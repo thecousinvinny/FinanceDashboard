@@ -130,6 +130,17 @@ tbody td{padding:9px 14px;color:var(--text);vertical-align:middle}
 .fs option{background:var(--s2)}
 .mac{display:flex;gap:9px;justify-content:flex-end;margin-top:18px}
 
+/* SHOW MORE */
+.show-more{text-align:center;padding:10px;font-size:11px;color:var(--accent2);cursor:pointer;border-top:1px solid var(--border);transition:background .15s}
+.show-more:hover{background:var(--s2)}
+
+/* DRAG COLS */
+thead th{position:relative;user-select:none}
+thead th.dragging{opacity:.4}
+thead th.drag-over{border-left:2px solid var(--accent)}
+thead th .drag-handle{position:absolute;right:4px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:10px;cursor:grab;opacity:0;transition:opacity .15s}
+thead th:hover .drag-handle{opacity:1}
+
 /* DUE HIGHLIGHT */
 .due-soon{background:rgba(245,158,11,0.12)!important}
 .due-today{background:rgba(239,68,68,0.12)!important}
@@ -225,8 +236,9 @@ td.editing{background:rgba(108,99,255,0.05)!important}
         <div class="ph"><div class="pt">📋 Wishlist <span class="pc" id="wc">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('wish')">+ Add item</button></div></div>
         <div class="tw"><table>
           <thead><tr><th>Name</th><th>Description</th><th>Category</th><th>Link</th><th>Original</th><th>Bought</th><th>Savings</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody id="wb"><tr><td colspan="9"><div class="empty"><div class="eic">📋</div>Loading...</div></td></tr></tbody>
+          <tbody id="wb"></tbody>
         </table></div>
+        <div class="show-more" id="sm-wish" onclick="showMore('wish')" style="display:none">Show more</div>
       </div>
     </div>
 
@@ -235,15 +247,25 @@ td.editing{background:rgba(108,99,255,0.05)!important}
         <div class="ph"><div class="pt">📦 Ordered <span class="pc" id="ec-ord">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('exp')">+ Add expense</button></div></div>
         <div class="tw"><table>
           <thead><tr><th>Name</th><th>Description</th><th>Category</th><th>Original Cost</th><th>Bought Cost</th><th>Card</th><th>Date</th><th>Actions</th></tr></thead>
-          <tbody id="eb-ord"><tr><td colspan="8"><div class="empty"><div class="eic">📦</div>Loading...</div></td></tr></tbody>
+          <tbody id="eb-ord"></tbody>
         </table></div>
+        <div class="show-more" id="sm-ord" onclick="showMore('ord')" style="display:none">Show more</div>
       </div>
       <div class="panel" id="panel-procured">
         <div class="ph"><div class="pt">✅ Procured <span class="pc" id="ec-pro">0</span></div></div>
         <div class="tw"><table>
           <thead><tr><th>Name</th><th>Description</th><th>Category</th><th>Original Cost</th><th>Bought Cost</th><th>Card</th><th>Date</th><th>Actions</th></tr></thead>
-          <tbody id="eb-pro"><tr><td colspan="8"><div class="empty"><div class="eic">✅</div>Loading...</div></td></tr></tbody>
+          <tbody id="eb-pro"></tbody>
         </table></div>
+        <div class="show-more" id="sm-pro" onclick="showMore('pro')" style="display:none">Show more</div>
+      </div>
+      <div class="panel" id="panel-food">
+        <div class="ph"><div class="pt">🍔 Food <span class="pc" id="ec-food">0</span></div></div>
+        <div class="tw"><table>
+          <thead><tr><th>Name</th><th>Description</th><th>Original Cost</th><th>Bought Cost</th><th>Card</th><th>Date</th><th>Actions</th></tr></thead>
+          <tbody id="eb-food"></tbody>
+        </table></div>
+        <div class="show-more" id="sm-food" onclick="showMore('food')" style="display:none">Show more</div>
       </div>
     </div>
 
@@ -261,8 +283,9 @@ td.editing{background:rgba(108,99,255,0.05)!important}
         <div class="sub-sum" id="ss2">—</div>
         <div class="tw"><table>
           <thead><tr><th>Name</th><th>Billing</th><th>Card</th><th>Cost</th><th>Due</th><th>Last Renewal</th><th>Next Renewal</th><th>Payments</th><th>Category</th><th>Actions</th></tr></thead>
-          <tbody id="sb2"><tr><td colspan="10"><div class="empty"><div class="eic">🔄</div>Loading...</div></td></tr></tbody>
+          <tbody id="sb2"></tbody>
         </table></div>
+        <div class="show-more" id="sm-sub" onclick="showMore('sub')" style="display:none">Show more</div>
       </div>
     </div>
 
@@ -290,8 +313,8 @@ td.editing{background:rgba(108,99,255,0.05)!important}
       <div class="panel">
         <div class="ph"><div class="pt">🏦 Banks <span class="pc" id="bank-count">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('bank')">+ Add bank</button></div></div>
         <div class="tw"><table>
-          <thead><tr><th>Bank Name</th><th>Type</th><th>Cards</th><th>Actions</th></tr></thead>
-          <tbody id="bank-body"><tr><td colspan="4"><div class="empty"><div class="eic">🏦</div>Loading...</div></td></tr></tbody>
+          <thead><tr><th>Bank Name</th><th>Type</th><th>Account #</th><th>Cards</th><th>Actions</th></tr></thead>
+          <tbody id="bank-body"><tr><td colspan="5"><div class="empty"><div class="eic">🏦</div>Loading...</div></td></tr></tbody>
         </table></div>
       </div>
     </div>
@@ -320,7 +343,7 @@ const HD={
   subscriptions:['Name','Billing','Card','Cost','LastRenewal','NextRenewal','Category','Status','Payments'],
   categories:['Name','Color'],
   cards:['Name','Bank','Type','Last4'],
-  banks:['Name','Type'],
+  banks:['Name','Type','Last4'],
 };
 const CC={Fun:'tf',Food:'tfo',Apparel:'tap',Tech:'tte',Home:'tho',Health:'the',Travel:'ttr',Tesla:'tts',PC:'tpc',Life:'tli',Gift:'tgi'};
 const CHART_C=['#6c63ff','#22c55e','#f59e0b','#ef4444','#14b8a6','#ec4899','#3b82f6','#f97316','#a855f7','#ff6b6b','#60a5fa'];
@@ -476,7 +499,7 @@ function parse(rows,hd){
 }
 
 // ── RENDER ──
-function renderAll(){renderDash();renderWish();renderExp();renderSub();renderCat();renderCards();renderBanks();}
+function renderAll(){renderDash();renderWish();renderExp();renderSub();renderCat();renderCards();renderBanks();setTimeout(initAllDragCols,0);}
 function $f(n){return'$'+(parseFloat(n)||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});}
 function catTag(c){return`<span class="tag ${CC[c]||'tdf'}">${c||'—'}</span>`;}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
@@ -638,9 +661,14 @@ function ieCancel(el,val,td){td.classList.remove('editing');el.textContent=val||
 // ── WISHLIST ──
 function renderWish(){
   const b=document.getElementById('wb');
+  const sm=document.getElementById('sm-wish');
   document.getElementById('wc').textContent=D.wishlist.length;
-  if(!D.wishlist.length){b.innerHTML='<tr><td colspan="9"><div class="empty"><div class="eic">📋</div>No wishlist items yet</div></td></tr>';return;}
-  b.innerHTML=D.wishlist.map(w=>{
+  if(!D.wishlist.length){b.innerHTML='<tr><td colspan="9"><div class="empty"><div class="eic">📋</div>No wishlist items yet</div></td></tr>';if(sm)sm.style.display='none';return;}
+  const lim=_pages['wish']||PAGE;
+  const visible=D.wishlist.slice(0,lim);
+  if(sm)sm.style.display=D.wishlist.length>lim?'':'none';
+  if(sm&&D.wishlist.length>lim)sm.textContent=`Show more (${D.wishlist.length-lim} remaining)`;
+  b.innerHTML=visible.map(w=>{
     const o=parseFloat(w.OCost)||0,bc=parseFloat(w.BCost)||0,sv=bc>0?o-bc:0;
     return`<tr>
       <td>${ie('Wishlist',w._row,'Name',w.Name)}</td>
@@ -668,6 +696,10 @@ async function markBought(row){
 }
 
 // ── EXPENSES ──
+const PAGE=20; // rows per page
+const _pages={ord:PAGE,pro:PAGE,food:PAGE,wish:PAGE,sub:PAGE};
+function showMore(key){_pages[key]+=20;renderAll();}
+
 function expRow(e){
   return`<tr>
     <td>${ie('Expenses',e._row,'Name',e.Name)}</td>
@@ -683,17 +715,29 @@ function expRow(e){
     </div></td>
   </tr>`;
 }
+function renderTable(bodyId,smId,rows,cols,key,emptyMsg){
+  const b=document.getElementById(bodyId);
+  const sm=document.getElementById(smId);
+  if(!b)return;
+  if(!rows.length){b.innerHTML=`<tr><td colspan="${cols}"><div class="empty"><div class="eic">${emptyMsg[0]}</div>${emptyMsg[1]}</div></td></tr>`;if(sm)sm.style.display='none';return;}
+  const lim=_pages[key]||PAGE;
+  b.innerHTML=rows.slice(0,lim).map(r=>typeof r==='string'?r:expRow(r)).join('');
+  if(sm)sm.style.display=rows.length>lim?'':'none';
+  if(sm&&rows.length>lim)sm.textContent=`Show more (${rows.length-lim} remaining)`;
+}
 function renderExp(){
   const sorted=[...D.expenses].sort((a,z)=>(z.Date||'').localeCompare(a.Date||''));
   const ordered=sorted.filter(e=>e.Status==='Ordered');
-  const procured=sorted.filter(e=>e.Status!=='Ordered');
-  const bo=document.getElementById('eb-ord');
-  const bp=document.getElementById('eb-pro');
+  const procured=sorted.filter(e=>e.Status!=='Ordered'&&(e.Category||'').toLowerCase()!=='food');
+  const food=sorted.filter(e=>e.Status!=='Ordered'&&(e.Category||'').toLowerCase()==='food');
   document.getElementById('ec-ord').textContent=ordered.length;
   document.getElementById('ec-pro').textContent=procured.length;
+  document.getElementById('ec-food').textContent=food.length;
   document.getElementById('panel-ordered').style.display=ordered.length?'':'none';
-  bo.innerHTML=ordered.length?ordered.map(expRow).join(''):'<tr><td colspan="8"><div class="empty"><div class="eic">📦</div>No ordered items</div></td></tr>';
-  bp.innerHTML=procured.length?procured.map(expRow).join(''):'<tr><td colspan="8"><div class="empty"><div class="eic">✅</div>No procured items yet</div></td></tr>';
+  document.getElementById('panel-food').style.display=food.length?'':'none';
+  renderTable('eb-ord','sm-ord',ordered,8,'ord',['📦','No ordered items']);
+  renderTable('eb-pro','sm-pro',procured,8,'pro',['✅','No procured items yet']);
+  renderTable('eb-food','sm-food',food,7,'food',['🍔','No food expenses']);
 }
 async function markPro(row){
   const e=D.expenses.find(x=>x._row===row);if(!e)return;
@@ -735,7 +779,12 @@ function renderSub(){
     .filter(s=>showCancelled||s.Status!=='Cancelled')
     .sort((a,z)=>(ORDER[a.Billing]??4)-(ORDER[z.Billing]??4));
   let ci=0;
-  b.innerHTML=visible.map(s=>{
+  const lim=_pages['sub']||PAGE;
+  const paged=visible.slice(0,lim);
+  const sm=document.getElementById('sm-sub');
+  if(sm)sm.style.display=visible.length>lim?'':'none';
+  if(sm&&visible.length>lim)sm.textContent=`Show more (${visible.length-lim} remaining)`;
+  b.innerHTML=paged.map(s=>{
     const dc=dueCls(s.NextRenewal);
     const daysLeft=s.NextRenewal?Math.ceil((new Date(s.NextRenewal+'T12:00:00')-new Date())/(1000*60*60*24)):null;
     const dueDisplay=s.NextRenewal?(dc?`<span class="due-badge">${daysLeft<=0?'DUE NOW':daysLeft<=1?'DUE SOON':s.NextRenewal}</span>`:s.NextRenewal):'—';
@@ -809,12 +858,13 @@ function renderCards(){
 function renderBanks(){
   const b=document.getElementById('bank-body');
   document.getElementById('bank-count').textContent=D.banks.length;
-  if(!D.banks.length){b.innerHTML='<tr><td colspan="4"><div class="empty"><div class="eic">🏦</div>No banks yet</div></td></tr>';return;}
+  if(!D.banks.length){b.innerHTML='<tr><td colspan="5"><div class="empty"><div class="eic">🏦</div>No banks yet</div></td></tr>';return;}
   b.innerHTML=D.banks.map(bk=>{
     const linked=D.cards.filter(c=>c.Bank===bk.Name);
     return`<tr>
       <td><strong>${esc(bk.Name)}</strong></td>
       <td class="td2">${esc(bk.Type||'—')}</td>
+      <td class="tm td3">••••&nbsp;${esc(bk.Last4||'????')}</td>
       <td>${linked.length?linked.map(c=>`<span class="tag tdf" style="margin-right:4px;">••••&nbsp;${esc(c.Last4||'????')} ${esc(c.Name)}</span>`).join(''):'<span class="td3">No cards</span>'}</td>
       <td><div style="display:flex;gap:5px;">
         <button class="btn btic" onclick="editR2('bank',${bk._row})">✎</button>
@@ -858,7 +908,8 @@ const MF={
   ]},
   bank:{t:'Add Bank',et:'Edit Bank',s:'Banks',h:HD.banks,fields:[
     {k:'Name',l:'Bank Name',full:1},
-    {k:'Type',l:'Account Type',tp:'sel',o:['Checking','Savings','Investment','Business'],full:1},
+    {k:'Type',l:'Account Type',tp:'sel',o:['Checking','Savings','Investment','Business']},
+    {k:'Last4',l:'Last 4 digits'},
   ]},
 };
 
@@ -921,7 +972,72 @@ function toast(msg,type=''){
   setTimeout(()=>{el.className='';},3000);
 }
 
+// ── COLUMN DRAG & DROP ──
+const COL_ORDER={};
+function saveColOrder(tableId,order){COL_ORDER[tableId]=order;try{localStorage.setItem('fin_cols',JSON.stringify(COL_ORDER));}catch(e){}}
+function loadColOrders(){try{const s=localStorage.getItem('fin_cols');if(s)Object.assign(COL_ORDER,JSON.parse(s));}catch(e){}}
+function initDragCols(tableId){
+  const table=document.getElementById(tableId);
+  if(!table)return;
+  const thead=table.closest('table').querySelector('thead tr');
+  if(!thead)return;
+  const ths=[...thead.querySelectorAll('th')];
+  // Apply saved order
+  const order=COL_ORDER[tableId];
+  if(order){
+    order.forEach((idx,pos)=>{
+      const th=ths[idx];
+      if(th)thead.appendChild(th);
+    });
+  }
+  // Add drag handles and listeners
+  [...thead.querySelectorAll('th')].forEach((th,i)=>{
+    if(!th.querySelector('.drag-handle')){
+      const h=document.createElement('span');
+      h.className='drag-handle';h.textContent='⠿';h.title='Drag to reorder';
+      th.appendChild(h);
+    }
+    th.draggable=true;
+    th.ondragstart=e=>{e.dataTransfer.setData('text/plain',th.cellIndex);th.classList.add('dragging');};
+    th.ondragend=e=>{th.classList.remove('dragging');document.querySelectorAll('th').forEach(t=>t.classList.remove('drag-over'));};
+    th.ondragover=e=>{e.preventDefault();th.classList.add('drag-over');};
+    th.ondragleave=e=>{th.classList.remove('drag-over');};
+    th.ondrop=e=>{
+      e.preventDefault();th.classList.remove('drag-over');
+      const fromIdx=parseInt(e.dataTransfer.getData('text/plain'));
+      const toIdx=th.cellIndex;
+      if(fromIdx===toIdx)return;
+      // Reorder thead
+      const tr=thead;
+      const thArr=[...tr.querySelectorAll('th')];
+      const moving=thArr[fromIdx];
+      if(toIdx<fromIdx){tr.insertBefore(moving,thArr[toIdx]);}
+      else{tr.insertBefore(moving,thArr[toIdx].nextSibling);}
+      // Reorder each tbody row
+      const tbody=table.closest('table').querySelector('tbody');
+      if(tbody){[...tbody.querySelectorAll('tr')].forEach(row=>{
+        const cells=[...row.querySelectorAll('td')];
+        const mc=cells[fromIdx];
+        if(!mc)return;
+        if(toIdx<fromIdx){row.insertBefore(mc,cells[toIdx]);}
+        else if(cells[toIdx+1]){row.insertBefore(mc,cells[toIdx+1]);}
+        else{row.appendChild(mc);}
+      });}
+      // Save order
+      const newOrder=[...tr.querySelectorAll('th')].map(t=>t.dataset.origIdx||0);
+      saveColOrder(tableId,newOrder);
+    };
+  });
+}
+function initAllDragCols(){
+  ['wb','eb-ord','eb-pro','eb-food','sb2','cb','card-body','bank-body'].forEach(id=>{
+    const tbody=document.getElementById(id);
+    if(tbody)initDragCols(id);
+  });
+}
+
 // ── INIT ──
+loadColOrders();
 if(loadCfg()){bootApp();}
 </script>
 </body>
