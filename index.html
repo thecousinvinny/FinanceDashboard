@@ -130,7 +130,18 @@ tbody td{padding:9px 14px;color:var(--text);vertical-align:middle}
 .fs option{background:var(--s2)}
 .mac{display:flex;gap:9px;justify-content:flex-end;margin-top:18px}
 
-/* MISC */
+/* DUE HIGHLIGHT */
+.due-soon{background:rgba(245,158,11,0.12)!important}
+.due-today{background:rgba(239,68,68,0.12)!important}
+.due-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 6px;border-radius:5px;background:rgba(239,68,68,0.2);color:var(--red)}
+.section-divider{font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;padding:10px 18px 6px;border-bottom:1px solid var(--border);background:var(--s2)}
+
+/* INLINE EDIT */
+.ie{cursor:pointer;border-radius:5px;padding:2px 4px;transition:background .1s;min-width:30px;display:inline-block}
+.ie:hover{background:var(--s3)}
+.ie-input{background:var(--s2);border:1px solid var(--accent);border-radius:5px;padding:2px 6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;outline:none;width:100%;min-width:80px}
+.ie-sel{background:var(--s2);border:1px solid var(--accent);border-radius:5px;padding:2px 4px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:11px;outline:none;cursor:pointer}
+td.editing{background:rgba(108,99,255,0.05)!important}
 .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;display:inline-block}
 .sub-sum{display:flex;gap:20px;padding:11px 18px;border-bottom:1px solid var(--border);background:var(--s2);font-size:11px;color:var(--text2)}
 .sub-sum strong{color:var(--text);font-weight:500}
@@ -181,6 +192,8 @@ tbody td{padding:9px 14px;color:var(--text);vertical-align:middle}
     <div class="nt" onclick="showTab('expenses',this)">Expenses</div>
     <div class="nt" onclick="showTab('subscriptions',this)">Subscriptions</div>
     <div class="nt" onclick="showTab('categories',this)">Categories</div>
+    <div class="nt" onclick="showTab('cards',this)">Cards</div>
+    <div class="nt" onclick="showTab('banks',this)">Banks</div>
   </nav>
   <div class="main">
 
@@ -188,14 +201,22 @@ tbody td{padding:9px 14px;color:var(--text);vertical-align:middle}
       <div class="sg">
         <div class="sc"><div class="sl">Spent this month</div><div class="sv danger" id="s-mo">—</div><div class="ss" id="s-mo2">—</div></div>
         <div class="sc"><div class="sl">Spent this year</div><div class="sv" id="s-yr">—</div><div class="ss" id="s-yr2">—</div></div>
-        <div class="sc"><div class="sl">Monthly subs</div><div class="sv warn" id="s-sb">—</div><div class="ss" id="s-sb2">—</div></div>
-        <div class="sc"><div class="sl">Total savings</div><div class="sv good" id="s-sv">—</div><div class="ss">From wishlist</div></div>
+        <div class="sc"><div class="sl">Est. monthly subs</div><div class="sv warn" id="s-sb">—</div><div class="ss" id="s-sb2">—</div></div>
+        <div class="sc"><div class="sl">Wishlist savings</div><div class="sv good" id="s-sv">—</div><div class="ss">All time</div></div>
       </div>
-      <div class="cg">
-        <div class="cc"><div class="ct">Spending by category</div><div class="cw"><canvas id="c-cat"></canvas></div></div>
-        <div class="cc"><div class="ct">Monthly trend (6 months)</div><div class="cw"><canvas id="c-trend"></canvas></div></div>
-        <div class="cc"><div class="ct">Subscription costs</div><div class="cw"><canvas id="c-subs"></canvas></div></div>
-        <div class="cc"><div class="ct">Ordered vs Procured</div><div class="cw"><canvas id="c-status"></canvas></div></div>
+      <div class="sg" style="margin-bottom:20px;">
+        <div class="sc"><div class="sl">Sub payments YTD</div><div class="sv" id="s-subpaid">—</div><div class="ss" id="s-subpaid2">—</div></div>
+        <div class="sc"><div class="sl">Est. annual subs</div><div class="sv warn" id="s-subyr">—</div><div class="ss">Projected</div></div>
+        <div class="sc"><div class="sl">Ordered (in transit)</div><div class="sv" style="color:var(--amber)" id="s-ord">—</div><div class="ss" id="s-ord2">—</div></div>
+        <div class="sc"><div class="sl">YTD savings</div><div class="sv good" id="s-svyr">—</div><div class="ss">vs original price</div></div>
+      </div>
+      <div class="cg" style="grid-template-columns:1fr 1fr 1fr">
+        <div class="cc"><div class="ct">Annual expenses by category</div><div class="cw"><canvas id="c-cat"></canvas></div></div>
+        <div class="cc"><div class="ct">Annual expenses by month</div><div class="cw"><canvas id="c-trend"></canvas></div></div>
+        <div class="cc"><div class="ct">Annual savings by month</div><div class="cw"><canvas id="c-savings"></canvas></div></div>
+        <div class="cc"><div class="ct">Sub payments this year by amount</div><div class="cw"><canvas id="c-subpaid"></canvas></div></div>
+        <div class="cc"><div class="ct">Sub payments by month</div><div class="cw"><canvas id="c-submo"></canvas></div></div>
+        <div class="cc"><div class="ct">Estimated monthly vs annual subs</div><div class="cw"><canvas id="c-subest"></canvas></div></div>
       </div>
     </div>
 
@@ -210,22 +231,37 @@ tbody td{padding:9px 14px;color:var(--text);vertical-align:middle}
     </div>
 
     <div id="tab-expenses" style="display:none">
-      <div class="panel">
-        <div class="ph"><div class="pt">💸 Expenses <span class="pc" id="ec">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('exp')">+ Add expense</button></div></div>
+      <div class="panel" id="panel-ordered">
+        <div class="ph"><div class="pt">📦 Ordered <span class="pc" id="ec-ord">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('exp')">+ Add expense</button></div></div>
         <div class="tw"><table>
-          <thead><tr><th>Status</th><th>Name</th><th>Description</th><th>Category</th><th>Cost</th><th>Card</th><th>Date</th><th>Actions</th></tr></thead>
-          <tbody id="eb"><tr><td colspan="8"><div class="empty"><div class="eic">💸</div>Loading...</div></td></tr></tbody>
+          <thead><tr><th>Name</th><th>Description</th><th>Category</th><th>Original Cost</th><th>Bought Cost</th><th>Card</th><th>Date</th><th>Actions</th></tr></thead>
+          <tbody id="eb-ord"><tr><td colspan="8"><div class="empty"><div class="eic">📦</div>Loading...</div></td></tr></tbody>
+        </table></div>
+      </div>
+      <div class="panel" id="panel-procured">
+        <div class="ph"><div class="pt">✅ Procured <span class="pc" id="ec-pro">0</span></div></div>
+        <div class="tw"><table>
+          <thead><tr><th>Name</th><th>Description</th><th>Category</th><th>Original Cost</th><th>Bought Cost</th><th>Card</th><th>Date</th><th>Actions</th></tr></thead>
+          <tbody id="eb-pro"><tr><td colspan="8"><div class="empty"><div class="eic">✅</div>Loading...</div></td></tr></tbody>
         </table></div>
       </div>
     </div>
 
     <div id="tab-subscriptions" style="display:none">
       <div class="panel">
-        <div class="ph"><div class="pt">🔄 Subscriptions <span class="pc" id="sc2">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('sub')">+ Add sub</button></div></div>
+        <div class="ph">
+          <div class="pt">🔄 Subscriptions <span class="pc" id="sc2">0</span></div>
+          <div class="pa">
+            <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);cursor:pointer;">
+              <input type="checkbox" id="show-cancelled" onchange="renderSub()" style="accent-color:var(--accent)"> Show cancelled
+            </label>
+            <button class="btn btn-a" onclick="openModal('sub')">+ Add sub</button>
+          </div>
+        </div>
         <div class="sub-sum" id="ss2">—</div>
         <div class="tw"><table>
-          <thead><tr><th>Name</th><th>Billing</th><th>Card</th><th>Cost</th><th>Last Renewal</th><th>Next Renewal</th><th>Category</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody id="sb2"><tr><td colspan="9"><div class="empty"><div class="eic">🔄</div>Loading...</div></td></tr></tbody>
+          <thead><tr><th>Name</th><th>Billing</th><th>Card</th><th>Cost</th><th>Due</th><th>Last Renewal</th><th>Next Renewal</th><th>Payments</th><th>Category</th><th>Actions</th></tr></thead>
+          <tbody id="sb2"><tr><td colspan="10"><div class="empty"><div class="eic">🔄</div>Loading...</div></td></tr></tbody>
         </table></div>
       </div>
     </div>
@@ -236,6 +272,26 @@ tbody td{padding:9px 14px;color:var(--text);vertical-align:middle}
         <div class="tw"><table>
           <thead><tr><th>Name</th><th>Color</th><th>Actions</th></tr></thead>
           <tbody id="cb"><tr><td colspan="3"><div class="empty"><div class="eic">🏷️</div>Loading...</div></td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div id="tab-cards" style="display:none">
+      <div class="panel">
+        <div class="ph"><div class="pt">💳 Cards <span class="pc" id="card-count">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('card')">+ Add card</button></div></div>
+        <div class="tw"><table>
+          <thead><tr><th>Card Name</th><th>Bank</th><th>Type</th><th>Last 4</th><th>Actions</th></tr></thead>
+          <tbody id="card-body"><tr><td colspan="5"><div class="empty"><div class="eic">💳</div>Loading...</div></td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div id="tab-banks" style="display:none">
+      <div class="panel">
+        <div class="ph"><div class="pt">🏦 Banks <span class="pc" id="bank-count">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('bank')">+ Add bank</button></div></div>
+        <div class="tw"><table>
+          <thead><tr><th>Bank Name</th><th>Type</th><th>Cards</th><th>Actions</th></tr></thead>
+          <tbody id="bank-body"><tr><td colspan="4"><div class="empty"><div class="eic">🏦</div>Loading...</div></td></tr></tbody>
         </table></div>
       </div>
     </div>
@@ -257,12 +313,14 @@ tbody td{padding:9px 14px;color:var(--text);vertical-align:middle}
 
 <script>
 // ── CONFIG ──
-const SH={expenses:'Expenses',wishlist:'Wishlist',subscriptions:'Subscriptions',categories:'Categories'};
+const SH={expenses:'Expenses',wishlist:'Wishlist',subscriptions:'Subscriptions',categories:'Categories',cards:'Cards',banks:'Banks'};
 const HD={
   expenses:['Name','Description','Category','Cost','Card','Date','Status','OCost'],
   wishlist:['Name','Description','Category','Link','OCost','BCost','Status'],
-  subscriptions:['Name','Billing','Card','Cost','LastRenewal','NextRenewal','Category','Status'],
+  subscriptions:['Name','Billing','Card','Cost','LastRenewal','NextRenewal','Category','Status','Payments'],
   categories:['Name','Color'],
+  cards:['Name','Bank','Type','Last4'],
+  banks:['Name','Type'],
 };
 const CC={Fun:'tf',Food:'tfo',Apparel:'tap',Tech:'tte',Home:'tho',Health:'the',Travel:'ttr',Tesla:'tts',PC:'tpc',Life:'tli',Gift:'tgi'};
 const CHART_C=['#6c63ff','#22c55e','#f59e0b','#ef4444','#14b8a6','#ec4899','#3b82f6','#f97316','#a855f7','#ff6b6b','#60a5fa'];
@@ -270,7 +328,7 @@ const DOT_C=['#ef4444','#3b82f6','#f97316','#22c55e','#a855f7','#f59e0b','#14b8a
 const CATS_SEED=[['Fun','#f59e0b'],['Food','#22c55e'],['Apparel','#ec4899'],['Tech','#3b82f6'],['Home','#a855f7'],['Health','#ef4444'],['Travel','#14b8a6'],['Tesla','#ff6b6b'],['PC','#60a5fa'],['Life','#f97316'],['Gift','#f472b6']];
 
 // ── STATE ──
-let cfg={}, D={expenses:[],wishlist:[],subscriptions:[],categories:[]}, charts={}, mMode='', editR=-1;
+let cfg={}, D={expenses:[],wishlist:[],subscriptions:[],categories:[],cards:[],banks:[]}, charts={}, mMode='', editR=-1;
 let _tc=null; // token client
 
 // ── CREDENTIALS ──
@@ -384,14 +442,17 @@ async function syncAll(){
   const b=document.querySelector('.sbtn');
   if(b){b.textContent='↻ Syncing…';}
   try{
-    const[er,wr,sr,cr]=await Promise.all([
+    const[er,wr,sr,cr,kar,bar]=await Promise.all([
       readSheet('Expenses'),readSheet('Wishlist'),
-      readSheet('Subscriptions'),readSheet('Categories')
+      readSheet('Subscriptions'),readSheet('Categories'),
+      readSheet('Cards'),readSheet('Banks')
     ]);
     D.expenses=parse(er,HD.expenses);
     D.wishlist=parse(wr,HD.wishlist);
     D.subscriptions=parse(sr,HD.subscriptions);
     D.categories=parse(cr,HD.categories);
+    D.cards=parse(kar,HD.cards);
+    D.banks=parse(bar,HD.banks);
     renderAll();
     toast('Synced ✓','ok');
   }catch(e){
@@ -415,7 +476,7 @@ function parse(rows,hd){
 }
 
 // ── RENDER ──
-function renderAll(){renderDash();renderWish();renderExp();renderSub();renderCat();}
+function renderAll(){renderDash();renderWish();renderExp();renderSub();renderCat();renderCards();renderBanks();}
 function $f(n){return'$'+(parseFloat(n)||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});}
 function catTag(c){return`<span class="tag ${CC[c]||'tdf'}">${c||'—'}</span>`;}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
@@ -424,8 +485,8 @@ function escQ(s){return String(s).replace(/'/g,"\\'")}
 // ── DASHBOARD ──
 function renderDash(){
   const now=new Date();
-  const mo=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const yr=String(now.getFullYear());
+  const mo=`${yr}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const pro=D.expenses.filter(e=>e.Status==='Procured');
   const moE=pro.filter(e=>e.Date&&e.Date.startsWith(mo));
   const yrE=pro.filter(e=>e.Date&&e.Date.startsWith(yr));
@@ -434,37 +495,145 @@ function renderDash(){
   const act=D.subscriptions.filter(s=>s.Status!=='Cancelled');
   const sbT=act.reduce((s,x)=>{const c=parseFloat(x.Cost)||0;return x.Billing==='Annual'?s+c/12:x.Billing==='BiWeekly'?s+c*2.17:s+c;},0);
   const svT=D.wishlist.reduce((s,w)=>{const o=parseFloat(w.OCost)||0,b=parseFloat(w.BCost)||0;return b>0?s+(o-b):s;},0);
+  const subPaidYr=act.reduce((s,x)=>{const c=parseFloat(x.Cost)||0,p=parseInt(x.Payments)||0;return s+c*p;},0);
+  const ordTotal=D.expenses.filter(e=>e.Status==='Ordered').reduce((s,e)=>s+(parseFloat(e.Cost)||0),0);
+  const yrSavings=D.wishlist.filter(w=>w.Status==='Bought').reduce((s,w)=>{const o=parseFloat(w.OCost)||0,b=parseFloat(w.BCost)||0;return b>0?s+(o-b):s;},0);
   document.getElementById('s-mo').textContent=$f(moT);
   document.getElementById('s-mo2').textContent=`${moE.length} expenses this month`;
   document.getElementById('s-yr').textContent=$f(yrT);
-  document.getElementById('s-yr2').textContent=`${yrE.length} in ${yr}`;
+  document.getElementById('s-yr2').textContent=`${yrE.length} procured in ${yr}`;
   document.getElementById('s-sb').textContent=$f(sbT)+'/mo';
-  document.getElementById('s-sb2').textContent=`${act.length} active · ${$f(sbT*12)}/yr`;
+  document.getElementById('s-sb2').textContent=`${act.length} active subscriptions`;
   document.getElementById('s-sv').textContent=$f(svT);
+  const sp=document.getElementById('s-subpaid');if(sp)sp.textContent=$f(subPaidYr);
+  const sp2=document.getElementById('s-subpaid2');if(sp2)sp2.textContent=`${act.reduce((s,x)=>s+(parseInt(x.Payments)||0),0)} total payments`;
+  const sy=document.getElementById('s-subyr');if(sy)sy.textContent=$f(sbT*12);
+  const so=document.getElementById('s-ord');if(so)so.textContent=$f(ordTotal);
+  const so2=document.getElementById('s-ord2');if(so2)so2.textContent=`${D.expenses.filter(e=>e.Status==='Ordered').length} items in transit`;
+  const ssv=document.getElementById('s-svyr');if(ssv)ssv.textContent=$f(yrSavings);
   renderCharts();
 }
 function renderCharts(){
   Chart.defaults.color='#8a8a9a';
   Chart.defaults.font.family="'DM Sans',sans-serif";
+  const yr=String(new Date().getFullYear());
+  const pro=D.expenses.filter(e=>e.Status==='Procured'&&e.Date&&e.Date.startsWith(yr));
+  const ord=D.expenses.filter(e=>e.Status==='Ordered'&&e.Date&&e.Date.startsWith(yr));
+  const act=D.subscriptions.filter(s=>s.Status!=='Cancelled');
+
+  // 1. Annual expenses by category
   const ct={};
-  D.expenses.filter(e=>e.Status==='Procured').forEach(e=>{ct[e.Category||'Other']=(ct[e.Category||'Other']||0)+(parseFloat(e.Cost)||0);});
+  pro.forEach(e=>{ct[e.Category||'Other']=(ct[e.Category||'Other']||0)+(parseFloat(e.Cost)||0);});
   donut('c-cat',Object.keys(ct),Object.values(ct),CHART_C);
-  const ml=[],mv=[];
-  for(let i=5;i>=0;i--){const d=new Date();d.setMonth(d.getMonth()-i);const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;ml.push(d.toLocaleString('default',{month:'short'}));mv.push(Math.round(D.expenses.filter(e=>e.Status==='Procured'&&e.Date&&e.Date.startsWith(k)).reduce((s,e)=>s+(parseFloat(e.Cost)||0),0)));}
-  lineChart('c-trend',ml,mv);
-  const st={};
-  D.subscriptions.filter(s=>s.Status!=='Cancelled').forEach(s=>{const c=parseFloat(s.Cost)||0;const m=s.Billing==='Annual'?c/12:s.Billing==='BiWeekly'?c*2.17:c;st[s.Category||s.Name]=(st[s.Category||s.Name]||0)+m;});
-  donut('c-subs',Object.keys(st),Object.values(st).map(v=>Math.round(v*100)/100),CHART_C);
-  donut('c-status',['Ordered','Procured'],[D.expenses.filter(e=>e.Status==='Ordered').length,D.expenses.filter(e=>e.Status==='Procured').length],['#f59e0b','#22c55e']);
+
+  // 2. Annual expenses by month
+  const months=[],expByMo=[],savByMo=[];
+  for(let i=0;i<12;i++){
+    const d=new Date(parseInt(yr),i,1);
+    const k=`${yr}-${String(i+1).padStart(2,'0')}`;
+    months.push(d.toLocaleString('default',{month:'short'}));
+    const moPro=pro.filter(e=>e.Date&&e.Date.startsWith(k));
+    expByMo.push(Math.round(moPro.reduce((s,e)=>s+(parseFloat(e.Cost)||0),0)));
+    // savings = sum of (OCost - BCost) for items bought this month
+    const moWish=D.wishlist.filter(w=>w.Status==='Bought'&&w.BCost);
+    savByMo.push(Math.round(moWish.reduce((s,w)=>{const o=parseFloat(w.OCost)||0,b=parseFloat(w.BCost)||0;return b>0?s+(o-b):s;},0)));
+  }
+  lineChart('c-trend',months,expByMo,'#6c63ff');
+  lineChart('c-savings',months,savByMo,'#22c55e');
+
+  // 4. Sub payments this year by sub name (donut)
+  const subPaid={};
+  act.forEach(s=>{const p=parseInt(s.Payments)||0;if(p>0)subPaid[s.Name]=(parseFloat(s.Cost)||0)*p;});
+  donut('c-subpaid',Object.keys(subPaid),Object.values(subPaid),CHART_C);
+
+  // 5. Sub payments by month — use NextRenewal to estimate
+  const subMoData=new Array(12).fill(0);
+  act.forEach(s=>{
+    const c=parseFloat(s.Cost)||0;
+    if(s.Billing==='Monthly'||s.Billing==='BiWeekly'){
+      for(let i=0;i<12;i++) subMoData[i]+=s.Billing==='Monthly'?c:c*2;
+    } else if(s.Billing==='Annual'&&s.NextRenewal){
+      const m=parseInt(s.NextRenewal.split('-')[1])-1;
+      if(m>=0&&m<12) subMoData[m]+=c;
+    }
+  });
+  lineChart('c-submo',months,subMoData.map(v=>Math.round(v)),'#f59e0b');
+
+  // 6. Estimated monthly vs annual
+  const estMo=act.reduce((s,x)=>{const c=parseFloat(x.Cost)||0;return x.Billing==='Annual'?s+c/12:x.Billing==='BiWeekly'?s+c*2.17:s+c;},0);
+  const estYr=estMo*12;
+  donut('c-subest',['Monthly equiv','Annual total'],[Math.round(estMo),Math.round(estYr)],['#6c63ff','#f97316']);
 }
 function donut(id,labels,data,colors){
   if(charts[id])charts[id].destroy();
   charts[id]=new Chart(document.getElementById(id).getContext('2d'),{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors.map(c=>c+'bb'),borderColor:colors,borderWidth:1.5,hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{boxWidth:9,padding:10,font:{size:10}}}},cutout:'65%'}});
 }
-function lineChart(id,labels,data){
+function lineChart(id,labels,data,color='#6c63ff'){
   if(charts[id])charts[id].destroy();
-  charts[id]=new Chart(document.getElementById(id).getContext('2d'),{type:'line',data:{labels,datasets:[{data,borderColor:'#6c63ff',backgroundColor:'rgba(108,99,255,0.07)',borderWidth:2,fill:true,tension:0.4,pointBackgroundColor:'#6c63ff',pointRadius:3.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{font:{size:10}}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{font:{size:10},callback:v=>'$'+v}}}}});
+  const el=document.getElementById(id);if(!el)return;
+  const rgb=color==='#22c55e'?'34,197,94':color==='#f59e0b'?'245,158,11':'108,99,255';
+  charts[id]=new Chart(el.getContext('2d'),{type:'line',data:{labels,datasets:[{data,borderColor:color,backgroundColor:`rgba(${rgb},0.07)`,borderWidth:2,fill:true,tension:0.4,pointBackgroundColor:color,pointRadius:3.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{font:{size:10}}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{font:{size:10},callback:v=>'$'+v}}}}});
 }
+
+// ── INLINE EDIT ENGINE ──
+function ie(sheet,row,field,val,type='text',opts=[]){
+  const display=val||'—';
+  return `<span class="ie" onclick="ieEdit('${sheet}',${row},'${field}','${val.replace(/'/g,"\\'")}','${type}',${JSON.stringify(opts)},this)">${display}</span>`;
+}
+function ieEdit(sheet,row,field,val,type,opts,el){
+  if(el.querySelector('input,select'))return;
+  const td=el.closest('td');td.classList.add('editing');
+  const cats=D.categories.map(c=>c.Name);
+  const cards=D.cards.map(c=>c.Name+' (••••'+c.Last4+')');
+  const cardVals=D.cards.map(c=>c.Name);
+  let input;
+  if(type==='sel'||type==='cat'||type==='card-sel'){
+    const choices=type==='cat'?cats:type==='card-sel'?cards:opts;
+    const vals=type==='card-sel'?cardVals:choices;
+    input=document.createElement('select');
+    input.className='ie-sel';
+    input.innerHTML='<option value="">—</option>'+choices.map((o,i)=>`<option value="${vals[i]||o}" ${(vals[i]||o)===val?'selected':''}>${o}</option>`).join('');
+    input.onchange=()=>ieSave(sheet,row,field,input.value,el,td);
+    input.onblur=()=>setTimeout(()=>ieCancel(el,val,td),150);
+  }else{
+    input=document.createElement('input');
+    input.className='ie-input';
+    input.type=type==='num'?'number':type==='date'?'date':'text';
+    if(type==='num')input.step='0.01';
+    input.value=val;
+    input.style.width=type==='date'?'130px':type==='num'?'90px':'140px';
+    input.onblur=()=>ieSave(sheet,row,field,input.value,el,td);
+    input.onkeydown=(e)=>{if(e.key==='Enter')input.blur();if(e.key==='Escape')ieCancel(el,val,td);};
+  }
+  el.innerHTML='';el.appendChild(input);input.focus();
+  if(input.select&&type!=='date')input.select();
+}
+async function ieSave(sheet,row,field,newVal,el,td){
+  if(td&&td.classList) td.classList.remove('editing');
+  const dk=sheet==='Wishlist'?'wishlist':sheet==='Expenses'?'expenses':sheet==='Subscriptions'?'subscriptions':'categories';
+  const item=D[dk].find(x=>x._row===row);
+  if(!item){if(el&&el.textContent!==undefined)el.textContent=newVal||'—';return;}
+  if(newVal===item[field]){if(el&&el.textContent!==undefined)el.textContent=newVal||'—';return;}
+  const old=item[field];
+  item[field]=newVal;
+  if(el&&el.textContent!==undefined) el.textContent=newVal||'—';
+  try{
+    // Build vals using the correct HD for this sheet
+    const hdKey=sheet==='Wishlist'?'wishlist':sheet==='Expenses'?'expenses':sheet==='Subscriptions'?'subscriptions':'categories';
+    const vals=HD[hdKey].map(h=>item[h]||'');
+    await updateRow(sheet,row,vals);
+    toast('Saved ✓','ok');
+    // Only re-render derived values, don't full re-read from sheet (avoids flash/duplicate)
+    if(sheet==='Expenses'||sheet==='Subscriptions') renderDash();
+    if(sheet==='Wishlist'){
+      // Update savings column
+      const o=parseFloat(item.OCost)||0,bc=parseFloat(item.BCost)||0,sv=bc>0?o-bc:0;
+      const row_el=el&&el.closest?el.closest('tr'):null;
+      if(row_el){const cells=row_el.querySelectorAll('td');if(cells[6])cells[6].textContent=sv>0?'-'+$f(sv):'—';}
+    }
+  }catch(e){item[field]=old;if(el&&el.textContent!==undefined)el.textContent=old||'—';toast('Save failed: '+e.message,'err');}
+}
+function ieCancel(el,val,td){td.classList.remove('editing');el.textContent=val||'—';}
 
 // ── WISHLIST ──
 function renderWish(){
@@ -474,88 +643,135 @@ function renderWish(){
   b.innerHTML=D.wishlist.map(w=>{
     const o=parseFloat(w.OCost)||0,bc=parseFloat(w.BCost)||0,sv=bc>0?o-bc:0;
     return`<tr>
-      <td><strong>${esc(w.Name)}</strong></td>
-      <td class="td2">${esc(w.Description||'—')}</td>
-      <td>${catTag(w.Category)}</td>
-      <td>${w.Link?`<a href="${esc(w.Link)}" target="_blank" style="color:var(--accent2);text-decoration:none;font-size:10px;">↗</a>`:'—'}</td>
-      <td class="tstr">${o?$f(o):'—'}</td>
-      <td class="tm">${bc?$f(bc):'—'}</td>
+      <td>${ie('Wishlist',w._row,'Name',w.Name)}</td>
+      <td>${ie('Wishlist',w._row,'Description',w.Description)}</td>
+      <td>${ie('Wishlist',w._row,'Category',w.Category,'cat')}</td>
+      <td>${ie('Wishlist',w._row,'Link',w.Link)}</td>
+      <td>${ie('Wishlist',w._row,'OCost',w.OCost,'num')}</td>
+      <td>${ie('Wishlist',w._row,'BCost',w.BCost,'num')}</td>
       <td class="${sv>0?'tgrn':'td3'}">${sv>0?'-'+$f(sv):'—'}</td>
-      <td><span class="tag ${w.Status==='Interested'?'s-int':'s-nln'}">${w.Status||'Interested'}</span></td>
+      <td>${ie('Wishlist',w._row,'Status',w.Status,'sel',['Interested','No Longer Needed','Bought'])}</td>
       <td><div style="display:flex;gap:5px;">
-        ${w.Status!=='Bought'?`<button class="btn btn-m" onclick="markBought(${w._row},'${escQ(w.Name)}','${escQ(w.Description)}','${escQ(w.Category)}','${escQ(w.BCost||w.OCost)}')">→ Expenses</button>`:''}
-        <button class="btn btic" onclick="editR2('wish',${w._row})">✎</button>
+        ${w.Status!=='Bought'?`<button class="btn btn-m" onclick="markBought(${w._row})">→ Exp</button>`:''}
         <button class="btn btn-c btic" onclick="delItem('Wishlist',${w._row})">✕</button>
       </div></td>
     </tr>`;
   }).join('');
 }
-async function markBought(row,name,desc,cat,cost){
-  if(!confirm(`Move "${name}" to Expenses as Ordered?`))return;
+async function markBought(row){
+  const w=D.wishlist.find(x=>x._row===row);if(!w)return;
+  if(!confirm(`Move "${w.Name}" to Expenses as Ordered?`))return;
   const today=new Date().toISOString().split('T')[0];
-  await appendRow('Expenses',[name,desc,cat,cost,'',today,'Ordered',cost]);
-  const w=D.wishlist.find(x=>x._row===row);
-  if(w)await updateRow('Wishlist',row,[w.Name,w.Description,w.Category,w.Link,w.OCost,w.BCost,'Bought']);
-  await syncAll();toast(name+' moved to Expenses ✓','ok');
+  await appendRow('Expenses',[w.Name,w.Description,w.Category,w.BCost||w.OCost,'',today,'Ordered',w.OCost]);
+  await updateRow('Wishlist',row,[w.Name,w.Description,w.Category,w.Link,w.OCost,w.BCost,'Bought']);
+  await syncAll();toast(w.Name+' moved to Expenses ✓','ok');
 }
 
 // ── EXPENSES ──
-function renderExp(){
-  const b=document.getElementById('eb');
-  document.getElementById('ec').textContent=D.expenses.length;
-  if(!D.expenses.length){b.innerHTML='<tr><td colspan="8"><div class="empty"><div class="eic">💸</div>No expenses yet</div></td></tr>';return;}
-  b.innerHTML=[...D.expenses].sort((a,z)=>(z.Date||'').localeCompare(a.Date||'')).map(e=>`<tr>
-    <td><span class="tag ${e.Status==='Ordered'?'s-ord':'s-pro'}">${e.Status||'Procured'}</span></td>
-    <td><strong>${esc(e.Name)}</strong></td>
-    <td class="td2">${esc(e.Description||'—')}</td>
-    <td>${catTag(e.Category)}</td>
-    <td class="tred">-${$f(e.Cost)}</td>
-    <td class="td2">${esc(e.Card||'—')}</td>
-    <td class="td3" style="font-size:10px;">${e.Date||'—'}</td>
+function expRow(e){
+  return`<tr>
+    <td>${ie('Expenses',e._row,'Name',e.Name)}</td>
+    <td>${ie('Expenses',e._row,'Description',e.Description)}</td>
+    <td>${ie('Expenses',e._row,'Category',e.Category,'cat')}</td>
+    <td>${ie('Expenses',e._row,'OCost',e.OCost,'num')}</td>
+    <td>${ie('Expenses',e._row,'Cost',e.Cost,'num')}</td>
+    <td>${ie('Expenses',e._row,'Card',e.Card,'card-sel')}</td>
+    <td>${ie('Expenses',e._row,'Date',e.Date,'date')}</td>
     <td><div style="display:flex;gap:5px;">
-      ${e.Status==='Ordered'?`<button class="btn btn-p" onclick="markPro(${e._row})">✓ Received</button>`:''}
-      <button class="btn btic" onclick="editR2('exp',${e._row})">✎</button>
+      ${e.Status==='Ordered'?`<button class="btn btn-p" onclick="markPro(${e._row})">✓ Procured</button>`:''}
       <button class="btn btn-c btic" onclick="delItem('Expenses',${e._row})">✕</button>
     </div></td>
-  </tr>`).join('');
+  </tr>`;
+}
+function renderExp(){
+  const sorted=[...D.expenses].sort((a,z)=>(z.Date||'').localeCompare(a.Date||''));
+  const ordered=sorted.filter(e=>e.Status==='Ordered');
+  const procured=sorted.filter(e=>e.Status!=='Ordered');
+  const bo=document.getElementById('eb-ord');
+  const bp=document.getElementById('eb-pro');
+  document.getElementById('ec-ord').textContent=ordered.length;
+  document.getElementById('ec-pro').textContent=procured.length;
+  document.getElementById('panel-ordered').style.display=ordered.length?'':'none';
+  bo.innerHTML=ordered.length?ordered.map(expRow).join(''):'<tr><td colspan="8"><div class="empty"><div class="eic">📦</div>No ordered items</div></td></tr>';
+  bp.innerHTML=procured.length?procured.map(expRow).join(''):'<tr><td colspan="8"><div class="empty"><div class="eic">✅</div>No procured items yet</div></td></tr>';
 }
 async function markPro(row){
   const e=D.expenses.find(x=>x._row===row);if(!e)return;
-  await updateRow('Expenses',row,[e.Name,e.Description,e.Category,e.Cost,e.Card,e.Date,'Procured',e.OCost]);
+  e.Status='Procured';
+  await updateRow('Expenses',row,HD.expenses.map(h=>e[h]||''));
   await syncAll();toast('Marked Procured ✓','ok');
 }
 
 // ── SUBSCRIPTIONS ──
+function nextRenewalDate(lastRenewal, billing){
+  if(!lastRenewal) return null;
+  const d=new Date(lastRenewal+'T12:00:00');
+  if(billing==='Monthly') d.setMonth(d.getMonth()+1);
+  else if(billing==='Annual') d.setFullYear(d.getFullYear()+1);
+  else if(billing==='BiWeekly') d.setDate(d.getDate()+14);
+  return d.toISOString().split('T')[0];
+}
+function dueCls(nextRenewal){
+  if(!nextRenewal) return '';
+  const diff=(new Date(nextRenewal+'T12:00:00')-new Date())/(1000*60*60*24);
+  if(diff<=0) return 'due-today';
+  if(diff<=1) return 'due-soon';
+  return '';
+}
 function renderSub(){
+  const showCancelled=document.getElementById('show-cancelled')?.checked;
   const b=document.getElementById('sb2');
   const act=D.subscriptions.filter(s=>s.Status!=='Cancelled');
   document.getElementById('sc2').textContent=`${act.length} active`;
   const mo=act.reduce((s,x)=>{const c=parseFloat(x.Cost)||0;return x.Billing==='Annual'?s+c/12:x.Billing==='BiWeekly'?s+c*2.17:s+c;},0);
   const yr=act.reduce((s,x)=>{const c=parseFloat(x.Cost)||0;return x.Billing==='Annual'?s+c:x.Billing==='BiWeekly'?s+c*26:s+c*12;},0);
   const nd=act.filter(s=>s.NextRenewal).sort((a,z)=>a.NextRenewal.localeCompare(z.NextRenewal))[0];
-  document.getElementById('ss2').innerHTML=`<span>Monthly: <strong>${$f(mo)}/mo</strong></span><span>Annual: <strong>${$f(yr)}/yr</strong></span><span>Next: <strong>${nd?nd.Name+' — '+nd.NextRenewal:'—'}</strong></span>`;
-  if(!D.subscriptions.length){b.innerHTML='<tr><td colspan="9"><div class="empty"><div class="eic">🔄</div>No subscriptions yet</div></td></tr>';return;}
+  const totalPaid=act.reduce((s,x)=>{const c=parseFloat(x.Cost)||0,p=parseInt(x.Payments)||0;return s+c*p;},0);
+  document.getElementById('ss2').innerHTML=`<span>Monthly est: <strong>${$f(mo)}/mo</strong></span><span>Annual est: <strong>${$f(yr)}/yr</strong></span><span>Total paid: <strong>${$f(totalPaid)}</strong></span><span>Next due: <strong>${nd?nd.Name+' — '+nd.NextRenewal:'—'}</strong></span>`;
+  if(!D.subscriptions.length){b.innerHTML='<tr><td colspan="10"><div class="empty"><div class="eic">🔄</div>No subscriptions yet</div></td></tr>';return;}
+  // Sort: Monthly first, then Annual, then BiWeekly, then Cancelled
+  const ORDER={'Monthly':0,'Annual':1,'BiWeekly':2,'Cancelled':3};
+  const visible=D.subscriptions
+    .filter(s=>showCancelled||s.Status!=='Cancelled')
+    .sort((a,z)=>(ORDER[a.Billing]??4)-(ORDER[z.Billing]??4));
   let ci=0;
-  b.innerHTML=D.subscriptions.map(s=>`<tr style="${s.Status==='Cancelled'?'opacity:.45':''}">
-    <td><div style="display:flex;align-items:center;gap:7px;"><span class="dot" style="background:${DOT_C[ci++%DOT_C.length]}"></span><strong>${esc(s.Name)}</strong></div></td>
-    <td><span class="tag tdf">${s.Billing||'Monthly'}</span></td>
-    <td class="td2">${esc(s.Card||'—')}</td>
-    <td class="tm">${$f(s.Cost)}</td>
-    <td class="td3" style="font-size:10px;">${s.LastRenewal||'—'}</td>
-    <td class="td3" style="font-size:10px;">${s.NextRenewal||'—'}</td>
-    <td>${catTag(s.Category)}</td>
-    <td><span class="tag ${s.Status==='Cancelled'?'s-can':'s-act'}">${s.Status||'Active'}</span></td>
-    <td><div style="display:flex;gap:5px;">
-      ${s.Status!=='Cancelled'?`<button class="btn btn-c" onclick="cancelSub(${s._row})">Cancel</button>`:''}
-      <button class="btn btic" onclick="editR2('sub',${s._row})">✎</button>
-      <button class="btn btn-c btic" onclick="delItem('Subscriptions',${s._row})">✕</button>
-    </div></td>
-  </tr>`).join('');
+  b.innerHTML=visible.map(s=>{
+    const dc=dueCls(s.NextRenewal);
+    const daysLeft=s.NextRenewal?Math.ceil((new Date(s.NextRenewal+'T12:00:00')-new Date())/(1000*60*60*24)):null;
+    const dueDisplay=s.NextRenewal?(dc?`<span class="due-badge">${daysLeft<=0?'DUE NOW':daysLeft<=1?'DUE SOON':s.NextRenewal}</span>`:s.NextRenewal):'—';
+    const payments=parseInt(s.Payments)||0;
+    return`<tr class="${dc}" style="${s.Status==='Cancelled'?'opacity:.45':''}">
+      <td><div style="display:flex;align-items:center;gap:7px;"><span class="dot" style="background:${DOT_C[ci++%DOT_C.length]}"></span>${ie('Subscriptions',s._row,'Name',s.Name)}</div></td>
+      <td>${ie('Subscriptions',s._row,'Billing',s.Billing,'sel',['Monthly','Annual','BiWeekly'])}</td>
+      <td>${ie('Subscriptions',s._row,'Card',s.Card,'card-sel')}</td>
+      <td>${ie('Subscriptions',s._row,'Cost',s.Cost,'num')}</td>
+      <td class="${dc}">${dueDisplay}</td>
+      <td>${ie('Subscriptions',s._row,'LastRenewal',s.LastRenewal,'date')}</td>
+      <td>${ie('Subscriptions',s._row,'NextRenewal',s.NextRenewal,'date')}</td>
+      <td style="text-align:center;font-family:'DM Mono',monospace;font-size:11px;">${payments}</td>
+      <td>${ie('Subscriptions',s._row,'Category',s.Category,'cat')}</td>
+      <td><div style="display:flex;gap:5px;">
+        ${s.Status!=='Cancelled'?`<button class="btn btn-p" onclick="paySub(${s._row})">✓ Paid</button>`:''}
+        ${s.Status!=='Cancelled'?`<button class="btn btn-c" onclick="cancelSub(${s._row})">Cancel</button>`:''}
+        <button class="btn btn-c btic" onclick="delItem('Subscriptions',${s._row})">✕</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+async function paySub(row){
+  const s=D.subscriptions.find(x=>x._row===row);if(!s)return;
+  const today=new Date().toISOString().split('T')[0];
+  const newNext=nextRenewalDate(today, s.Billing);
+  const payments=(parseInt(s.Payments)||0)+1;
+  s.LastRenewal=today;s.NextRenewal=newNext||s.NextRenewal;s.Payments=String(payments);
+  await updateRow('Subscriptions',row,HD.subscriptions.map(h=>s[h]||''));
+  await syncAll();toast(`${s.Name} paid ✓ — ${payments} total payments`,'ok');
 }
 async function cancelSub(row){
   const s=D.subscriptions.find(x=>x._row===row);
   if(!s||!confirm(`Cancel "${s.Name}"?`))return;
-  await updateRow('Subscriptions',row,[s.Name,s.Billing,s.Card,s.Cost,s.LastRenewal,s.NextRenewal,s.Category,'Cancelled']);
+  s.Status='Cancelled';
+  await updateRow('Subscriptions',row,HD.subscriptions.map(h=>s[h]||''));
   await syncAll();toast(s.Name+' cancelled','ok');
 }
 
@@ -565,16 +781,48 @@ function renderCat(){
   document.getElementById('cc2').textContent=D.categories.length;
   if(!D.categories.length){b.innerHTML='<tr><td colspan="3"><div class="empty"><div class="eic">🏷️</div>No categories</div></td></tr>';return;}
   b.innerHTML=D.categories.map(c=>`<tr>
+    <td>${ie('Categories',c._row,'Name',c.Name)}</td>
+    <td><span style="display:inline-flex;align-items:center;gap:7px;"><span id="cc-${c._row}" style="width:12px;height:12px;border-radius:50%;background:${esc(c.Color||'#666')};display:inline-block"></span>${ie('Categories',c._row,'Color',c.Color)}</span></td>
+    <td><button class="btn btn-c btic" onclick="delItem('Categories',${c._row})">✕</button></td>
+  </tr>`).join('');
+}
+
+// ── CARDS ──
+function renderCards(){
+  const b=document.getElementById('card-body');
+  document.getElementById('card-count').textContent=D.cards.length;
+  if(!D.cards.length){b.innerHTML='<tr><td colspan="5"><div class="empty"><div class="eic">💳</div>No cards yet</div></td></tr>';return;}
+  const TYPE_C={Credit:'tte',Debit:'tfo',Prepaid:'tf',Business:'tho'};
+  b.innerHTML=D.cards.map(c=>`<tr>
     <td><strong>${esc(c.Name)}</strong></td>
-    <td><span style="display:inline-flex;align-items:center;gap:7px;"><span style="width:12px;height:12px;border-radius:50%;background:${esc(c.Color||'#666')};display:inline-block"></span><span class="td2 tm">${esc(c.Color||'—')}</span></span></td>
+    <td class="td2">${esc(c.Bank||'—')}</td>
+    <td>${c.Type?`<span class="tag ${TYPE_C[c.Type]||'tdf'}">${c.Type}</span>`:'—'}</td>
+    <td class="tm td3">••••&nbsp;${esc(c.Last4||'????')}</td>
     <td><div style="display:flex;gap:5px;">
-      <button class="btn btic" onclick="editR2('cat',${c._row})">✎</button>
-      <button class="btn btn-c btic" onclick="delItem('Categories',${c._row})">✕</button>
+      <button class="btn btic" onclick="editR2('card',${c._row})">✎</button>
+      <button class="btn btn-c btic" onclick="delItem('Cards',${c._row})">✕</button>
     </div></td>
   </tr>`).join('');
 }
 
-// ── DELETE ──
+// ── BANKS ──
+function renderBanks(){
+  const b=document.getElementById('bank-body');
+  document.getElementById('bank-count').textContent=D.banks.length;
+  if(!D.banks.length){b.innerHTML='<tr><td colspan="4"><div class="empty"><div class="eic">🏦</div>No banks yet</div></td></tr>';return;}
+  b.innerHTML=D.banks.map(bk=>{
+    const linked=D.cards.filter(c=>c.Bank===bk.Name);
+    return`<tr>
+      <td><strong>${esc(bk.Name)}</strong></td>
+      <td class="td2">${esc(bk.Type||'—')}</td>
+      <td>${linked.length?linked.map(c=>`<span class="tag tdf" style="margin-right:4px;">••••&nbsp;${esc(c.Last4||'????')} ${esc(c.Name)}</span>`).join(''):'<span class="td3">No cards</span>'}</td>
+      <td><div style="display:flex;gap:5px;">
+        <button class="btn btic" onclick="editR2('bank',${bk._row})">✎</button>
+        <button class="btn btn-c btic" onclick="delItem('Banks',${bk._row})">✕</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
 async function delItem(sheet,row){
   if(!confirm('Delete this item?'))return;
   await delRow(sheet,row);await syncAll();toast('Deleted','ok');
@@ -590,18 +838,27 @@ const MF={
   ]},
   exp:{t:'Add Expense',et:'Edit Expense',s:'Expenses',h:HD.expenses,fields:[
     {k:'Name',l:'Name',full:1},{k:'Description',l:'Description',full:1},
-    {k:'Category',l:'Category',tp:'cat'},{k:'Cost',l:'Cost',tp:'num'},
-    {k:'Card',l:'Card Used'},{k:'Date',l:'Date',tp:'date'},
-    {k:'Status',l:'Status',tp:'sel',o:['Ordered','Procured']},{k:'OCost',l:'Original Cost',tp:'num'},
+    {k:'Category',l:'Category',tp:'cat'},{k:'OCost',l:'Original Cost',tp:'num'},
+    {k:'Cost',l:'Bought Cost',tp:'num'},{k:'Card',l:'Card Used',tp:'card-sel'},
+    {k:'Date',l:'Date Bought',tp:'date'},{k:'Status',l:'Status',tp:'sel',o:['Ordered','Procured']},
   ]},
   sub:{t:'Add Subscription',et:'Edit Subscription',s:'Subscriptions',h:HD.subscriptions,fields:[
     {k:'Name',l:'Name',full:1},{k:'Billing',l:'Billing',tp:'sel',o:['Monthly','Annual','BiWeekly']},
-    {k:'Card',l:'Card'},{k:'Cost',l:'Cost',tp:'num'},
+    {k:'Card',l:'Autopay Card',tp:'card-sel'},{k:'Cost',l:'Cost',tp:'num'},
     {k:'LastRenewal',l:'Last Renewal',tp:'date'},{k:'NextRenewal',l:'Next Renewal',tp:'date'},
     {k:'Category',l:'Category',tp:'cat'},{k:'Status',l:'Status',tp:'sel',o:['Active','Cancelled']},
   ]},
   cat:{t:'Add Category',et:'Edit Category',s:'Categories',h:HD.categories,fields:[
     {k:'Name',l:'Name',full:1},{k:'Color',l:'Color hex (e.g. #f59e0b)',full:1},
+  ]},
+  card:{t:'Add Card',et:'Edit Card',s:'Cards',h:HD.cards,fields:[
+    {k:'Name',l:'Card Name',full:1},
+    {k:'Bank',l:'Bank',tp:'bank'},{k:'Type',l:'Card Type',tp:'sel',o:['Credit','Debit','Prepaid','Business']},
+    {k:'Last4',l:'Last 4 digits',full:1},
+  ]},
+  bank:{t:'Add Bank',et:'Edit Bank',s:'Banks',h:HD.banks,fields:[
+    {k:'Name',l:'Bank Name',full:1},
+    {k:'Type',l:'Account Type',tp:'sel',o:['Checking','Savings','Investment','Business'],full:1},
   ]},
 };
 
@@ -617,6 +874,8 @@ function openModal(mode,existing){
     let inp='';
     if(f.tp==='sel') inp=`<select class="fs" id="mf-${f.k}"><option value="">—</option>${f.o.map(o=>`<option ${o===val?'selected':''}>${o}</option>`).join('')}</select>`;
     else if(f.tp==='cat') inp=`<select class="fs" id="mf-${f.k}"><option value="">—</option>${cats.map(o=>`<option ${o===val?'selected':''}>${o}</option>`).join('')}</select>`;
+    else if(f.tp==='bank') inp=`<select class="fs" id="mf-${f.k}"><option value="">—</option>${D.banks.map(bk=>`<option ${bk.Name===val?'selected':''}>${bk.Name}</option>`).join('')}</select>`;
+    else if(f.tp==='card-sel') inp=`<select class="fs" id="mf-${f.k}"><option value="">—</option>${D.cards.map(c=>`<option ${c.Name===val?'selected':''}>${c.Name} (••••${c.Last4})</option>`).join('')}</select>`;
     else if(f.tp==='num') inp=`<input class="fi" id="mf-${f.k}" type="number" step="0.01" placeholder="0.00" value="${esc(val)}">`;
     else if(f.tp==='date') inp=`<input class="fi" id="mf-${f.k}" type="date" value="${esc(val)}">`;
     else inp=`<input class="fi" id="mf-${f.k}" placeholder="${esc(f.l)}" value="${esc(val)}">`;
@@ -625,7 +884,7 @@ function openModal(mode,existing){
   document.getElementById('mo').classList.add('open');
 }
 function editR2(mode,row){
-  const dk=mode==='wish'?'wishlist':mode==='exp'?'expenses':mode==='sub'?'subscriptions':'categories';
+  const dk=mode==='wish'?'wishlist':mode==='exp'?'expenses':mode==='sub'?'subscriptions':mode==='card'?'cards':mode==='bank'?'banks':'categories';
   const item=D[dk].find(x=>x._row===row);if(!item)return;
   editR=row;openModal(mode,item);
 }
