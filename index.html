@@ -4,15 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>💵 Finance Dashboard</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:;">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://apis.google.com/js/api.js" defer></script>
-<script src="https://accounts.google.com/gsi/client" defer></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0c0c0e;--s1:#141416;--s2:#1c1c1f;--s3:#252529;--s4:#2e2e33;
+  --bg:#0c0c0e;--s1:#141416;--s2:#1c1c1f;--s3:#252529;
   --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
   --text:#ebebeb;--text2:#8a8a9a;--text3:#555563;
   --accent:#6c63ff;--accent2:#8b85ff;
@@ -20,7 +17,7 @@
   --pink:#ec4899;--teal:#14b8a6;--orange:#f97316;--purple:#a855f7;
   --r:10px;--r2:14px
 }
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
 
 /* AUTH */
 #auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px}
@@ -36,19 +33,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .ai{width:100%;background:var(--s2);border:1px solid var(--border2);border-radius:var(--r);padding:11px 14px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;margin-bottom:10px;outline:none;transition:border-color .2s}
 .ai:focus{border-color:var(--accent)}
 .ai::placeholder{color:var(--text3)}
-.bp{width:100%;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:opacity .2s}
-.bp:hover{opacity:.85}
+.bp{width:100%;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer}
 .anote{font-size:11px;color:var(--text3);margin-top:14px}
 
 /* APP */
 #app{display:none}
 .hdr{background:var(--s1);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100}
-.hlogo{font-size:17px;font-weight:600;display:flex;align-items:center;gap:8px}
-.hlogo em{color:var(--text2);font-weight:300;font-size:13px;font-style:normal}
+.hlogo{font-size:17px;font-weight:600}
 .hright{display:flex;align-items:center;gap:10px}
-.sbtn{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:7px 13px;color:var(--text2);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;display:flex;align-items:center;gap:5px}
+.sbtn{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:7px 13px;color:var(--text2);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
 .sbtn:hover{background:var(--s3);color:var(--text)}
-.sbtn.spin{color:var(--accent2)}
+.signin-btn{background:var(--accent);color:#fff;border:none;border-radius:var(--r);padding:7px 14px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;display:none}
 .nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 24px;display:flex;gap:2px;overflow-x:auto}
 .nt{padding:12px 15px;font-size:13px;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
 .nt:hover{color:var(--text)}
@@ -155,28 +150,28 @@ tbody td{padding:9px 14px;color:var(--text);vertical-align:middle}
   <div class="auth-card">
     <div class="auth-logo">💵</div>
     <div class="auth-title">Finance Dashboard</div>
-    <div class="auth-sub">Your data lives in Google Sheets — this app reads and writes to it. Works across all your devices.</div>
+    <div class="auth-sub">Your data lives in Google Sheets. Works across all devices.</div>
     <div class="steps">
       <h4>One-time setup</h4>
       <div class="step"><div class="sn">1</div><div>Go to <strong>console.cloud.google.com</strong> → New project → Enable <strong>Google Sheets API</strong></div></div>
-      <div class="step"><div class="sn">2</div><div>Create an <strong>API Key</strong> and an <strong>OAuth 2.0 Client ID</strong> (web app type). Add your GitHub Pages URL to authorized origins.</div></div>
-      <div class="step"><div class="sn">3</div><div>Create a blank <strong>Google Sheet</strong>. Copy the ID from the URL (between /d/ and /edit).</div></div>
-      <div class="step"><div class="sn">4</div><div>Paste everything below and click Connect. Sheets and headers are created automatically.</div></div>
+      <div class="step"><div class="sn">2</div><div>Create an <strong>API Key</strong> and an <strong>OAuth 2.0 Client ID</strong> (web app). Add your GitHub Pages URL to authorized origins.</div></div>
+      <div class="step"><div class="sn">3</div><div>Create a blank <strong>Google Sheet</strong> and copy the ID from the URL.</div></div>
+      <div class="step"><div class="sn">4</div><div>Paste below and click Connect. Everything is created automatically.</div></div>
     </div>
-    <input class="ai" id="in-cid" placeholder="OAuth Client ID  (…apps.googleusercontent.com)">
+    <input class="ai" id="in-cid" placeholder="OAuth Client ID">
     <input class="ai" id="in-key" placeholder="API Key">
     <input class="ai" id="in-sid" placeholder="Google Sheet ID">
     <button class="bp" onclick="connect()">Connect to Google Sheets →</button>
-    <div class="anote">Credentials saved in localStorage — never sent anywhere except Google.</div>
+    <div class="anote">Credentials saved in your browser only — never sent anywhere except Google.</div>
   </div>
 </div>
 
 <div id="app">
   <header class="hdr">
-    <div class="hlogo">💵 Finance <em>Dashboard</em></div>
+    <div class="hlogo">💵 Finance Dashboard</div>
     <div class="hright">
-      <button id="manual-signin" style="display:none;background:var(--accent);color:#fff;border:none;border-radius:var(--r);padding:7px 14px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;" onclick="window._tc&&window._tc.requestAccessToken({prompt:'select_account'})">Sign in with Google</button>
-      <button class="sbtn" id="sbtn" onclick="syncAll()">↻ Sync</button>
+      <button class="signin-btn" id="signin-btn" onclick="doSignIn()">↗ Sign in</button>
+      <button class="sbtn" onclick="syncAll()">↻ Sync</button>
       <button class="btn" onclick="logout()">Disconnect</button>
     </div>
   </header>
@@ -189,7 +184,6 @@ tbody td{padding:9px 14px;color:var(--text);vertical-align:middle}
   </nav>
   <div class="main">
 
-    <!-- DASHBOARD -->
     <div id="tab-dashboard">
       <div class="sg">
         <div class="sc"><div class="sl">Spent this month</div><div class="sv danger" id="s-mo">—</div><div class="ss" id="s-mo2">—</div></div>
@@ -205,47 +199,43 @@ tbody td{padding:9px 14px;color:var(--text);vertical-align:middle}
       </div>
     </div>
 
-    <!-- WISHLIST -->
     <div id="tab-wishlist" style="display:none">
       <div class="panel">
         <div class="ph"><div class="pt">📋 Wishlist <span class="pc" id="wc">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('wish')">+ Add item</button></div></div>
         <div class="tw"><table>
           <thead><tr><th>Name</th><th>Description</th><th>Category</th><th>Link</th><th>Original</th><th>Bought</th><th>Savings</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody id="wb"></tbody>
+          <tbody id="wb"><tr><td colspan="9"><div class="empty"><div class="eic">📋</div>Loading...</div></td></tr></tbody>
         </table></div>
       </div>
     </div>
 
-    <!-- EXPENSES -->
     <div id="tab-expenses" style="display:none">
       <div class="panel">
         <div class="ph"><div class="pt">💸 Expenses <span class="pc" id="ec">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('exp')">+ Add expense</button></div></div>
         <div class="tw"><table>
           <thead><tr><th>Status</th><th>Name</th><th>Description</th><th>Category</th><th>Cost</th><th>Card</th><th>Date</th><th>Actions</th></tr></thead>
-          <tbody id="eb"></tbody>
+          <tbody id="eb"><tr><td colspan="8"><div class="empty"><div class="eic">💸</div>Loading...</div></td></tr></tbody>
         </table></div>
       </div>
     </div>
 
-    <!-- SUBSCRIPTIONS -->
     <div id="tab-subscriptions" style="display:none">
       <div class="panel">
         <div class="ph"><div class="pt">🔄 Subscriptions <span class="pc" id="sc2">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('sub')">+ Add sub</button></div></div>
         <div class="sub-sum" id="ss2">—</div>
         <div class="tw"><table>
           <thead><tr><th>Name</th><th>Billing</th><th>Card</th><th>Cost</th><th>Last Renewal</th><th>Next Renewal</th><th>Category</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody id="sb2"></tbody>
+          <tbody id="sb2"><tr><td colspan="9"><div class="empty"><div class="eic">🔄</div>Loading...</div></td></tr></tbody>
         </table></div>
       </div>
     </div>
 
-    <!-- CATEGORIES -->
     <div id="tab-categories" style="display:none">
       <div class="panel">
         <div class="ph"><div class="pt">🏷️ Categories <span class="pc" id="cc2">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('cat')">+ Add category</button></div></div>
         <div class="tw"><table>
           <thead><tr><th>Name</th><th>Color</th><th>Actions</th></tr></thead>
-          <tbody id="cb"></tbody>
+          <tbody id="cb"><tr><td colspan="3"><div class="empty"><div class="eic">🏷️</div>Loading...</div></td></tr></tbody>
         </table></div>
       </div>
     </div>
@@ -253,7 +243,6 @@ tbody td{padding:9px 14px;color:var(--text);vertical-align:middle}
   </div>
 </div>
 
-<!-- MODAL -->
 <div class="mo" id="mo" onclick="closeMo(event)">
   <div class="md">
     <div class="mtit" id="mt">Add</div>
@@ -267,125 +256,97 @@ tbody td{padding:9px 14px;color:var(--text);vertical-align:middle}
 <div id="toast"></div>
 
 <script>
-// ─── CONFIG ───
-const SH = {expenses:'Expenses',wishlist:'Wishlist',subscriptions:'Subscriptions',categories:'Categories'};
-const HD = {
+// ── CONFIG ──
+const SH={expenses:'Expenses',wishlist:'Wishlist',subscriptions:'Subscriptions',categories:'Categories'};
+const HD={
   expenses:['Name','Description','Category','Cost','Card','Date','Status','OCost'],
   wishlist:['Name','Description','Category','Link','OCost','BCost','Status'],
   subscriptions:['Name','Billing','Card','Cost','LastRenewal','NextRenewal','Category','Status'],
   categories:['Name','Color'],
 };
-const CC = {Fun:'tf',Food:'tfo',Apparel:'tap',Tech:'tte',Home:'tho',Health:'the',Travel:'ttr',Tesla:'tts',PC:'tpc',Life:'tli',Gift:'tgi'};
-const CHART_C = ['#6c63ff','#22c55e','#f59e0b','#ef4444','#14b8a6','#ec4899','#3b82f6','#f97316','#a855f7','#ff6b6b','#60a5fa'];
-const DOT_C = ['#ef4444','#3b82f6','#f97316','#22c55e','#a855f7','#f59e0b','#14b8a6','#ec4899','#6c63ff','#60a5fa','#ff6b6b'];
+const CC={Fun:'tf',Food:'tfo',Apparel:'tap',Tech:'tte',Home:'tho',Health:'the',Travel:'ttr',Tesla:'tts',PC:'tpc',Life:'tli',Gift:'tgi'};
+const CHART_C=['#6c63ff','#22c55e','#f59e0b','#ef4444','#14b8a6','#ec4899','#3b82f6','#f97316','#a855f7','#ff6b6b','#60a5fa'];
+const DOT_C=['#ef4444','#3b82f6','#f97316','#22c55e','#a855f7','#f59e0b','#14b8a6','#ec4899','#6c63ff','#60a5fa','#ff6b6b'];
+const CATS_SEED=[['Fun','#f59e0b'],['Food','#22c55e'],['Apparel','#ec4899'],['Tech','#3b82f6'],['Home','#a855f7'],['Health','#ef4444'],['Travel','#14b8a6'],['Tesla','#ff6b6b'],['PC','#60a5fa'],['Life','#f97316'],['Gift','#f472b6']];
 
-// ─── STATE ───
+// ── STATE ──
 let cfg={}, D={expenses:[],wishlist:[],subscriptions:[],categories:[]}, charts={}, mMode='', editR=-1;
-let _tokenExpiry=0;
+let _tc=null; // token client
 
-// ─── AUTH ───
+// ── CREDENTIALS ──
+function loadCfg(){const s=localStorage.getItem('fin_cfg');if(s){cfg=JSON.parse(s);return true;}return false;}
+function saveCfg(){localStorage.setItem('fin_cfg',JSON.stringify(cfg));}
+function logout(){localStorage.clear();location.reload();}
+
 function connect(){
   const cid=document.getElementById('in-cid').value.trim();
   const key=document.getElementById('in-key').value.trim();
   const sid=document.getElementById('in-sid').value.trim();
   if(!cid||!key||!sid){toast('Fill in all fields','err');return;}
   cfg={cid,key,sid};
-  localStorage.setItem('fin',JSON.stringify(cfg));
-  loadGapi();
-}
-function logout(){localStorage.removeItem('fin');localStorage.removeItem('fin_authed');location.reload();}
-function loadCfg(){const s=localStorage.getItem('fin');if(s){cfg=JSON.parse(s);return true;}return false;}
-
-async function ensureToken(){
-  // If no token client yet or token still valid, skip
-  if(!window._tc) return true;
-  if(Date.now() < _tokenExpiry - 120000) return true;
-  return new Promise((resolve)=>{
-    const tc=google.accounts.oauth2.initTokenClient({
-      client_id:cfg.cid,
-      scope:'https://www.googleapis.com/auth/spreadsheets',
-      callback:(r)=>{
-        if(r.error){ resolve(false); }
-        else { _tokenExpiry=Date.now()+(r.expires_in||3600)*1000; resolve(true); }
-      }
-    });
-    tc.requestAccessToken({prompt:'none'});
-  });
+  saveCfg();
+  bootApp();
 }
 
-// ─── AUTH ───
-function connect(){
-  const cid=document.getElementById('in-cid').value.trim();
-  const key=document.getElementById('in-key').value.trim();
-  const sid=document.getElementById('in-sid').value.trim();
-  if(!cid||!key||!sid){toast('Fill in all fields','err');return;}
-  cfg={cid,key,sid};
-  localStorage.setItem('fin',JSON.stringify(cfg));
-  loadGapi();
+// ── BOOT ──
+function bootApp(){
+  // Show app shell immediately
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  // Load Google API then authenticate
+  loadScript('https://apis.google.com/js/api.js', gapiLoaded);
 }
-function logout(){localStorage.removeItem('fin');localStorage.removeItem('fin_authed');location.reload();}
-function loadCfg(){const s=localStorage.getItem('fin');if(s){cfg=JSON.parse(s);return true;}return false;}
 
-// ─── GAPI ───
-function loadGapi(){
-  
-  const init = () => {
-    gapi.load('client', async () => {
-      try {
-        await gapi.client.init({apiKey:cfg.key, discoveryDocs:['https://sheets.googleapis.com/$discovery/rest?version=v4']});
-        
-        loadGsi();
-      } catch(e) {
-        
-        toast('GAPI init failed: '+e.message,'err');
-      }
-    });
-  };
-  // If gapi already loaded (via defer script tag), use it directly
-  if(typeof gapi !== 'undefined') {
-    
-    init();
-  } else {
-    
-    const check = setInterval(()=>{ if(typeof gapi !== 'undefined'){ clearInterval(check); init(); }}, 100);
-    setTimeout(()=>{ clearInterval(check); if(typeof gapi==='undefined') toast('Google API failed to load — check network','err'); }, 10000);
-  }
-}
-function loadGsi(){
-  
+function loadScript(src, cb){
   const s=document.createElement('script');
-  s.src='https://accounts.google.com/gsi/client';
-  s.onload=()=>{
-    
-    const tc=google.accounts.oauth2.initTokenClient({
-      client_id:cfg.cid,
-      scope:'https://www.googleapis.com/auth/spreadsheets',
-      callback:async(r)=>{
-        
-        if(r.error){
-          toast('Sign in failed: '+r.error+' — try clicking Sync to retry','err');
-          // Show a manual sign in button
-          document.getElementById('manual-signin').style.display='block';
-          return;
-        }
-        document.getElementById('manual-signin').style.display='none';
-        _tokenExpiry = Date.now() + (r.expires_in||3600)*1000;
-        showApp();
-        localStorage.setItem('fin_authed','1');
-        await ensureSheets();
-        await syncAll();
-      }
-    });
-    // Store tc globally so manual signin button can use it
-    window._tc = tc;
-    // Empty prompt = reuse existing Google session silently, no popup if already signed in
-    tc.requestAccessToken({prompt:''});
-  };
-  s.onerror=(e)=>
+  s.src=src;
+  s.onload=cb;
+  s.onerror=()=>toast('Failed to load Google API. Check your internet connection.','err');
   document.head.appendChild(s);
 }
 
-// ─── SHEETS INIT ───
+function gapiLoaded(){
+  gapi.load('client', async()=>{
+    try{
+      await gapi.client.init({
+        apiKey:cfg.key,
+        discoveryDocs:['https://sheets.googleapis.com/$discovery/rest?version=v4']
+      });
+      // Now load GSI for OAuth
+      loadScript('https://accounts.google.com/gsi/client', gsiLoaded);
+    }catch(e){
+      toast('Google API init failed: '+e.message,'err');
+    }
+  });
+}
+
+function gsiLoaded(){
+  _tc=google.accounts.oauth2.initTokenClient({
+    client_id:cfg.cid,
+    scope:'https://www.googleapis.com/auth/spreadsheets',
+    callback:onToken,
+  });
+  doSignIn();
+}
+
+function doSignIn(){
+  if(!_tc){toast('Still loading — please wait...','err');return;}
+  document.getElementById('signin-btn').style.display='none';
+  _tc.requestAccessToken({prompt:''});
+}
+
+async function onToken(r){
+  if(r.error){
+    toast('Sign in required','err');
+    document.getElementById('signin-btn').style.display='block';
+    return;
+  }
+  document.getElementById('signin-btn').style.display='none';
+  await ensureSheets();
+  await syncAll();
+}
+
+// ── SHEETS SETUP ──
 async function ensureSheets(){
   try{
     const meta=await gapi.client.sheets.spreadsheets.get({spreadsheetId:cfg.sid});
@@ -393,18 +354,13 @@ async function ensureSheets(){
     const reqs=[];
     for(const n of Object.values(SH)) if(!ex.includes(n)) reqs.push({addSheet:{properties:{title:n}}});
     if(reqs.length) await gapi.client.sheets.spreadsheets.batchUpdate({spreadsheetId:cfg.sid,resource:{requests:reqs}});
-    for(const[k,n] of Object.entries(SH)) if(!ex.includes(n)) await writeRow(n,1,HD[k]);
-    // seed categories
+    for(const[k,n] of Object.entries(SH)) if(!ex.includes(n)) await updateRow(n,1,HD[k]);
     const cr=await readSheet('Categories');
-    if(cr.length<=1){
-      const cats=[['Fun','#f59e0b'],['Food','#22c55e'],['Apparel','#ec4899'],['Tech','#3b82f6'],
-        ['Home','#a855f7'],['Health','#ef4444'],['Travel','#14b8a6'],['Tesla','#ff6b6b'],['PC','#60a5fa'],['Life','#f97316'],['Gift','#f472b6']];
-      for(const c of cats) await appendRow('Categories',c);
-    }
-  }catch(e){toast('Setup: '+e.message,'err');}
+    if(cr.length<=1) for(const c of CATS_SEED) await appendRow('Categories',c);
+  }catch(e){toast('Setup error: '+e.message,'err');}
 }
 
-// ─── SHEETS I/O ───
+// ── SHEETS I/O ──
 async function readSheet(name){
   const r=await gapi.client.sheets.spreadsheets.values.get({spreadsheetId:cfg.sid,range:name});
   return r.result.values||[];
@@ -416,46 +372,39 @@ async function updateRow(sheet,row,vals){
   const col=String.fromCharCode(64+vals.length);
   await gapi.client.sheets.spreadsheets.values.update({spreadsheetId:cfg.sid,range:`${sheet}!A${row}:${col}${row}`,valueInputOption:'USER_ENTERED',resource:{values:[vals]}});
 }
-async function writeRow(sheet,row,vals){await updateRow(sheet,row,vals);}
-async function deleteRow(sheet,row){
+async function delRow(sheet,row){
   const meta=await gapi.client.sheets.spreadsheets.get({spreadsheetId:cfg.sid});
   const sh=meta.result.sheets.find(s=>s.properties.title===sheet);
   if(!sh)return;
   await gapi.client.sheets.spreadsheets.batchUpdate({spreadsheetId:cfg.sid,resource:{requests:[{deleteDimension:{range:{sheetId:sh.properties.sheetId,dimension:'ROWS',startIndex:row-1,endIndex:row}}}]}});
 }
 
-// ─── SYNC ───
+// ── SYNC ──
 async function syncAll(){
-  const b=document.getElementById('sbtn');
-  b.textContent='↻ Syncing…';b.classList.add('spin');
-  const ok=await ensureToken();
-  if(!ok){
-    toast('Session expired — click Sign In','err');
-    document.getElementById('manual-signin').style.display='block';
-    b.textContent='↻ Sync';b.classList.remove('spin');
-    return;
-  }
+  const b=document.querySelector('.sbtn');
+  if(b){b.textContent='↻ Syncing…';}
   try{
-    const[er,wr,sr,cr]=await Promise.all([readSheet('Expenses'),readSheet('Wishlist'),readSheet('Subscriptions'),readSheet('Categories')]);
-    
+    const[er,wr,sr,cr]=await Promise.all([
+      readSheet('Expenses'),readSheet('Wishlist'),
+      readSheet('Subscriptions'),readSheet('Categories')
+    ]);
     D.expenses=parse(er,HD.expenses);
     D.wishlist=parse(wr,HD.wishlist);
     D.subscriptions=parse(sr,HD.subscriptions);
     D.categories=parse(cr,HD.categories);
-    
     renderAll();
     toast('Synced ✓','ok');
   }catch(e){
-    
-    if(e.status===401||e.status===403){
+    if(e.status===401){
       toast('Session expired — signing in again...','err');
-      window._tc&&window._tc.requestAccessToken({prompt:'select_account'});
+      doSignIn();
     } else {
       toast('Sync failed: '+e.message,'err');
     }
   }
-  b.textContent='↻ Sync';b.classList.remove('spin');
+  if(b){b.textContent='↻ Sync';}
 }
+
 function parse(rows,hd){
   if(!rows||rows.length<2)return[];
   return rows.slice(1).map((r,i)=>{
@@ -465,15 +414,14 @@ function parse(rows,hd){
   }).filter(r=>r[hd[0]]);
 }
 
-// ─── RENDER ───
+// ── RENDER ──
 function renderAll(){renderDash();renderWish();renderExp();renderSub();renderCat();}
-
 function $f(n){return'$'+(parseFloat(n)||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});}
-function catTag(c){const cl=CC[c]||'tdf';return`<span class="tag ${cl}">${c||'—'}</span>`;}
+function catTag(c){return`<span class="tag ${CC[c]||'tdf'}">${c||'—'}</span>`;}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 function escQ(s){return String(s).replace(/'/g,"\\'")}
 
-// ─── DASHBOARD ───
+// ── DASHBOARD ──
 function renderDash(){
   const now=new Date();
   const mo=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
@@ -498,55 +446,46 @@ function renderDash(){
 function renderCharts(){
   Chart.defaults.color='#8a8a9a';
   Chart.defaults.font.family="'DM Sans',sans-serif";
-  // Category
   const ct={};
   D.expenses.filter(e=>e.Status==='Procured').forEach(e=>{ct[e.Category||'Other']=(ct[e.Category||'Other']||0)+(parseFloat(e.Cost)||0);});
-  doughnut('c-cat',Object.keys(ct),Object.values(ct),CHART_C);
-  // Trend
+  donut('c-cat',Object.keys(ct),Object.values(ct),CHART_C);
   const ml=[],mv=[];
-  for(let i=5;i>=0;i--){const d=new Date();d.setMonth(d.getMonth()-i);const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;const lb=d.toLocaleString('default',{month:'short'});const t=D.expenses.filter(e=>e.Status==='Procured'&&e.Date&&e.Date.startsWith(k)).reduce((s,e)=>s+(parseFloat(e.Cost)||0),0);ml.push(lb);mv.push(Math.round(t));}
+  for(let i=5;i>=0;i--){const d=new Date();d.setMonth(d.getMonth()-i);const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;ml.push(d.toLocaleString('default',{month:'short'}));mv.push(Math.round(D.expenses.filter(e=>e.Status==='Procured'&&e.Date&&e.Date.startsWith(k)).reduce((s,e)=>s+(parseFloat(e.Cost)||0),0)));}
   lineChart('c-trend',ml,mv);
-  // Subs
   const st={};
   D.subscriptions.filter(s=>s.Status!=='Cancelled').forEach(s=>{const c=parseFloat(s.Cost)||0;const m=s.Billing==='Annual'?c/12:s.Billing==='BiWeekly'?c*2.17:c;st[s.Category||s.Name]=(st[s.Category||s.Name]||0)+m;});
-  doughnut('c-subs',Object.keys(st),Object.values(st).map(v=>Math.round(v*100)/100),CHART_C);
-  // Status
-  const ord=D.expenses.filter(e=>e.Status==='Ordered').length;
-  const prc=D.expenses.filter(e=>e.Status==='Procured').length;
-  doughnut('c-status',['Ordered','Procured'],[ord,prc],['#f59e0b','#22c55e']);
+  donut('c-subs',Object.keys(st),Object.values(st).map(v=>Math.round(v*100)/100),CHART_C);
+  donut('c-status',['Ordered','Procured'],[D.expenses.filter(e=>e.Status==='Ordered').length,D.expenses.filter(e=>e.Status==='Procured').length],['#f59e0b','#22c55e']);
 }
-function doughnut(id,labels,data,colors){
+function donut(id,labels,data,colors){
   if(charts[id])charts[id].destroy();
-  const ctx=document.getElementById(id).getContext('2d');
-  charts[id]=new Chart(ctx,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors.map(c=>c+'bb'),borderColor:colors,borderWidth:1.5,hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{boxWidth:9,padding:10,font:{size:10}}}},cutout:'65%'}});
+  charts[id]=new Chart(document.getElementById(id).getContext('2d'),{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors.map(c=>c+'bb'),borderColor:colors,borderWidth:1.5,hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{boxWidth:9,padding:10,font:{size:10}}}},cutout:'65%'}});
 }
 function lineChart(id,labels,data){
   if(charts[id])charts[id].destroy();
-  const ctx=document.getElementById(id).getContext('2d');
-  charts[id]=new Chart(ctx,{type:'line',data:{labels,datasets:[{data,borderColor:'#6c63ff',backgroundColor:'rgba(108,99,255,0.07)',borderWidth:2,fill:true,tension:0.4,pointBackgroundColor:'#6c63ff',pointRadius:3.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{font:{size:10}}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{font:{size:10},callback:v=>'$'+v}}}}});
+  charts[id]=new Chart(document.getElementById(id).getContext('2d'),{type:'line',data:{labels,datasets:[{data,borderColor:'#6c63ff',backgroundColor:'rgba(108,99,255,0.07)',borderWidth:2,fill:true,tension:0.4,pointBackgroundColor:'#6c63ff',pointRadius:3.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{font:{size:10}}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{font:{size:10},callback:v=>'$'+v}}}}});
 }
 
-// ─── WISHLIST ───
+// ── WISHLIST ──
 function renderWish(){
   const b=document.getElementById('wb');
   document.getElementById('wc').textContent=D.wishlist.length;
   if(!D.wishlist.length){b.innerHTML='<tr><td colspan="9"><div class="empty"><div class="eic">📋</div>No wishlist items yet</div></td></tr>';return;}
   b.innerHTML=D.wishlist.map(w=>{
     const o=parseFloat(w.OCost)||0,bc=parseFloat(w.BCost)||0,sv=bc>0?o-bc:0;
-    const sc=w.Status==='Interested'?'s-int':'s-nln';
     return`<tr>
       <td><strong>${esc(w.Name)}</strong></td>
       <td class="td2">${esc(w.Description||'—')}</td>
       <td>${catTag(w.Category)}</td>
-      <td>${w.Link?`<a href="${esc(w.Link)}" target="_blank" style="color:var(--accent2);text-decoration:none;font-size:10px;">↗ Link</a>`:'—'}</td>
+      <td>${w.Link?`<a href="${esc(w.Link)}" target="_blank" style="color:var(--accent2);text-decoration:none;font-size:10px;">↗</a>`:'—'}</td>
       <td class="tstr">${o?$f(o):'—'}</td>
       <td class="tm">${bc?$f(bc):'—'}</td>
       <td class="${sv>0?'tgrn':'td3'}">${sv>0?'-'+$f(sv):'—'}</td>
-      <td><span class="tag ${sc}">${w.Status||'Interested'}</span></td>
+      <td><span class="tag ${w.Status==='Interested'?'s-int':'s-nln'}">${w.Status||'Interested'}</span></td>
       <td><div style="display:flex;gap:5px;">
         ${w.Status!=='Bought'?`<button class="btn btn-m" onclick="markBought(${w._row},'${escQ(w.Name)}','${escQ(w.Description)}','${escQ(w.Category)}','${escQ(w.BCost||w.OCost)}')">→ Expenses</button>`:''}
         <button class="btn btic" onclick="editR2('wish',${w._row})">✎</button>
-        <button class="btn btn-c btic" onclick="del('Wishlist',${w._row})">✕</button>
+        <button class="btn btn-c btic" onclick="delItem('Wishlist',${w._row})">✕</button>
       </div></td>
     </tr>`;
   }).join('');
@@ -557,33 +496,28 @@ async function markBought(row,name,desc,cat,cost){
   await appendRow('Expenses',[name,desc,cat,cost,'',today,'Ordered',cost]);
   const w=D.wishlist.find(x=>x._row===row);
   if(w)await updateRow('Wishlist',row,[w.Name,w.Description,w.Category,w.Link,w.OCost,w.BCost,'Bought']);
-  await syncAll();
-  toast(`${name} moved to Expenses ✓`,'ok');
+  await syncAll();toast(name+' moved to Expenses ✓','ok');
 }
 
-// ─── EXPENSES ───
+// ── EXPENSES ──
 function renderExp(){
   const b=document.getElementById('eb');
   document.getElementById('ec').textContent=D.expenses.length;
   if(!D.expenses.length){b.innerHTML='<tr><td colspan="8"><div class="empty"><div class="eic">💸</div>No expenses yet</div></td></tr>';return;}
-  const sorted=[...D.expenses].sort((a,z)=>(z.Date||'').localeCompare(a.Date||''));
-  b.innerHTML=sorted.map(e=>{
-    const sc=e.Status==='Ordered'?'s-ord':'s-pro';
-    return`<tr>
-      <td><span class="tag ${sc}">${e.Status||'Procured'}</span></td>
-      <td><strong>${esc(e.Name)}</strong></td>
-      <td class="td2">${esc(e.Description||'—')}</td>
-      <td>${catTag(e.Category)}</td>
-      <td class="tred">-${$f(e.Cost)}</td>
-      <td class="td2">${esc(e.Card||'—')}</td>
-      <td class="td3" style="font-size:10px;">${e.Date||'—'}</td>
-      <td><div style="display:flex;gap:5px;">
-        ${e.Status==='Ordered'?`<button class="btn btn-p" onclick="markPro(${e._row})">✓ Received</button>`:''}
-        <button class="btn btic" onclick="editR2('exp',${e._row})">✎</button>
-        <button class="btn btn-c btic" onclick="del('Expenses',${e._row})">✕</button>
-      </div></td>
-    </tr>`;
-  }).join('');
+  b.innerHTML=[...D.expenses].sort((a,z)=>(z.Date||'').localeCompare(a.Date||'')).map(e=>`<tr>
+    <td><span class="tag ${e.Status==='Ordered'?'s-ord':'s-pro'}">${e.Status||'Procured'}</span></td>
+    <td><strong>${esc(e.Name)}</strong></td>
+    <td class="td2">${esc(e.Description||'—')}</td>
+    <td>${catTag(e.Category)}</td>
+    <td class="tred">-${$f(e.Cost)}</td>
+    <td class="td2">${esc(e.Card||'—')}</td>
+    <td class="td3" style="font-size:10px;">${e.Date||'—'}</td>
+    <td><div style="display:flex;gap:5px;">
+      ${e.Status==='Ordered'?`<button class="btn btn-p" onclick="markPro(${e._row})">✓ Received</button>`:''}
+      <button class="btn btic" onclick="editR2('exp',${e._row})">✎</button>
+      <button class="btn btn-c btic" onclick="delItem('Expenses',${e._row})">✕</button>
+    </div></td>
+  </tr>`).join('');
 }
 async function markPro(row){
   const e=D.expenses.find(x=>x._row===row);if(!e)return;
@@ -591,7 +525,7 @@ async function markPro(row){
   await syncAll();toast('Marked Procured ✓','ok');
 }
 
-// ─── SUBSCRIPTIONS ───
+// ── SUBSCRIPTIONS ──
 function renderSub(){
   const b=document.getElementById('sb2');
   const act=D.subscriptions.filter(s=>s.Status!=='Cancelled');
@@ -602,34 +536,30 @@ function renderSub(){
   document.getElementById('ss2').innerHTML=`<span>Monthly: <strong>${$f(mo)}/mo</strong></span><span>Annual: <strong>${$f(yr)}/yr</strong></span><span>Next: <strong>${nd?nd.Name+' — '+nd.NextRenewal:'—'}</strong></span>`;
   if(!D.subscriptions.length){b.innerHTML='<tr><td colspan="9"><div class="empty"><div class="eic">🔄</div>No subscriptions yet</div></td></tr>';return;}
   let ci=0;
-  b.innerHTML=D.subscriptions.map(s=>{
-    const col=DOT_C[ci++%DOT_C.length];
-    const sc=s.Status==='Cancelled'?'s-can':'s-act';
-    return`<tr style="${s.Status==='Cancelled'?'opacity:.45':''}">
-      <td><div style="display:flex;align-items:center;gap:7px;"><span class="dot" style="background:${col}"></span><strong>${esc(s.Name)}</strong></div></td>
-      <td><span class="tag tdf">${s.Billing||'Monthly'}</span></td>
-      <td class="td2">${esc(s.Card||'—')}</td>
-      <td class="tm">${$f(s.Cost)}</td>
-      <td class="td3" style="font-size:10px;">${s.LastRenewal||'—'}</td>
-      <td class="td3" style="font-size:10px;">${s.NextRenewal||'—'}</td>
-      <td>${catTag(s.Category)}</td>
-      <td><span class="tag ${sc}">${s.Status||'Active'}</span></td>
-      <td><div style="display:flex;gap:5px;">
-        ${s.Status!=='Cancelled'?`<button class="btn btn-c" onclick="cancelSub(${s._row})">Cancel</button>`:''}
-        <button class="btn btic" onclick="editR2('sub',${s._row})">✎</button>
-        <button class="btn btn-c btic" onclick="del('Subscriptions',${s._row})">✕</button>
-      </div></td>
-    </tr>`;
-  }).join('');
+  b.innerHTML=D.subscriptions.map(s=>`<tr style="${s.Status==='Cancelled'?'opacity:.45':''}">
+    <td><div style="display:flex;align-items:center;gap:7px;"><span class="dot" style="background:${DOT_C[ci++%DOT_C.length]}"></span><strong>${esc(s.Name)}</strong></div></td>
+    <td><span class="tag tdf">${s.Billing||'Monthly'}</span></td>
+    <td class="td2">${esc(s.Card||'—')}</td>
+    <td class="tm">${$f(s.Cost)}</td>
+    <td class="td3" style="font-size:10px;">${s.LastRenewal||'—'}</td>
+    <td class="td3" style="font-size:10px;">${s.NextRenewal||'—'}</td>
+    <td>${catTag(s.Category)}</td>
+    <td><span class="tag ${s.Status==='Cancelled'?'s-can':'s-act'}">${s.Status||'Active'}</span></td>
+    <td><div style="display:flex;gap:5px;">
+      ${s.Status!=='Cancelled'?`<button class="btn btn-c" onclick="cancelSub(${s._row})">Cancel</button>`:''}
+      <button class="btn btic" onclick="editR2('sub',${s._row})">✎</button>
+      <button class="btn btn-c btic" onclick="delItem('Subscriptions',${s._row})">✕</button>
+    </div></td>
+  </tr>`).join('');
 }
 async function cancelSub(row){
   const s=D.subscriptions.find(x=>x._row===row);
   if(!s||!confirm(`Cancel "${s.Name}"?`))return;
   await updateRow('Subscriptions',row,[s.Name,s.Billing,s.Card,s.Cost,s.LastRenewal,s.NextRenewal,s.Category,'Cancelled']);
-  await syncAll();toast(`${s.Name} cancelled`,'ok');
+  await syncAll();toast(s.Name+' cancelled','ok');
 }
 
-// ─── CATEGORIES ───
+// ── CATEGORIES ──
 function renderCat(){
   const b=document.getElementById('cb');
   document.getElementById('cc2').textContent=D.categories.length;
@@ -639,19 +569,18 @@ function renderCat(){
     <td><span style="display:inline-flex;align-items:center;gap:7px;"><span style="width:12px;height:12px;border-radius:50%;background:${esc(c.Color||'#666')};display:inline-block"></span><span class="td2 tm">${esc(c.Color||'—')}</span></span></td>
     <td><div style="display:flex;gap:5px;">
       <button class="btn btic" onclick="editR2('cat',${c._row})">✎</button>
-      <button class="btn btn-c btic" onclick="del('Categories',${c._row})">✕</button>
+      <button class="btn btn-c btic" onclick="delItem('Categories',${c._row})">✕</button>
     </div></td>
   </tr>`).join('');
 }
 
-// ─── DELETE ───
-async function del(sheet,row){
+// ── DELETE ──
+async function delItem(sheet,row){
   if(!confirm('Delete this item?'))return;
-  await deleteRow(sheet,row);
-  await syncAll();toast('Deleted','ok');
+  await delRow(sheet,row);await syncAll();toast('Deleted','ok');
 }
 
-// ─── MODAL CONFIGS ───
+// ── MODAL ──
 const MF={
   wish:{t:'Add Wishlist Item',et:'Edit Wishlist Item',s:'Wishlist',h:HD.wishlist,fields:[
     {k:'Name',l:'Name',full:1},{k:'Description',l:'Description',full:1},
@@ -672,28 +601,26 @@ const MF={
     {k:'Category',l:'Category',tp:'cat'},{k:'Status',l:'Status',tp:'sel',o:['Active','Cancelled']},
   ]},
   cat:{t:'Add Category',et:'Edit Category',s:'Categories',h:HD.categories,fields:[
-    {k:'Name',l:'Name',full:1},{k:'Color',l:'Color hex e.g. #f59e0b',full:1},
+    {k:'Name',l:'Name',full:1},{k:'Color',l:'Color hex (e.g. #f59e0b)',full:1},
   ]},
 };
 
-// ─── MODAL ───
 function openModal(mode,existing){
   mMode=mode;editR=-1;
-  const cfg=MF[mode];
-  document.getElementById('mt').textContent=existing?cfg.et:cfg.t;
+  const c=MF[mode];
+  document.getElementById('mt').textContent=existing?c.et:c.t;
   document.getElementById('msave').textContent=existing?'Update':'Save';
-  const cats=D.categories.map(c=>c.Name);
+  const cats=D.categories.map(x=>x.Name);
   const today=new Date().toISOString().split('T')[0];
-  document.getElementById('mb').innerHTML=`<div class="fg">${cfg.fields.map(f=>{
-    const cls=f.full?'fgr full':'fgr';
+  document.getElementById('mb').innerHTML=`<div class="fg">${c.fields.map(f=>{
     const val=existing?(existing[f.k]||''):(f.tp==='date'?today:'');
     let inp='';
-    if(f.tp==='sel') inp=`<select class="fs" id="mf-${f.k}"><option value="">— Select —</option>${f.o.map(o=>`<option ${o===val?'selected':''}>${o}</option>`).join('')}</select>`;
-    else if(f.tp==='cat') inp=`<select class="fs" id="mf-${f.k}"><option value="">— Select —</option>${cats.map(c=>`<option ${c===val?'selected':''}>${c}</option>`).join('')}</select>`;
+    if(f.tp==='sel') inp=`<select class="fs" id="mf-${f.k}"><option value="">—</option>${f.o.map(o=>`<option ${o===val?'selected':''}>${o}</option>`).join('')}</select>`;
+    else if(f.tp==='cat') inp=`<select class="fs" id="mf-${f.k}"><option value="">—</option>${cats.map(o=>`<option ${o===val?'selected':''}>${o}</option>`).join('')}</select>`;
     else if(f.tp==='num') inp=`<input class="fi" id="mf-${f.k}" type="number" step="0.01" placeholder="0.00" value="${esc(val)}">`;
     else if(f.tp==='date') inp=`<input class="fi" id="mf-${f.k}" type="date" value="${esc(val)}">`;
     else inp=`<input class="fi" id="mf-${f.k}" placeholder="${esc(f.l)}" value="${esc(val)}">`;
-    return`<div class="${cls}"><label class="fl">${f.l}</label>${inp}</div>`;
+    return`<div class="${f.full?'fgr full':'fgr'}"><label class="fl">${f.l}</label>${inp}</div>`;
   }).join('')}</div>`;
   document.getElementById('mo').classList.add('open');
 }
@@ -707,18 +634,18 @@ function closeMo(e){
   document.getElementById('mo').classList.remove('open');editR=-1;
 }
 async function saveMo(){
-  const cfg=MF[mMode];
-  const vals=cfg.h.map(h=>{const el=document.getElementById('mf-'+h);return el?el.value:'';});
+  const c=MF[mMode];
+  const vals=c.h.map(h=>{const el=document.getElementById('mf-'+h);return el?el.value:'';});
   if(!vals[0]){toast('Name is required','err');return;}
   try{
-    if(editR>0){await updateRow(cfg.s,editR,vals);toast('Updated ✓','ok');}
-    else{await appendRow(cfg.s,vals);toast('Saved ✓','ok');}
+    if(editR>0){await updateRow(c.s,editR,vals);toast('Updated ✓','ok');}
+    else{await appendRow(c.s,vals);toast('Saved ✓','ok');}
     document.getElementById('mo').classList.remove('open');
     await syncAll();
   }catch(e){toast('Save failed: '+e.message,'err');}
 }
 
-// ─── UI ───
+// ── UI ──
 function showTab(name,el){
   document.querySelectorAll('[id^="tab-"]').forEach(t=>t.style.display='none');
   document.getElementById('tab-'+name).style.display='';
@@ -735,11 +662,8 @@ function toast(msg,type=''){
   setTimeout(()=>{el.className='';},3000);
 }
 
-// ─── INIT ───
-if(loadCfg()){
-  showApp();
-  loadGapi();
-}
+// ── INIT ──
+if(loadCfg()){bootApp();}
 </script>
 </body>
 </html>
