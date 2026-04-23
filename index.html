@@ -62,7 +62,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .cg{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
 .cc{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);padding:20px}
 .ct{font-size:12px;font-weight:500;color:var(--text2);margin-bottom:14px}
-.cw{position:relative;height:210px}
+.cw{position:relative;height:240px}
 
 /* PANELS */
 .panel{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:14px}
@@ -244,9 +244,9 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 
     <div id="tab-expenses" style="display:none">
       <div class="panel" id="panel-ordered">
-        <div class="ph"><div class="pt">📦 Ordered <span class="pc" id="ec-ord">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('exp')">+ Add expense</button></div></div>
+        <div class="ph"><div class="pt">📦 Ordered <span class="pc" id="ec-ord">0</span></div><div class="pa"><button class="btn" onclick="resetExpColOrder()" style="font-size:10px;color:var(--text3)">Reset cols</button><button class="btn btn-a" onclick="openModal('exp')">+ Add expense</button></div></div>
         <div class="tw"><table>
-          <thead><tr><th>Name</th><th>Description</th><th>Category</th><th>Original Cost</th><th>Bought Cost</th><th>Card</th><th>Date</th><th>Actions</th></tr></thead>
+          <thead></thead>
           <tbody id="eb-ord"></tbody>
         </table></div>
         <div class="show-more" id="sm-ord" onclick="showMore('ord')" style="display:none">Show more</div>
@@ -254,7 +254,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
       <div class="panel" id="panel-procured">
         <div class="ph"><div class="pt">✅ Procured <span class="pc" id="ec-pro">0</span></div></div>
         <div class="tw"><table>
-          <thead><tr><th>Name</th><th>Description</th><th>Category</th><th>Original Cost</th><th>Bought Cost</th><th>Card</th><th>Date</th><th>Actions</th></tr></thead>
+          <thead></thead>
           <tbody id="eb-pro"></tbody>
         </table></div>
         <div class="show-more" id="sm-pro" onclick="showMore('pro')" style="display:none">Show more</div>
@@ -262,7 +262,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
       <div class="panel" id="panel-food">
         <div class="ph"><div class="pt">🍔 Food <span class="pc" id="ec-food">0</span></div></div>
         <div class="tw"><table>
-          <thead><tr><th>Name</th><th>Description</th><th>Original Cost</th><th>Bought Cost</th><th>Card</th><th>Date</th><th>Actions</th></tr></thead>
+          <thead></thead>
           <tbody id="eb-food"></tbody>
         </table></div>
         <div class="show-more" id="sm-food" onclick="showMore('food')" style="display:none">Show more</div>
@@ -277,12 +277,13 @@ td.editing{background:rgba(108,99,255,0.05)!important}
             <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);cursor:pointer;">
               <input type="checkbox" id="show-cancelled" onchange="renderSub()" style="accent-color:var(--accent)"> Show cancelled
             </label>
+            <button class="btn" onclick="resetSubColOrder()" style="font-size:10px;color:var(--text3)">Reset cols</button>
             <button class="btn btn-a" onclick="openModal('sub')">+ Add sub</button>
           </div>
         </div>
         <div class="sub-sum" id="ss2">—</div>
         <div class="tw"><table>
-          <thead><tr><th>Name</th><th>Billing</th><th>Card</th><th>Cost</th><th>Due</th><th>Last Renewal</th><th>Next Renewal</th><th>Payments</th><th>Category</th><th>Actions</th></tr></thead>
+          <thead></thead>
           <tbody id="sb2"></tbody>
         </table></div>
         <div class="show-more" id="sm-sub" onclick="showMore('sub')" style="display:none">Show more</div>
@@ -346,6 +347,7 @@ const HD={
   banks:['Name','Type','Last4'],
 };
 const CC={Fun:'tf',Food:'tfo',Apparel:'tap',Tech:'tte',Home:'tho',Health:'the',Travel:'ttr',Tesla:'tts',PC:'tpc',Life:'tli',Gift:'tgi'};
+const CE={Fun:'🎮',Food:'🍽️',Apparel:'👕',Tech:'📱',Home:'🏠',Health:'🏥',Travel:'✈️',Tesla:'🚗',PC:'🖥️',Life:'🌿',Gift:'🎁'};
 const CHART_C=['#6c63ff','#22c55e','#f59e0b','#ef4444','#14b8a6','#ec4899','#3b82f6','#f97316','#a855f7','#ff6b6b','#60a5fa'];
 const DOT_C=['#ef4444','#3b82f6','#f97316','#22c55e','#a855f7','#f59e0b','#14b8a6','#ec4899','#6c63ff','#60a5fa','#ff6b6b'];
 const CATS_SEED=[['Fun','#f59e0b'],['Food','#22c55e'],['Apparel','#ec4899'],['Tech','#3b82f6'],['Home','#a855f7'],['Health','#ef4444'],['Travel','#14b8a6'],['Tesla','#ff6b6b'],['PC','#60a5fa'],['Life','#f97316'],['Gift','#f472b6']];
@@ -501,7 +503,7 @@ function parse(rows,hd){
 // ── RENDER ──
 function renderAll(){renderDash();renderWish();renderExp();renderSub();renderCat();renderCards();renderBanks();setTimeout(initAllDragCols,0);}
 function $f(n){return'$'+(parseFloat(n)||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});}
-function catTag(c){return`<span class="tag ${CC[c]||'tdf'}">${c||'—'}</span>`;}
+function catTag(c){const e=CE[c]||'';return`<span class="tag ${CC[c]||'tdf'}">${e?e+' ':''} ${c||'—'}</span>`;}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 function escQ(s){return String(s).replace(/'/g,"\\'")}
 
@@ -544,12 +546,13 @@ function renderCharts(){
   const ord=D.expenses.filter(e=>e.Status==='Ordered'&&e.Date&&e.Date.startsWith(yr));
   const act=D.subscriptions.filter(s=>s.Status!=='Cancelled');
 
-  // 1. Annual expenses by category
+  // 1. Annual expenses by category — Style C bar
   const ct={};
-  pro.forEach(e=>{ct[e.Category||'Other']=(ct[e.Category||'Other']||0)+(parseFloat(e.Cost)||0);});
-  donut('c-cat',Object.keys(ct),Object.values(ct),CHART_C);
+  pro.forEach(e=>{const label=(CE[e.Category]||'')+' '+(e.Category||'Other');ct[label.trim()]=(ct[label.trim()]||0)+(parseFloat(e.Cost)||0);});
+  const ctLabels=Object.keys(ct).sort((a,z)=>ct[z]-ct[a]);
+  barChart('c-cat',ctLabels,ctLabels.map(k=>ct[k]));
 
-  // 2. Annual expenses by month
+  // 2. Annual expenses by month — Style B green line
   const months=[],expByMo=[],savByMo=[];
   for(let i=0;i<12;i++){
     const d=new Date(parseInt(yr),i,1);
@@ -557,19 +560,20 @@ function renderCharts(){
     months.push(d.toLocaleString('default',{month:'short'}));
     const moPro=pro.filter(e=>e.Date&&e.Date.startsWith(k));
     expByMo.push(Math.round(moPro.reduce((s,e)=>s+(parseFloat(e.Cost)||0),0)));
-    // savings = sum of (OCost - BCost) for items bought this month
     const moWish=D.wishlist.filter(w=>w.Status==='Bought'&&w.BCost);
     savByMo.push(Math.round(moWish.reduce((s,w)=>{const o=parseFloat(w.OCost)||0,b=parseFloat(w.BCost)||0;return b>0?s+(o-b):s;},0)));
   }
-  lineChart('c-trend',months,expByMo,'#6c63ff');
-  lineChart('c-savings',months,savByMo,'#22c55e');
+  lineChart('c-trend',months,expByMo,'#1aa378');
 
-  // 4. Sub payments this year by sub name (donut)
+  // 3. Annual savings by month — Style B amber line
+  lineChart('c-savings',months,savByMo,'#f59e0b');
+
+  // 4. Sub payments YTD by sub — Style C donut ring
   const subPaid={};
   act.forEach(s=>{const p=parseInt(s.Payments)||0;if(p>0)subPaid[s.Name]=(parseFloat(s.Cost)||0)*p;});
-  donut('c-subpaid',Object.keys(subPaid),Object.values(subPaid),CHART_C);
+  donut('c-subpaid',Object.keys(subPaid),Object.values(subPaid));
 
-  // 5. Sub payments by month — use NextRenewal to estimate
+  // 5. Sub payments by month — Style B purple line
   const subMoData=new Array(12).fill(0);
   act.forEach(s=>{
     const c=parseFloat(s.Cost)||0;
@@ -580,23 +584,127 @@ function renderCharts(){
       if(m>=0&&m<12) subMoData[m]+=c;
     }
   });
-  lineChart('c-submo',months,subMoData.map(v=>Math.round(v)),'#f59e0b');
+  lineChart('c-submo',months,subMoData.map(v=>Math.round(v)),'#6c63ff');
 
-  // 6. Estimated monthly vs annual
+  // 6. Est monthly vs annual — Style C donut ring
   const estMo=act.reduce((s,x)=>{const c=parseFloat(x.Cost)||0;return x.Billing==='Annual'?s+c/12:x.Billing==='BiWeekly'?s+c*2.17:s+c;},0);
-  const estYr=estMo*12;
-  donut('c-subest',['Monthly equiv','Annual total'],[Math.round(estMo),Math.round(estYr)],['#6c63ff','#f97316']);
+  donut('c-subest',['Monthly equiv','Annual total'],[Math.round(estMo),Math.round(estMo*12)]);
 }
 function donut(id,labels,data,colors){
   if(charts[id])charts[id].destroy();
-  charts[id]=new Chart(document.getElementById(id).getContext('2d'),{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors.map(c=>c+'bb'),borderColor:colors,borderWidth:1.5,hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{boxWidth:9,padding:10,font:{size:10}}}},cutout:'65%'}});
+  const el=document.getElementById(id);if(!el)return;
+  // Style C: monochrome ring — brightest slice is the largest
+  const max=Math.max(...data);
+  const mono=data.map(v=>v===max?'rgba(255,255,255,0.88)':'rgba(255,255,255,0.18)');
+  const ctx=el.getContext('2d');
+  charts[id]=new Chart(ctx,{
+    type:'doughnut',
+    data:{labels,datasets:[{data,backgroundColor:mono,borderWidth:0,hoverOffset:3}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      cutout:'75%',
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'rgba(0,0,0,0.75)',
+          titleColor:'#fff',bodyColor:'rgba(255,255,255,0.7)',
+          padding:10,cornerRadius:6,
+          callbacks:{label:ctx=>' '+ctx.label+': $'+Math.round(ctx.raw).toLocaleString()}
+        }
+      }
+    }
+  });
+  // Draw center total label
+  charts[id]._centerLabel='$'+Math.round(data.reduce((a,b)=>a+b,0)).toLocaleString();
 }
-function lineChart(id,labels,data,color='#6c63ff'){
+
+function lineChart(id,labels,data,color='#1aa378'){
   if(charts[id])charts[id].destroy();
   const el=document.getElementById(id);if(!el)return;
-  const rgb=color==='#22c55e'?'34,197,94':color==='#f59e0b'?'245,158,11':'108,99,255';
-  charts[id]=new Chart(el.getContext('2d'),{type:'line',data:{labels,datasets:[{data,borderColor:color,backgroundColor:`rgba(${rgb},0.07)`,borderWidth:2,fill:true,tension:0.4,pointBackgroundColor:color,pointRadius:3.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{font:{size:10}}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{font:{size:10},callback:v=>'$'+v}}}}});
+  const ctx=el.getContext('2d');
+  // Style B: filled area, smooth, no points, subtle grid
+  const grad=ctx.createLinearGradient(0,0,0,el.offsetHeight||200);
+  grad.addColorStop(0,color==='#1aa378'?'rgba(26,163,120,0.28)':color==='#f59e0b'?'rgba(245,158,11,0.22)':'rgba(108,99,255,0.22)');
+  grad.addColorStop(0.7,'rgba(0,0,0,0)');
+  charts[id]=new Chart(ctx,{
+    type:'line',
+    data:{labels,datasets:[{
+      data,
+      borderColor:color,
+      backgroundColor:grad,
+      borderWidth:2,
+      fill:true,
+      tension:0.45,
+      pointRadius:0,
+      pointHoverRadius:5,
+      pointHoverBackgroundColor:color,
+      pointHoverBorderColor:'#fff',
+      pointHoverBorderWidth:2,
+    }]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'rgba(0,0,0,0.75)',
+          titleColor:'#fff',bodyColor:'rgba(255,255,255,0.7)',
+          padding:10,cornerRadius:6,
+          callbacks:{label:ctx=>' $'+Math.round(ctx.raw).toLocaleString()}
+        }
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{color:'rgba(255,255,255,0.3)',font:{size:10}},border:{display:false}},
+        y:{grid:{color:'rgba(255,255,255,0.05)',lineWidth:1},ticks:{color:'rgba(255,255,255,0.3)',font:{size:10},callback:v=>'$'+v.toLocaleString()},border:{display:false}},
+      }
+    }
+  });
 }
+
+function barChart(id,labels,data,color='rgba(255,255,255,0.85)'){
+  if(charts[id])charts[id].destroy();
+  const el=document.getElementById(id);if(!el)return;
+  // Style C: monochrome bars, tallest highlighted
+  const max=Math.max(...data);
+  const bgs=data.map(v=>v===max?'rgba(255,255,255,0.88)':'rgba(255,255,255,0.18)');
+  charts[id]=new Chart(el.getContext('2d'),{
+    type:'bar',
+    data:{labels,datasets:[{data,backgroundColor:bgs,borderRadius:4,borderSkipped:false,barThickness:14}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'rgba(0,0,0,0.75)',
+          titleColor:'#fff',bodyColor:'rgba(255,255,255,0.7)',
+          padding:10,cornerRadius:6,
+          callbacks:{label:ctx=>' $'+Math.round(ctx.raw).toLocaleString()}
+        }
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{color:'rgba(255,255,255,0.3)',font:{size:10}},border:{display:false}},
+        y:{grid:{color:'rgba(255,255,255,0.05)',lineWidth:1},ticks:{color:'rgba(255,255,255,0.3)',font:{size:10},callback:v=>'$'+v.toLocaleString()},border:{display:false}},
+      }
+    }
+  });
+}
+
+// Center label plugin for donut charts
+Chart.register({
+  id:'centerLabel',
+  afterDraw(chart){
+    if(!chart._centerLabel)return;
+    const{ctx,chartArea:{top,bottom,left,right}}=chart;
+    const cx=(left+right)/2,cy=(top+bottom)/2;
+    ctx.save();
+    ctx.font='500 15px DM Sans, sans-serif';
+    ctx.fillStyle='rgba(255,255,255,0.88)';
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText(chart._centerLabel,cx,cy);
+    ctx.restore();
+  }
+});
 
 // ── INLINE EDIT ENGINE ──
 function ie(sheet,row,field,val,type='text',opts=[]){
@@ -762,6 +870,66 @@ function dueCls(nextRenewal){
   if(diff<=1) return 'due-soon';
   return '';
 }
+
+const SUB_COLS_DEFAULT=['Name','Billing','Card','Cost','Due','LastRenewal','NextRenewal','Payments','Category','Actions'];
+let _subColOrder=[...SUB_COLS_DEFAULT];
+
+function loadSubColOrder(){
+  try{const s=localStorage.getItem('fin_sub_cols');if(s){const o=JSON.parse(s);if(Array.isArray(o))_subColOrder=o;}}catch(e){}
+}
+function saveSubColOrder(){
+  try{localStorage.setItem('fin_sub_cols',JSON.stringify(_subColOrder));}catch(e){}
+}
+function resetSubColOrder(){
+  _subColOrder=[...SUB_COLS_DEFAULT];saveSubColOrder();renderSub();initSubDragCols();
+}
+
+let _subDragFrom=null;
+function subDragStart(e,idx){_subDragFrom=idx;e.currentTarget.classList.add('dragging');e.dataTransfer.effectAllowed='move';}
+function subDragDrop(e,toIdx){
+  e.preventDefault();e.currentTarget.classList.remove('drag-over');
+  if(_subDragFrom===null||_subDragFrom===toIdx)return;
+  const moved=_subColOrder.splice(_subDragFrom,1)[0];
+  _subColOrder.splice(toIdx,0,moved);
+  saveSubColOrder();renderSub();initSubDragCols();_subDragFrom=null;
+}
+
+function subThead(){
+  const labels={Name:'Name',Billing:'Billing',Card:'Card',Cost:'Cost',Due:'Due',LastRenewal:'Last Renewal',NextRenewal:'Next Renewal',Payments:'Payments',Category:'Category',Actions:''};
+  return`<tr>${_subColOrder.map((k,i)=>`<th draggable="true"
+    ondragstart="subDragStart(event,${i})"
+    ondragover="event.preventDefault();this.classList.add('drag-over')"
+    ondragleave="this.classList.remove('drag-over')"
+    ondrop="subDragDrop(event,${i})"
+    ondragend="document.querySelectorAll('th').forEach(t=>t.classList.remove('drag-over','dragging'))"
+    >${labels[k]||k}<span class="drag-handle">⠿</span></th>`).join('')}</tr>`;
+}
+
+function subRow(s,ci){
+  const dc=dueCls(s.NextRenewal);
+  const daysLeft=s.NextRenewal?Math.ceil((new Date(s.NextRenewal+'T12:00:00')-new Date())/(1000*60*60*24)):null;
+  const dueDisplay=s.NextRenewal?(dc?`<span class="due-badge">${daysLeft<=0?'DUE NOW':'DUE SOON'}</span>`:s.NextRenewal):'—';
+  const payments=parseInt(s.Payments)||0;
+  const cells={
+    Name:`<td><div style="display:flex;align-items:center;gap:7px;"><span class="dot" style="background:${DOT_C[ci%DOT_C.length]}"></span>${ie('Subscriptions',s._row,'Name',s.Name)}</div></td>`,
+    Billing:`<td>${ie('Subscriptions',s._row,'Billing',s.Billing,'sel',['Monthly','Annual','BiWeekly'])}</td>`,
+    Card:`<td>${ie('Subscriptions',s._row,'Card',s.Card,'card-sel')}</td>`,
+    Cost:`<td>${ie('Subscriptions',s._row,'Cost',s.Cost,'num')}</td>`,
+    Due:`<td class="${dc}">${dueDisplay}</td>`,
+    LastRenewal:`<td>${ie('Subscriptions',s._row,'LastRenewal',s.LastRenewal,'date')}</td>`,
+    NextRenewal:`<td>${ie('Subscriptions',s._row,'NextRenewal',s.NextRenewal,'date')}</td>`,
+    Payments:`<td style="text-align:center;font-family:'DM Mono',monospace;font-size:11px;">${payments}</td>`,
+    Category:`<td>${ie('Subscriptions',s._row,'Category',s.Category,'cat')}</td>`,
+    Actions:`<td><div style="display:flex;gap:5px;">${s.Status!=='Cancelled'?`<button class="btn btn-p" onclick="paySub(${s._row})">✓ Paid</button>`:''} ${s.Status!=='Cancelled'?`<button class="btn btn-c" onclick="cancelSub(${s._row})">Cancel</button>`:''}<button class="btn btn-c btic" onclick="delItem('Subscriptions',${s._row})">✕</button></div></td>`,
+  };
+  return`<tr class="${dc}" style="${s.Status==='Cancelled'?'opacity:.45':''}">${_subColOrder.map(k=>cells[k]||'<td>—</td>').join('')}</tr>`;
+}
+
+function initSubDragCols(){
+  const thead=document.querySelector('#sb2')?.closest('table')?.querySelector('thead');
+  if(thead)thead.innerHTML=subThead();
+}
+
 function renderSub(){
   const showCancelled=document.getElementById('show-cancelled')?.checked;
   const b=document.getElementById('sb2');
@@ -772,40 +940,19 @@ function renderSub(){
   const nd=act.filter(s=>s.NextRenewal).sort((a,z)=>a.NextRenewal.localeCompare(z.NextRenewal))[0];
   const totalPaid=act.reduce((s,x)=>{const c=parseFloat(x.Cost)||0,p=parseInt(x.Payments)||0;return s+c*p;},0);
   document.getElementById('ss2').innerHTML=`<span>Monthly est: <strong>${$f(mo)}/mo</strong></span><span>Annual est: <strong>${$f(yr)}/yr</strong></span><span>Total paid: <strong>${$f(totalPaid)}</strong></span><span>Next due: <strong>${nd?nd.Name+' — '+nd.NextRenewal:'—'}</strong></span>`;
-  if(!D.subscriptions.length){b.innerHTML='<tr><td colspan="10"><div class="empty"><div class="eic">🔄</div>No subscriptions yet</div></td></tr>';return;}
-  // Sort: Monthly first, then Annual, then BiWeekly, then Cancelled
+  if(!D.subscriptions.length){b.innerHTML=`<tr><td colspan="${_subColOrder.length}"><div class="empty"><div class="eic">🔄</div>No subscriptions yet</div></td></tr>`;initSubDragCols();return;}
   const ORDER={'Monthly':0,'Annual':1,'BiWeekly':2,'Cancelled':3};
   const visible=D.subscriptions
     .filter(s=>showCancelled||s.Status!=='Cancelled')
     .sort((a,z)=>(ORDER[a.Billing]??4)-(ORDER[z.Billing]??4));
-  let ci=0;
   const lim=_pages['sub']||PAGE;
   const paged=visible.slice(0,lim);
   const sm=document.getElementById('sm-sub');
   if(sm)sm.style.display=visible.length>lim?'':'none';
   if(sm&&visible.length>lim)sm.textContent=`Show more (${visible.length-lim} remaining)`;
-  b.innerHTML=paged.map(s=>{
-    const dc=dueCls(s.NextRenewal);
-    const daysLeft=s.NextRenewal?Math.ceil((new Date(s.NextRenewal+'T12:00:00')-new Date())/(1000*60*60*24)):null;
-    const dueDisplay=s.NextRenewal?(dc?`<span class="due-badge">${daysLeft<=0?'DUE NOW':daysLeft<=1?'DUE SOON':s.NextRenewal}</span>`:s.NextRenewal):'—';
-    const payments=parseInt(s.Payments)||0;
-    return`<tr class="${dc}" style="${s.Status==='Cancelled'?'opacity:.45':''}">
-      <td><div style="display:flex;align-items:center;gap:7px;"><span class="dot" style="background:${DOT_C[ci++%DOT_C.length]}"></span>${ie('Subscriptions',s._row,'Name',s.Name)}</div></td>
-      <td>${ie('Subscriptions',s._row,'Billing',s.Billing,'sel',['Monthly','Annual','BiWeekly'])}</td>
-      <td>${ie('Subscriptions',s._row,'Card',s.Card,'card-sel')}</td>
-      <td>${ie('Subscriptions',s._row,'Cost',s.Cost,'num')}</td>
-      <td class="${dc}">${dueDisplay}</td>
-      <td>${ie('Subscriptions',s._row,'LastRenewal',s.LastRenewal,'date')}</td>
-      <td>${ie('Subscriptions',s._row,'NextRenewal',s.NextRenewal,'date')}</td>
-      <td style="text-align:center;font-family:'DM Mono',monospace;font-size:11px;">${payments}</td>
-      <td>${ie('Subscriptions',s._row,'Category',s.Category,'cat')}</td>
-      <td><div style="display:flex;gap:5px;">
-        ${s.Status!=='Cancelled'?`<button class="btn btn-p" onclick="paySub(${s._row})">✓ Paid</button>`:''}
-        ${s.Status!=='Cancelled'?`<button class="btn btn-c" onclick="cancelSub(${s._row})">Cancel</button>`:''}
-        <button class="btn btn-c btic" onclick="delItem('Subscriptions',${s._row})">✕</button>
-      </div></td>
-    </tr>`;
-  }).join('');
+  let ci=0;
+  b.innerHTML=paged.map(s=>subRow(s,ci++)).join('');
+  initSubDragCols();
 }
 async function paySub(row){
   const s=D.subscriptions.find(x=>x._row===row);if(!s)return;
@@ -830,7 +977,7 @@ function renderCat(){
   document.getElementById('cc2').textContent=D.categories.length;
   if(!D.categories.length){b.innerHTML='<tr><td colspan="3"><div class="empty"><div class="eic">🏷️</div>No categories</div></td></tr>';return;}
   b.innerHTML=D.categories.map(c=>`<tr>
-    <td>${ie('Categories',c._row,'Name',c.Name)}</td>
+    <td><span style="margin-right:6px;font-size:14px;">${CE[c.Name]||'🏷️'}</span>${ie('Categories',c._row,'Name',c.Name)}</td>
     <td><span style="display:inline-flex;align-items:center;gap:7px;"><span id="cc-${c._row}" style="width:12px;height:12px;border-radius:50%;background:${esc(c.Color||'#666')};display:inline-block"></span>${ie('Categories',c._row,'Color',c.Color)}</span></td>
     <td><button class="btn btn-c btic" onclick="delItem('Categories',${c._row})">✕</button></td>
   </tr>`).join('');
@@ -973,71 +1120,96 @@ function toast(msg,type=''){
 }
 
 // ── COLUMN DRAG & DROP ──
-const COL_ORDER={};
-function saveColOrder(tableId,order){COL_ORDER[tableId]=order;try{localStorage.setItem('fin_cols',JSON.stringify(COL_ORDER));}catch(e){}}
-function loadColOrders(){try{const s=localStorage.getItem('fin_cols');if(s)Object.assign(COL_ORDER,JSON.parse(s));}catch(e){}}
-function initDragCols(tableId){
-  const table=document.getElementById(tableId);
-  if(!table)return;
-  const thead=table.closest('table').querySelector('thead tr');
-  if(!thead)return;
-  const ths=[...thead.querySelectorAll('th')];
-  // Apply saved order
-  const order=COL_ORDER[tableId];
-  if(order){
-    order.forEach((idx,pos)=>{
-      const th=ths[idx];
-      if(th)thead.appendChild(th);
-    });
-  }
-  // Add drag handles and listeners
-  [...thead.querySelectorAll('th')].forEach((th,i)=>{
-    if(!th.querySelector('.drag-handle')){
-      const h=document.createElement('span');
-      h.className='drag-handle';h.textContent='⠿';h.title='Drag to reorder';
-      th.appendChild(h);
-    }
-    th.draggable=true;
-    th.ondragstart=e=>{e.dataTransfer.setData('text/plain',th.cellIndex);th.classList.add('dragging');};
-    th.ondragend=e=>{th.classList.remove('dragging');document.querySelectorAll('th').forEach(t=>t.classList.remove('drag-over'));};
-    th.ondragover=e=>{e.preventDefault();th.classList.add('drag-over');};
-    th.ondragleave=e=>{th.classList.remove('drag-over');};
-    th.ondrop=e=>{
-      e.preventDefault();th.classList.remove('drag-over');
-      const fromIdx=parseInt(e.dataTransfer.getData('text/plain'));
-      const toIdx=th.cellIndex;
-      if(fromIdx===toIdx)return;
-      // Reorder thead
-      const tr=thead;
-      const thArr=[...tr.querySelectorAll('th')];
-      const moving=thArr[fromIdx];
-      if(toIdx<fromIdx){tr.insertBefore(moving,thArr[toIdx]);}
-      else{tr.insertBefore(moving,thArr[toIdx].nextSibling);}
-      // Reorder each tbody row
-      const tbody=table.closest('table').querySelector('tbody');
-      if(tbody){[...tbody.querySelectorAll('tr')].forEach(row=>{
-        const cells=[...row.querySelectorAll('td')];
-        const mc=cells[fromIdx];
-        if(!mc)return;
-        if(toIdx<fromIdx){row.insertBefore(mc,cells[toIdx]);}
-        else if(cells[toIdx+1]){row.insertBefore(mc,cells[toIdx+1]);}
-        else{row.appendChild(mc);}
-      });}
-      // Save order
-      const newOrder=[...tr.querySelectorAll('th')].map(t=>t.dataset.origIdx||0);
-      saveColOrder(tableId,newOrder);
-    };
-  });
+// Instead of DOM manipulation, we store a field order and re-render tables.
+// Expense tables (ord/pro/food) all share one column order.
+
+const EXP_COLS_DEFAULT=['Name','Description','Category','OCost','Cost','Card','Date','Actions'];
+let _expColOrder=[...EXP_COLS_DEFAULT];
+let _dragFromIdx=null;
+
+function loadColOrders(){
+  try{
+    const s=localStorage.getItem('fin_exp_cols');
+    if(s){const o=JSON.parse(s);if(Array.isArray(o))_expColOrder=o;}
+  }catch(e){}
 }
-function initAllDragCols(){
-  ['wb','eb-ord','eb-pro','eb-food','sb2','cb','card-body','bank-body'].forEach(id=>{
-    const tbody=document.getElementById(id);
-    if(tbody)initDragCols(id);
-  });
+function saveExpColOrder(){
+  try{localStorage.setItem('fin_exp_cols',JSON.stringify(_expColOrder));}catch(e){}
+}
+function resetExpColOrder(){
+  _expColOrder=[...EXP_COLS_DEFAULT];
+  saveExpColOrder();
+  renderExp();
+  initAllDragCols();
 }
 
+// Build a single expense row in the current column order
+function expRow(e){
+  const cells={
+    Name:`<td>${ie('Expenses',e._row,'Name',e.Name)}</td>`,
+    Description:`<td>${ie('Expenses',e._row,'Description',e.Description)}</td>`,
+    Category:`<td>${ie('Expenses',e._row,'Category',e.Category,'cat')}</td>`,
+    OCost:`<td>${ie('Expenses',e._row,'OCost',e.OCost,'num')}</td>`,
+    Cost:`<td>${ie('Expenses',e._row,'Cost',e.Cost,'num')}</td>`,
+    Card:`<td>${ie('Expenses',e._row,'Card',e.Card,'card-sel')}</td>`,
+    Date:`<td>${ie('Expenses',e._row,'Date',e.Date,'date')}</td>`,
+    Actions:`<td><div style="display:flex;gap:5px;">${e.Status==='Ordered'?`<button class="btn btn-p" onclick="markPro(${e._row})">✓ Procured</button>`:''}<button class="btn btn-c btic" onclick="delItem('Expenses',${e._row})">✕</button></div></td>`,
+  };
+  return`<tr>${_expColOrder.map(k=>cells[k]||'<td>—</td>').join('')}</tr>`;
+}
+
+// Build thead for expense tables from current order
+function expThead(tbodyId){
+  const labels={Name:'Name',Description:'Description',Category:'Category',OCost:'Original Cost',Cost:'Bought Cost',Card:'Card',Date:'Date',Actions:''};
+  const ncols=_expColOrder.length;
+  return`<tr>${_expColOrder.map((k,i)=>`<th draggable="true" data-colidx="${i}" data-tableid="${tbodyId}"
+    ondragstart="dragColStart(event,${i},'${tbodyId}')"
+    ondragover="event.preventDefault();this.classList.add('drag-over')"
+    ondragleave="this.classList.remove('drag-over')"
+    ondrop="dragColDrop(event,${i},'${tbodyId}')"
+    ondragend="document.querySelectorAll('th').forEach(t=>t.classList.remove('drag-over','dragging'))"
+    >${labels[k]||k}<span class="drag-handle">⠿</span></th>`).join('')}</tr>`;
+}
+
+function dragColStart(e,idx,tableId){
+  _dragFromIdx=idx;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed='move';
+}
+function dragColDrop(e,toIdx,tableId){
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if(_dragFromIdx===null||_dragFromIdx===toIdx)return;
+  // Reorder _expColOrder
+  const moved=_expColOrder.splice(_dragFromIdx,1)[0];
+  _expColOrder.splice(toIdx,0,moved);
+  saveExpColOrder();
+  // Re-render all expense tables with new order
+  renderExp();
+  initAllDragCols();
+  _dragFromIdx=null;
+}
+
+function initDragCols(tbodyId){
+  // For expense tables, inject dynamic thead
+  if(EXP_TABLES.includes(tbodyId)){
+    const tbody=document.getElementById(tbodyId);
+    if(!tbody)return;
+    const table=tbody.closest('table');
+    const thead=table.querySelector('thead');
+    if(thead)thead.innerHTML=expThead(tbodyId);
+  }
+  // For other tables, just add drag handles (static order for now)
+}
+
+const EXP_TABLES=['eb-ord','eb-pro','eb-food'];
+
+function initAllDragCols(){
+  EXP_TABLES.forEach(id=>initDragCols(id));
+}
 // ── INIT ──
 loadColOrders();
+loadSubColOrder();
 if(loadCfg()){bootApp();}
 </script>
 </body>
