@@ -293,25 +293,34 @@ function loadCfg(){const s=localStorage.getItem('fin');if(s){cfg=JSON.parse(s);r
 
 // ─── GAPI ───
 function loadGapi(){
+  console.log('[FIN] Loading GAPI script...');
   const s=document.createElement('script');
   s.src='https://apis.google.com/js/api.js';
-  s.onload=()=>gapi.load('client',async()=>{
-    await gapi.client.init({apiKey:cfg.key,discoveryDocs:['https://sheets.googleapis.com/$discovery/rest?version=v4']});
-    loadGsi();
-  });
+  s.onload=()=>{
+    console.log('[FIN] GAPI loaded, initializing client...');
+    gapi.load('client',async()=>{
+      await gapi.client.init({apiKey:cfg.key,discoveryDocs:['https://sheets.googleapis.com/$discovery/rest?version=v4']});
+      console.log('[FIN] GAPI client initialized, loading GSI...');
+      loadGsi();
+    });
+  };
+  s.onerror=(e)=>console.error('[FIN] GAPI script failed to load',e);
   document.head.appendChild(s);
 }
 function loadGsi(){
+  console.log('[FIN] Loading GSI script...');
   const s=document.createElement('script');
   s.src='https://accounts.google.com/gsi/client';
   s.onload=()=>{
+    console.log('[FIN] GSI loaded, requesting token...');
     const tc=google.accounts.oauth2.initTokenClient({
       client_id:cfg.cid,
       scope:'https://www.googleapis.com/auth/spreadsheets',
       callback:async(r)=>{
+        console.log('[FIN] Token callback fired:', r.error||'SUCCESS');
         if(r.error){
-          // If silent auth failed, try with prompt
           if(r.error==='interaction_required'||r.error==='login_required'){
+            console.log('[FIN] Silent auth failed, trying with prompt...');
             tc.requestAccessToken({prompt:'consent'});
           } else {
             toast('Auth failed: '+r.error,'err');
@@ -324,10 +333,11 @@ function loadGsi(){
         await syncAll();
       }
     });
-    // Try silent first (no popup), falls back via callback if interaction needed
     const isFirstConnect = !localStorage.getItem('fin_authed');
+    console.log('[FIN] First connect?', isFirstConnect);
     tc.requestAccessToken({prompt: isFirstConnect ? 'consent' : 'none'});
   };
+  s.onerror=(e)=>console.error('[FIN] GSI script failed to load',e);
   document.head.appendChild(s);
 }
 
@@ -372,17 +382,23 @@ async function deleteRow(sheet,row){
 
 // ─── SYNC ───
 async function syncAll(){
+  console.log('[FIN] syncAll started...');
   const b=document.getElementById('sbtn');
   b.textContent='↻ Syncing…';b.classList.add('spin');
   try{
     const[er,wr,sr,cr]=await Promise.all([readSheet('Expenses'),readSheet('Wishlist'),readSheet('Subscriptions'),readSheet('Categories')]);
+    console.log('[FIN] Raw data counts — Expenses:',er.length,'Wishlist:',wr.length,'Subs:',sr.length,'Cats:',cr.length);
     D.expenses=parse(er,HD.expenses);
     D.wishlist=parse(wr,HD.wishlist);
     D.subscriptions=parse(sr,HD.subscriptions);
     D.categories=parse(cr,HD.categories);
+    console.log('[FIN] Parsed counts — Expenses:',D.expenses.length,'Wishlist:',D.wishlist.length,'Subs:',D.subscriptions.length,'Cats:',D.categories.length);
     renderAll();
     toast('Synced ✓','ok');
-  }catch(e){toast('Sync failed: '+e.message,'err');}
+  }catch(e){
+    console.error('[FIN] syncAll error:',e);
+    toast('Sync failed: '+e.message,'err');
+  }
   b.textContent='↻ Sync';b.classList.remove('spin');
 }
 function parse(rows,hd){
@@ -665,9 +681,13 @@ function toast(msg,type=''){
 }
 
 // ─── INIT ───
+console.log('[FIN] Script loaded');
 if(loadCfg()){
+  console.log('[FIN] Config found:', JSON.stringify({cid:cfg.cid?cfg.cid.slice(0,20)+'…':'MISSING',key:cfg.key?'present':'MISSING',sid:cfg.sid?cfg.sid.slice(0,10)+'…':'MISSING'}));
   showApp();
   loadGapi();
+} else {
+  console.log('[FIN] No config saved — showing auth screen');
 }
 </script>
 </body>
