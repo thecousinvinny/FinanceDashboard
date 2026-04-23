@@ -688,8 +688,10 @@ function showTab(name,el){
   el.classList.add('on');
 }
 function showApp(){
+  console.log('[FIN] showApp called');
   document.getElementById('auth-screen').style.display='none';
-  document.getElementById('app').style.display='';
+  document.getElementById('app').style.display='block';
+  console.log('[FIN] app display:', document.getElementById('app').style.display);
 }
 function toast(msg,type=''){
   const el=document.getElementById('toast');
