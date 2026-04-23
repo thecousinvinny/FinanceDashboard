@@ -297,40 +297,40 @@ function loadCfg(){const s=localStorage.getItem('fin');if(s){cfg=JSON.parse(s);r
 
 // ─── GAPI ───
 function loadGapi(){
-  console.log('[FIN] Initializing GAPI client...');
+  
   const init = () => {
     gapi.load('client', async () => {
       try {
         await gapi.client.init({apiKey:cfg.key, discoveryDocs:['https://sheets.googleapis.com/$discovery/rest?version=v4']});
-        console.log('[FIN] GAPI client initialized, loading GSI...');
+        
         loadGsi();
       } catch(e) {
-        console.error('[FIN] GAPI init error:', e);
+        
         toast('GAPI init failed: '+e.message,'err');
       }
     });
   };
   // If gapi already loaded (via defer script tag), use it directly
   if(typeof gapi !== 'undefined') {
-    console.log('[FIN] GAPI already available');
+    
     init();
   } else {
-    console.log('[FIN] Waiting for GAPI...');
+    
     const check = setInterval(()=>{ if(typeof gapi !== 'undefined'){ clearInterval(check); init(); }}, 100);
     setTimeout(()=>{ clearInterval(check); if(typeof gapi==='undefined') toast('Google API failed to load — check network','err'); }, 10000);
   }
 }
 function loadGsi(){
-  console.log('[FIN] Loading GSI script...');
+  
   const s=document.createElement('script');
   s.src='https://accounts.google.com/gsi/client';
   s.onload=()=>{
-    console.log('[FIN] GSI loaded, requesting token...');
+    
     const tc=google.accounts.oauth2.initTokenClient({
       client_id:cfg.cid,
       scope:'https://www.googleapis.com/auth/spreadsheets',
       callback:async(r)=>{
-        console.log('[FIN] Token callback fired:', r.error||'SUCCESS');
+        
         if(r.error){
           toast('Sign in failed: '+r.error+' — try clicking Sync to retry','err');
           // Show a manual sign in button
@@ -346,10 +346,10 @@ function loadGsi(){
     });
     // Store tc globally so manual signin button can use it
     window._tc = tc;
-    console.log('[FIN] Requesting token with select_account prompt...');
+    
     tc.requestAccessToken({prompt:'select_account'});
   };
-  s.onerror=(e)=>console.error('[FIN] GSI script failed to load',e);
+  s.onerror=(e)=>
   document.head.appendChild(s);
 }
 
@@ -394,21 +394,21 @@ async function deleteRow(sheet,row){
 
 // ─── SYNC ───
 async function syncAll(){
-  console.log('[FIN] syncAll started...');
+  
   const b=document.getElementById('sbtn');
   b.textContent='↻ Syncing…';b.classList.add('spin');
   try{
     const[er,wr,sr,cr]=await Promise.all([readSheet('Expenses'),readSheet('Wishlist'),readSheet('Subscriptions'),readSheet('Categories')]);
-    console.log('[FIN] Raw data counts — Expenses:',er.length,'Wishlist:',wr.length,'Subs:',sr.length,'Cats:',cr.length);
+    
     D.expenses=parse(er,HD.expenses);
     D.wishlist=parse(wr,HD.wishlist);
     D.subscriptions=parse(sr,HD.subscriptions);
     D.categories=parse(cr,HD.categories);
-    console.log('[FIN] Parsed counts — Expenses:',D.expenses.length,'Wishlist:',D.wishlist.length,'Subs:',D.subscriptions.length,'Cats:',D.categories.length);
+    
     renderAll();
     toast('Synced ✓','ok');
   }catch(e){
-    console.error('[FIN] syncAll error:',e);
+    
     if(e.status===401||e.status===403){
       toast('Session expired — signing in again...','err');
       window._tc&&window._tc.requestAccessToken({prompt:'select_account'});
@@ -688,10 +688,8 @@ function showTab(name,el){
   el.classList.add('on');
 }
 function showApp(){
-  console.log('[FIN] showApp called');
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app').style.display='block';
-  console.log('[FIN] app display:', document.getElementById('app').style.display);
 }
 function toast(msg,type=''){
   const el=document.getElementById('toast');
@@ -700,13 +698,9 @@ function toast(msg,type=''){
 }
 
 // ─── INIT ───
-console.log('[FIN] Script loaded');
 if(loadCfg()){
-  console.log('[FIN] Config found:', JSON.stringify({cid:cfg.cid?cfg.cid.slice(0,20)+'…':'MISSING',key:cfg.key?'present':'MISSING',sid:cfg.sid?cfg.sid.slice(0,10)+'…':'MISSING'}));
   showApp();
   loadGapi();
-} else {
-  console.log('[FIN] No config saved — showing auth screen');
 }
 </script>
 </body>
