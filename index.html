@@ -288,7 +288,7 @@ function connect(){
   localStorage.setItem('fin',JSON.stringify(cfg));
   loadGapi();
 }
-function logout(){localStorage.removeItem('fin');location.reload();}
+function logout(){localStorage.removeItem('fin');localStorage.removeItem('fin_authed');location.reload();}
 function loadCfg(){const s=localStorage.getItem('fin');if(s){cfg=JSON.parse(s);return true;}return false;}
 
 // ─── GAPI ───
@@ -309,13 +309,24 @@ function loadGsi(){
       client_id:cfg.cid,
       scope:'https://www.googleapis.com/auth/spreadsheets',
       callback:async(r)=>{
-        if(r.error){toast('Auth failed','err');return;}
+        if(r.error){
+          // If silent auth failed, try with prompt
+          if(r.error==='interaction_required'||r.error==='login_required'){
+            tc.requestAccessToken({prompt:'consent'});
+          } else {
+            toast('Auth failed: '+r.error,'err');
+          }
+          return;
+        }
         showApp();
+        localStorage.setItem('fin_authed','1');
         await ensureSheets();
         await syncAll();
       }
     });
-    tc.requestAccessToken({prompt:''});
+    // Try silent first (no popup), falls back via callback if interaction needed
+    const isFirstConnect = !localStorage.getItem('fin_authed');
+    tc.requestAccessToken({prompt: isFirstConnect ? 'consent' : 'none'});
   };
   document.head.appendChild(s);
 }
@@ -655,8 +666,7 @@ function toast(msg,type=''){
 
 // ─── INIT ───
 if(loadCfg()){
-  document.getElementById('auth-screen').style.display='none';
-  document.getElementById('app').style.display='';
+  showApp();
   loadGapi();
 }
 </script>
