@@ -281,6 +281,30 @@ const DOT_C = ['#ef4444','#3b82f6','#f97316','#22c55e','#a855f7','#f59e0b','#14b
 
 // ─── STATE ───
 let cfg={}, D={expenses:[],wishlist:[],subscriptions:[],categories:[]}, charts={}, mMode='', editR=-1;
+let _tokenExpiry=0;
+
+// ─── AUTH ───
+function connect(){
+  const cid=document.getElementById('in-cid').value.trim();
+  const key=document.getElementById('in-key').value.trim();
+  const sid=document.getElementById('in-sid').value.trim();
+  if(!cid||!key||!sid){toast('Fill in all fields','err');return;}
+  cfg={cid,key,sid};
+  localStorage.setItem('fin',JSON.stringify(cfg));
+  loadGapi();
+}
+function logout(){localStorage.removeItem('fin');localStorage.removeItem('fin_authed');location.reload();}
+function loadCfg(){const s=localStorage.getItem('fin');if(s){cfg=JSON.parse(s);return true;}return false;}
+
+async function ensureToken(){
+  // If token expires in less than 2 minutes, refresh it silently
+  if(Date.now() < _tokenExpiry - 120000) return true;
+  return new Promise((resolve)=>{
+    window._tc.requestAccessToken({prompt:'none', callback:(r)=>{
+      if(r.error){ resolve(false); } else { _tokenExpiry=Date.now()+(r.expires_in||3600)*1000; resolve(true); }
+    }});
+  });
+}
 
 // ─── AUTH ───
 function connect(){
@@ -338,6 +362,7 @@ function loadGsi(){
           return;
         }
         document.getElementById('manual-signin').style.display='none';
+        _tokenExpiry = Date.now() + (r.expires_in||3600)*1000;
         showApp();
         localStorage.setItem('fin_authed','1');
         await ensureSheets();
@@ -394,9 +419,15 @@ async function deleteRow(sheet,row){
 
 // ─── SYNC ───
 async function syncAll(){
-  
   const b=document.getElementById('sbtn');
   b.textContent='↻ Syncing…';b.classList.add('spin');
+  const ok=await ensureToken();
+  if(!ok){
+    toast('Session expired — click Sign In','err');
+    document.getElementById('manual-signin').style.display='block';
+    b.textContent='↻ Sync';b.classList.remove('spin');
+    return;
+  }
   try{
     const[er,wr,sr,cr]=await Promise.all([readSheet('Expenses'),readSheet('Wishlist'),readSheet('Subscriptions'),readSheet('Categories')]);
     
