@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>💵 Finance Dashboard</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:;">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://apis.google.com/js/api.js" defer></script>
+<script src="https://accounts.google.com/gsi/client" defer></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -172,6 +175,7 @@ tbody td{padding:9px 14px;color:var(--text);vertical-align:middle}
   <header class="hdr">
     <div class="hlogo">💵 Finance <em>Dashboard</em></div>
     <div class="hright">
+      <button id="manual-signin" style="display:none;background:var(--accent);color:#fff;border:none;border-radius:var(--r);padding:7px 14px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;" onclick="window._tc&&window._tc.requestAccessToken({prompt:'select_account'})">Sign in with Google</button>
       <button class="sbtn" id="sbtn" onclick="syncAll()">↻ Sync</button>
       <button class="btn" onclick="logout()">Disconnect</button>
     </div>
@@ -293,19 +297,28 @@ function loadCfg(){const s=localStorage.getItem('fin');if(s){cfg=JSON.parse(s);r
 
 // ─── GAPI ───
 function loadGapi(){
-  console.log('[FIN] Loading GAPI script...');
-  const s=document.createElement('script');
-  s.src='https://apis.google.com/js/api.js';
-  s.onload=()=>{
-    console.log('[FIN] GAPI loaded, initializing client...');
-    gapi.load('client',async()=>{
-      await gapi.client.init({apiKey:cfg.key,discoveryDocs:['https://sheets.googleapis.com/$discovery/rest?version=v4']});
-      console.log('[FIN] GAPI client initialized, loading GSI...');
-      loadGsi();
+  console.log('[FIN] Initializing GAPI client...');
+  const init = () => {
+    gapi.load('client', async () => {
+      try {
+        await gapi.client.init({apiKey:cfg.key, discoveryDocs:['https://sheets.googleapis.com/$discovery/rest?version=v4']});
+        console.log('[FIN] GAPI client initialized, loading GSI...');
+        loadGsi();
+      } catch(e) {
+        console.error('[FIN] GAPI init error:', e);
+        toast('GAPI init failed: '+e.message,'err');
+      }
     });
   };
-  s.onerror=(e)=>console.error('[FIN] GAPI script failed to load',e);
-  document.head.appendChild(s);
+  // If gapi already loaded (via defer script tag), use it directly
+  if(typeof gapi !== 'undefined') {
+    console.log('[FIN] GAPI already available');
+    init();
+  } else {
+    console.log('[FIN] Waiting for GAPI...');
+    const check = setInterval(()=>{ if(typeof gapi !== 'undefined'){ clearInterval(check); init(); }}, 100);
+    setTimeout(()=>{ clearInterval(check); if(typeof gapi==='undefined') toast('Google API failed to load — check network','err'); }, 10000);
+  }
 }
 function loadGsi(){
   console.log('[FIN] Loading GSI script...');
@@ -319,23 +332,22 @@ function loadGsi(){
       callback:async(r)=>{
         console.log('[FIN] Token callback fired:', r.error||'SUCCESS');
         if(r.error){
-          if(r.error==='interaction_required'||r.error==='login_required'){
-            console.log('[FIN] Silent auth failed, trying with prompt...');
-            tc.requestAccessToken({prompt:'consent'});
-          } else {
-            toast('Auth failed: '+r.error,'err');
-          }
+          toast('Sign in failed: '+r.error+' — try clicking Sync to retry','err');
+          // Show a manual sign in button
+          document.getElementById('manual-signin').style.display='block';
           return;
         }
+        document.getElementById('manual-signin').style.display='none';
         showApp();
         localStorage.setItem('fin_authed','1');
         await ensureSheets();
         await syncAll();
       }
     });
-    const isFirstConnect = !localStorage.getItem('fin_authed');
-    console.log('[FIN] First connect?', isFirstConnect);
-    tc.requestAccessToken({prompt: isFirstConnect ? 'consent' : 'none'});
+    // Store tc globally so manual signin button can use it
+    window._tc = tc;
+    console.log('[FIN] Requesting token with select_account prompt...');
+    tc.requestAccessToken({prompt:'select_account'});
   };
   s.onerror=(e)=>console.error('[FIN] GSI script failed to load',e);
   document.head.appendChild(s);
@@ -397,7 +409,12 @@ async function syncAll(){
     toast('Synced ✓','ok');
   }catch(e){
     console.error('[FIN] syncAll error:',e);
-    toast('Sync failed: '+e.message,'err');
+    if(e.status===401||e.status===403){
+      toast('Session expired — signing in again...','err');
+      window._tc&&window._tc.requestAccessToken({prompt:'select_account'});
+    } else {
+      toast('Sync failed: '+e.message,'err');
+    }
   }
   b.textContent='↻ Sync';b.classList.remove('spin');
 }
