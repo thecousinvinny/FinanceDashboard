@@ -303,9 +303,9 @@ td.editing{background:rgba(108,99,255,0.05)!important}
             <div class="dash-page-label">📊 All Time</div>
             <div class="cg4">
               <div class="cc"><div class="ct">Expenses by category</div><div class="cw"><canvas id="c-all-cat"></canvas></div></div>
-              <div class="cc"><div class="ct">Expenses by month (last 12)</div><div class="cw"><canvas id="c-all-trend"></canvas></div></div>
-              <div class="cc"><div class="ct">Savings by month (last 12)</div><div class="cw"><canvas id="c-all-savings"></canvas></div></div>
-              <div class="cc"><div class="ct">Sub payments by month (last 12)</div><div class="cw"><canvas id="c-all-submo"></canvas></div></div>
+              <div class="cc"><div class="ct">Expenses by month (all time)</div><div class="cw"><canvas id="c-all-trend"></canvas></div></div>
+              <div class="cc"><div class="ct">Savings by month (all time)</div><div class="cw"><canvas id="c-all-savings"></canvas></div></div>
+              <div class="cc"><div class="ct">Sub payments by month (all time)</div><div class="cw"><canvas id="c-all-submo"></canvas></div></div>
             </div>
             <div class="swipe-hint">← Swipe left for current year</div>
           </div>
@@ -978,12 +978,18 @@ function renderCharts(){
   lineChart('c-yr-savings',yrMonths,monthlySavings(yrKeys),'#f59e0b');
   lineChart('c-yr-submo',yrMonths,subPayByMonth(yrKeys),'#6c63ff');
 
-  // ── ALL TIME (last 12 rolling months) ──
+  // ── ALL TIME (earliest expense → today) ──
   const allMonths=[], allKeys=[];
-  for(let i=11;i>=0;i--){
-    const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);
-    allKeys.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
-    allMonths.push(d.toLocaleString('default',{month:'short'})+"'"+String(d.getFullYear()).slice(2));
+  const allDates=pro.map(e=>toSortableDate(e.Date)).filter(Boolean).sort();
+  const earliest=allDates[0]||`${new Date().getFullYear()-1}-01`;
+  let ay=parseInt(earliest.slice(0,4)), am=parseInt(earliest.slice(5,7));
+  const nowY=new Date().getFullYear(), nowM=new Date().getMonth()+1;
+  while(ay<nowY||(ay===nowY&&am<=nowM)){
+    const k=`${ay}-${String(am).padStart(2,'0')}`;
+    const d=new Date(ay,am-1,1);
+    allKeys.push(k);
+    allMonths.push(d.toLocaleString('default',{month:'short'})+' \''+String(ay).slice(2));
+    am++;if(am>12){am=1;ay++;}
   }
   const allCat=catBreakdown(pro);
   barChart('c-all-cat',allCat.labels,allCat.vals);
