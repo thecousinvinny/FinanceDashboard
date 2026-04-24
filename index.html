@@ -396,7 +396,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
           </div>
         </div>
         <div class="tw"><table>
-          <thead><tr><th class="col-date">Date</th><th class="col-sm">Type</th><th class="col-lg">Name</th><th>Description</th><th class="col-md">Category</th><th class="col-num">Cost</th><th class="col-num">Original</th><th class="col-num">Savings</th><th class="col-md">Card</th><th class="col-md">Bank</th><th class="col-md">Billing</th><th class="col-md">Status</th><th class="col-sm">Source</th></tr></thead>
+          <thead><tr><th class="col-date">Date</th><th class="col-sm">Type</th><th class="col-lg">Name</th><th>Description</th><th class="col-md">Category</th><th class="col-num">Cost</th><th class="col-num">Original</th><th class="col-num">Savings</th><th class="col-md">Card</th><th class="col-md">Bank</th><th class="col-md">Billing</th><th class="col-md">Status</th><th class="col-sm">Source</th><th class="col-act"></th></tr></thead>
           <tbody id="master-body"><tr><td colspan="13"><div class="empty"><div class="eic">📊</div>Loading...</div></td></tr></tbody>
         </table></div>
         <div class="show-more" id="sm-master" onclick="showMore('master')" style="display:none">Show more</div>
@@ -1433,7 +1433,7 @@ function renderMaster(){
   // Sort by date descending by default
   rows.sort((a,z)=>toSortableDate(z.Date).localeCompare(toSortableDate(a.Date)));
   document.getElementById('master-count').textContent=rows.length;
-  if(!rows.length){b.innerHTML='<tr><td colspan="13"><div class="empty"><div class="eic">📊</div>No entries yet — data flows here when you add expenses, move wishlist items, or pay subscriptions</div></td></tr>';if(sm)sm.style.display='none';return;}
+  if(!rows.length){b.innerHTML='<tr><td colspan="14"><div class="empty"><div class="eic">📊</div>No entries yet — data flows here when you add expenses, move wishlist items, or pay subscriptions</div></td></tr>';if(sm)sm.style.display='none';return;}
   const lim=_pages['master']||PAGE;
   const paged=rows.slice(0,lim);
   if(sm)sm.style.display=rows.length>lim?'':'none';
@@ -1456,6 +1456,7 @@ function renderMaster(){
       <td>${ie('Master',m._row,'Billing',m.Billing,'sel',['Monthly','Annual','BiWeekly',''])}</td>
       <td>${ie('Master',m._row,'Status',m.Status,'sel',['Procured','Ordered','Paid','Cancelled',''])}</td>
       <td class="td3" style="font-size:10px;">${esc(m.Source||'—')}</td>
+      <td><button class="btn btn-c btic" onclick="delItem('Master',${m._row})">✕</button></td>
     </tr>`;
   }).join('');
 }
