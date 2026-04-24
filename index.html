@@ -642,7 +642,10 @@ async function repairAllSheets(){
 
 // ── SHEETS I/O ──
 async function readSheet(name){
-  const r=await gapi.client.sheets.spreadsheets.values.get({spreadsheetId:cfg.sid,range:name});
+  const r=await gapi.client.sheets.spreadsheets.values.get({
+    spreadsheetId:cfg.sid,
+    range:`${name}!A1:Z10000`,
+  });
   return r.result.values||[];
 }
 async function appendRow(sheet,vals){
@@ -1415,7 +1418,7 @@ function renderMaster(){
   if(!b)return;
   const filter=document.getElementById('master-filter')?.value||'';
   const rows=filter?D.master.filter(m=>m.Type===filter):[...D.master];
-  // Sort by date descending
+  // Sort by date descending by default
   rows.sort((a,z)=>(z.Date||'').localeCompare(a.Date||''));
   document.getElementById('master-count').textContent=rows.length;
   if(!rows.length){b.innerHTML='<tr><td colspan="13"><div class="empty"><div class="eic">📊</div>No entries yet — data flows here when you add expenses, move wishlist items, or pay subscriptions</div></td></tr>';if(sm)sm.style.display='none';return;}
