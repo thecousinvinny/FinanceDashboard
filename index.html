@@ -192,6 +192,8 @@ td.editing{background:rgba(108,99,255,0.05)!important}
   <header class="hdr">
     <div class="hlogo">💵 Finance Dashboard</div>
     <div class="hright">
+      <button class="btn btn-a" style="gap:5px;" onclick="openFoodMo()">🍽️ + Food</button>
+      <button class="btn btn-a" style="gap:5px;" onclick="openModal('wish')">📋 + Wishlist</button>
       <button class="signin-btn" id="signin-btn" onclick="doSignIn()">↗ Sign in</button>
       <button class="sbtn" onclick="syncAll()">↻ Sync</button>
       <button class="btn" onclick="logout()">Disconnect</button>
@@ -205,6 +207,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
     <div class="nt" onclick="showTab('categories',this)">Categories</div>
     <div class="nt" onclick="showTab('cards',this)">Cards</div>
     <div class="nt" onclick="showTab('banks',this)">Banks</div>
+    <div class="nt" onclick="showTab('master',this)">Master</div>
   </nav>
   <div class="main">
 
@@ -235,7 +238,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
       <div class="panel">
         <div class="ph"><div class="pt">📋 Wishlist <span class="pc" id="wc">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('wish')">+ Add item</button></div></div>
         <div class="tw"><table>
-          <thead><tr><th>Name</th><th>Description</th><th>Category</th><th>Link</th><th>Original</th><th>Bought</th><th>Savings</th><th>Status</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Name</th><th>Description</th><th>Category</th><th>Link</th><th>Original</th><th>Bought</th><th>Savings</th><th></th><th></th><th></th></tr></thead>
           <tbody id="wb"></tbody>
         </table></div>
         <div class="show-more" id="sm-wish" onclick="showMore('wish')" style="display:none">Show more</div>
@@ -320,6 +323,26 @@ td.editing{background:rgba(108,99,255,0.05)!important}
       </div>
     </div>
 
+    <div id="tab-master" style="display:none">
+      <div class="panel">
+        <div class="ph">
+          <div class="pt">📊 Master Ledger <span class="pc" id="master-count">0</span></div>
+          <div class="pa">
+            <select id="master-filter" onchange="renderMaster()" class="fs" style="font-size:11px;padding:5px 8px;width:auto;">
+              <option value="">All types</option>
+              <option value="Expense">Expenses</option>
+              <option value="Subscription">Subscriptions</option>
+            </select>
+          </div>
+        </div>
+        <div class="tw"><table>
+          <thead><tr><th>Date</th><th>Type</th><th>Name</th><th>Description</th><th>Category</th><th>Cost</th><th>Original</th><th>Savings</th><th>Card</th><th>Bank</th><th>Billing</th><th>Status</th><th>Source</th></tr></thead>
+          <tbody id="master-body"><tr><td colspan="13"><div class="empty"><div class="eic">📊</div>Loading...</div></td></tr></tbody>
+        </table></div>
+        <div class="show-more" id="sm-master" onclick="showMore('master')" style="display:none">Show more</div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -333,11 +356,28 @@ td.editing{background:rgba(108,99,255,0.05)!important}
     </div>
   </div>
 </div>
+<div class="mo" id="food-mo" onclick="closeFoodMo(event)">
+  <div class="md" style="max-width:380px;">
+    <div class="mtit">🍽️ Log Food</div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="fgr"><label class="fl">What did you eat?</label><input class="fi" id="food-name" placeholder="e.g. Chipotle, Sushi, Groceries" autofocus></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="fgr"><label class="fl">Cost</label><input class="fi" id="food-cost" type="number" step="0.01" placeholder="0.00"></div>
+        <div class="fgr"><label class="fl">Date</label><input class="fi" id="food-date" type="date"></div>
+      </div>
+      <div class="fgr"><label class="fl">Card Used</label><select class="fs" id="food-card"><option value="">— Select card —</option></select></div>
+    </div>
+    <div class="mac">
+      <button class="btn" onclick="closeFoodMo()">Cancel</button>
+      <button class="btn btn-a" onclick="saveFoodMo()">+ Log Food</button>
+    </div>
+  </div>
+</div>
 <div id="toast"></div>
 
 <script>
 // ── CONFIG ──
-const SH={expenses:'Expenses',wishlist:'Wishlist',subscriptions:'Subscriptions',categories:'Categories',cards:'Cards',banks:'Banks'};
+const SH={expenses:'Expenses',wishlist:'Wishlist',subscriptions:'Subscriptions',categories:'Categories',cards:'Cards',banks:'Banks',master:'Master'};
 const HD={
   expenses:['Name','Description','Category','Cost','Card','Date','Status','OCost'],
   wishlist:['Name','Description','Category','Link','OCost','BCost','Status'],
@@ -345,6 +385,7 @@ const HD={
   categories:['Name','Color'],
   cards:['Name','Bank','Type','Last4'],
   banks:['Name','Type','Last4'],
+  master:['Date','Type','Name','Description','Category','Cost','OCost','Savings','Card','Bank','Billing','Status','Source'],
 };
 const CC={Fun:'tf',Food:'tfo',Apparel:'tap',Tech:'tte',Home:'tho',Health:'the',Travel:'ttr',Tesla:'tts',PC:'tpc',Life:'tli',Gift:'tgi'};
 const CE={Fun:'🎮',Food:'🍽️',Apparel:'👕',Tech:'📱',Home:'🏠',Health:'🏥',Travel:'✈️',Tesla:'🚗',PC:'🖥️',Life:'🌿',Gift:'🎁'};
@@ -353,7 +394,7 @@ const DOT_C=['#ef4444','#3b82f6','#f97316','#22c55e','#a855f7','#f59e0b','#14b8a
 const CATS_SEED=[['Fun','#f59e0b'],['Food','#22c55e'],['Apparel','#ec4899'],['Tech','#3b82f6'],['Home','#a855f7'],['Health','#ef4444'],['Travel','#14b8a6'],['Tesla','#ff6b6b'],['PC','#60a5fa'],['Life','#f97316'],['Gift','#f472b6']];
 
 // ── STATE ──
-let cfg={}, D={expenses:[],wishlist:[],subscriptions:[],categories:[],cards:[],banks:[]}, charts={}, mMode='', editR=-1;
+let cfg={}, D={expenses:[],wishlist:[],subscriptions:[],categories:[],cards:[],banks:[],master:[]}, charts={}, mMode='', editR=-1;
 let _tc=null; // token client
 
 // ── CREDENTIALS ──
@@ -467,10 +508,10 @@ async function syncAll(){
   const b=document.querySelector('.sbtn');
   if(b){b.textContent='↻ Syncing…';}
   try{
-    const[er,wr,sr,cr,kar,bar]=await Promise.all([
+    const[er,wr,sr,cr,kar,bar,mr]=await Promise.all([
       readSheet('Expenses'),readSheet('Wishlist'),
       readSheet('Subscriptions'),readSheet('Categories'),
-      readSheet('Cards'),readSheet('Banks')
+      readSheet('Cards'),readSheet('Banks'),readSheet('Master')
     ]);
     D.expenses=parse(er,HD.expenses);
     D.wishlist=parse(wr,HD.wishlist);
@@ -478,6 +519,7 @@ async function syncAll(){
     D.categories=parse(cr,HD.categories);
     D.cards=parse(kar,HD.cards);
     D.banks=parse(bar,HD.banks);
+    D.master=parse(mr,HD.master);
     renderAll();
     toast('Synced ✓','ok');
   }catch(e){
@@ -501,7 +543,7 @@ function parse(rows,hd){
 }
 
 // ── RENDER ──
-function renderAll(){renderDash();renderWish();renderExp();renderSub();renderCat();renderCards();renderBanks();setTimeout(initAllDragCols,0);}
+function renderAll(){renderDash();renderWish();renderExp();renderSub();renderCat();renderCards();renderBanks();renderMaster();setTimeout(initAllDragCols,0);}
 function $f(n){return'$'+(parseFloat(n)||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});}
 function catTag(c){const e=CE[c]||'';return`<span class="tag ${CC[c]||'tdf'}">${e?e+' ':''} ${c||'—'}</span>`;}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
@@ -767,17 +809,27 @@ async function ieSave(sheet,row,field,newVal,el,td){
 function ieCancel(el,val,td){td.classList.remove('editing');el.textContent=val||'—';}
 
 // ── WISHLIST ──
+async function wishSetStatus(row, status){
+  const w=D.wishlist.find(x=>x._row===row);if(!w)return;
+  w.Status=status;
+  await updateRow('Wishlist',row,HD.wishlist.map(h=>w[h]||''));
+  await syncAll();toast(`Marked ${status} ✓`,'ok');
+}
+
 function renderWish(){
   const b=document.getElementById('wb');
   const sm=document.getElementById('sm-wish');
-  document.getElementById('wc').textContent=D.wishlist.length;
-  if(!D.wishlist.length){b.innerHTML='<tr><td colspan="9"><div class="empty"><div class="eic">📋</div>No wishlist items yet</div></td></tr>';if(sm)sm.style.display='none';return;}
+  // Filter out No Longer Needed
+  const visible=D.wishlist.filter(w=>w.Status!=='No Longer Needed');
+  document.getElementById('wc').textContent=visible.length;
+  if(!visible.length){b.innerHTML='<tr><td colspan="9"><div class="empty"><div class="eic">📋</div>No wishlist items yet</div></td></tr>';if(sm)sm.style.display='none';return;}
   const lim=_pages['wish']||PAGE;
-  const visible=D.wishlist.slice(0,lim);
-  if(sm)sm.style.display=D.wishlist.length>lim?'':'none';
-  if(sm&&D.wishlist.length>lim)sm.textContent=`Show more (${D.wishlist.length-lim} remaining)`;
-  b.innerHTML=visible.map(w=>{
+  const paged=visible.slice(0,lim);
+  if(sm)sm.style.display=visible.length>lim?'':'none';
+  if(sm&&visible.length>lim)sm.textContent=`Show more (${visible.length-lim} remaining)`;
+  b.innerHTML=paged.map(w=>{
     const o=parseFloat(w.OCost)||0,bc=parseFloat(w.BCost)||0,sv=bc>0?o-bc:0;
+    const isBought=w.Status==='Bought';
     return`<tr>
       <td>${ie('Wishlist',w._row,'Name',w.Name)}</td>
       <td>${ie('Wishlist',w._row,'Description',w.Description)}</td>
@@ -786,11 +838,15 @@ function renderWish(){
       <td>${ie('Wishlist',w._row,'OCost',w.OCost,'num')}</td>
       <td>${ie('Wishlist',w._row,'BCost',w.BCost,'num')}</td>
       <td class="${sv>0?'tgrn':'td3'}">${sv>0?'-'+$f(sv):'—'}</td>
-      <td>${ie('Wishlist',w._row,'Status',w.Status,'sel',['Interested','No Longer Needed','Bought'])}</td>
-      <td><div style="display:flex;gap:5px;">
-        ${w.Status!=='Bought'?`<button class="btn btn-m" onclick="markBought(${w._row})">→ Exp</button>`:''}
+      <td>
+        ${!isBought?`<button class="btn btn-m" style="white-space:nowrap" onclick="markBought(${w._row})">→ Expense</button>`:'<span class="tag s-pro">Bought</span>'}
+      </td>
+      <td>
+        ${!isBought?`<button class="btn" style="font-size:10px;color:var(--text3)" onclick="wishSetStatus(${w._row},'No Longer Needed')">Not interested</button>`:''}
+      </td>
+      <td>
         <button class="btn btn-c btic" onclick="delItem('Wishlist',${w._row})">✕</button>
-      </div></td>
+      </td>
     </tr>`;
   }).join('');
 }
@@ -798,14 +854,18 @@ async function markBought(row){
   const w=D.wishlist.find(x=>x._row===row);if(!w)return;
   if(!confirm(`Move "${w.Name}" to Expenses as Ordered?`))return;
   const today=new Date().toISOString().split('T')[0];
-  await appendRow('Expenses',[w.Name,w.Description,w.Category,w.BCost||w.OCost,'',today,'Ordered',w.OCost]);
+  const cost=w.BCost||w.OCost;
+  const savings=w.OCost&&w.BCost?(parseFloat(w.OCost)-parseFloat(w.BCost)).toFixed(2):'0';
+  const bank=D.cards.find(cd=>cd.Name===w.Card)?.Bank||'';
+  await appendRow('Expenses',[w.Name,w.Description,w.Category,cost,'',today,'Ordered',w.OCost]);
   await updateRow('Wishlist',row,[w.Name,w.Description,w.Category,w.Link,w.OCost,w.BCost,'Bought']);
+  await appendRow('Master',[today,'Expense',w.Name,w.Description,w.Category,cost,w.OCost,savings,'','','','Ordered','Wishlist']);
   await syncAll();toast(w.Name+' moved to Expenses ✓','ok');
 }
 
 // ── EXPENSES ──
 const PAGE=20; // rows per page
-const _pages={ord:PAGE,pro:PAGE,food:PAGE,wish:PAGE,sub:PAGE};
+const _pages={ord:PAGE,pro:PAGE,food:PAGE,wish:PAGE,sub:PAGE,master:PAGE};
 function showMore(key){_pages[key]+=20;renderAll();}
 
 function expRow(e){
@@ -851,6 +911,10 @@ async function markPro(row){
   const e=D.expenses.find(x=>x._row===row);if(!e)return;
   e.Status='Procured';
   await updateRow('Expenses',row,HD.expenses.map(h=>e[h]||''));
+  const savings=e.OCost&&e.Cost?(parseFloat(e.OCost)-parseFloat(e.Cost)).toFixed(2):'0';
+  const bank=D.cards.find(cd=>cd.Name===e.Card)?.Bank||'';
+  const today=new Date().toISOString().split('T')[0];
+  await appendRow('Master',[e.Date||today,'Expense',e.Name,e.Description,e.Category,e.Cost,e.OCost,savings,e.Card,bank,'','Procured','Expense']);
   await syncAll();toast('Marked Procured ✓','ok');
 }
 
@@ -957,10 +1021,12 @@ function renderSub(){
 async function paySub(row){
   const s=D.subscriptions.find(x=>x._row===row);if(!s)return;
   const today=new Date().toISOString().split('T')[0];
-  const newNext=nextRenewalDate(today, s.Billing);
+  const newNext=nextRenewalDate(today,s.Billing);
   const payments=(parseInt(s.Payments)||0)+1;
   s.LastRenewal=today;s.NextRenewal=newNext||s.NextRenewal;s.Payments=String(payments);
   await updateRow('Subscriptions',row,HD.subscriptions.map(h=>s[h]||''));
+  const bank=D.cards.find(cd=>cd.Name===s.Card)?.Bank||'';
+  await appendRow('Master',[today,'Subscription',s.Name,'',s.Category,s.Cost,'','',s.Card,bank,s.Billing,'Paid','Subscription']);
   await syncAll();toast(`${s.Name} paid ✓ — ${payments} total payments`,'ok');
 }
 async function cancelSub(row){
@@ -981,6 +1047,42 @@ function renderCat(){
     <td><span style="display:inline-flex;align-items:center;gap:7px;"><span id="cc-${c._row}" style="width:12px;height:12px;border-radius:50%;background:${esc(c.Color||'#666')};display:inline-block"></span>${ie('Categories',c._row,'Color',c.Color)}</span></td>
     <td><button class="btn btn-c btic" onclick="delItem('Categories',${c._row})">✕</button></td>
   </tr>`).join('');
+}
+
+// ── MASTER ──
+function renderMaster(){
+  const b=document.getElementById('master-body');
+  const sm=document.getElementById('sm-master');
+  if(!b)return;
+  const filter=document.getElementById('master-filter')?.value||'';
+  const rows=filter?D.master.filter(m=>m.Type===filter):[...D.master];
+  // Sort by date descending
+  rows.sort((a,z)=>(z.Date||'').localeCompare(a.Date||''));
+  document.getElementById('master-count').textContent=rows.length;
+  if(!rows.length){b.innerHTML='<tr><td colspan="13"><div class="empty"><div class="eic">📊</div>No entries yet — data flows here when you add expenses, move wishlist items, or pay subscriptions</div></td></tr>';if(sm)sm.style.display='none';return;}
+  const lim=_pages['master']||PAGE;
+  const paged=rows.slice(0,lim);
+  if(sm)sm.style.display=rows.length>lim?'':'none';
+  if(sm&&rows.length>lim)sm.textContent=`Show more (${rows.length-lim} remaining)`;
+  const TYPE_CLS={Expense:'s-pro',Subscription:'s-int'};
+  b.innerHTML=paged.map(m=>{
+    const savings=parseFloat(m.Savings)||0;
+    return`<tr>
+      <td class="td3" style="font-size:10px;white-space:nowrap;">${m.Date||'—'}</td>
+      <td><span class="tag ${TYPE_CLS[m.Type]||'tdf'}">${m.Type||'—'}</span></td>
+      <td><strong>${esc(m.Name||'—')}</strong></td>
+      <td class="td2">${esc(m.Description||'—')}</td>
+      <td>${m.Category?catTag(m.Category):'—'}</td>
+      <td class="tred">-${$f(m.Cost)}</td>
+      <td class="tstr tm">${m.OCost?$f(m.OCost):'—'}</td>
+      <td class="${savings>0?'tgrn':'td3'}">${savings>0?'+'+$f(savings):'—'}</td>
+      <td class="td2">${esc(m.Card||'—')}</td>
+      <td class="td2">${esc(m.Bank||'—')}</td>
+      <td class="td2">${esc(m.Billing||'—')}</td>
+      <td><span class="tag tdf">${esc(m.Status||'—')}</span></td>
+      <td class="td3" style="font-size:10px;">${esc(m.Source||'—')}</td>
+    </tr>`;
+  }).join('');
 }
 
 // ── CARDS ──
@@ -1031,7 +1133,6 @@ const MF={
     {k:'Name',l:'Name',full:1},{k:'Description',l:'Description',full:1},
     {k:'Category',l:'Category',tp:'cat'},{k:'Link',l:'Link URL',full:1},
     {k:'OCost',l:'Original Cost',tp:'num'},{k:'BCost',l:'Bought Cost',tp:'num'},
-    {k:'Status',l:'Status',tp:'sel',o:['Interested','No Longer Needed','Bought']},
   ]},
   exp:{t:'Add Expense',et:'Edit Expense',s:'Expenses',h:HD.expenses,fields:[
     {k:'Name',l:'Name',full:1},{k:'Description',l:'Description',full:1},
@@ -1058,6 +1159,7 @@ const MF={
     {k:'Type',l:'Account Type',tp:'sel',o:['Checking','Savings','Investment','Business']},
     {k:'Last4',l:'Last 4 digits'},
   ]},
+
 };
 
 function openModal(mode,existing){
@@ -1094,11 +1196,73 @@ async function saveMo(){
   const c=MF[mMode];
   const vals=c.h.map(h=>{const el=document.getElementById('mf-'+h);return el?el.value:'';});
   if(!vals[0]){toast('Name is required','err');return;}
+  // Auto-assign Interested for new wishlist
+  if(mMode==='wish'&&editR<0){
+    const si=HD.wishlist.indexOf('Status');if(si>=0)vals[si]='Interested';
+  }
+  // Food: auto-assign Category=Food, Status=Procured, Description=''
+  if(mMode==='food'&&editR<0){
+    const catI=HD.expenses.indexOf('Category');if(catI>=0)vals[catI]='Food';
+    const stI=HD.expenses.indexOf('Status');if(stI>=0)vals[stI]='Procured';
+    const ocI=HD.expenses.indexOf('OCost');if(ocI>=0)vals[ocI]=vals[HD.expenses.indexOf('Cost')]||'';
+  }
   try{
     if(editR>0){await updateRow(c.s,editR,vals);toast('Updated ✓','ok');}
-    else{await appendRow(c.s,vals);toast('Saved ✓','ok');}
+    else{
+      await appendRow(c.s,vals);
+      // Write to Master
+      if(mMode==='exp'||mMode==='food'){
+        const name=vals[HD.expenses.indexOf('Name')]||'';
+        const desc=vals[HD.expenses.indexOf('Description')]||'';
+        const cat=vals[HD.expenses.indexOf('Category')]||'';
+        const cost=vals[HD.expenses.indexOf('Cost')]||'';
+        const ocost=vals[HD.expenses.indexOf('OCost')]||cost;
+        const card=vals[HD.expenses.indexOf('Card')]||'';
+        const date=vals[HD.expenses.indexOf('Date')]||new Date().toISOString().split('T')[0];
+        const status=vals[HD.expenses.indexOf('Status')]||'';
+        const savings=ocost&&cost?(parseFloat(ocost)-parseFloat(cost)).toFixed(2):'0';
+        const bank=D.cards.find(cd=>cd.Name===card)?.Bank||'';
+        await appendRow('Master',[date,'Expense',name,desc,cat,cost,ocost,savings,card,bank,'','',status,'Manual']);
+      }
+      toast('Saved ✓','ok');
+    }
     document.getElementById('mo').classList.remove('open');
     await syncAll();
+  }catch(e){toast('Save failed: '+e.message,'err');}
+}
+
+// ── FOOD MODAL ──
+function openFoodMo(){
+  // Populate card dropdown from D.cards
+  const sel=document.getElementById('food-card');
+  sel.innerHTML='<option value="">— Select card —</option>'+D.cards.map(c=>`<option>${c.Name} (••••${c.Last4})</option>`).join('');
+  // Default date to today
+  document.getElementById('food-date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('food-name').value='';
+  document.getElementById('food-cost').value='';
+  document.getElementById('food-mo').classList.add('open');
+  setTimeout(()=>document.getElementById('food-name').focus(),100);
+}
+function closeFoodMo(e){
+  if(e&&e.target!==document.getElementById('food-mo'))return;
+  document.getElementById('food-mo').classList.remove('open');
+}
+async function saveFoodMo(){
+  const name=document.getElementById('food-name').value.trim();
+  const cost=document.getElementById('food-cost').value.trim();
+  const date=document.getElementById('food-date').value;
+  const cardRaw=document.getElementById('food-card').value;
+  const card=cardRaw.replace(/ \(.*\)$/,''); // strip the (••••XXXX) suffix
+  if(!name){toast('Name is required','err');return;}
+  if(!cost){toast('Cost is required','err');return;}
+  const today=date||new Date().toISOString().split('T')[0];
+  const bank=D.cards.find(cd=>cd.Name===card)?.Bank||'';
+  try{
+    await appendRow('Expenses',[name,'','Food',cost,card,today,'Procured',cost]);
+    await appendRow('Master',[today,'Expense',name,'','Food',cost,cost,'0',card,bank,'','Procured','Food']);
+    closeFoodMo();
+    await syncAll();
+    toast('Food logged ✓','ok');
   }catch(e){toast('Save failed: '+e.message,'err');}
 }
 
