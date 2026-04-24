@@ -1248,18 +1248,20 @@ function subThead(){
 
 function subRow(s,ci){
   const dc=dueCls(s.NextRenewal);
-  const daysLeft=s.NextRenewal?Math.ceil((new Date(s.NextRenewal+'T12:00:00')-new Date())/(1000*60*60*24)):null;
-  const dueDisplay=s.NextRenewal?(dc?`<span class="due-badge">${daysLeft<=0?'DUE NOW':'DUE SOON'}</span>`:fmtDate(s.NextRenewal)):'—';
+  const isDue=dc==='due-today'||dc==='due-soon';
+  const dueTag=isDue
+    ?`<span class="due-badge">DUE</span>`
+    :`<span class="tag s-act" style="font-size:10px;">PAID</span>`;
   const payments=parseInt(s.Payments)||0;
   const cells={
     Name:`<td><div style="display:flex;align-items:center;gap:7px;"><span class="dot" style="background:${DOT_C[ci%DOT_C.length]}"></span>${ie('Subscriptions',s._row,'Name',s.Name)}</div></td>`,
     Billing:`<td>${ie('Subscriptions',s._row,'Billing',s.Billing,'sel',['Monthly','Annual','BiWeekly'])}</td>`,
     Card:`<td>${ie('Subscriptions',s._row,'Card',s.Card,'card-sel')}</td>`,
     Cost:`<td>${ie('Subscriptions',s._row,'Cost',s.Cost,'num')}</td>`,
-    Due:`<td class="${dc}">${dueDisplay}</td>`,
+    Due:`<td>${s.NextRenewal?dueTag:'—'}</td>`,
     LastRenewal:`<td>${ieDateCell('Subscriptions',s._row,'LastRenewal',s.LastRenewal)}</td>`,
     NextRenewal:`<td>${ieDateCell('Subscriptions',s._row,'NextRenewal',s.NextRenewal)}</td>`,
-    Payments:`<td style="text-align:center;font-family:'DM Mono',monospace;font-size:11px;">${payments}</td>`,
+    Payments:`<td>${ie('Subscriptions',s._row,'Payments',String(payments),'num')}</td>`,
     Category:`<td>${ie('Subscriptions',s._row,'Category',s.Category,'cat')}</td>`,
     Actions:`<td><div style="display:flex;gap:5px;">${s.Status!=='Cancelled'?`<button class="btn btn-p" onclick="paySub(${s._row})">✓ Paid</button>`:''} ${s.Status!=='Cancelled'?`<button class="btn btn-c" onclick="cancelSub(${s._row})">Cancel</button>`:''}<button class="btn btn-c btic" onclick="delItem('Subscriptions',${s._row})">✕</button></div></td>`,
   };
