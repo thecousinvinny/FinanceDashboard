@@ -216,6 +216,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
     <div class="hright">
       <button class="btn btn-a" style="gap:5px;" onclick="openFoodMo()">🍽️ + Food</button>
       <button class="btn btn-a" style="gap:5px;" onclick="openModal('wish')">📋 + Wishlist</button>
+      <button class="btn btn-a" style="gap:5px;border-color:var(--green);color:var(--green);" onclick="openIncomeMo()">💰 + Income</button>
       <button class="signin-btn" id="signin-btn" onclick="doSignIn()">↗ Sign in</button>
       <button class="sbtn" onclick="syncAll()">↻ Sync</button>
       <button class="sbtn" onclick="repairAllSheets()" title="Fix missing or mismatched sheet headers">🔧 Repair</button>
@@ -390,6 +391,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
               <option value="">All types</option>
               <option value="Expense">Expenses</option>
               <option value="Subscription">Subscriptions</option>
+              <option value="Income">Income</option>
             </select>
           </div>
         </div>
@@ -446,6 +448,30 @@ td.editing{background:rgba(108,99,255,0.05)!important}
     <div class="mac">
       <button class="btn" onclick="closeFoodMo()">Cancel</button>
       <button class="btn btn-a" onclick="saveFoodMo()">+ Log Food</button>
+    </div>
+  </div>
+</div>
+<div class="mo" id="income-mo" onclick="closeIncomeMo(event)">
+  <div class="md" style="max-width:420px;">
+    <div class="mtit">💰 Log Income</div>
+    <div style="display:flex;flex-direction:column;gap:11px;">
+      <div class="fgr"><label class="fl">What was this payment for?</label><input class="fi" id="inc-name" placeholder="e.g. Freelance project, Loan repayment…"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
+        <div class="fgr"><label class="fl">Amount received</label><input class="fi" id="inc-amount" type="number" step="0.01" placeholder="0.00"></div>
+        <div class="fgr"><label class="fl">Date</label><input class="fi" id="inc-date" type="date"></div>
+      </div>
+      <div class="fgr"><label class="fl">Account paid to</label><select class="fs" id="inc-bank"><option value="">— Select bank —</option></select></div>
+      <div class="fgr"><label class="fl">Source</label><select class="fs" id="inc-source">
+        <option value="Repayment">Repayment</option>
+        <option value="Refund">Refund</option>
+        <option value="Projects">Projects</option>
+        <option value="Other">Other</option>
+      </select></div>
+      <div class="fgr"><label class="fl">Notes (optional)</label><input class="fi" id="inc-notes" placeholder="Any extra detail…"></div>
+    </div>
+    <div class="mac">
+      <button class="btn" onclick="closeIncomeMo()">Cancel</button>
+      <button class="btn" style="border-color:rgba(34,197,94,.4);color:var(--green);" onclick="saveIncomeMo()">+ Log Income</button>
     </div>
   </div>
 </div>
@@ -634,6 +660,30 @@ async function delRow(sheet,row){
 }
 
 // ── SYNC ──
+function calcSubCosts(s){
+  const cost=parseFloat(s.Cost)||0;
+  const mo=s.Billing==='Annual'?cost/12:s.Billing==='BiWeekly'?cost*2.17:cost;
+  const yr=s.Billing==='Annual'?cost:s.Billing==='BiWeekly'?cost*26:cost*12;
+  return{
+    MonthlyCost:(Math.round(mo*100)/100).toFixed(2),
+    AnnualCost:(Math.round(yr*100)/100).toFixed(2),
+  };
+}
+
+async function writeBackCalculated(){
+  // Write MonthlyCost and AnnualCost back to sheet for any sub where they differ
+  const writes=[];
+  for(const s of D.subscriptions){
+    const{MonthlyCost,AnnualCost}=calcSubCosts(s);
+    if(s.MonthlyCost!==MonthlyCost||s.AnnualCost!==AnnualCost){
+      s.MonthlyCost=MonthlyCost;
+      s.AnnualCost=AnnualCost;
+      writes.push(updateRow('Subscriptions',s._row,HD.subscriptions.map(h=>s[h]||'')));
+    }
+  }
+  if(writes.length) await Promise.all(writes);
+}
+
 async function syncAll(){
   const b=document.querySelector('.sbtn');
   if(b){b.textContent='↻ Syncing…';}
@@ -650,6 +700,8 @@ async function syncAll(){
     D.cards=parse(kar,HD.cards);
     D.banks=parse(bar,HD.banks);
     D.master=parse(mr,HD.master);
+    // Write calculated subscription costs back to sheet if stale
+    await writeBackCalculated();
     renderAll();
     toast('Synced ✓','ok');
   }catch(e){
@@ -954,6 +1006,12 @@ async function ieSave(sheet,row,field,newVal,el,td){
       if(row_el){const cells=row_el.querySelectorAll('td');if(cells[6])cells[6].textContent=sv>0?'-'+$f(sv):'—';}
     }
     if(sheet==='Banks')renderCards(); // update linked cards display
+    if(sheet==='Subscriptions'&&(field==='Cost'||field==='Billing')){
+      // Recalculate and write back monthly/annual costs
+      const{MonthlyCost,AnnualCost}=calcSubCosts(item);
+      item.MonthlyCost=MonthlyCost;item.AnnualCost=AnnualCost;
+      await updateRow(sheet,row,HD.subscriptions.map(h=>item[h]||''));
+    }
   }catch(e){item[field]=old;if(el)el.textContent=old||'—';toast('Save failed: '+e.message,'err');}
 }
 function ieCancel(el,val,td){td.classList.remove('editing');el.textContent=val||'—';}
@@ -1348,16 +1406,17 @@ function renderMaster(){
   const paged=rows.slice(0,lim);
   if(sm)sm.style.display=rows.length>lim?'':'none';
   if(sm&&rows.length>lim)sm.textContent=`Show more (${rows.length-lim} remaining)`;
-  const TYPE_CLS={Expense:'s-pro',Subscription:'s-int'};
+  const TYPE_CLS={Expense:'s-pro',Subscription:'s-int',Income:'s-act'};
   b.innerHTML=paged.map(m=>{
     const savings=parseFloat(m.Savings)||0;
-    return`<tr>
+    const isIncome=m.Type==='Income';
+    return`<tr style="${isIncome?'background:rgba(34,197,94,0.03)':''}">
       <td>${ieDateCell('Master',m._row,'Date',m.Date)}</td>
-      <td>${ie('Master',m._row,'Type',m.Type,'sel',['Expense','Subscription'])}</td>
+      <td>${ie('Master',m._row,'Type',m.Type,'sel',['Expense','Subscription','Income'])}</td>
       <td>${ie('Master',m._row,'Name',m.Name)}</td>
       <td>${ie('Master',m._row,'Description',m.Description)}</td>
-      <td>${ie('Master',m._row,'Category',m.Category,'cat')}</td>
-      <td>${ie('Master',m._row,'Cost',m.Cost,'num')}</td>
+      <td>${m.Category?catTag(m.Category):'—'}</td>
+      <td class="${isIncome?'tgrn':'tred'}">${isIncome?'+':'-'}${$f(m.Cost)}</td>
       <td>${ie('Master',m._row,'OCost',m.OCost,'num')}</td>
       <td class="${savings>0?'tgrn':'td3'}">${savings>0?'+'+$f(savings):'—'}</td>
       <td>${ie('Master',m._row,'Card',m.Card,'card-sel')}</td>
@@ -1578,6 +1637,41 @@ async function saveFoodMo(){
     closeFoodMo();
     await syncAll();
     toast('Food logged ✓','ok');
+  }catch(e){toast('Save failed: '+e.message,'err');}
+}
+
+// ── INCOME MODAL ──
+function openIncomeMo(){
+  // Populate bank dropdown
+  const sel=document.getElementById('inc-bank');
+  sel.innerHTML='<option value="">— Select bank —</option>'+D.banks.map(b=>`<option value="${esc(b.Name)}">${esc(b.Name)}${b.Last4?' (••••'+b.Last4+')':''}</option>`).join('');
+  document.getElementById('inc-date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('inc-name').value='';
+  document.getElementById('inc-amount').value='';
+  document.getElementById('inc-notes').value='';
+  document.getElementById('inc-source').value='Repayment';
+  document.getElementById('income-mo').classList.add('open');
+  setTimeout(()=>document.getElementById('inc-name').focus(),100);
+}
+function closeIncomeMo(e){
+  if(e&&e.target!==document.getElementById('income-mo'))return;
+  document.getElementById('income-mo').classList.remove('open');
+}
+async function saveIncomeMo(){
+  const name=document.getElementById('inc-name').value.trim();
+  const amount=document.getElementById('inc-amount').value.trim();
+  const date=document.getElementById('inc-date').value||new Date().toISOString().split('T')[0];
+  const bank=document.getElementById('inc-bank').value;
+  const source=document.getElementById('inc-source').value;
+  const notes=document.getElementById('inc-notes').value.trim();
+  if(!name){toast('Payment description is required','err');return;}
+  if(!amount){toast('Amount is required','err');return;}
+  try{
+    // Income goes straight to Master — it's not an expense
+    await appendRow('Master',[date,'Income',name,notes,'',amount,'','','' ,bank,'',source,source]);
+    closeIncomeMo();
+    await syncAll();
+    toast('Income logged ✓','ok');
   }catch(e){toast('Save failed: '+e.message,'err');}
 }
 
