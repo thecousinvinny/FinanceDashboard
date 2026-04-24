@@ -703,8 +703,6 @@ async function syncAll(){
     D.cards=parse(kar,HD.cards);
     D.banks=parse(bar,HD.banks);
     D.master=parse(mr,HD.master);
-    console.log('[SYNC] raw rows — Expenses:',er.length,'Master:',mr.length,'parsed Master:',D.master.length);
-    if(D.master.length>0)console.log('[SYNC] Master date range:',D.master[0]?.Date,'→',D.master[D.master.length-1]?.Date);
     // Write calculated subscription costs back to sheet if stale
     await writeBackCalculated();
     renderAll();
@@ -743,6 +741,15 @@ function parse(rows,hd){
 // ── RENDER ──
 function renderAll(){renderDash();renderWish();renderExp();renderSub();renderCat();renderCards();renderBanks();renderMaster();setTimeout(()=>{initAllDragCols();updateSortBtns('wish');updateSortBtns('exp');updateSortBtns('sub');},0);}
 function $f(n){return'$'+(parseFloat(n)||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});}
+function toSortableDate(d){
+  if(!d)return'';
+  // Already YYYY-MM-DD
+  if(/^\d{4}-\d{2}-\d{2}/.test(d))return d;
+  // MM/DD/YYYY → YYYY-MM-DD
+  const p=d.split('/');
+  if(p.length===3)return`${p[2]}-${p[0].padStart(2,'0')}-${p[1].padStart(2,'0')}`;
+  return d;
+}
 function fmtDate(d){
   if(!d||d==='—')return'—';
   const parts=d.split('-');
@@ -763,8 +770,8 @@ function renderDash(){
   const yr=String(now.getFullYear());
   const mo=`${yr}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const pro=D.expenses.filter(e=>e.Status==='Procured');
-  const moE=pro.filter(e=>e.Date&&e.Date.startsWith(mo));
-  const yrE=pro.filter(e=>e.Date&&e.Date.startsWith(yr));
+  const moE=pro.filter(e=>toSortableDate(e.Date).startsWith(mo));
+  const yrE=pro.filter(e=>toSortableDate(e.Date).startsWith(yr));
   const moT=moE.reduce((s,e)=>s+(parseFloat(e.Cost)||0),0);
   const yrT=yrE.reduce((s,e)=>s+(parseFloat(e.Cost)||0),0);
   const act=D.subscriptions.filter(s=>s.Status!=='Cancelled');
@@ -797,7 +804,7 @@ function renderCharts(){
   const act=D.subscriptions.filter(s=>s.Status!=='Cancelled');
 
   // 1. Annual expenses by category — current year
-  const yrPro=pro.filter(e=>e.Date&&e.Date.startsWith(yr));
+  const yrPro=pro.filter(e=>toSortableDate(e.Date).startsWith(yr));
   const ct={};
   yrPro.forEach(e=>{const label=(CE[e.Category]||'')+' '+(e.Category||'Other');ct[label.trim()]=(ct[label.trim()]||0)+(parseFloat(e.Cost)||0);});
   const ctLabels=Object.keys(ct).sort((a,z)=>ct[z]-ct[a]);
@@ -809,7 +816,7 @@ function renderCharts(){
     const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);
     const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
     months.push(d.toLocaleString('default',{month:'short'})+"'"+String(d.getFullYear()).slice(2));
-    const moPro=pro.filter(e=>e.Date&&e.Date.startsWith(k));
+    const moPro=pro.filter(e=>toSortableDate(e.Date).startsWith(k));
     expByMo.push(Math.round(moPro.reduce((s,e)=>s+(parseFloat(e.Cost)||0),0)));
     const moWish=D.wishlist.filter(w=>w.Status==='Bought'&&w.BCost);
     savByMo.push(Math.round(moWish.reduce((s,w)=>{const o=parseFloat(w.OCost)||0,b=parseFloat(w.BCost)||0;return b>0?s+(o-b):s;},0)));
@@ -1196,6 +1203,9 @@ function updateSortBtns(table){
 
 function compareVal(field,a,b){
   if(field==='_row')return(a._row||0)-(b._row||0);
+  if(field==='Date'||field==='LastRenewal'||field==='NextRenewal'){
+    return toSortableDate(a[field]||'').localeCompare(toSortableDate(b[field]||''));
+  }
   let av=a[field]||'', bv=b[field]||'';
   if(field==='_savings'){
     av=(parseFloat(a.OCost)||0)-(parseFloat(a.BCost||a.Cost)||0);
@@ -1421,7 +1431,7 @@ function renderMaster(){
   const filter=document.getElementById('master-filter')?.value||'';
   const rows=filter?D.master.filter(m=>m.Type===filter):[...D.master];
   // Sort by date descending by default
-  rows.sort((a,z)=>(z.Date||'').localeCompare(a.Date||''));
+  rows.sort((a,z)=>toSortableDate(z.Date).localeCompare(toSortableDate(a.Date)));
   document.getElementById('master-count').textContent=rows.length;
   if(!rows.length){b.innerHTML='<tr><td colspan="13"><div class="empty"><div class="eic">📊</div>No entries yet — data flows here when you add expenses, move wishlist items, or pay subscriptions</div></td></tr>';if(sm)sm.style.display='none';return;}
   const lim=_pages['master']||PAGE;
