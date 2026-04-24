@@ -545,6 +545,16 @@ function parse(rows,hd){
 // ── RENDER ──
 function renderAll(){renderDash();renderWish();renderExp();renderSub();renderCat();renderCards();renderBanks();renderMaster();setTimeout(initAllDragCols,0);}
 function $f(n){return'$'+(parseFloat(n)||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});}
+function fmtDate(d){
+  if(!d||d==='—')return'—';
+  const parts=d.split('-');
+  if(parts.length!==3)return d;
+  return`${parts[1]}/${parts[2]}/${parts[0]}`;
+}
+function ieDateCell(sheet,row,field,val){
+  const safe=(val||'').replace(/"/g,'&quot;');
+  return '<span class="ie td3" style="font-size:10px;" onclick="ieEdit(\''+sheet+'\','+row+',\''+field+'\',\''+safe+'\',\'date\',[],this)">'+( fmtDate(val)||'—')+'</span>';
+}
 function catTag(c){const e=CE[c]||'';return`<span class="tag ${CC[c]||'tdf'}">${e?e+' ':''} ${c||'—'}</span>`;}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 function escQ(s){return String(s).replace(/'/g,"\\'")}
@@ -751,7 +761,8 @@ Chart.register({
 // ── INLINE EDIT ENGINE ──
 function ie(sheet,row,field,val,type='text',opts=[]){
   const display=val||'—';
-  return `<span class="ie" onclick="ieEdit('${sheet}',${row},'${field}','${val.replace(/'/g,"\\'")}','${type}',${JSON.stringify(opts)},this)">${display}</span>`;
+  const safeVal=(val||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  return `<span class="ie" onclick="ieEdit('${sheet}',${row},'${field}','${safeVal}','${type}',${JSON.stringify(opts)},this)">${display}</span>`;
 }
 function ieEdit(sheet,row,field,val,type,opts,el){
   if(el.querySelector('input,select'))return;
@@ -759,9 +770,10 @@ function ieEdit(sheet,row,field,val,type,opts,el){
   const cats=D.categories.map(c=>c.Name);
   const cards=D.cards.map(c=>c.Name+' (••••'+c.Last4+')');
   const cardVals=D.cards.map(c=>c.Name);
+  const banks=D.banks.map(b=>b.Name);
   let input;
-  if(type==='sel'||type==='cat'||type==='card-sel'){
-    const choices=type==='cat'?cats:type==='card-sel'?cards:opts;
+  if(type==='sel'||type==='cat'||type==='card-sel'||type==='bank-sel'){
+    const choices=type==='cat'?cats:type==='card-sel'?cards:type==='bank-sel'?banks:opts;
     const vals=type==='card-sel'?cardVals:choices;
     input=document.createElement('select');
     input.className='ie-sel';
@@ -782,29 +794,32 @@ function ieEdit(sheet,row,field,val,type,opts,el){
   if(input.select&&type!=='date')input.select();
 }
 async function ieSave(sheet,row,field,newVal,el,td){
-  if(td&&td.classList) td.classList.remove('editing');
-  const dk=sheet==='Wishlist'?'wishlist':sheet==='Expenses'?'expenses':sheet==='Subscriptions'?'subscriptions':'categories';
+  if(td&&td.classList)td.classList.remove('editing');
+  // Map sheet name to D key and HD key
+  const sheetMap={
+    'Wishlist':'wishlist','Expenses':'expenses','Subscriptions':'subscriptions',
+    'Categories':'categories','Cards':'cards','Banks':'banks','Master':'master'
+  };
+  const dk=sheetMap[sheet];
+  if(!dk){if(el)el.textContent=newVal||'—';return;}
   const item=D[dk].find(x=>x._row===row);
-  if(!item){if(el&&el.textContent!==undefined)el.textContent=newVal||'—';return;}
-  if(newVal===item[field]){if(el&&el.textContent!==undefined)el.textContent=newVal||'—';return;}
+  if(!item){if(el)el.textContent=newVal||'—';return;}
+  if(newVal===item[field]){if(el)el.textContent=newVal||'—';return;}
   const old=item[field];
   item[field]=newVal;
-  if(el&&el.textContent!==undefined) el.textContent=newVal||'—';
+  if(el&&el.textContent!==undefined) el.textContent=(field==='Date'||field==='LastRenewal'||field==='NextRenewal')?fmtDate(newVal)||'—':newVal||'—';
   try{
-    // Build vals using the correct HD for this sheet
-    const hdKey=sheet==='Wishlist'?'wishlist':sheet==='Expenses'?'expenses':sheet==='Subscriptions'?'subscriptions':'categories';
-    const vals=HD[hdKey].map(h=>item[h]||'');
+    const vals=HD[dk].map(h=>item[h]||'');
     await updateRow(sheet,row,vals);
     toast('Saved ✓','ok');
-    // Only re-render derived values, don't full re-read from sheet (avoids flash/duplicate)
-    if(sheet==='Expenses'||sheet==='Subscriptions') renderDash();
+    if(sheet==='Expenses'||sheet==='Subscriptions')renderDash();
     if(sheet==='Wishlist'){
-      // Update savings column
       const o=parseFloat(item.OCost)||0,bc=parseFloat(item.BCost)||0,sv=bc>0?o-bc:0;
       const row_el=el&&el.closest?el.closest('tr'):null;
       if(row_el){const cells=row_el.querySelectorAll('td');if(cells[6])cells[6].textContent=sv>0?'-'+$f(sv):'—';}
     }
-  }catch(e){item[field]=old;if(el&&el.textContent!==undefined)el.textContent=old||'—';toast('Save failed: '+e.message,'err');}
+    if(sheet==='Banks')renderCards(); // update linked cards display
+  }catch(e){item[field]=old;if(el)el.textContent=old||'—';toast('Save failed: '+e.message,'err');}
 }
 function ieCancel(el,val,td){td.classList.remove('editing');el.textContent=val||'—';}
 
@@ -972,7 +987,7 @@ function subThead(){
 function subRow(s,ci){
   const dc=dueCls(s.NextRenewal);
   const daysLeft=s.NextRenewal?Math.ceil((new Date(s.NextRenewal+'T12:00:00')-new Date())/(1000*60*60*24)):null;
-  const dueDisplay=s.NextRenewal?(dc?`<span class="due-badge">${daysLeft<=0?'DUE NOW':'DUE SOON'}</span>`:s.NextRenewal):'—';
+  const dueDisplay=s.NextRenewal?(dc?`<span class="due-badge">${daysLeft<=0?'DUE NOW':'DUE SOON'}</span>`:fmtDate(s.NextRenewal)):'—';
   const payments=parseInt(s.Payments)||0;
   const cells={
     Name:`<td><div style="display:flex;align-items:center;gap:7px;"><span class="dot" style="background:${DOT_C[ci%DOT_C.length]}"></span>${ie('Subscriptions',s._row,'Name',s.Name)}</div></td>`,
@@ -980,8 +995,8 @@ function subRow(s,ci){
     Card:`<td>${ie('Subscriptions',s._row,'Card',s.Card,'card-sel')}</td>`,
     Cost:`<td>${ie('Subscriptions',s._row,'Cost',s.Cost,'num')}</td>`,
     Due:`<td class="${dc}">${dueDisplay}</td>`,
-    LastRenewal:`<td>${ie('Subscriptions',s._row,'LastRenewal',s.LastRenewal,'date')}</td>`,
-    NextRenewal:`<td>${ie('Subscriptions',s._row,'NextRenewal',s.NextRenewal,'date')}</td>`,
+    LastRenewal:`<td>${ieDateCell('Subscriptions',s._row,'LastRenewal',s.LastRenewal)}</td>`,
+    NextRenewal:`<td>${ieDateCell('Subscriptions',s._row,'NextRenewal',s.NextRenewal)}</td>`,
     Payments:`<td style="text-align:center;font-family:'DM Mono',monospace;font-size:11px;">${payments}</td>`,
     Category:`<td>${ie('Subscriptions',s._row,'Category',s.Category,'cat')}</td>`,
     Actions:`<td><div style="display:flex;gap:5px;">${s.Status!=='Cancelled'?`<button class="btn btn-p" onclick="paySub(${s._row})">✓ Paid</button>`:''} ${s.Status!=='Cancelled'?`<button class="btn btn-c" onclick="cancelSub(${s._row})">Cancel</button>`:''}<button class="btn btn-c btic" onclick="delItem('Subscriptions',${s._row})">✕</button></div></td>`,
@@ -1003,7 +1018,7 @@ function renderSub(){
   const yr=act.reduce((s,x)=>{const c=parseFloat(x.Cost)||0;return x.Billing==='Annual'?s+c:x.Billing==='BiWeekly'?s+c*26:s+c*12;},0);
   const nd=act.filter(s=>s.NextRenewal).sort((a,z)=>a.NextRenewal.localeCompare(z.NextRenewal))[0];
   const totalPaid=act.reduce((s,x)=>{const c=parseFloat(x.Cost)||0,p=parseInt(x.Payments)||0;return s+c*p;},0);
-  document.getElementById('ss2').innerHTML=`<span>Monthly est: <strong>${$f(mo)}/mo</strong></span><span>Annual est: <strong>${$f(yr)}/yr</strong></span><span>Total paid: <strong>${$f(totalPaid)}</strong></span><span>Next due: <strong>${nd?nd.Name+' — '+nd.NextRenewal:'—'}</strong></span>`;
+  document.getElementById('ss2').innerHTML=`<span>Monthly est: <strong>${$f(mo)}/mo</strong></span><span>Annual est: <strong>${$f(yr)}/yr</strong></span><span>Total paid: <strong>${$f(totalPaid)}</strong></span><span>Next due: <strong>${nd?nd.Name+' — '+fmtDate(nd.NextRenewal):'—'}</strong></span>`;
   if(!D.subscriptions.length){b.innerHTML=`<tr><td colspan="${_subColOrder.length}"><div class="empty"><div class="eic">🔄</div>No subscriptions yet</div></td></tr>`;initSubDragCols();return;}
   const ORDER={'Monthly':0,'Annual':1,'BiWeekly':2,'Cancelled':3};
   const visible=D.subscriptions
@@ -1068,18 +1083,18 @@ function renderMaster(){
   b.innerHTML=paged.map(m=>{
     const savings=parseFloat(m.Savings)||0;
     return`<tr>
-      <td class="td3" style="font-size:10px;white-space:nowrap;">${m.Date||'—'}</td>
-      <td><span class="tag ${TYPE_CLS[m.Type]||'tdf'}">${m.Type||'—'}</span></td>
-      <td><strong>${esc(m.Name||'—')}</strong></td>
-      <td class="td2">${esc(m.Description||'—')}</td>
-      <td>${m.Category?catTag(m.Category):'—'}</td>
-      <td class="tred">-${$f(m.Cost)}</td>
-      <td class="tstr tm">${m.OCost?$f(m.OCost):'—'}</td>
+      <td>${ieDateCell('Master',m._row,'Date',m.Date)}</td>
+      <td>${ie('Master',m._row,'Type',m.Type,'sel',['Expense','Subscription'])}</td>
+      <td>${ie('Master',m._row,'Name',m.Name)}</td>
+      <td>${ie('Master',m._row,'Description',m.Description)}</td>
+      <td>${ie('Master',m._row,'Category',m.Category,'cat')}</td>
+      <td>${ie('Master',m._row,'Cost',m.Cost,'num')}</td>
+      <td>${ie('Master',m._row,'OCost',m.OCost,'num')}</td>
       <td class="${savings>0?'tgrn':'td3'}">${savings>0?'+'+$f(savings):'—'}</td>
-      <td class="td2">${esc(m.Card||'—')}</td>
-      <td class="td2">${esc(m.Bank||'—')}</td>
-      <td class="td2">${esc(m.Billing||'—')}</td>
-      <td><span class="tag tdf">${esc(m.Status||'—')}</span></td>
+      <td>${ie('Master',m._row,'Card',m.Card,'card-sel')}</td>
+      <td>${ie('Master',m._row,'Bank',m.Bank,'bank-sel')}</td>
+      <td>${ie('Master',m._row,'Billing',m.Billing,'sel',['Monthly','Annual','BiWeekly',''])}</td>
+      <td>${ie('Master',m._row,'Status',m.Status,'sel',['Procured','Ordered','Paid','Cancelled',''])}</td>
       <td class="td3" style="font-size:10px;">${esc(m.Source||'—')}</td>
     </tr>`;
   }).join('');
@@ -1092,14 +1107,11 @@ function renderCards(){
   if(!D.cards.length){b.innerHTML='<tr><td colspan="5"><div class="empty"><div class="eic">💳</div>No cards yet</div></td></tr>';return;}
   const TYPE_C={Credit:'tte',Debit:'tfo',Prepaid:'tf',Business:'tho'};
   b.innerHTML=D.cards.map(c=>`<tr>
-    <td><strong>${esc(c.Name)}</strong></td>
-    <td class="td2">${esc(c.Bank||'—')}</td>
-    <td>${c.Type?`<span class="tag ${TYPE_C[c.Type]||'tdf'}">${c.Type}</span>`:'—'}</td>
-    <td class="tm td3">••••&nbsp;${esc(c.Last4||'????')}</td>
-    <td><div style="display:flex;gap:5px;">
-      <button class="btn btic" onclick="editR2('card',${c._row})">✎</button>
-      <button class="btn btn-c btic" onclick="delItem('Cards',${c._row})">✕</button>
-    </div></td>
+    <td>${ie('Cards',c._row,'Name',c.Name)}</td>
+    <td>${ie('Cards',c._row,'Bank',c.Bank,'bank-sel')}</td>
+    <td>${ie('Cards',c._row,'Type',c.Type,'sel',['Credit','Debit','Prepaid','Business'])}</td>
+    <td>${ie('Cards',c._row,'Last4',c.Last4)}</td>
+    <td><button class="btn btn-c btic" onclick="delItem('Cards',${c._row})">✕</button></td>
   </tr>`).join('');
 }
 
@@ -1111,14 +1123,11 @@ function renderBanks(){
   b.innerHTML=D.banks.map(bk=>{
     const linked=D.cards.filter(c=>c.Bank===bk.Name);
     return`<tr>
-      <td><strong>${esc(bk.Name)}</strong></td>
-      <td class="td2">${esc(bk.Type||'—')}</td>
-      <td class="tm td3">••••&nbsp;${esc(bk.Last4||'????')}</td>
+      <td>${ie('Banks',bk._row,'Name',bk.Name)}</td>
+      <td>${ie('Banks',bk._row,'Type',bk.Type,'sel',['Checking','Savings','Investment','Business'])}</td>
+      <td>${ie('Banks',bk._row,'Last4',bk.Last4)}</td>
       <td>${linked.length?linked.map(c=>`<span class="tag tdf" style="margin-right:4px;">••••&nbsp;${esc(c.Last4||'????')} ${esc(c.Name)}</span>`).join(''):'<span class="td3">No cards</span>'}</td>
-      <td><div style="display:flex;gap:5px;">
-        <button class="btn btic" onclick="editR2('bank',${bk._row})">✎</button>
-        <button class="btn btn-c btic" onclick="delItem('Banks',${bk._row})">✕</button>
-      </div></td>
+      <td><button class="btn btn-c btic" onclick="delItem('Banks',bk._row)">✕</button></td>
     </tr>`;
   }).join('');
 }
@@ -1316,7 +1325,7 @@ function expRow(e){
     OCost:`<td>${ie('Expenses',e._row,'OCost',e.OCost,'num')}</td>`,
     Cost:`<td>${ie('Expenses',e._row,'Cost',e.Cost,'num')}</td>`,
     Card:`<td>${ie('Expenses',e._row,'Card',e.Card,'card-sel')}</td>`,
-    Date:`<td>${ie('Expenses',e._row,'Date',e.Date,'date')}</td>`,
+    Date:`<td>${ieDateCell('Expenses',e._row,'Date',e.Date)}</td>`,
     Actions:`<td><div style="display:flex;gap:5px;">${e.Status==='Ordered'?`<button class="btn btn-p" onclick="markPro(${e._row})">✓ Procured</button>`:''}<button class="btn btn-c btic" onclick="delItem('Expenses',${e._row})">✕</button></div></td>`,
   };
   return`<tr>${_expColOrder.map(k=>cells[k]||'<td>—</td>').join('')}</tr>`;
