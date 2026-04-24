@@ -158,6 +158,14 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .sub-sum strong{color:var(--text);font-weight:500}
 .empty{padding:36px;text-align:center;color:var(--text3);font-size:12px}
 .eic{font-size:26px;margin-bottom:7px}
+/* SORT BAR */
+.sort-bar{display:flex;align-items:center;gap:6px;padding:8px 18px;border-bottom:1px solid var(--border);background:var(--s2);flex-wrap:wrap}
+.sort-lbl{font-size:10px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.06em;margin-right:4px}
+.sort-btn{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.sort-btn:hover{background:var(--s3);color:var(--text)}
+.sort-btn.active{background:var(--s3);color:var(--text);border-color:var(--accent2)}
+.sort-btn .arr{font-size:9px;opacity:.7}
+
 #toast{position:fixed;bottom:22px;right:22px;background:var(--s3);border:1px solid var(--border2);border-radius:var(--r);padding:11px 18px;font-size:12px;color:var(--text);z-index:9999;transform:translateY(80px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none}
 #toast.show{transform:translateY(0);opacity:1}
 #toast.ok{border-color:rgba(34,197,94,.4);color:var(--green)}
@@ -237,6 +245,14 @@ td.editing{background:rgba(108,99,255,0.05)!important}
     <div id="tab-wishlist" style="display:none">
       <div class="panel">
         <div class="ph"><div class="pt">📋 Wishlist <span class="pc" id="wc">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('wish')">+ Add item</button></div></div>
+        <div class="sort-bar">
+          <span class="sort-lbl">Sort</span>
+          <button class="sort-btn active" id="ws-name" onclick="setSort('wish','Name',this)">Name <span class="arr">↕</span></button>
+          <button class="sort-btn" id="ws-cat" onclick="setSort('wish','Category',this)">Category <span class="arr">↕</span></button>
+          <button class="sort-btn" id="ws-ocost" onclick="setSort('wish','OCost',this)">Original <span class="arr">↕</span></button>
+          <button class="sort-btn" id="ws-savings" onclick="setSort('wish','_savings',this)">Savings <span class="arr">↕</span></button>
+          <button class="sort-btn" id="ws-status" onclick="setSort('wish','Status',this)">Status <span class="arr">↕</span></button>
+        </div>
         <div class="tw"><table>
           <thead><tr><th>Name</th><th>Description</th><th>Category</th><th>Link</th><th>Original</th><th>Bought</th><th>Savings</th><th></th><th></th><th></th></tr></thead>
           <tbody id="wb"></tbody>
@@ -246,6 +262,15 @@ td.editing{background:rgba(108,99,255,0.05)!important}
     </div>
 
     <div id="tab-expenses" style="display:none">
+      <div class="sort-bar" style="background:var(--s1);border:1px solid var(--border);border-radius:var(--r2) var(--r2) 0 0;border-bottom:none;margin-bottom:0;">
+        <span class="sort-lbl">Sort all</span>
+        <button class="sort-btn active" id="es-date" onclick="setSort('exp','Date',this)">Date <span class="arr">↕</span></button>
+        <button class="sort-btn" id="es-name" onclick="setSort('exp','Name',this)">Name <span class="arr">↕</span></button>
+        <button class="sort-btn" id="es-cat" onclick="setSort('exp','Category',this)">Category <span class="arr">↕</span></button>
+        <button class="sort-btn" id="es-cost" onclick="setSort('exp','Cost',this)">Cost <span class="arr">↕</span></button>
+        <button class="sort-btn" id="es-savings" onclick="setSort('exp','_savings',this)">Savings <span class="arr">↕</span></button>
+        <button class="sort-btn" id="es-card" onclick="setSort('exp','Card',this)">Card <span class="arr">↕</span></button>
+      </div>
       <div class="panel" id="panel-ordered">
         <div class="ph"><div class="pt">📦 Ordered <span class="pc" id="ec-ord">0</span></div><div class="pa"><button class="btn" onclick="resetExpColOrder()" style="font-size:10px;color:var(--text3)">Reset cols</button><button class="btn btn-a" onclick="openModal('exp')">+ Add expense</button></div></div>
         <div class="tw"><table>
@@ -285,6 +310,15 @@ td.editing{background:rgba(108,99,255,0.05)!important}
           </div>
         </div>
         <div class="sub-sum" id="ss2">—</div>
+        <div class="sort-bar">
+          <span class="sort-lbl">Sort</span>
+          <button class="sort-btn active" id="ss-billing" onclick="setSort('sub','Billing',this)">Billing <span class="arr">↕</span></button>
+          <button class="sort-btn" id="ss-name" onclick="setSort('sub','Name',this)">Name <span class="arr">↕</span></button>
+          <button class="sort-btn" id="ss-cost" onclick="setSort('sub','Cost',this)">Cost <span class="arr">↕</span></button>
+          <button class="sort-btn" id="ss-due" onclick="setSort('sub','NextRenewal',this)">Due Date <span class="arr">↕</span></button>
+          <button class="sort-btn" id="ss-cat" onclick="setSort('sub','Category',this)">Category <span class="arr">↕</span></button>
+          <button class="sort-btn" id="ss-payments" onclick="setSort('sub','Payments',this)">Payments <span class="arr">↕</span></button>
+        </div>
         <div class="tw"><table>
           <thead></thead>
           <tbody id="sb2"></tbody>
@@ -307,7 +341,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
       <div class="panel">
         <div class="ph"><div class="pt">💳 Cards <span class="pc" id="card-count">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('card')">+ Add card</button></div></div>
         <div class="tw"><table>
-          <thead><tr><th>Card Name</th><th>Bank</th><th>Type</th><th>Last 4</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Card Name</th><th>Alias</th><th>Bank</th><th>Type</th><th>Last 4</th><th>Actions</th></tr></thead>
           <tbody id="card-body"><tr><td colspan="5"><div class="empty"><div class="eic">💳</div>Loading...</div></td></tr></tbody>
         </table></div>
       </div>
@@ -383,7 +417,7 @@ const HD={
   wishlist:['Name','Description','Category','Link','OCost','BCost','Status'],
   subscriptions:['Name','Billing','Card','Cost','LastRenewal','NextRenewal','Category','Status','Payments'],
   categories:['Name','Color'],
-  cards:['Name','Bank','Type','Last4'],
+  cards:['Name','Bank','Type','Last4','Alias'],
   banks:['Name','Type','Last4'],
   master:['Date','Type','Name','Description','Category','Cost','OCost','Savings','Card','Bank','Billing','Status','Source'],
 };
@@ -760,16 +794,16 @@ Chart.register({
 
 // ── INLINE EDIT ENGINE ──
 function ie(sheet,row,field,val,type='text',opts=[]){
-  const display=val||'—';
   const safeVal=(val||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const display=type==='card-sel'?cardDisplay(val):(val||'—');
   return `<span class="ie" onclick="ieEdit('${sheet}',${row},'${field}','${safeVal}','${type}',${JSON.stringify(opts)},this)">${display}</span>`;
 }
 function ieEdit(sheet,row,field,val,type,opts,el){
   if(el.querySelector('input,select'))return;
   const td=el.closest('td');td.classList.add('editing');
   const cats=D.categories.map(c=>c.Name);
-  const cards=D.cards.map(c=>c.Name+' (••••'+c.Last4+')');
-  const cardVals=D.cards.map(c=>c.Name);
+  const cards=D.cards.map(cd=>cardLabel(cd));
+  const cardVals=D.cards.map(cd=>cd.Name);
   const banks=D.banks.map(b=>b.Name);
   let input;
   if(type==='sel'||type==='cat'||type==='card-sel'||type==='bank-sel'){
@@ -807,7 +841,11 @@ async function ieSave(sheet,row,field,newVal,el,td){
   if(newVal===item[field]){if(el)el.textContent=newVal||'—';return;}
   const old=item[field];
   item[field]=newVal;
-  if(el&&el.textContent!==undefined) el.textContent=(field==='Date'||field==='LastRenewal'||field==='NextRenewal')?fmtDate(newVal)||'—':newVal||'—';
+  if(el&&el.textContent!==undefined){
+    if(field==='Date'||field==='LastRenewal'||field==='NextRenewal') el.textContent=fmtDate(newVal)||'—';
+    else if(field==='Card') el.textContent=cardDisplay(newVal)||'—';
+    else el.textContent=newVal||'—';
+  }
   try{
     const vals=HD[dk].map(h=>item[h]||'');
     await updateRow(sheet,row,vals);
@@ -838,8 +876,10 @@ function renderWish(){
   const visible=D.wishlist.filter(w=>w.Status!=='No Longer Needed');
   document.getElementById('wc').textContent=visible.length;
   if(!visible.length){b.innerHTML='<tr><td colspan="9"><div class="empty"><div class="eic">📋</div>No wishlist items yet</div></td></tr>';if(sm)sm.style.display='none';return;}
+  const {field:wf,dir:wd}=_sort.wish;
+  const sorted=sortRows(visible,wf,wd);
   const lim=_pages['wish']||PAGE;
-  const paged=visible.slice(0,lim);
+  const paged=sorted.slice(0,lim);
   if(sm)sm.style.display=visible.length>lim?'':'none';
   if(sm&&visible.length>lim)sm.textContent=`Show more (${visible.length-lim} remaining)`;
   b.innerHTML=paged.map(w=>{
@@ -881,6 +921,47 @@ async function markBought(row){
 // ── EXPENSES ──
 const PAGE=20; // rows per page
 const _pages={ord:PAGE,pro:PAGE,food:PAGE,wish:PAGE,sub:PAGE,master:PAGE};
+const _sort={
+  wish:{field:'Name',dir:1},
+  exp:{field:'Date',dir:-1},
+  sub:{field:'Billing',dir:1},
+};
+function setSort(table,field,btn){
+  const s=_sort[table];
+  if(s.field===field){s.dir*=-1;}else{s.field=field;s.dir=1;}
+  // Update button states
+  const prefix=table==='wish'?'ws-':table==='exp'?'es-':'ss-';
+  document.querySelectorAll('.sort-btn').forEach(b=>{
+    if(b.id&&b.id.startsWith(prefix))b.classList.remove('active');
+  });
+  btn.classList.add('active');
+  const arr=btn.querySelector('.arr');
+  if(arr)arr.textContent=s.dir===1?'↑':'↓';
+  if(table==='wish')renderWish();
+  else if(table==='exp')renderExp();
+  else if(table==='sub')renderSub();
+}
+function sortRows(rows,field,dir){
+  return [...rows].sort((a,b)=>{
+    let av=a[field]||'', bv=b[field]||'';
+    // Computed savings field
+    if(field==='_savings'){
+      av=(parseFloat(a.OCost)||0)-(parseFloat(a.BCost||a.Cost)||0);
+      bv=(parseFloat(b.OCost)||0)-(parseFloat(b.BCost||b.Cost)||0);
+      return(av-bv)*dir;
+    }
+    // Numeric fields
+    if(['Cost','OCost','BCost','Payments'].includes(field)){
+      return((parseFloat(av)||0)-(parseFloat(bv)||0))*dir;
+    }
+    // Billing order
+    if(field==='Billing'){
+      const order={Monthly:0,Annual:1,BiWeekly:2,'':3};
+      return((order[av]??4)-(order[bv]??4))*dir;
+    }
+    return av.localeCompare(bv)*dir;
+  });
+}
 function showMore(key){_pages[key]+=20;renderAll();}
 
 function expRow(e){
@@ -909,7 +990,8 @@ function renderTable(bodyId,smId,rows,cols,key,emptyMsg){
   if(sm&&rows.length>lim)sm.textContent=`Show more (${rows.length-lim} remaining)`;
 }
 function renderExp(){
-  const sorted=[...D.expenses].sort((a,z)=>(z.Date||'').localeCompare(a.Date||''));
+  const {field:ef,dir:ed}=_sort.exp;
+  const sorted=sortRows(D.expenses,ef,ed);
   const ordered=sorted.filter(e=>e.Status==='Ordered');
   const procured=sorted.filter(e=>e.Status!=='Ordered'&&(e.Category||'').toLowerCase()!=='food');
   const food=sorted.filter(e=>e.Status!=='Ordered'&&(e.Category||'').toLowerCase()==='food');
@@ -1020,10 +1102,11 @@ function renderSub(){
   const totalPaid=act.reduce((s,x)=>{const c=parseFloat(x.Cost)||0,p=parseInt(x.Payments)||0;return s+c*p;},0);
   document.getElementById('ss2').innerHTML=`<span>Monthly est: <strong>${$f(mo)}/mo</strong></span><span>Annual est: <strong>${$f(yr)}/yr</strong></span><span>Total paid: <strong>${$f(totalPaid)}</strong></span><span>Next due: <strong>${nd?nd.Name+' — '+fmtDate(nd.NextRenewal):'—'}</strong></span>`;
   if(!D.subscriptions.length){b.innerHTML=`<tr><td colspan="${_subColOrder.length}"><div class="empty"><div class="eic">🔄</div>No subscriptions yet</div></td></tr>`;initSubDragCols();return;}
-  const ORDER={'Monthly':0,'Annual':1,'BiWeekly':2,'Cancelled':3};
-  const visible=D.subscriptions
-    .filter(s=>showCancelled||s.Status!=='Cancelled')
-    .sort((a,z)=>(ORDER[a.Billing]??4)-(ORDER[z.Billing]??4));
+  const {field:sf,dir:sd}=_sort.sub;
+  const visible=sortRows(
+    D.subscriptions.filter(s=>showCancelled||s.Status!=='Cancelled'),
+    sf,sd
+  );
   const lim=_pages['sub']||PAGE;
   const paged=visible.slice(0,lim);
   const sm=document.getElementById('sm-sub');
@@ -1101,17 +1184,28 @@ function renderMaster(){
 }
 
 // ── CARDS ──
+function cardDisplay(name){
+  // Given a stored card Name, return alias display
+  const card=D.cards.find(cd=>cd.Name===name);
+  if(!card)return name||'—';
+  return cardLabel(card);
+}
+function cardLabel(card){
+  // Returns the display label for a card: "Alias (••••1234)" or "Name (••••1234)"
+  const label=card.Alias||card.Name;
+  return label+(card.Last4?' (••••'+card.Last4+')':'');
+}
 function renderCards(){
   const b=document.getElementById('card-body');
   document.getElementById('card-count').textContent=D.cards.length;
-  if(!D.cards.length){b.innerHTML='<tr><td colspan="5"><div class="empty"><div class="eic">💳</div>No cards yet</div></td></tr>';return;}
-  const TYPE_C={Credit:'tte',Debit:'tfo',Prepaid:'tf',Business:'tho'};
-  b.innerHTML=D.cards.map(c=>`<tr>
-    <td>${ie('Cards',c._row,'Name',c.Name)}</td>
-    <td>${ie('Cards',c._row,'Bank',c.Bank,'bank-sel')}</td>
-    <td>${ie('Cards',c._row,'Type',c.Type,'sel',['Credit','Debit','Prepaid','Business'])}</td>
-    <td>${ie('Cards',c._row,'Last4',c.Last4)}</td>
-    <td><button class="btn btn-c btic" onclick="delItem('Cards',${c._row})">✕</button></td>
+  if(!D.cards.length){b.innerHTML='<tr><td colspan="6"><div class="empty"><div class="eic">💳</div>No cards yet</div></td></tr>';return;}
+  b.innerHTML=D.cards.map(cd=>`<tr>
+    <td>${ie('Cards',cd._row,'Name',cd.Name)}</td>
+    <td>${ie('Cards',cd._row,'Alias',cd.Alias)}</td>
+    <td>${ie('Cards',cd._row,'Bank',cd.Bank,'bank-sel')}</td>
+    <td>${ie('Cards',cd._row,'Type',cd.Type,'sel',['Credit','Debit','Prepaid','Business'])}</td>
+    <td>${ie('Cards',cd._row,'Last4',cd.Last4)}</td>
+    <td><button class="btn btn-c btic" onclick="delItem('Cards',${cd._row})">✕</button></td>
   </tr>`).join('');
 }
 
@@ -1126,7 +1220,7 @@ function renderBanks(){
       <td>${ie('Banks',bk._row,'Name',bk.Name)}</td>
       <td>${ie('Banks',bk._row,'Type',bk.Type,'sel',['Checking','Savings','Investment','Business'])}</td>
       <td>${ie('Banks',bk._row,'Last4',bk.Last4)}</td>
-      <td>${linked.length?linked.map(c=>`<span class="tag tdf" style="margin-right:4px;">••••&nbsp;${esc(c.Last4||'????')} ${esc(c.Name)}</span>`).join(''):'<span class="td3">No cards</span>'}</td>
+      <td>${linked.length?linked.map(cd=>`<span class="tag tdf" style="margin-right:4px;">${esc(cardLabel(cd))}</span>`).join(''):'<span class="td3">No cards</span>'}</td>
       <td><button class="btn btn-c btic" onclick="delItem('Banks',bk._row)">✕</button></td>
     </tr>`;
   }).join('');
@@ -1160,8 +1254,9 @@ const MF={
   ]},
   card:{t:'Add Card',et:'Edit Card',s:'Cards',h:HD.cards,fields:[
     {k:'Name',l:'Card Name',full:1},
+    {k:'Alias',l:'Alias (e.g. Chase Sapphire)',full:1},
     {k:'Bank',l:'Bank',tp:'bank'},{k:'Type',l:'Card Type',tp:'sel',o:['Credit','Debit','Prepaid','Business']},
-    {k:'Last4',l:'Last 4 digits',full:1},
+    {k:'Last4',l:'Last 4 digits'},
   ]},
   bank:{t:'Add Bank',et:'Edit Bank',s:'Banks',h:HD.banks,fields:[
     {k:'Name',l:'Bank Name',full:1},
@@ -1244,7 +1339,7 @@ async function saveMo(){
 function openFoodMo(){
   // Populate card dropdown from D.cards
   const sel=document.getElementById('food-card');
-  sel.innerHTML='<option value="">— Select card —</option>'+D.cards.map(c=>`<option>${c.Name} (••••${c.Last4})</option>`).join('');
+  sel.innerHTML='<option value="">— Select card —</option>'+D.cards.map(cd=>`<option value="${cd.Name}">${cardLabel(cd)}</option>`).join('');
   // Default date to today
   document.getElementById('food-date').value=new Date().toISOString().split('T')[0];
   document.getElementById('food-name').value='';
