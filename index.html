@@ -2179,8 +2179,10 @@ let _calEvents=[]; // local cache of GCal events
 
 async function calSync(){
   toast('Syncing calendar…');
+  console.log('[CAL] calSync started, gapi.client.calendar:', !!gapi.client.calendar);
   if(!gapi.client.calendar){
     await new Promise((res,rej)=>gapi.client.load('calendar','v3',()=>{
+      console.log('[CAL] calendar API loaded:', !!gapi.client.calendar);
       if(gapi.client.calendar)res();
       else rej(new Error('Calendar API failed to load'));
     }));
@@ -2188,17 +2190,19 @@ async function calSync(){
   try{
     const start=new Date(_calYear,_calMonth-1,1).toISOString();
     const end=new Date(_calYear,_calMonth+2,1).toISOString();
+    console.log('[CAL] fetching events', CAL_ID, start, end);
     const resp=await gapi.client.calendar.events.list({
       calendarId:CAL_ID,
       timeMin:start,timeMax:end,
       singleEvents:true,orderBy:'startTime',maxResults:500
     });
     _calEvents=resp.result.items||[];
+    console.log('[CAL] events fetched:', _calEvents.length, _calEvents);
     document.getElementById('cal-count').textContent=_calEvents.length+' events';
     renderCalendar();
     toast('Calendar synced ✓','ok');
   }catch(e){
-    // Still render with subscription data even if GCal fetch fails
+    console.error('[CAL] sync error:', e);
     renderCalendar();
     toast('Calendar sync failed: '+e.message,'err');
   }
@@ -2248,7 +2252,9 @@ function calNav(dir){
 }
 
 function renderCalendar(){
+  console.log('[CAL] renderCalendar called, _calMonth:', _calMonth, '_calYear:', _calYear);
   const grid=document.getElementById('cal-grid');
+  console.log('[CAL] cal-grid element:', grid);
   if(!grid)return;
   const label=new Date(_calYear,_calMonth,1).toLocaleString('default',{month:'long',year:'numeric'});
   const el=document.getElementById('cal-month-label');
