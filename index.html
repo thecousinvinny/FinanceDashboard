@@ -787,22 +787,23 @@ function renderCharts(){
   Chart.defaults.color='#8a8a9a';
   Chart.defaults.font.family="'DM Sans',sans-serif";
   const yr=String(new Date().getFullYear());
-  const pro=D.expenses.filter(e=>e.Status==='Procured'&&e.Date&&e.Date.startsWith(yr));
-  const ord=D.expenses.filter(e=>e.Status==='Ordered'&&e.Date&&e.Date.startsWith(yr));
+  const pro=D.expenses.filter(e=>e.Status==='Procured');
+  const ord=D.expenses.filter(e=>e.Status==='Ordered');
   const act=D.subscriptions.filter(s=>s.Status!=='Cancelled');
 
-  // 1. Annual expenses by category — Style C bar
+  // 1. Annual expenses by category — current year
+  const yrPro=pro.filter(e=>e.Date&&e.Date.startsWith(yr));
   const ct={};
-  pro.forEach(e=>{const label=(CE[e.Category]||'')+' '+(e.Category||'Other');ct[label.trim()]=(ct[label.trim()]||0)+(parseFloat(e.Cost)||0);});
+  yrPro.forEach(e=>{const label=(CE[e.Category]||'')+' '+(e.Category||'Other');ct[label.trim()]=(ct[label.trim()]||0)+(parseFloat(e.Cost)||0);});
   const ctLabels=Object.keys(ct).sort((a,z)=>ct[z]-ct[a]);
   barChart('c-cat',ctLabels,ctLabels.map(k=>ct[k]));
 
-  // 2. Annual expenses by month — Style B green line
+  // 2. Last 12 months of expenses — Style B green line
   const months=[],expByMo=[],savByMo=[];
-  for(let i=0;i<12;i++){
-    const d=new Date(parseInt(yr),i,1);
-    const k=`${yr}-${String(i+1).padStart(2,'0')}`;
-    months.push(d.toLocaleString('default',{month:'short'}));
+  for(let i=11;i>=0;i--){
+    const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);
+    const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    months.push(d.toLocaleString('default',{month:'short'})+"'"+String(d.getFullYear()).slice(2));
     const moPro=pro.filter(e=>e.Date&&e.Date.startsWith(k));
     expByMo.push(Math.round(moPro.reduce((s,e)=>s+(parseFloat(e.Cost)||0),0)));
     const moWish=D.wishlist.filter(w=>w.Status==='Bought'&&w.BCost);
@@ -1111,12 +1112,12 @@ const _pages={ord:PAGE,pro:PAGE,food:PAGE,wish:PAGE,sub:PAGE,master:PAGE};
 // Multi-level sort state: array of {field, dir} in priority order
 const _SORT_DEFAULTS={
   wish:[{field:'_row',dir:1}],
-  exp:[{field:'_row',dir:1}],
+  exp:[{field:'Date',dir:-1}],
   sub:[{field:'_row',dir:1}],
 };
 const _sort={
   wish:[{field:'_row',dir:1}],
-  exp:[{field:'_row',dir:1}],
+  exp:[{field:'Date',dir:-1}],
   sub:[{field:'_row',dir:1}],
 };
 function saveSortState(){
