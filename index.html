@@ -59,7 +59,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .sv.danger{color:var(--red)}.sv.warn{color:var(--amber)}.sv.good{color:var(--green)}
 
 /* CHARTS */
-.cg{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.cg{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:8px}
+.chart-group-label{font-size:12px;font-weight:600;color:var(--text2);padding:14px 4px 8px;letter-spacing:.02em;border-bottom:1px solid var(--border);margin-bottom:14px}
 .cc{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);padding:20px}
 .ct{font-size:12px;font-weight:500;color:var(--text2);margin-bottom:14px}
 .cw{position:relative;height:240px}
@@ -249,12 +250,20 @@ td.editing{background:rgba(108,99,255,0.05)!important}
         <div class="sc"><div class="sl">YTD savings</div><div class="sv good" id="s-svyr">—</div><div class="ss">vs original price</div></div>
       </div>
       <div class="cg" style="grid-template-columns:1fr 1fr 1fr">
-        <div class="cc"><div class="ct">Annual expenses by category</div><div class="cw"><canvas id="c-cat"></canvas></div></div>
-        <div class="cc"><div class="ct">Annual expenses by month</div><div class="cw"><canvas id="c-trend"></canvas></div></div>
-        <div class="cc"><div class="ct">Annual savings by month</div><div class="cw"><canvas id="c-savings"></canvas></div></div>
-        <div class="cc"><div class="ct">Sub payments this year by amount</div><div class="cw"><canvas id="c-subpaid"></canvas></div></div>
-        <div class="cc"><div class="ct">Sub payments by month</div><div class="cw"><canvas id="c-submo"></canvas></div></div>
-        <div class="cc"><div class="ct">Estimated monthly vs annual subs</div><div class="cw"><canvas id="c-subest"></canvas></div></div>
+        <div class="chart-group-label">📅 2026 — Current Year</div>
+        <div class="cg">
+          <div class="cc"><div class="ct">Expenses by category</div><div class="cw"><canvas id="c-yr-cat"></canvas></div></div>
+          <div class="cc"><div class="ct">Expenses by month</div><div class="cw"><canvas id="c-yr-trend"></canvas></div></div>
+          <div class="cc"><div class="ct">Savings by month</div><div class="cw"><canvas id="c-yr-savings"></canvas></div></div>
+          <div class="cc"><div class="ct">Sub payments by month</div><div class="cw"><canvas id="c-yr-submo"></canvas></div></div>
+        </div>
+        <div class="chart-group-label">📊 All Time</div>
+        <div class="cg">
+          <div class="cc"><div class="ct">Expenses by category</div><div class="cw"><canvas id="c-all-cat"></canvas></div></div>
+          <div class="cc"><div class="ct">Expenses by month (last 12)</div><div class="cw"><canvas id="c-all-trend"></canvas></div></div>
+          <div class="cc"><div class="ct">Savings by month (last 12)</div><div class="cw"><canvas id="c-all-savings"></canvas></div></div>
+          <div class="cc"><div class="ct">Sub payments by month (last 12)</div><div class="cw"><canvas id="c-all-submo"></canvas></div></div>
+        </div>
       </div>
     </div>
 
@@ -800,54 +809,64 @@ function renderCharts(){
   Chart.defaults.font.family="'DM Sans',sans-serif";
   const yr=String(new Date().getFullYear());
   const pro=D.expenses.filter(e=>e.Status==='Procured');
-  const ord=D.expenses.filter(e=>e.Status==='Ordered');
   const act=D.subscriptions.filter(s=>s.Status!=='Cancelled');
 
-  // 1. Annual expenses by category — current year
-  const yrPro=pro.filter(e=>toSortableDate(e.Date).startsWith(yr));
-  const ct={};
-  yrPro.forEach(e=>{const label=(CE[e.Category]||'')+' '+(e.Category||'Other');ct[label.trim()]=(ct[label.trim()]||0)+(parseFloat(e.Cost)||0);});
-  const ctLabels=Object.keys(ct).sort((a,z)=>ct[z]-ct[a]);
-  barChart('c-cat',ctLabels,ctLabels.map(k=>ct[k]));
+  // ── Helper: build monthly data for a given set of months ──
+  function monthlyData(months12, expenses){
+    return months12.map(k=>Math.round(expenses.filter(e=>toSortableDate(e.Date).startsWith(k)).reduce((s,e)=>s+(parseFloat(e.Cost)||0),0)));
+  }
+  function monthlySavings(months12){
+    return months12.map(k=>{
+      const bought=D.wishlist.filter(w=>w.Status==='Bought'&&toSortableDate(w.Date||'').startsWith(k));
+      return Math.round(bought.reduce((s,w)=>{const o=parseFloat(w.OCost)||0,b=parseFloat(w.BCost)||0;return b>0?s+(o-b):s;},0));
+    });
+  }
+  function subPayByMonth(months12){
+    return months12.map(k=>{
+      const mo=act.reduce((s,sub)=>{
+        const cost=parseFloat(sub.Cost)||0;
+        if(sub.Billing==='Monthly'||sub.Billing==='BiWeekly') return s+(sub.Billing==='Monthly'?cost:cost*2);
+        if(sub.Billing==='Annual'&&sub.NextRenewal&&toSortableDate(sub.NextRenewal).startsWith(k)) return s+cost;
+        return s;
+      },0);
+      return Math.round(mo);
+    });
+  }
+  function catBreakdown(expenses){
+    const ct={};
+    expenses.forEach(e=>{const label=(CE[e.Category]||'')+' '+(e.Category||'Other');ct[label.trim()]=(ct[label.trim()]||0)+(parseFloat(e.Cost)||0);});
+    const labels=Object.keys(ct).sort((a,z)=>ct[z]-ct[a]);
+    return{labels,vals:labels.map(k=>ct[k])};
+  }
 
-  // 2. Last 12 months of expenses — Style B green line
-  const months=[],expByMo=[],savByMo=[];
+  // ── CURRENT YEAR ──
+  const yrPro=pro.filter(e=>toSortableDate(e.Date).startsWith(yr));
+  const yrMonths=[], yrKeys=[];
+  for(let i=0;i<12;i++){
+    const d=new Date(parseInt(yr),i,1);
+    yrMonths.push(d.toLocaleString('default',{month:'short'}));
+    yrKeys.push(`${yr}-${String(i+1).padStart(2,'0')}`);
+  }
+  const yrCat=catBreakdown(yrPro);
+  barChart('c-yr-cat',yrCat.labels,yrCat.vals);
+  lineChart('c-yr-trend',yrMonths,monthlyData(yrKeys,yrPro),'#1aa378');
+  lineChart('c-yr-savings',yrMonths,monthlySavings(yrKeys),'#f59e0b');
+  lineChart('c-yr-submo',yrMonths,subPayByMonth(yrKeys),'#6c63ff');
+
+  // ── ALL TIME (last 12 rolling months) ──
+  const allMonths=[], allKeys=[];
   for(let i=11;i>=0;i--){
     const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);
-    const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    months.push(d.toLocaleString('default',{month:'short'})+"'"+String(d.getFullYear()).slice(2));
-    const moPro=pro.filter(e=>toSortableDate(e.Date).startsWith(k));
-    expByMo.push(Math.round(moPro.reduce((s,e)=>s+(parseFloat(e.Cost)||0),0)));
-    const moWish=D.wishlist.filter(w=>w.Status==='Bought'&&w.BCost);
-    savByMo.push(Math.round(moWish.reduce((s,w)=>{const o=parseFloat(w.OCost)||0,b=parseFloat(w.BCost)||0;return b>0?s+(o-b):s;},0)));
+    allKeys.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+    allMonths.push(d.toLocaleString('default',{month:'short'})+"'"+String(d.getFullYear()).slice(2));
   }
-  lineChart('c-trend',months,expByMo,'#1aa378');
-
-  // 3. Annual savings by month — Style B amber line
-  lineChart('c-savings',months,savByMo,'#f59e0b');
-
-  // 4. Sub payments YTD by sub — Style C donut ring
-  const subPaid={};
-  act.forEach(s=>{const p=parseInt(s.Payments)||0;if(p>0)subPaid[s.Name]=(parseFloat(s.Cost)||0)*p;});
-  donut('c-subpaid',Object.keys(subPaid),Object.values(subPaid));
-
-  // 5. Sub payments by month — Style B purple line
-  const subMoData=new Array(12).fill(0);
-  act.forEach(s=>{
-    const c=parseFloat(s.Cost)||0;
-    if(s.Billing==='Monthly'||s.Billing==='BiWeekly'){
-      for(let i=0;i<12;i++) subMoData[i]+=s.Billing==='Monthly'?c:c*2;
-    } else if(s.Billing==='Annual'&&s.NextRenewal){
-      const m=parseInt(s.NextRenewal.split('-')[1])-1;
-      if(m>=0&&m<12) subMoData[m]+=c;
-    }
-  });
-  lineChart('c-submo',months,subMoData.map(v=>Math.round(v)),'#6c63ff');
-
-  // 6. Est monthly vs annual — Style C donut ring
-  const estMo=act.reduce((s,x)=>{const c=parseFloat(x.Cost)||0;return x.Billing==='Annual'?s+c/12:x.Billing==='BiWeekly'?s+c*2.17:s+c;},0);
-  donut('c-subest',['Monthly equiv','Annual total'],[Math.round(estMo),Math.round(estMo*12)]);
+  const allCat=catBreakdown(pro);
+  barChart('c-all-cat',allCat.labels,allCat.vals);
+  lineChart('c-all-trend',allMonths,monthlyData(allKeys,pro),'#1aa378');
+  lineChart('c-all-savings',allMonths,monthlySavings(allKeys),'#f59e0b');
+  lineChart('c-all-submo',allMonths,subPayByMonth(allKeys),'#6c63ff');
 }
+
 function donut(id,labels,data,colors){
   if(charts[id])charts[id].destroy();
   const el=document.getElementById(id);if(!el)return;
@@ -1029,16 +1048,59 @@ async function ieSave(sheet,row,field,newVal,el,td){
       const row_el=el&&el.closest?el.closest('tr'):null;
       if(row_el){const cells=row_el.querySelectorAll('td');if(cells[6])cells[6].textContent=sv>0?'-'+$f(sv):'—';}
     }
-    if(sheet==='Banks')renderCards(); // update linked cards display
+    if(sheet==='Banks')renderCards();
     if(sheet==='Subscriptions'&&(field==='Cost'||field==='Billing')){
-      // Recalculate and write back monthly/annual costs
       const{MonthlyCost,AnnualCost}=calcSubCosts(item);
       item.MonthlyCost=MonthlyCost;item.AnnualCost=AnnualCost;
       await updateRow(sheet,row,HD.subscriptions.map(h=>item[h]||''));
     }
+    // Sync change to Master — find matching row by Name+Date and update it
+    if(sheet==='Expenses'||sheet==='Subscriptions'){
+      await syncEditToMaster(sheet,item,field,newVal);
+    }
   }catch(e){item[field]=old;if(el)el.textContent=old||'—';toast('Save failed: '+e.message,'err');}
 }
 function ieCancel(el,val,td){td.classList.remove('editing');el.textContent=val||'—';}
+
+// ── MASTER SYNC ──
+// Maps Expense/Subscription fields to their Master column equivalents
+const MASTER_FIELD_MAP={
+  // Expense fields
+  Name:'Name', Description:'Description', Category:'Category',
+  Cost:'Cost', OCost:'OCost', Card:'Card', Date:'Date', Status:'Status',
+  // Subscription fields
+  Billing:'Billing',
+};
+
+async function syncEditToMaster(sheet,item,field,newVal){
+  // Find the Master column index for this field
+  const masterField=MASTER_FIELD_MAP[field];
+  if(!masterField)return; // field doesn't exist in Master, skip
+
+  // Find matching Master row by Name + approximate Date
+  const itemDate=toSortableDate(item.Date||item.LastRenewal||'');
+  const match=D.master.find(m=>{
+    if((m.Name||'').trim().toLowerCase()!==(item.Name||'').trim().toLowerCase())return false;
+    const mDate=toSortableDate(m.Date||'');
+    // Allow ±3 day window for date matching
+    if(itemDate&&mDate){
+      const diff=Math.abs(new Date(itemDate)-new Date(mDate))/(1000*60*60*24);
+      return diff<=3;
+    }
+    return true;
+  });
+
+  if(!match)return; // no matching Master row found — skip silently
+
+  // Update the field in Master
+  match[masterField]=newVal;
+  // Also recalculate Savings if Cost or OCost changed
+  if(field==='Cost'||field==='OCost'){
+    const o=parseFloat(match.OCost)||0,cost=parseFloat(match.Cost)||0;
+    match.Savings=o>0&&cost>0?(o-cost).toFixed(2):'0';
+  }
+  await updateRow('Master',match._row,HD.master.map(h=>match[h]||''));
+}
 
 // ── WISHLIST ──
 async function wishSetStatus(row, status){
@@ -1282,6 +1344,7 @@ async function markPro(row){
   const e=D.expenses.find(x=>x._row===row);if(!e)return;
   e.Status='Procured';
   await updateRow('Expenses',row,HD.expenses.map(h=>e[h]||''));
+  await syncEditToMaster('Expenses',e,'Status','Procured');
   const savings=e.OCost&&e.Cost?(parseFloat(e.OCost)-parseFloat(e.Cost)).toFixed(2):'0';
   const bank=D.cards.find(cd=>cd.Name===e.Card)?.Bank||'';
   const today=new Date().toISOString().split('T')[0];
