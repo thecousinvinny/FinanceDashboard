@@ -716,12 +716,23 @@ async function syncAll(){
 }
 
 function parse(rows,hd){
-  if(!rows||rows.length<2)return[];
-  return rows.slice(1).map((r,i)=>{
-    const o={_row:i+2};
+  if(!rows||rows.length<1)return[];
+  // Find the actual header row (in case it got shifted or duplicated)
+  let dataStart=1;
+  for(let i=0;i<Math.min(5,rows.length);i++){
+    const row=rows[i];
+    // If this row matches expected headers, data starts after it
+    if(row&&row[0]&&hd[0]&&row[0].trim()===hd[0].trim()){
+      dataStart=i+1;
+      break;
+    }
+  }
+  return rows.slice(dataStart).map((r,i)=>{
+    const o={_row:dataStart+i+1};
     hd.forEach((h,j)=>o[h]=r[j]||'');
     return o;
-  }).filter(r=>r[hd[0]]);
+  // Filter out any rows that look like accidental header duplicates
+  }).filter(r=>r[hd[0]]&&r[hd[0]].trim()!==hd[0]);
 }
 
 // ── RENDER ──
