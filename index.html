@@ -2179,7 +2179,6 @@ let _calEvents=[]; // local cache of GCal events
 
 async function calSync(){
   toast('Syncing calendar…');
-  // Load calendar API if not yet loaded
   if(!gapi.client.calendar){
     await new Promise((res,rej)=>gapi.client.load('calendar','v3',()=>{
       if(gapi.client.calendar)res();
@@ -2187,7 +2186,6 @@ async function calSync(){
     }));
   }
   try{
-    // Fetch events for 3 months around current view
     const start=new Date(_calYear,_calMonth-1,1).toISOString();
     const end=new Date(_calYear,_calMonth+2,1).toISOString();
     const resp=await gapi.client.calendar.events.list({
@@ -2199,18 +2197,21 @@ async function calSync(){
     document.getElementById('cal-count').textContent=_calEvents.length+' events';
     renderCalendar();
     toast('Calendar synced ✓','ok');
-  }catch(e){toast('Calendar sync failed: '+e.message,'err');}
+  }catch(e){
+    // Still render with subscription data even if GCal fetch fails
+    renderCalendar();
+    toast('Calendar sync failed: '+e.message,'err');
+  }
 }
 
 async function calEnsureSubEvents(){
-  // Create events for subscriptions that don't have one yet
+  if(!gapi.client.calendar)return;
   const act=D.subscriptions.filter(s=>s.Status!=='Cancelled'&&s.NextRenewal);
   let created=0;
   for(const s of act){
     const title=`💳 ${s.Name} — ${$f(s.Cost)}`;
     const date=toSortableDate(s.NextRenewal);
     if(!date)continue;
-    // Check if already exists
     const exists=_calEvents.find(e=>e.summary===title&&e.start?.date===date);
     if(exists)continue;
     try{
@@ -2220,13 +2221,14 @@ async function calEnsureSubEvents(){
           summary:title,
           start:{date},end:{date},
           description:`Subscription: ${s.Name}\nBilling: ${s.Billing}\nCard: ${s.Card||'—'}`,
-          colorId:'5', // banana yellow
+          colorId:'5',
         }
       });
       created++;
     }catch(e){console.warn('Cal event create failed:',e);}
   }
   if(created>0){toast(`Created ${created} calendar events ✓`,'ok');await calSync();}
+  else renderCalendar();
 }
 
 async function calDeleteEvent(eventId){
@@ -2281,8 +2283,11 @@ function renderCalendar(){
       return d===dateStr;
     });
 
-    // Also show sub due dates from D.subscriptions
-    const subsDue=D.subscriptions.filter(s=>s.Status!=='Cancelled'&&toSortableDate(s.NextRenewal)===dateStr);
+    // Also show sub due dates from D.subscriptions (normalize date format)
+    const subsDue=D.subscriptions.filter(s=>{
+      if(s.Status==='Cancelled'||!s.NextRenewal)return false;
+      return toSortableDate(s.NextRenewal)===dateStr;
+    });
 
     let evHtml='';
     // Sub due dates (from app data, not necessarily on calendar yet)
