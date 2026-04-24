@@ -1219,19 +1219,17 @@ function sortRows(rows,table){
 function showMore(key){_pages[key]+=20;renderAll();}
 
 function expRow(e){
-  return`<tr>
-    <td>${ie('Expenses',e._row,'Name',e.Name)}</td>
-    <td>${ie('Expenses',e._row,'Description',e.Description)}</td>
-    <td>${ie('Expenses',e._row,'Category',e.Category,'cat')}</td>
-    <td>${ie('Expenses',e._row,'OCost',e.OCost,'num')}</td>
-    <td>${ie('Expenses',e._row,'Cost',e.Cost,'num')}</td>
-    <td>${ie('Expenses',e._row,'Card',e.Card,'card-sel')}</td>
-    <td>${ie('Expenses',e._row,'Date',e.Date,'date')}</td>
-    <td><div style="display:flex;gap:5px;">
-      ${e.Status==='Ordered'?`<button class="btn btn-p" onclick="markPro(${e._row})">✓ Procured</button>`:''}
-      <button class="btn btn-c btic" onclick="delItem('Expenses',${e._row})">✕</button>
-    </div></td>
-  </tr>`;
+  const cells={
+    Name:`<td>${ie('Expenses',e._row,'Name',e.Name)}</td>`,
+    Description:`<td>${ie('Expenses',e._row,'Description',e.Description)}</td>`,
+    Category:`<td>${ie('Expenses',e._row,'Category',e.Category,'cat')}</td>`,
+    OCost:`<td>${ie('Expenses',e._row,'OCost',e.OCost,'num')}</td>`,
+    Cost:`<td>${ie('Expenses',e._row,'Cost',e.Cost,'num')}</td>`,
+    Card:`<td>${ie('Expenses',e._row,'Card',e.Card,'card-sel')}</td>`,
+    Date:`<td>${ieDateCell('Expenses',e._row,'Date',e.Date)}</td>`,
+    Actions:`<td><div style="display:flex;gap:5px;">${e.Status==='Ordered'?`<button class="btn btn-p" onclick="markPro(${e._row})">✓ Procured</button>`:''}<button class="btn btn-c btic" onclick="delItem('Expenses',${e._row})">✕</button></div></td>`,
+  };
+  return`<tr>${_expColOrder.map(k=>cells[k]||'<td>—</td>').join('')}</tr>`;
 }
 function renderTable(bodyId,smId,rows,cols,key,emptyMsg){
   const b=document.getElementById(bodyId);
@@ -1253,6 +1251,13 @@ function renderExp(){
   document.getElementById('ec-food').textContent=food.length;
   document.getElementById('panel-ordered').style.display=ordered.length?'':'none';
   document.getElementById('panel-food').style.display=food.length?'':'none';
+  // Always inject headers immediately — don't wait for drag init
+  EXP_TABLES.forEach(id=>{
+    const tbody=document.getElementById(id);
+    if(!tbody)return;
+    const thead=tbody.closest('table')?.querySelector('thead');
+    if(thead)thead.innerHTML=expThead(id);
+  });
   renderTable('eb-ord','sm-ord',ordered,8,'ord',['📦','No ordered items']);
   renderTable('eb-pro','sm-pro',procured,8,'pro',['✅','No procured items yet']);
   renderTable('eb-food','sm-food',food,7,'food',['🍔','No food expenses']);
@@ -1776,6 +1781,40 @@ function initStaticDrag(tbodyId,orderKey){
 }
 
 // For data-driven expense tables (expThead/expRow system)
+const EXP_COLS_DEFAULT=['Name','Description','Category','OCost','Cost','Card','Date','Actions'];
+let _expColOrder=[...EXP_COLS_DEFAULT];
+
+function loadExpColOrder(){
+  try{const s=localStorage.getItem('fin_exp_cols');if(s){const o=JSON.parse(s);if(Array.isArray(o))_expColOrder=o;}}catch(e){}
+}
+function saveExpColOrder(){
+  try{localStorage.setItem('fin_exp_cols',JSON.stringify(_expColOrder));}catch(e){}
+}
+function resetExpColOrder(){
+  _expColOrder=[...EXP_COLS_DEFAULT];saveExpColOrder();renderExp();
+}
+
+let _expDragFrom=null;
+function expDragStart(e,idx){_expDragFrom=idx;e.currentTarget.classList.add('dragging');e.dataTransfer.effectAllowed='move';}
+function expDragDrop(e,toIdx,tbodyId){
+  e.preventDefault();e.currentTarget.classList.remove('drag-over');
+  if(_expDragFrom===null||_expDragFrom===toIdx)return;
+  const moved=_expColOrder.splice(_expDragFrom,1)[0];
+  _expColOrder.splice(toIdx,0,moved);
+  saveExpColOrder();renderExp();_expDragFrom=null;
+}
+
+function expThead(tbodyId){
+  const labels={Name:'Name',Description:'Description',Category:'Category',OCost:'Original Cost',Cost:'Bought Cost',Card:'Card',Date:'Date',Actions:''};
+  return`<tr>${_expColOrder.map((k,i)=>`<th draggable="true"
+    ondragstart="expDragStart(event,${i})"
+    ondragover="event.preventDefault();this.classList.add('drag-over')"
+    ondragleave="this.classList.remove('drag-over')"
+    ondrop="expDragDrop(event,${i},'${tbodyId}')"
+    ondragend="document.querySelectorAll('th').forEach(t=>t.classList.remove('drag-over','dragging'))"
+    >${labels[k]||k}<span class="drag-handle">⠿</span></th>`).join('')}</tr>`;
+}
+
 function initDragCols(tbodyId){
   if(EXP_TABLES.includes(tbodyId)){
     const tbody=document.getElementById(tbodyId);
@@ -1797,6 +1836,7 @@ function initAllDragCols(){
 // ── INIT ──
 loadColOrders();
 loadSubColOrder();
+loadExpColOrder();
 loadSortState();
 if(loadCfg()){bootApp();}
 </script>
