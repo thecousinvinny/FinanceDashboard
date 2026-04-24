@@ -703,6 +703,8 @@ async function syncAll(){
     D.cards=parse(kar,HD.cards);
     D.banks=parse(bar,HD.banks);
     D.master=parse(mr,HD.master);
+    console.log('[SYNC] raw rows — Expenses:',er.length,'Master:',mr.length,'parsed Master:',D.master.length);
+    if(D.master.length>0)console.log('[SYNC] Master date range:',D.master[0]?.Date,'→',D.master[D.master.length-1]?.Date);
     // Write calculated subscription costs back to sheet if stale
     await writeBackCalculated();
     renderAll();
