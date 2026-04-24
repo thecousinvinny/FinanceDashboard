@@ -812,8 +812,9 @@ function ieEdit(sheet,row,field,val,type,opts,el){
     input=document.createElement('select');
     input.className='ie-sel';
     input.innerHTML='<option value="">—</option>'+choices.map((o,i)=>`<option value="${vals[i]||o}" ${(vals[i]||o)===val?'selected':''}>${o}</option>`).join('');
-    input.onchange=()=>ieSave(sheet,row,field,input.value,el,td);
-    input.onblur=()=>setTimeout(()=>ieCancel(el,val,td),150);
+    let _saved=false;
+    input.onchange=()=>{_saved=true;ieSave(sheet,row,field,input.value,el,td);};
+    input.onblur=()=>{if(!_saved)ieCancel(el,val,td);};
   }else{
     input=document.createElement('input');
     input.className='ie-input';
