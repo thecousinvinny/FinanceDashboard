@@ -624,12 +624,16 @@ function gapiLoaded(){
     try{
       await gapi.client.init({
         apiKey:cfg.key,
-        discoveryDocs:['https://sheets.googleapis.com/$discovery/rest?version=v4','https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest']
+        discoveryDocs:['https://sheets.googleapis.com/$discovery/rest?version=v4']
       });
+      // Load Calendar API separately (more reliable than discovery doc in init)
+      await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest');
       // Now load GSI for OAuth
       loadScript('https://accounts.google.com/gsi/client', gsiLoaded);
     }catch(e){
-      toast('Google API init failed: '+e.message,'err');
+      // Calendar load might fail in some envs — continue without it
+      console.warn('Calendar API load warning:', e.message);
+      loadScript('https://accounts.google.com/gsi/client', gsiLoaded);
     }
   });
 }
@@ -2180,6 +2184,10 @@ let _calEvents=[]; // local cache of GCal events
 
 async function calSync(){
   toast('Syncing calendar…');
+  if(!gapi.client.calendar){
+    try{await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest');}
+    catch(e){toast('Calendar API unavailable: '+e.message,'err');return;}
+  }
   try{
     // Fetch events for 3 months around current view
     const start=new Date(_calYear,_calMonth-1,1).toISOString();
