@@ -262,7 +262,8 @@ td.editing{background:rgba(108,99,255,0.05)!important}
         <div class="ph"><div class="pt">📋 Wishlist <span class="pc" id="wc">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('wish')">+ Add item</button></div></div>
         <div class="sort-bar">
           <span class="sort-lbl">Sort</span>
-          <button class="sort-btn asc" id="ws-name" data-field="Name" onclick="setSort('wish','Name',this)">Name <span class="arr">↑</span></button>
+          <button class="sort-btn asc" id="ws-row" data-field="_row" onclick="setSort('wish','_row',this)">Date Added <span class="arr">↑</span></button>
+          <button class="sort-btn" id="ws-name" data-field="Name" onclick="setSort('wish','Name',this)">Name <span class="arr">↕</span></button>
           <button class="sort-btn" id="ws-cat" data-field="Category" onclick="setSort('wish','Category',this)">Category <span class="arr">↕</span></button>
           <button class="sort-btn" id="ws-ocost" data-field="OCost" onclick="setSort('wish','OCost',this)">Original <span class="arr">↕</span></button>
           <button class="sort-btn" id="ws-savings" data-field="_savings" onclick="setSort('wish','_savings',this)">Savings <span class="arr">↕</span></button>
@@ -281,7 +282,8 @@ td.editing{background:rgba(108,99,255,0.05)!important}
     <div id="tab-expenses" style="display:none">
       <div class="sort-bar" style="background:var(--s1);border:1px solid var(--border);border-radius:var(--r2) var(--r2) 0 0;border-bottom:none;margin-bottom:0;">
         <span class="sort-lbl">Sort all</span>
-        <button class="sort-btn desc" id="es-date" data-field="Date" onclick="setSort('exp','Date',this)">Date <span class="arr">↓</span></button>
+        <button class="sort-btn asc" id="es-row" data-field="_row" onclick="setSort('exp','_row',this)">Date Added <span class="arr">↑</span></button>
+        <button class="sort-btn" id="es-date" data-field="Date" onclick="setSort('exp','Date',this)">Date <span class="arr">↕</span></button>
         <button class="sort-btn" id="es-name" data-field="Name" onclick="setSort('exp','Name',this)">Name <span class="arr">↕</span></button>
         <button class="sort-btn" id="es-cat" data-field="Category" onclick="setSort('exp','Category',this)">Category <span class="arr">↕</span></button>
         <button class="sort-btn" id="es-cost" data-field="Cost" onclick="setSort('exp','Cost',this)">Cost <span class="arr">↕</span></button>
@@ -331,7 +333,8 @@ td.editing{background:rgba(108,99,255,0.05)!important}
         <div class="sub-sum" id="ss2">—</div>
         <div class="sort-bar">
           <span class="sort-lbl">Sort</span>
-          <button class="sort-btn asc" id="ss-billing" data-field="Billing" onclick="setSort('sub','Billing',this)">Billing <span class="arr">↑</span></button>
+          <button class="sort-btn asc" id="ss-row" data-field="_row" onclick="setSort('sub','_row',this)">Date Added <span class="arr">↑</span></button>
+          <button class="sort-btn" id="ss-billing" data-field="Billing" onclick="setSort('sub','Billing',this)">Billing <span class="arr">↕</span></button>
           <button class="sort-btn" id="ss-name" data-field="Name" onclick="setSort('sub','Name',this)">Name <span class="arr">↕</span></button>
           <button class="sort-btn" id="ss-cost" data-field="Cost" onclick="setSort('sub','Cost',this)">Cost <span class="arr">↕</span></button>
           <button class="sort-btn" id="ss-due" data-field="NextRenewal" onclick="setSort('sub','NextRenewal',this)">Due Date <span class="arr">↕</span></button>
@@ -454,7 +457,7 @@ const SH={expenses:'Expenses',wishlist:'Wishlist',subscriptions:'Subscriptions',
 const HD={
   expenses:['Name','Description','Category','Cost','Card','Date','Status','OCost'],
   wishlist:['Name','Description','Category','Link','OCost','BCost','Status'],
-  subscriptions:['Name','Billing','Card','Cost','LastRenewal','NextRenewal','Category','Status','Payments'],
+  subscriptions:['Name','Billing','Card','Cost','LastRenewal','NextRenewal','Category','Status','Payments','MonthlyCost','AnnualCost'],
   categories:['Name','Color'],
   cards:['Name','Bank','Type','Last4','Alias','Default'],
   banks:['Name','Type','Last4'],
@@ -834,7 +837,7 @@ function lineChart(id,labels,data,color='#1aa378'){
       },
       scales:{
         x:{grid:{display:false},ticks:{color:'rgba(255,255,255,0.3)',font:{size:10}},border:{display:false}},
-        y:{grid:{color:'rgba(255,255,255,0.05)',lineWidth:1},ticks:{color:'rgba(255,255,255,0.3)',font:{size:10},callback:v=>'$'+v.toLocaleString()},border:{display:false}},
+        y:{grid:{color:'rgba(255,255,255,0.05)',lineWidth:1},ticks:{color:'rgba(255,255,255,0.3)',font:{size:10},callback:v=>'$'+v.toLocaleString()},border:{display:false},min:0},
       }
     }
   });
@@ -862,7 +865,7 @@ function barChart(id,labels,data,color='rgba(255,255,255,0.85)'){
       },
       scales:{
         x:{grid:{display:false},ticks:{color:'rgba(255,255,255,0.3)',font:{size:10}},border:{display:false}},
-        y:{grid:{color:'rgba(255,255,255,0.05)',lineWidth:1},ticks:{color:'rgba(255,255,255,0.3)',font:{size:10},callback:v=>'$'+v.toLocaleString()},border:{display:false}},
+        y:{grid:{color:'rgba(255,255,255,0.05)',lineWidth:1},ticks:{color:'rgba(255,255,255,0.3)',font:{size:10},callback:v=>'$'+v.toLocaleString()},border:{display:false},min:0},
       }
     }
   });
@@ -1034,18 +1037,18 @@ async function confirmBuy(){
 }
 
 // ── EXPENSES ──
-const PAGE=20; // rows per page
+const PAGE=25; // rows per page
 const _pages={ord:PAGE,pro:PAGE,food:PAGE,wish:PAGE,sub:PAGE,master:PAGE};
 // Multi-level sort state: array of {field, dir} in priority order
 const _SORT_DEFAULTS={
-  wish:[{field:'Name',dir:1}],
-  exp:[{field:'Date',dir:-1}],
-  sub:[{field:'Billing',dir:1}],
+  wish:[{field:'_row',dir:1}],
+  exp:[{field:'_row',dir:1}],
+  sub:[{field:'_row',dir:1}],
 };
 const _sort={
-  wish:[{field:'Name',dir:1}],
-  exp:[{field:'Date',dir:-1}],
-  sub:[{field:'Billing',dir:1}],
+  wish:[{field:'_row',dir:1}],
+  exp:[{field:'_row',dir:1}],
+  sub:[{field:'_row',dir:1}],
 };
 function saveSortState(){
   try{localStorage.setItem('fin_sort',JSON.stringify(_sort));}catch(e){}
@@ -1117,6 +1120,7 @@ function updateSortBtns(table){
 }
 
 function compareVal(field,a,b){
+  if(field==='_row')return(a._row||0)-(b._row||0);
   let av=a[field]||'', bv=b[field]||'';
   if(field==='_savings'){
     av=(parseFloat(a.OCost)||0)-(parseFloat(a.BCost||a.Cost)||0);
@@ -1212,7 +1216,7 @@ function dueCls(nextRenewal){
   return '';
 }
 
-const SUB_COLS_DEFAULT=['Name','Billing','Card','Cost','Due','LastRenewal','NextRenewal','Payments','Category','Actions'];
+const SUB_COLS_DEFAULT=['Name','Billing','Card','Cost','MonthlyCost','AnnualCost','Due','LastRenewal','NextRenewal','Payments','Category','Actions'];
 let _subColOrder=[...SUB_COLS_DEFAULT];
 
 function loadSubColOrder(){
@@ -1236,7 +1240,7 @@ function subDragDrop(e,toIdx){
 }
 
 function subThead(){
-  const labels={Name:'Name',Billing:'Billing',Card:'Card',Cost:'Cost',Due:'Due',LastRenewal:'Last Renewal',NextRenewal:'Next Renewal',Payments:'Payments',Category:'Category',Actions:''};
+  const labels={Name:'Name',Billing:'Billing',Card:'Card',Cost:'Cost',MonthlyCost:'Monthly',AnnualCost:'Annual',Due:'Due',LastRenewal:'Last Renewal',NextRenewal:'Next Renewal',Payments:'Payments',Category:'Category',Actions:''};
   return`<tr>${_subColOrder.map((k,i)=>`<th draggable="true"
     ondragstart="subDragStart(event,${i})"
     ondragover="event.preventDefault();this.classList.add('drag-over')"
@@ -1258,6 +1262,8 @@ function subRow(s,ci){
     Billing:`<td>${ie('Subscriptions',s._row,'Billing',s.Billing,'sel',['Monthly','Annual','BiWeekly'])}</td>`,
     Card:`<td>${ie('Subscriptions',s._row,'Card',s.Card,'card-sel')}</td>`,
     Cost:`<td>${ie('Subscriptions',s._row,'Cost',s.Cost,'num')}</td>`,
+    MonthlyCost:(()=>{const cost=parseFloat(s.Cost)||0;const mo=s.Billing==='Annual'?cost/12:s.Billing==='BiWeekly'?cost*2.17:cost;return`<td class="tm td2">${$f(Math.round(mo*100)/100)}</td>`;})(),
+    AnnualCost:(()=>{const cost=parseFloat(s.Cost)||0;const yr=s.Billing==='Annual'?cost:s.Billing==='BiWeekly'?cost*26:cost*12;return`<td class="tm td2">${$f(Math.round(yr*100)/100)}</td>`;})(),
     Due:`<td>${s.NextRenewal?dueTag:'—'}</td>`,
     LastRenewal:`<td>${ieDateCell('Subscriptions',s._row,'LastRenewal',s.LastRenewal)}</td>`,
     NextRenewal:`<td>${ieDateCell('Subscriptions',s._row,'NextRenewal',s.NextRenewal)}</td>`,
@@ -1592,79 +1598,80 @@ function toast(msg,type=''){
   setTimeout(()=>{el.className='';},3000);
 }
 
-// ── COLUMN DRAG & DROP ──
-// Instead of DOM manipulation, we store a field order and re-render tables.
-// Expense tables (ord/pro/food) all share one column order.
+// ── UNIVERSAL COLUMN DRAG & DROP ──
+const EXP_TABLES=['eb-ord','eb-pro','eb-food'];
+const COL_ORDER={};
+let _dragFromCol=null;
 
-const EXP_COLS_DEFAULT=['Name','Description','Category','OCost','Cost','Card','Date','Actions'];
-let _expColOrder=[...EXP_COLS_DEFAULT];
-let _dragFromIdx=null;
-
+function saveColOrder(key,order){
+  COL_ORDER[key]=order;
+  try{localStorage.setItem('fin_cols',JSON.stringify(COL_ORDER));}catch(e){}
+}
 function loadColOrders(){
-  try{
-    const s=localStorage.getItem('fin_exp_cols');
-    if(s){const o=JSON.parse(s);if(Array.isArray(o))_expColOrder=o;}
-  }catch(e){}
-}
-function saveExpColOrder(){
-  try{localStorage.setItem('fin_exp_cols',JSON.stringify(_expColOrder));}catch(e){}
-}
-function resetExpColOrder(){
-  _expColOrder=[...EXP_COLS_DEFAULT];
-  saveExpColOrder();
-  renderExp();
-  initAllDragCols();
+  try{const s=localStorage.getItem('fin_cols');if(s)Object.assign(COL_ORDER,JSON.parse(s));}catch(e){}
 }
 
-// Build a single expense row in the current column order
-function expRow(e){
-  const cells={
-    Name:`<td>${ie('Expenses',e._row,'Name',e.Name)}</td>`,
-    Description:`<td>${ie('Expenses',e._row,'Description',e.Description)}</td>`,
-    Category:`<td>${ie('Expenses',e._row,'Category',e.Category,'cat')}</td>`,
-    OCost:`<td>${ie('Expenses',e._row,'OCost',e.OCost,'num')}</td>`,
-    Cost:`<td>${ie('Expenses',e._row,'Cost',e.Cost,'num')}</td>`,
-    Card:`<td>${ie('Expenses',e._row,'Card',e.Card,'card-sel')}</td>`,
-    Date:`<td>${ieDateCell('Expenses',e._row,'Date',e.Date)}</td>`,
-    Actions:`<td><div style="display:flex;gap:5px;">${e.Status==='Ordered'?`<button class="btn btn-p" onclick="markPro(${e._row})">✓ Procured</button>`:''}<button class="btn btn-c btic" onclick="delItem('Expenses',${e._row})">✕</button></div></td>`,
-  };
-  return`<tr>${_expColOrder.map(k=>cells[k]||'<td>—</td>').join('')}</tr>`;
+// Wire drag-and-drop onto any static (HTML-rendered) table
+function initStaticDrag(tbodyId,orderKey){
+  const tbody=document.getElementById(tbodyId);
+  if(!tbody)return;
+  const table=tbody.closest('table');
+  const thead=table.querySelector('thead tr');
+  if(!thead||!thead.children.length)return;
+
+  // Tag ths with stable data-col index
+  const ths=[...thead.querySelectorAll('th')];
+  ths.forEach((th,i)=>{if(!th.dataset.col)th.dataset.col=String(i);});
+
+  // Apply any saved order
+  const saved=COL_ORDER[orderKey];
+  if(saved&&saved.length){
+    const thMap={};ths.forEach(th=>thMap[th.dataset.col]=th);
+    saved.forEach(col=>{if(thMap[col])thead.appendChild(thMap[col]);});
+    const curOrder=[...thead.querySelectorAll('th')].map(t=>parseInt(t.dataset.col));
+    [...tbody.querySelectorAll('tr')].forEach(row=>{
+      const tds=[...row.querySelectorAll('td')];
+      curOrder.forEach(i=>{if(tds[i])row.appendChild(tds[i]);});
+    });
+  }
+
+  // Wire drag events
+  [...thead.querySelectorAll('th')].forEach(th=>{
+    if(!th.querySelector('.drag-handle')){
+      const h=document.createElement('span');
+      h.className='drag-handle';h.innerHTML='&#8285;';h.title='Drag to reorder';
+      h.addEventListener('mousedown',e=>e.stopPropagation());
+      th.appendChild(h);
+    }
+    th.draggable=true;
+    th.addEventListener('dragstart',e=>{_dragFromCol=th.dataset.col;th.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
+    th.addEventListener('dragend',()=>document.querySelectorAll('th').forEach(t=>t.classList.remove('dragging','drag-over')));
+    th.addEventListener('dragover',e=>{e.preventDefault();th.classList.add('drag-over');});
+    th.addEventListener('dragleave',()=>th.classList.remove('drag-over'));
+    th.addEventListener('drop',e=>{
+      e.preventDefault();th.classList.remove('drag-over');
+      if(!_dragFromCol||_dragFromCol===th.dataset.col){_dragFromCol=null;return;}
+      const curThs=[...thead.querySelectorAll('th')];
+      const fromTh=curThs.find(t=>t.dataset.col===_dragFromCol);
+      if(!fromTh){_dragFromCol=null;return;}
+      const fromPos=[...thead.children].indexOf(fromTh);
+      const toPos=[...thead.children].indexOf(th);
+      if(fromPos<toPos)thead.insertBefore(fromTh,th.nextSibling);
+      else thead.insertBefore(fromTh,th);
+      // Reorder body rows
+      const newOrder=[...thead.querySelectorAll('th')].map(t=>t.dataset.col);
+      [...tbody.querySelectorAll('tr')].forEach(row=>{
+        const tds=[...row.querySelectorAll('td')];
+        newOrder.forEach(col=>{const td=tds[parseInt(col)];if(td)row.appendChild(td);});
+      });
+      saveColOrder(orderKey,newOrder);
+      _dragFromCol=null;
+    });
+  });
 }
 
-// Build thead for expense tables from current order
-function expThead(tbodyId){
-  const labels={Name:'Name',Description:'Description',Category:'Category',OCost:'Original Cost',Cost:'Bought Cost',Card:'Card',Date:'Date',Actions:''};
-  const ncols=_expColOrder.length;
-  return`<tr>${_expColOrder.map((k,i)=>`<th draggable="true" data-colidx="${i}" data-tableid="${tbodyId}"
-    ondragstart="dragColStart(event,${i},'${tbodyId}')"
-    ondragover="event.preventDefault();this.classList.add('drag-over')"
-    ondragleave="this.classList.remove('drag-over')"
-    ondrop="dragColDrop(event,${i},'${tbodyId}')"
-    ondragend="document.querySelectorAll('th').forEach(t=>t.classList.remove('drag-over','dragging'))"
-    >${labels[k]||k}<span class="drag-handle">⠿</span></th>`).join('')}</tr>`;
-}
-
-function dragColStart(e,idx,tableId){
-  _dragFromIdx=idx;
-  e.currentTarget.classList.add('dragging');
-  e.dataTransfer.effectAllowed='move';
-}
-function dragColDrop(e,toIdx,tableId){
-  e.preventDefault();
-  e.currentTarget.classList.remove('drag-over');
-  if(_dragFromIdx===null||_dragFromIdx===toIdx)return;
-  // Reorder _expColOrder
-  const moved=_expColOrder.splice(_dragFromIdx,1)[0];
-  _expColOrder.splice(toIdx,0,moved);
-  saveExpColOrder();
-  // Re-render all expense tables with new order
-  renderExp();
-  initAllDragCols();
-  _dragFromIdx=null;
-}
-
+// For data-driven expense tables (expThead/expRow system)
 function initDragCols(tbodyId){
-  // For expense tables, inject dynamic thead
   if(EXP_TABLES.includes(tbodyId)){
     const tbody=document.getElementById(tbodyId);
     if(!tbody)return;
@@ -1672,13 +1679,15 @@ function initDragCols(tbodyId){
     const thead=table.querySelector('thead');
     if(thead)thead.innerHTML=expThead(tbodyId);
   }
-  // For other tables, just add drag handles (static order for now)
 }
-
-const EXP_TABLES=['eb-ord','eb-pro','eb-food'];
 
 function initAllDragCols(){
   EXP_TABLES.forEach(id=>initDragCols(id));
+  initStaticDrag('wb','wishlist');
+  initStaticDrag('cb','categories');
+  initStaticDrag('card-body','cards');
+  initStaticDrag('bank-body','banks');
+  initStaticDrag('master-body','master');
 }
 // ── INIT ──
 loadColOrders();
