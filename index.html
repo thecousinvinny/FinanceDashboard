@@ -73,18 +73,29 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 
 /* TABLE */
 .tw{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:12px;table-layout:auto}
 thead tr{background:var(--s2)}
-thead th{padding:8px 14px;text-align:left;font-size:10px;font-weight:500;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+thead th{padding:8px 14px;text-align:left;font-size:10px;font-weight:500;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
 tbody tr:last-child{border-bottom:none}
 tbody tr:hover{background:var(--s2)}
-tbody td{padding:9px 14px;color:var(--text);vertical-align:middle}
+tbody td{padding:9px 14px;color:var(--text);vertical-align:middle;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis}
 .tm{font-family:'DM Mono',monospace;font-size:11px}
 .td2{color:var(--text2)}.td3{color:var(--text3)}
 .tred{color:var(--red);font-family:'DM Mono',monospace;font-size:11px;font-weight:500}
 .tgrn{color:var(--green);font-family:'DM Mono',monospace;font-size:11px;font-weight:500}
 .tstr{text-decoration:line-through;color:var(--text3);font-family:'DM Mono',monospace;font-size:11px}
+/* Column width hints */
+th:first-child,td:first-child{min-width:120px}
+th.col-sm,td.col-sm{width:80px;min-width:60px}
+th.col-md,td.col-md{width:120px;min-width:90px}
+th.col-lg,td.col-lg{min-width:160px}
+th.col-num,td.col-num{width:90px;min-width:70px;text-align:right}
+th.col-date,td.col-date{width:100px;min-width:90px}
+th.col-act,td.col-act{width:1%;white-space:nowrap}
+/* Inline edit inputs stay within cell */
+.ie-input{max-width:100%;box-sizing:border-box}
+.ie{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle}
 
 /* TAGS */
 .tag{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:500;padding:2px 7px;border-radius:5px;white-space:nowrap}
@@ -207,6 +218,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
       <button class="btn btn-a" style="gap:5px;" onclick="openModal('wish')">📋 + Wishlist</button>
       <button class="signin-btn" id="signin-btn" onclick="doSignIn()">↗ Sign in</button>
       <button class="sbtn" onclick="syncAll()">↻ Sync</button>
+      <button class="sbtn" onclick="repairAllSheets()" title="Fix missing or mismatched sheet headers">🔧 Repair</button>
       <button class="btn" onclick="logout()">Disconnect</button>
     </div>
   </header>
@@ -259,7 +271,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
           <button class="sort-btn" onclick="clearSort('wish')" style="color:var(--text3);font-size:10px;">✕ Clear</button>
         </div>
         <div class="tw"><table>
-          <thead><tr><th>Name</th><th>Description</th><th>Category</th><th>Link</th><th>Original</th><th>Bought</th><th>Savings</th><th></th><th></th><th></th></tr></thead>
+          <thead><tr><th class="col-lg">Name</th><th>Description</th><th class="col-md">Category</th><th class="col-sm">Link</th><th class="col-num">Original</th><th class="col-num">Bought</th><th class="col-num">Savings</th><th class="col-act"></th><th class="col-act"></th><th class="col-act"></th></tr></thead>
           <tbody id="wb"></tbody>
         </table></div>
         <div class="show-more" id="sm-wish" onclick="showMore('wish')" style="display:none">Show more</div>
@@ -340,7 +352,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
       <div class="panel">
         <div class="ph"><div class="pt">🏷️ Categories <span class="pc" id="cc2">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('cat')">+ Add category</button></div></div>
         <div class="tw"><table>
-          <thead><tr><th>Name</th><th>Color</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Name</th><th class="col-md">Color</th><th class="col-act"></th></tr></thead>
           <tbody id="cb"><tr><td colspan="3"><div class="empty"><div class="eic">🏷️</div>Loading...</div></td></tr></tbody>
         </table></div>
       </div>
@@ -350,7 +362,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
       <div class="panel">
         <div class="ph"><div class="pt">💳 Cards <span class="pc" id="card-count">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('card')">+ Add card</button></div></div>
         <div class="tw"><table>
-          <thead><tr><th>Card Name</th><th>Alias</th><th>Bank</th><th>Type</th><th>Last 4</th><th>Default</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Card Name</th><th>Alias</th><th>Bank</th><th class="col-md">Type</th><th class="col-sm">Last 4</th><th class="col-md">Default</th><th class="col-act"></th></tr></thead>
           <tbody id="card-body"><tr><td colspan="5"><div class="empty"><div class="eic">💳</div>Loading...</div></td></tr></tbody>
         </table></div>
       </div>
@@ -360,7 +372,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
       <div class="panel">
         <div class="ph"><div class="pt">🏦 Banks <span class="pc" id="bank-count">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('bank')">+ Add bank</button></div></div>
         <div class="tw"><table>
-          <thead><tr><th>Bank Name</th><th>Type</th><th>Account #</th><th>Cards</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Bank Name</th><th class="col-md">Type</th><th class="col-sm">Account #</th><th>Cards</th><th class="col-act"></th></tr></thead>
           <tbody id="bank-body"><tr><td colspan="5"><div class="empty"><div class="eic">🏦</div>Loading...</div></td></tr></tbody>
         </table></div>
       </div>
@@ -379,7 +391,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
           </div>
         </div>
         <div class="tw"><table>
-          <thead><tr><th>Date</th><th>Type</th><th>Name</th><th>Description</th><th>Category</th><th>Cost</th><th>Original</th><th>Savings</th><th>Card</th><th>Bank</th><th>Billing</th><th>Status</th><th>Source</th></tr></thead>
+          <thead><tr><th class="col-date">Date</th><th class="col-sm">Type</th><th class="col-lg">Name</th><th>Description</th><th class="col-md">Category</th><th class="col-num">Cost</th><th class="col-num">Original</th><th class="col-num">Savings</th><th class="col-md">Card</th><th class="col-md">Bank</th><th class="col-md">Billing</th><th class="col-md">Status</th><th class="col-sm">Source</th></tr></thead>
           <tbody id="master-body"><tr><td colspan="13"><div class="empty"><div class="eic">📊</div>Loading...</div></td></tr></tbody>
         </table></div>
         <div class="show-more" id="sm-master" onclick="showMore('master')" style="display:none">Show more</div>
@@ -536,13 +548,67 @@ async function ensureSheets(){
   try{
     const meta=await gapi.client.sheets.spreadsheets.get({spreadsheetId:cfg.sid});
     const ex=meta.result.sheets.map(s=>s.properties.title);
+
+    // Create any missing sheets
     const reqs=[];
     for(const n of Object.values(SH)) if(!ex.includes(n)) reqs.push({addSheet:{properties:{title:n}}});
     if(reqs.length) await gapi.client.sheets.spreadsheets.batchUpdate({spreadsheetId:cfg.sid,resource:{requests:reqs}});
-    for(const[k,n] of Object.entries(SH)) if(!ex.includes(n)) await updateRow(n,1,HD[k]);
+
+    // For every sheet, read row 1 and repair headers
+    for(const[k,name] of Object.entries(SH)){
+      const expected=HD[k];
+      const rows=await readSheet(name);
+      const existing=(rows[0]||[]);
+
+      // Check if headers need repair
+      let needsRepair=false;
+      for(let i=0;i<expected.length;i++){
+        if((existing[i]||'').trim()!==expected[i]){needsRepair=true;break;}
+      }
+      // Also repair if sheet has fewer header cols than expected
+      if(existing.length<expected.length) needsRepair=true;
+
+      if(needsRepair){
+        if(rows.length<=1){
+          // Empty or header-only — just write headers
+          await updateRow(name,1,expected);
+        } else {
+          // Has data — need to remap columns carefully
+          // Build a map from existing header name → column index
+          const existingMap={};
+          existing.forEach((h,i)=>{if(h)existingMap[h.trim()]=i;});
+
+          // Rewrite header row
+          await updateRow(name,1,expected);
+
+          // Rewrite each data row, remapping by header name
+          const dataRows=rows.slice(1);
+          for(let ri=0;ri<dataRows.length;ri++){
+            const oldRow=dataRows[ri];
+            const newRow=expected.map(h=>{
+              const oldIdx=existingMap[h];
+              return oldIdx!==undefined?(oldRow[oldIdx]||''):'';
+            });
+            await updateRow(name,ri+2,newRow);
+          }
+          toast(`Repaired headers in ${name}`, 'ok');
+        }
+      }
+    }
+
+    // Seed categories if empty
     const cr=await readSheet('Categories');
-    if(cr.length<=1) for(const c of CATS_SEED) await appendRow('Categories',c);
+    if(cr.length<=1) for(const cat of CATS_SEED) await appendRow('Categories',cat);
+
   }catch(e){toast('Setup error: '+e.message,'err');}
+}
+
+// Manual repair trigger — callable from console or a button
+async function repairAllSheets(){
+  toast('Repairing all sheet headers…');
+  await ensureSheets();
+  await syncAll();
+  toast('All sheets repaired ✓','ok');
 }
 
 // ── SHEETS I/O ──
@@ -604,7 +670,7 @@ function parse(rows,hd){
 }
 
 // ── RENDER ──
-function renderAll(){renderDash();renderWish();renderExp();renderSub();renderCat();renderCards();renderBanks();renderMaster();setTimeout(initAllDragCols,0);}
+function renderAll(){renderDash();renderWish();renderExp();renderSub();renderCat();renderCards();renderBanks();renderMaster();setTimeout(()=>{initAllDragCols();updateSortBtns('wish');updateSortBtns('exp');updateSortBtns('sub');},0);}
 function $f(n){return'$'+(parseFloat(n)||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});}
 function fmtDate(d){
   if(!d||d==='—')return'—';
@@ -971,11 +1037,30 @@ async function confirmBuy(){
 const PAGE=20; // rows per page
 const _pages={ord:PAGE,pro:PAGE,food:PAGE,wish:PAGE,sub:PAGE,master:PAGE};
 // Multi-level sort state: array of {field, dir} in priority order
+const _SORT_DEFAULTS={
+  wish:[{field:'Name',dir:1}],
+  exp:[{field:'Date',dir:-1}],
+  sub:[{field:'Billing',dir:1}],
+};
 const _sort={
   wish:[{field:'Name',dir:1}],
   exp:[{field:'Date',dir:-1}],
   sub:[{field:'Billing',dir:1}],
 };
+function saveSortState(){
+  try{localStorage.setItem('fin_sort',JSON.stringify(_sort));}catch(e){}
+}
+function loadSortState(){
+  try{
+    const s=localStorage.getItem('fin_sort');
+    if(s){
+      const saved=JSON.parse(s);
+      if(saved.wish)_sort.wish=saved.wish;
+      if(saved.exp)_sort.exp=saved.exp;
+      if(saved.sub)_sort.sub=saved.sub;
+    }
+  }catch(e){}
+}
 
 function setSort(table,field,btn){
   const levels=_sort[table];
@@ -992,15 +1077,16 @@ function setSort(table,field,btn){
     if(levels.length>3)levels.pop();
   }
   updateSortBtns(table);
+  saveSortState();
   if(table==='wish')renderWish();
   else if(table==='exp')renderExp();
   else if(table==='sub')renderSub();
 }
 
 function clearSort(table){
-  const defaults={wish:[{field:'Name',dir:1}],exp:[{field:'Date',dir:-1}],sub:[{field:'Billing',dir:1}]};
-  _sort[table]=defaults[table];
+  _sort[table]=[..._SORT_DEFAULTS[table].map(x=>({...x}))];
   updateSortBtns(table);
+  saveSortState();
   if(table==='wish')renderWish();
   else if(table==='exp')renderExp();
   else if(table==='sub')renderSub();
@@ -1319,7 +1405,7 @@ function renderCards(){
         ?'<span class="tag s-act" style="font-size:10px;">⭐ Default</span>'
         :`<button class="btn" style="font-size:10px;" onclick="setDefaultCard(${cd._row})">Set default</button>`
       }</td>
-      <td><button class="btn btn-c btic" onclick="delItem('Cards',${cd._row})">✕</button></td>
+      <td class="col-act"><button class="btn btn-c btic" onclick="delItem('Cards',${cd._row})">✕</button></td>
     </tr>`;
   }).join('');
 }
@@ -1595,6 +1681,7 @@ function initAllDragCols(){
 // ── INIT ──
 loadColOrders();
 loadSubColOrder();
+loadSortState();
 if(loadCfg()){bootApp();}
 </script>
 </body>
