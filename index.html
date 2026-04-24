@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>💵 Finance Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -58,9 +59,21 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .ss{font-size:11px;color:var(--text3);margin-top:4px}
 .sv.danger{color:var(--red)}.sv.warn{color:var(--amber)}.sv.good{color:var(--green)}
 
+/* DASH SWIPER */
+.dash-slider-wrap{overflow:hidden;width:100%}
+.dash-slider{display:flex;transition:transform .35s cubic-bezier(.4,0,.2,1);will-change:transform}
+.dash-page{min-width:100%;width:100%;flex-shrink:0;padding-bottom:8px}
+.dash-page-label{font-size:11px;font-weight:600;color:var(--text3);padding:14px 2px 10px;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border);margin-bottom:14px}
+.dash-page-indicator{display:flex;gap:6px;justify-content:center;margin-bottom:20px}
+.dpi{width:24px;height:3px;border-radius:2px;background:var(--s4);transition:all .25s}
+.dpi.active{background:var(--accent);width:36px}
+.swipe-hint{text-align:center;font-size:11px;color:var(--text3);margin-top:16px;opacity:.6}
+
 /* CHARTS */
 .cg{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:8px}
-.chart-group-label{font-size:12px;font-weight:600;color:var(--text2);padding:14px 4px 8px;letter-spacing:.02em;border-bottom:1px solid var(--border);margin-bottom:14px}
+.cg4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:24px}
+.chart-group-label{font-size:11px;font-weight:600;color:var(--text3);padding:16px 2px 10px;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border);margin-bottom:14px}
+@media(max-width:1100px){.cg4{grid-template-columns:1fr 1fr}}
 .cc{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);padding:20px}
 .ct{font-size:12px;font-weight:500;color:var(--text2);margin-bottom:14px}
 .cw{position:relative;height:240px}
@@ -237,32 +250,66 @@ td.editing{background:rgba(108,99,255,0.05)!important}
   <div class="main">
 
     <div id="tab-dashboard">
-      <div class="sg">
-        <div class="sc"><div class="sl">Spent this month</div><div class="sv danger" id="s-mo">—</div><div class="ss" id="s-mo2">—</div></div>
-        <div class="sc"><div class="sl">Spent this year</div><div class="sv" id="s-yr">—</div><div class="ss" id="s-yr2">—</div></div>
-        <div class="sc"><div class="sl">Est. monthly subs</div><div class="sv warn" id="s-sb">—</div><div class="ss" id="s-sb2">—</div></div>
-        <div class="sc"><div class="sl">Wishlist savings</div><div class="sv good" id="s-sv">—</div><div class="ss">All time</div></div>
-      </div>
-      <div class="sg" style="margin-bottom:20px;">
-        <div class="sc"><div class="sl">Sub payments YTD</div><div class="sv" id="s-subpaid">—</div><div class="ss" id="s-subpaid2">—</div></div>
-        <div class="sc"><div class="sl">Est. annual subs</div><div class="sv warn" id="s-subyr">—</div><div class="ss">Projected</div></div>
-        <div class="sc"><div class="sl">Ordered (in transit)</div><div class="sv" style="color:var(--amber)" id="s-ord">—</div><div class="ss" id="s-ord2">—</div></div>
-        <div class="sc"><div class="sl">YTD savings</div><div class="sv good" id="s-svyr">—</div><div class="ss">vs original price</div></div>
-      </div>
-      <div class="cg" style="grid-template-columns:1fr 1fr 1fr">
-        <div class="chart-group-label">📅 2026 — Current Year</div>
-        <div class="cg">
-          <div class="cc"><div class="ct">Expenses by category</div><div class="cw"><canvas id="c-yr-cat"></canvas></div></div>
-          <div class="cc"><div class="ct">Expenses by month</div><div class="cw"><canvas id="c-yr-trend"></canvas></div></div>
-          <div class="cc"><div class="ct">Savings by month</div><div class="cw"><canvas id="c-yr-savings"></canvas></div></div>
-          <div class="cc"><div class="ct">Sub payments by month</div><div class="cw"><canvas id="c-yr-submo"></canvas></div></div>
-        </div>
-        <div class="chart-group-label">📊 All Time</div>
-        <div class="cg">
-          <div class="cc"><div class="ct">Expenses by category</div><div class="cw"><canvas id="c-all-cat"></canvas></div></div>
-          <div class="cc"><div class="ct">Expenses by month (last 12)</div><div class="cw"><canvas id="c-all-trend"></canvas></div></div>
-          <div class="cc"><div class="ct">Savings by month (last 12)</div><div class="cw"><canvas id="c-all-savings"></canvas></div></div>
-          <div class="cc"><div class="ct">Sub payments by month (last 12)</div><div class="cw"><canvas id="c-all-submo"></canvas></div></div>
+      <!-- Swipe container -->
+      <div class="dash-slider-wrap">
+        <div class="dash-slider" id="dash-slider">
+
+          <!-- PAGE 1: Current Year -->
+          <div class="dash-page">
+            <div class="dash-page-indicator">
+              <span class="dpi active"></span>
+              <span class="dpi"></span>
+            </div>
+            <div class="sg">
+              <div class="sc"><div class="sl">Spent this month</div><div class="sv danger" id="s-mo">—</div><div class="ss" id="s-mo2">—</div></div>
+              <div class="sc"><div class="sl">Spent this year</div><div class="sv" id="s-yr">—</div><div class="ss" id="s-yr2">—</div></div>
+              <div class="sc"><div class="sl">Est. monthly subs</div><div class="sv warn" id="s-sb">—</div><div class="ss" id="s-sb2">—</div></div>
+              <div class="sc"><div class="sl">Wishlist savings</div><div class="sv good" id="s-sv">—</div><div class="ss">All time</div></div>
+            </div>
+            <div class="sg" style="margin-bottom:20px;">
+              <div class="sc"><div class="sl">Sub payments YTD</div><div class="sv" id="s-subpaid">—</div><div class="ss" id="s-subpaid2">—</div></div>
+              <div class="sc"><div class="sl">Est. annual subs</div><div class="sv warn" id="s-subyr">—</div><div class="ss">Projected</div></div>
+              <div class="sc"><div class="sl">Ordered (in transit)</div><div class="sv" style="color:var(--amber)" id="s-ord">—</div><div class="ss" id="s-ord2">—</div></div>
+              <div class="sc"><div class="sl">YTD savings</div><div class="sv good" id="s-svyr">—</div><div class="ss">vs original price</div></div>
+            </div>
+            <div class="dash-page-label">📅 Current Year</div>
+            <div class="cg4">
+              <div class="cc"><div class="ct">Expenses by category</div><div class="cw"><canvas id="c-yr-cat"></canvas></div></div>
+              <div class="cc"><div class="ct">Expenses by month</div><div class="cw"><canvas id="c-yr-trend"></canvas></div></div>
+              <div class="cc"><div class="ct">Savings by month</div><div class="cw"><canvas id="c-yr-savings"></canvas></div></div>
+              <div class="cc"><div class="ct">Sub payments by month</div><div class="cw"><canvas id="c-yr-submo"></canvas></div></div>
+            </div>
+            <div class="swipe-hint">Swipe right for all time →</div>
+          </div>
+
+          <!-- PAGE 2: All Time -->
+          <div class="dash-page">
+            <div class="dash-page-indicator">
+              <span class="dpi"></span>
+              <span class="dpi active"></span>
+            </div>
+            <div class="sg">
+              <div class="sc"><div class="sl">Total spent (all time)</div><div class="sv danger" id="s-all-total">—</div><div class="ss" id="s-all-total2">—</div></div>
+              <div class="sc"><div class="sl">Total income</div><div class="sv good" id="s-all-income">—</div><div class="ss" id="s-all-income2">—</div></div>
+              <div class="sc"><div class="sl">Total savings</div><div class="sv good" id="s-all-savings">—</div><div class="ss">vs original prices</div></div>
+              <div class="sc"><div class="sl">Total sub payments</div><div class="sv warn" id="s-all-subpaid">—</div><div class="ss" id="s-all-subpaid2">—</div></div>
+            </div>
+            <div class="sg" style="margin-bottom:20px;">
+              <div class="sc"><div class="sl">Avg monthly spend</div><div class="sv" id="s-all-avgmo">—</div><div class="ss">All time average</div></div>
+              <div class="sc"><div class="sl">Most spent category</div><div class="sv" id="s-all-topcat" style="font-size:16px;">—</div><div class="ss" id="s-all-topcat2">—</div></div>
+              <div class="sc"><div class="sl">Total expenses</div><div class="sv" id="s-all-count">—</div><div class="ss">All time</div></div>
+              <div class="sc"><div class="sl">Wishlist savings</div><div class="sv good" id="s-all-wishsav">—</div><div class="ss">From wishlist</div></div>
+            </div>
+            <div class="dash-page-label">📊 All Time</div>
+            <div class="cg4">
+              <div class="cc"><div class="ct">Expenses by category</div><div class="cw"><canvas id="c-all-cat"></canvas></div></div>
+              <div class="cc"><div class="ct">Expenses by month (last 12)</div><div class="cw"><canvas id="c-all-trend"></canvas></div></div>
+              <div class="cc"><div class="ct">Savings by month (last 12)</div><div class="cw"><canvas id="c-all-savings"></canvas></div></div>
+              <div class="cc"><div class="ct">Sub payments by month (last 12)</div><div class="cw"><canvas id="c-all-submo"></canvas></div></div>
+            </div>
+            <div class="swipe-hint">← Swipe left for current year</div>
+          </div>
+
         </div>
       </div>
     </div>
@@ -773,6 +820,54 @@ function catTag(c){const e=CE[c]||'';return`<span class="tag ${CC[c]||'tdf'}">${
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 function escQ(s){return String(s).replace(/'/g,"\\'")}
 
+// ── DASHBOARD SWIPER ──
+let _dashPage=0;
+let _swipeStartX=0,_swipeStartY=0,_swiping=false;
+
+function dashGoTo(page){
+  _dashPage=page;
+  const slider=document.getElementById('dash-slider');
+  if(slider)slider.style.transform=`translateX(-${page*100}%)`;
+  // Update dots
+  document.querySelectorAll('.dpi').forEach((d,i)=>{
+    d.classList.toggle('active',Math.floor(i/2)===page||(i%2)===page);
+  });
+  // Redraw charts on the newly visible page (Canvas needs a repaint)
+  setTimeout(()=>renderCharts(),50);
+}
+
+function initDashSwipe(){
+  const wrap=document.querySelector('.dash-slider-wrap');
+  if(!wrap)return;
+  wrap.addEventListener('touchstart',e=>{
+    _swipeStartX=e.touches[0].clientX;
+    _swipeStartY=e.touches[0].clientY;
+    _swiping=true;
+  },{passive:true});
+  wrap.addEventListener('touchend',e=>{
+    if(!_swiping)return;
+    const dx=e.changedTouches[0].clientX-_swipeStartX;
+    const dy=e.changedTouches[0].clientY-_swipeStartY;
+    if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>40){
+      if(dx<0&&_dashPage===0)dashGoTo(1);
+      else if(dx>0&&_dashPage===1)dashGoTo(0);
+    }
+    _swiping=false;
+  },{passive:true});
+  // Also support mouse drag for desktop
+  let _mStart=null;
+  wrap.addEventListener('mousedown',e=>{_mStart=e.clientX;});
+  wrap.addEventListener('mouseup',e=>{
+    if(_mStart===null)return;
+    const dx=e.clientX-_mStart;
+    if(Math.abs(dx)>60){
+      if(dx<0&&_dashPage===0)dashGoTo(1);
+      else if(dx>0&&_dashPage===1)dashGoTo(0);
+    }
+    _mStart=null;
+  });
+}
+
 // ── DASHBOARD ──
 function renderDash(){
   const now=new Date();
@@ -802,7 +897,37 @@ function renderDash(){
   const so=document.getElementById('s-ord');if(so)so.textContent=$f(ordTotal);
   const so2=document.getElementById('s-ord2');if(so2)so2.textContent=`${D.expenses.filter(e=>e.Status==='Ordered').length} items in transit`;
   const ssv=document.getElementById('s-svyr');if(ssv)ssv.textContent=$f(yrSavings);
+
+  // ── All-time stat cards (page 2) ──
+  const allPro=D.expenses.filter(e=>e.Status==='Procured');
+  const allTotal=allPro.reduce((s,e)=>s+(parseFloat(e.Cost)||0),0);
+  const allIncome=D.master.filter(m=>m.Type==='Income').reduce((s,m)=>s+(parseFloat(m.Cost)||0),0);
+  const allSubPaid=act.reduce((s,x)=>{const c=parseFloat(x.Cost)||0,p=parseInt(x.Payments)||0;return s+c*p;},0);
+  const allWishSav=D.wishlist.reduce((s,w)=>{const o=parseFloat(w.OCost)||0,b=parseFloat(w.BCost)||0;return b>0?s+(o-b):s;},0);
+  // Avg monthly spend — across all months that have data
+  const monthTotals={};
+  allPro.forEach(e=>{const k=toSortableDate(e.Date||'').slice(0,7);if(k)monthTotals[k]=(monthTotals[k]||0)+(parseFloat(e.Cost)||0);});
+  const monthCount=Object.keys(monthTotals).length||1;
+  const avgMo=allTotal/monthCount;
+  // Top category
+  const catTotals={};
+  allPro.forEach(e=>{catTotals[e.Category||'Other']=(catTotals[e.Category||'Other']||0)+(parseFloat(e.Cost)||0);});
+  const topCat=Object.entries(catTotals).sort((a,b)=>b[1]-a[1])[0];
+  const el=document.getElementById('s-all-total');if(el)el.textContent=$f(allTotal);
+  const el2=document.getElementById('s-all-total2');if(el2)el2.textContent=`${allPro.length} total expenses`;
+  const el3=document.getElementById('s-all-income');if(el3)el3.textContent=$f(allIncome);
+  const el4=document.getElementById('s-all-income2');if(el4)el4.textContent=`From Master ledger`;
+  const el5=document.getElementById('s-all-savings');if(el5)el5.textContent=$f(allWishSav);
+  const el6=document.getElementById('s-all-subpaid');if(el6)el6.textContent=$f(allSubPaid);
+  const el7=document.getElementById('s-all-subpaid2');if(el7)el7.textContent=`${act.reduce((s,x)=>s+(parseInt(x.Payments)||0),0)} total payments`;
+  const el8=document.getElementById('s-all-avgmo');if(el8)el8.textContent=$f(avgMo);
+  const el9=document.getElementById('s-all-topcat');if(el9)el9.textContent=topCat?((CE[topCat[0]]||'')+' '+topCat[0]).trim():'—';
+  const el10=document.getElementById('s-all-topcat2');if(el10)el10.textContent=topCat?$f(topCat[1])+' all time':'';
+  const el11=document.getElementById('s-all-count');if(el11)el11.textContent=allPro.length.toLocaleString();
+  const el12=document.getElementById('s-all-wishsav');if(el12)el12.textContent=$f(allWishSav);
+
   renderCharts();
+  initDashSwipe();
 }
 function renderCharts(){
   Chart.defaults.color='#8a8a9a';
@@ -882,6 +1007,7 @@ function donut(id,labels,data,colors){
       cutout:'75%',
       plugins:{
         legend:{display:false},
+        datalabels:{display:false},
         tooltip:{
           backgroundColor:'rgba(0,0,0,0.75)',
           titleColor:'#fff',bodyColor:'rgba(255,255,255,0.7)',
@@ -899,24 +1025,26 @@ function lineChart(id,labels,data,color='#1aa378'){
   if(charts[id])charts[id].destroy();
   const el=document.getElementById(id);if(!el)return;
   const ctx=el.getContext('2d');
-  // Style B: filled area, smooth, no points, subtle grid
-  const grad=ctx.createLinearGradient(0,0,0,el.offsetHeight||200);
-  grad.addColorStop(0,color==='#1aa378'?'rgba(26,163,120,0.28)':color==='#f59e0b'?'rgba(245,158,11,0.22)':'rgba(108,99,255,0.22)');
-  grad.addColorStop(0.7,'rgba(0,0,0,0)');
+  const rgb=color==='#1aa378'?'26,163,120':color==='#f59e0b'?'245,158,11':'108,99,255';
+  const grad=ctx.createLinearGradient(0,0,0,el.offsetHeight||220);
+  grad.addColorStop(0,`rgba(${rgb},0.4)`);
+  grad.addColorStop(0.6,`rgba(${rgb},0.08)`);
+  grad.addColorStop(1,'rgba(0,0,0,0)');
   charts[id]=new Chart(ctx,{
     type:'line',
     data:{labels,datasets:[{
-      data,
-      borderColor:color,
-      backgroundColor:grad,
-      borderWidth:2,
-      fill:true,
-      tension:0.45,
-      pointRadius:0,
-      pointHoverRadius:5,
-      pointHoverBackgroundColor:color,
-      pointHoverBorderColor:'#fff',
-      pointHoverBorderWidth:2,
+      data,borderColor:color,backgroundColor:grad,borderWidth:2,
+      fill:true,tension:0.4,
+      pointRadius:3,pointBackgroundColor:color,
+      pointHoverRadius:5,pointHoverBackgroundColor:color,
+      pointHoverBorderColor:'#fff',pointHoverBorderWidth:2,
+      datalabels:{
+        color:'rgba(255,255,255,0.65)',
+        font:{size:8,family:"'DM Mono',monospace"},
+        formatter:v=>v>0?(v>=1000?'$'+(v/1000).toFixed(1)+'k':'$'+Math.round(v)):'',
+        anchor:'end',align:'top',offset:1,
+        display:ctx=>ctx.dataset.data[ctx.dataIndex]>0,
+      }
     }]},
     options:{
       responsive:true,maintainAspectRatio:false,
@@ -924,49 +1052,60 @@ function lineChart(id,labels,data,color='#1aa378'){
       plugins:{
         legend:{display:false},
         tooltip:{
-          backgroundColor:'rgba(0,0,0,0.75)',
-          titleColor:'#fff',bodyColor:'rgba(255,255,255,0.7)',
-          padding:10,cornerRadius:6,
+          backgroundColor:'rgba(0,0,0,0.8)',titleColor:'#fff',
+          bodyColor:'rgba(255,255,255,0.7)',padding:10,cornerRadius:6,
           callbacks:{label:ctx=>' $'+Math.round(ctx.raw).toLocaleString()}
         }
       },
       scales:{
-        x:{grid:{display:false},ticks:{color:'rgba(255,255,255,0.3)',font:{size:10}},border:{display:false}},
-        y:{grid:{color:'rgba(255,255,255,0.05)',lineWidth:1},ticks:{color:'rgba(255,255,255,0.3)',font:{size:10},callback:v=>'$'+v.toLocaleString()},border:{display:false},min:0},
+        x:{grid:{display:false},ticks:{color:'rgba(255,255,255,0.3)',font:{size:9}},border:{display:false}},
+        y:{grid:{color:'rgba(255,255,255,0.05)',lineWidth:1},min:0,
+           ticks:{color:'rgba(255,255,255,0.3)',font:{size:9},callback:v=>v>=1000?'$'+(v/1000).toFixed(0)+'k':'$'+v},
+           border:{display:false}},
       }
     }
   });
 }
 
-function barChart(id,labels,data,color='rgba(255,255,255,0.85)'){
+function barChart(id,labels,data){
   if(charts[id])charts[id].destroy();
   const el=document.getElementById(id);if(!el)return;
-  // Style C: monochrome bars, tallest highlighted
-  const max=Math.max(...data);
-  const bgs=data.map(v=>v===max?'rgba(255,255,255,0.88)':'rgba(255,255,255,0.18)');
+  const max=Math.max(...data,1);
+  const bgs=data.map(v=>v===max?'rgba(255,255,255,0.9)':'rgba(255,255,255,0.2)');
   charts[id]=new Chart(el.getContext('2d'),{
     type:'bar',
-    data:{labels,datasets:[{data,backgroundColor:bgs,borderRadius:4,borderSkipped:false,barThickness:14}]},
+    data:{labels,datasets:[{data,backgroundColor:bgs,borderRadius:4,borderSkipped:false,barThickness:14,
+      datalabels:{
+        color:'rgba(255,255,255,0.65)',
+        font:{size:8,family:"'DM Mono',monospace"},
+        formatter:v=>v>0?(v>=1000?'$'+(v/1000).toFixed(1)+'k':'$'+Math.round(v)):'',
+        anchor:'end',align:'top',offset:1,
+        display:ctx=>ctx.dataset.data[ctx.dataIndex]>0,
+      }
+    }]},
     options:{
       responsive:true,maintainAspectRatio:false,
       plugins:{
         legend:{display:false},
         tooltip:{
-          backgroundColor:'rgba(0,0,0,0.75)',
-          titleColor:'#fff',bodyColor:'rgba(255,255,255,0.7)',
-          padding:10,cornerRadius:6,
+          backgroundColor:'rgba(0,0,0,0.8)',titleColor:'#fff',
+          bodyColor:'rgba(255,255,255,0.7)',padding:10,cornerRadius:6,
           callbacks:{label:ctx=>' $'+Math.round(ctx.raw).toLocaleString()}
         }
       },
       scales:{
-        x:{grid:{display:false},ticks:{color:'rgba(255,255,255,0.3)',font:{size:10}},border:{display:false}},
-        y:{grid:{color:'rgba(255,255,255,0.05)',lineWidth:1},ticks:{color:'rgba(255,255,255,0.3)',font:{size:10},callback:v=>'$'+v.toLocaleString()},border:{display:false},min:0},
+        x:{grid:{display:false},ticks:{color:'rgba(255,255,255,0.3)',font:{size:9},maxRotation:35},border:{display:false}},
+        y:{grid:{color:'rgba(255,255,255,0.05)',lineWidth:1},min:0,
+           ticks:{color:'rgba(255,255,255,0.3)',font:{size:9},callback:v=>v>=1000?'$'+(v/1000).toFixed(0)+'k':'$'+v},
+           border:{display:false}},
       }
     }
   });
 }
 
+
 // Center label plugin for donut charts
+Chart.register(ChartDataLabels);
 Chart.register({
   id:'centerLabel',
   afterDraw(chart){
