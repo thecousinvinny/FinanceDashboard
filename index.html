@@ -183,6 +183,20 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .sub-sum strong{color:var(--text);font-weight:500}
 .empty{padding:36px;text-align:center;color:var(--text3);font-size:12px}
 .eic{font-size:26px;margin-bottom:7px}
+/* CALENDAR */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-day-header{text-align:center;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;padding:8px 4px}
+.cal-cell{min-height:90px;background:var(--s2);border-radius:6px;padding:6px;position:relative;border:1px solid var(--border)}
+.cal-cell.today{border-color:var(--accent);background:rgba(108,99,255,0.06)}
+.cal-cell.other-month{opacity:.35}
+.cal-date{font-size:11px;font-weight:500;color:var(--text3);margin-bottom:4px}
+.cal-cell.today .cal-date{color:var(--accent);font-weight:700}
+.cal-event{font-size:10px;padding:2px 5px;border-radius:4px;margin-bottom:2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .15s}
+.cal-event:hover{opacity:.8}
+.cal-event.sub{background:rgba(245,158,11,0.2);color:var(--amber);border-left:2px solid var(--amber)}
+.cal-event.income{background:rgba(34,197,94,0.2);color:var(--green);border-left:2px solid var(--green)}
+.cal-event.due{background:rgba(239,68,68,0.2);color:var(--red);border-left:2px solid var(--red)}
+
 /* SORT BAR */
 .sort-bar{display:flex;align-items:center;gap:6px;padding:9px 18px;border-bottom:1px solid var(--border);background:var(--s2);flex-wrap:wrap}
 .sort-lbl{font-size:10px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.06em;margin-right:2px;flex-shrink:0}
@@ -246,6 +260,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
     <div class="nt" onclick="showTab('cards',this)">Cards</div>
     <div class="nt" onclick="showTab('banks',this)">Banks</div>
     <div class="nt" onclick="showTab('master',this)">Master</div>
+    <div class="nt" onclick="showTab('calendar',this)">Calendar</div>
   </nav>
   <div class="main">
 
@@ -459,6 +474,21 @@ td.editing{background:rgba(108,99,255,0.05)!important}
       </div>
     </div>
 
+    <div id="tab-calendar" style="display:none">
+      <div class="panel">
+        <div class="ph">
+          <div class="pt">📅 FinanceDash Calendar <span class="pc" id="cal-count">0 events</span></div>
+          <div class="pa" style="gap:8px;">
+            <button class="btn" onclick="calNav(-1)">← Prev</button>
+            <span id="cal-month-label" style="font-size:13px;font-weight:500;min-width:140px;text-align:center;color:var(--text);"></span>
+            <button class="btn" onclick="calNav(1)">Next →</button>
+            <button class="btn btn-a" onclick="calSync()">↻ Sync Calendar</button>
+          </div>
+        </div>
+        <div id="cal-grid" style="padding:16px;"></div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -545,6 +575,8 @@ const HD={
   banks:['Name','Type','Last4'],
   master:['Date','Type','Name','Description','Category','Cost','OCost','Savings','Card','Bank','Billing','Status','Source'],
 };
+const CAL_ID='4afe919405332d0d693bbe06975c2a399e5911c5c68ad5f1224c0162a4bdf157@group.calendar.google.com';
+let D_cal={}; // calendarId -> events cache
 const CC={Fun:'tf',Food:'tfo',Apparel:'tap',Tech:'tte',Home:'tho',Health:'the',Travel:'ttr',Tesla:'tts',PC:'tpc',Life:'tli',Gift:'tgi'};
 const CE={Fun:'🎮',Food:'🍽️',Apparel:'👕',Tech:'📱',Home:'🏠',Health:'🏥',Travel:'✈️',Tesla:'🚗',PC:'🖥️',Life:'🌿',Gift:'🎁'};
 const CHART_C=['#6c63ff','#22c55e','#f59e0b','#ef4444','#14b8a6','#ec4899','#3b82f6','#f97316','#a855f7','#ff6b6b','#60a5fa'];
@@ -592,7 +624,7 @@ function gapiLoaded(){
     try{
       await gapi.client.init({
         apiKey:cfg.key,
-        discoveryDocs:['https://sheets.googleapis.com/$discovery/rest?version=v4']
+        discoveryDocs:['https://sheets.googleapis.com/$discovery/rest?version=v4','https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest']
       });
       // Now load GSI for OAuth
       loadScript('https://accounts.google.com/gsi/client', gsiLoaded);
@@ -605,7 +637,7 @@ function gapiLoaded(){
 function gsiLoaded(){
   _tc=google.accounts.oauth2.initTokenClient({
     client_id:cfg.cid,
-    scope:'https://www.googleapis.com/auth/spreadsheets',
+    scope:'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/calendar',
     callback:onToken,
   });
   doSignIn();
@@ -813,8 +845,9 @@ function fmtDate(d){
   return`${parts[1]}/${parts[2]}/${parts[0]}`;
 }
 function ieDateCell(sheet,row,field,val){
-  const safe=(val||'').replace(/"/g,'&quot;');
-  return '<span class="ie td3" style="font-size:10px;" onclick="ieEdit(\''+sheet+'\','+row+',\''+field+'\',\''+safe+'\',\'date\',[],this)">'+( fmtDate(val)||'—')+'</span>';
+  const key=`ie_${_ieSeq++}`;
+  _ieData[key]={sheet,row,field,val:val||'',type:'date',opts:[]};
+  return `<span class="ie td3" style="font-size:10px;" data-ie="${key}" onclick="ieEditKey('${key}',this)">${fmtDate(val)||'—'}</span>`;
 }
 function catTag(c){const e=CE[c]||'';return`<span class="tag ${CC[c]||'tdf'}">${e?e+' ':''} ${c||'—'}</span>`;}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
@@ -993,9 +1026,9 @@ function renderCharts(){
   }
   const allCat=catBreakdown(pro);
   barChart('c-all-cat',allCat.labels,allCat.vals);
-  lineChart('c-all-trend',allMonths,monthlyData(allKeys,pro),'#1aa378');
-  lineChart('c-all-savings',allMonths,monthlySavings(allKeys),'#f59e0b');
-  lineChart('c-all-submo',allMonths,subPayByMonth(allKeys),'#6c63ff');
+  lineChartClean('c-all-trend',allMonths,monthlyData(allKeys,pro),'#1aa378');
+  lineChartClean('c-all-savings',allMonths,monthlySavings(allKeys),'#f59e0b');
+  lineChartClean('c-all-submo',allMonths,subPayByMonth(allKeys),'#6c63ff');
 }
 
 function donut(id,labels,data,colors){
@@ -1073,6 +1106,46 @@ function lineChart(id,labels,data,color='#1aa378'){
   });
 }
 
+function lineChartClean(id,labels,data,color='#1aa378'){
+  if(charts[id])charts[id].destroy();
+  const el=document.getElementById(id);if(!el)return;
+  const ctx=el.getContext('2d');
+  const rgb=color==='#1aa378'?'26,163,120':color==='#f59e0b'?'245,158,11':'108,99,255';
+  const grad=ctx.createLinearGradient(0,0,0,el.offsetHeight||220);
+  grad.addColorStop(0,`rgba(${rgb},0.3)`);
+  grad.addColorStop(0.7,`rgba(${rgb},0.04)`);
+  grad.addColorStop(1,'rgba(0,0,0,0)');
+  charts[id]=new Chart(ctx,{
+    type:'line',
+    data:{labels,datasets:[{
+      data,borderColor:color,backgroundColor:grad,borderWidth:1.5,
+      fill:true,tension:0.3,
+      pointRadius:0,pointHoverRadius:3,
+      pointHoverBackgroundColor:color,
+      datalabels:{display:false}
+    }]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:false},
+        datalabels:{display:false},
+        tooltip:{
+          backgroundColor:'rgba(0,0,0,0.8)',titleColor:'#fff',
+          bodyColor:'rgba(255,255,255,0.7)',padding:10,cornerRadius:6,
+          callbacks:{label:ctx=>' $'+Math.round(ctx.raw).toLocaleString()}
+        }
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{color:'rgba(255,255,255,0.25)',font:{size:8},maxTicksLimit:18},border:{display:false}},
+        y:{grid:{color:'rgba(255,255,255,0.04)',lineWidth:1},min:0,
+           ticks:{color:'rgba(255,255,255,0.25)',font:{size:8},callback:v=>v>=1000?'$'+(v/1000).toFixed(0)+'k':'$'+v},
+           border:{display:false}},
+      }
+    }
+  });
+}
+
 function barChart(id,labels,data){
   if(charts[id])charts[id].destroy();
   const el=document.getElementById(id);if(!el)return;
@@ -1129,11 +1202,23 @@ Chart.register({
 });
 
 // ── INLINE EDIT ENGINE ──
+// Store pending ie data to avoid escaping issues
+const _ieData={};
+let _ieSeq=0;
+
 function ie(sheet,row,field,val,type='text',opts=[]){
-  const safeVal=(val||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const key=`ie_${_ieSeq++}`;
+  _ieData[key]={sheet,row,field,val:val||'',type,opts};
   const display=type==='card-sel'?cardDisplay(val):(val||'—');
-  return `<span class="ie" onclick="ieEdit('${sheet}',${row},'${field}','${safeVal}','${type}',${JSON.stringify(opts)},this)">${display}</span>`;
+  return `<span class="ie" data-ie="${key}" onclick="ieEditKey('${key}',this)">${display}</span>`;
 }
+
+function ieEditKey(key,el){
+  const d=_ieData[key];
+  if(!d)return;
+  ieEdit(d.sheet,d.row,d.field,d.val,d.type,d.opts,el);
+}
+
 function ieEdit(sheet,row,field,val,type,opts,el){
   if(el.querySelector('input,select'))return;
   const td=el.closest('td');td.classList.add('editing');
@@ -1147,7 +1232,10 @@ function ieEdit(sheet,row,field,val,type,opts,el){
     const vals=type==='card-sel'?cardVals:choices;
     input=document.createElement('select');
     input.className='ie-sel';
-    input.innerHTML='<option value="">—</option>'+choices.map((o,i)=>`<option value="${vals[i]||o}" ${(vals[i]||o)===val?'selected':''}>${o}</option>`).join('');
+    input.innerHTML='<option value="">—</option>'+choices.map((o,i)=>{
+      const v=vals[i]||o;
+      return `<option value="${v}" ${v===val?'selected':''}>${o}</option>`;
+    }).join('');
     let _saved=false;
     input.onchange=()=>{_saved=true;ieSave(sheet,row,field,input.value,el,td);};
     input.onblur=()=>{if(!_saved)ieCancel(el,val,td);};
@@ -1166,7 +1254,6 @@ function ieEdit(sheet,row,field,val,type,opts,el){
 }
 async function ieSave(sheet,row,field,newVal,el,td){
   if(td&&td.classList)td.classList.remove('editing');
-  // Map sheet name to D key and HD key
   const sheetMap={
     'Wishlist':'wishlist','Expenses':'expenses','Subscriptions':'subscriptions',
     'Categories':'categories','Cards':'cards','Banks':'banks','Master':'master'
@@ -1175,14 +1262,24 @@ async function ieSave(sheet,row,field,newVal,el,td){
   if(!dk){if(el)el.textContent=newVal||'—';return;}
   const item=D[dk].find(x=>x._row===row);
   if(!item){if(el)el.textContent=newVal||'—';return;}
-  if(newVal===item[field]){if(el)el.textContent=newVal||'—';return;}
+  // Skip if unchanged
+  if(newVal===item[field]){
+    if(el&&el.textContent!==undefined){
+      if(field==='Card')el.textContent=cardDisplay(newVal)||'—';
+      else el.textContent=newVal||'—';
+    }
+    return;
+  }
   const old=item[field];
   item[field]=newVal;
+  // Update display
   if(el&&el.textContent!==undefined){
-    if(field==='Date'||field==='LastRenewal'||field==='NextRenewal') el.textContent=fmtDate(newVal)||'—';
-    else if(field==='Card') el.textContent=cardDisplay(newVal)||'—';
+    if(field==='Date'||field==='LastRenewal'||field==='NextRenewal')el.textContent=fmtDate(newVal)||'—';
+    else if(field==='Card')el.textContent=cardDisplay(newVal)||'—';
     else el.textContent=newVal||'—';
   }
+  // Update data key in _ieData for future edits
+  if(el&&el.dataset.ie)_ieData[el.dataset.ie]={..._ieData[el.dataset.ie],val:newVal};
   try{
     const vals=HD[dk].map(h=>item[h]||'');
     await updateRow(sheet,row,vals);
@@ -1199,11 +1296,10 @@ async function ieSave(sheet,row,field,newVal,el,td){
       item.MonthlyCost=MonthlyCost;item.AnnualCost=AnnualCost;
       await updateRow(sheet,row,HD.subscriptions.map(h=>item[h]||''));
     }
-    // Sync change to Master — find matching row by Name+Date and update it
     if(sheet==='Expenses'||sheet==='Subscriptions'){
       await syncEditToMaster(sheet,item,field,newVal);
     }
-  }catch(e){item[field]=old;if(el)el.textContent=old||'—';toast('Save failed: '+e.message,'err');}
+  }catch(e){item[field]=old;if(el&&el.textContent!==undefined)el.textContent=old||'—';toast('Save failed: '+e.message,'err');}
 }
 function ieCancel(el,val,td){td.classList.remove('editing');el.textContent=val||'—';}
 
@@ -1609,6 +1705,24 @@ async function paySub(row){
   await updateRow('Subscriptions',row,HD.subscriptions.map(h=>s[h]||''));
   const bank=D.cards.find(cd=>cd.Name===s.Card)?.Bank||'';
   await appendRow('Master',[today,'Subscription',s.Name,'',s.Category,s.Cost,'','',s.Card,bank,s.Billing,'Paid','Subscription']);
+  // Remove old calendar event and create new one for next renewal
+  const oldTitle=`💳 ${s.Name} — ${$f(s.Cost)}`;
+  const oldEvent=_calEvents.find(e=>e.summary===oldTitle);
+  if(oldEvent)await calDeleteEvent(oldEvent.id);
+  // Create next renewal event
+  if(newNext){
+    try{
+      await gapi.client.calendar.events.insert({
+        calendarId:CAL_ID,
+        resource:{
+          summary:oldTitle,
+          start:{date:newNext},end:{date:newNext},
+          description:`Subscription: ${s.Name}\nBilling: ${s.Billing}\nCard: ${s.Card||'—'}`,
+          colorId:'5',
+        }
+      });
+    }catch(e){console.warn('Calendar update failed:',e);}
+  }
   await syncAll();toast(`${s.Name} paid ✓ — ${payments} total payments`,'ok');
 }
 async function cancelSub(row){
@@ -1922,6 +2036,7 @@ function showTab(name,el){
   document.getElementById('tab-'+name).style.display='';
   document.querySelectorAll('.nt').forEach(t=>t.classList.remove('on'));
   el.classList.add('on');
+  if(name==='calendar')initCalendar();
 }
 function showApp(){
   document.getElementById('auth-screen').style.display='none';
@@ -2058,6 +2173,142 @@ function initAllDragCols(){
   initStaticDrag('bank-body','banks');
   initStaticDrag('master-body','master');
 }
+// ── CALENDAR ──
+let _calYear=new Date().getFullYear();
+let _calMonth=new Date().getMonth(); // 0-based
+let _calEvents=[]; // local cache of GCal events
+
+async function calSync(){
+  toast('Syncing calendar…');
+  try{
+    // Fetch events for 3 months around current view
+    const start=new Date(_calYear,_calMonth-1,1).toISOString();
+    const end=new Date(_calYear,_calMonth+2,1).toISOString();
+    const resp=await gapi.client.calendar.events.list({
+      calendarId:CAL_ID,
+      timeMin:start,timeMax:end,
+      singleEvents:true,orderBy:'startTime',maxResults:500
+    });
+    _calEvents=resp.result.items||[];
+    document.getElementById('cal-count').textContent=_calEvents.length+' events';
+    renderCalendar();
+    toast('Calendar synced ✓','ok');
+  }catch(e){toast('Calendar sync failed: '+e.message,'err');}
+}
+
+async function calEnsureSubEvents(){
+  // Create events for subscriptions that don't have one yet
+  const act=D.subscriptions.filter(s=>s.Status!=='Cancelled'&&s.NextRenewal);
+  let created=0;
+  for(const s of act){
+    const title=`💳 ${s.Name} — ${$f(s.Cost)}`;
+    const date=toSortableDate(s.NextRenewal);
+    if(!date)continue;
+    // Check if already exists
+    const exists=_calEvents.find(e=>e.summary===title&&e.start?.date===date);
+    if(exists)continue;
+    try{
+      await gapi.client.calendar.events.insert({
+        calendarId:CAL_ID,
+        resource:{
+          summary:title,
+          start:{date},end:{date},
+          description:`Subscription: ${s.Name}\nBilling: ${s.Billing}\nCard: ${s.Card||'—'}`,
+          colorId:'5', // banana yellow
+        }
+      });
+      created++;
+    }catch(e){console.warn('Cal event create failed:',e);}
+  }
+  if(created>0){toast(`Created ${created} calendar events ✓`,'ok');await calSync();}
+}
+
+async function calDeleteEvent(eventId){
+  try{
+    await gapi.client.calendar.events.delete({calendarId:CAL_ID,eventId});
+    _calEvents=_calEvents.filter(e=>e.id!==eventId);
+    renderCalendar();
+    toast('Event removed ✓','ok');
+  }catch(e){toast('Delete failed: '+e.message,'err');}
+}
+
+function calNav(dir){
+  _calMonth+=dir;
+  if(_calMonth>11){_calMonth=0;_calYear++;}
+  if(_calMonth<0){_calMonth=11;_calYear--;}
+  calSync();
+}
+
+function renderCalendar(){
+  const grid=document.getElementById('cal-grid');
+  if(!grid)return;
+  const label=new Date(_calYear,_calMonth,1).toLocaleString('default',{month:'long',year:'numeric'});
+  const el=document.getElementById('cal-month-label');
+  if(el)el.textContent=label;
+
+  const today=new Date();
+  const firstDay=new Date(_calYear,_calMonth,1).getDay(); // 0=Sun
+  const daysInMonth=new Date(_calYear,_calMonth+1,0).getDate();
+  const daysInPrev=new Date(_calYear,_calMonth,0).getDate();
+
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  let html=`<div class="cal-grid">`;
+  // Headers
+  html+=days.map(d=>`<div class="cal-day-header">${d}</div>`).join('');
+
+  // Build 6 weeks
+  let day=1,nextDay=1;
+  for(let i=0;i<42;i++){
+    let date,isOther=false;
+    if(i<firstDay){date=daysInPrev-(firstDay-i-1);isOther=true;}
+    else if(day>daysInMonth){date=nextDay++;isOther=true;}
+    else{date=day++;}
+
+    const actualYear=isOther?(i<firstDay?(_calMonth===0?_calYear-1:_calYear):(_calMonth===11?_calYear+1:_calYear)):_calYear;
+    const actualMonth=isOther?(i<firstDay?(_calMonth===0?11:_calMonth-1):(_calMonth===11?0:_calMonth+1)):_calMonth;
+    const dateStr=`${actualYear}-${String(actualMonth+1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
+    const isToday=actualYear===today.getFullYear()&&actualMonth===today.getMonth()&&date===today.getDate();
+
+    // Get events for this day
+    const dayEvents=_calEvents.filter(e=>{
+      const d=e.start?.date||e.start?.dateTime?.slice(0,10);
+      return d===dateStr;
+    });
+
+    // Also show sub due dates from D.subscriptions
+    const subsDue=D.subscriptions.filter(s=>s.Status!=='Cancelled'&&toSortableDate(s.NextRenewal)===dateStr);
+
+    let evHtml='';
+    // Sub due dates (from app data, not necessarily on calendar yet)
+    subsDue.forEach(s=>{
+      const isDue=isToday||new Date(dateStr)<=new Date();
+      evHtml+=`<div class="cal-event ${isDue?'due':'sub'}" title="${s.Name} — ${$f(s.Cost)}">${CE[s.Category]||'💳'} ${s.Name}</div>`;
+    });
+    // Calendar events (income etc)
+    dayEvents.forEach(ev=>{
+      const isIncome=ev.summary?.startsWith('💰');
+      const isSub=ev.summary?.startsWith('💳');
+      if(isSub)return; // already shown from app data above
+      evHtml+=`<div class="cal-event ${isIncome?'income':'sub'}" title="${ev.summary}" onclick="calDeleteEvent('${ev.id}')">${ev.summary}</div>`;
+    });
+
+    html+=`<div class="cal-cell${isOther?' other-month':''}${isToday?' today':''}">
+      <div class="cal-date">${date}</div>
+      ${evHtml}
+    </div>`;
+  }
+  html+='</div>';
+  grid.innerHTML=html;
+}
+
+async function initCalendar(){
+  await calSync();
+  // Auto-populate sub events on first load if calendar is empty
+  if(_calEvents.length===0){
+    await calEnsureSubEvents();
+  }
+}
+
 // ── INIT ──
 loadColOrders();
 loadSubColOrder();
