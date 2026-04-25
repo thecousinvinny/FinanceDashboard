@@ -198,6 +198,15 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .cal-event.income{background:rgba(34,197,94,0.2);color:var(--green);border-left-color:var(--green)}
 .cal-event.due{background:rgba(239,68,68,0.2);color:var(--red);border-left-color:var(--red)}
 #cal-location-results div:last-child{border-bottom:none}
+.cal-popover{position:fixed;z-index:2000;background:var(--s1);border:1px solid var(--border2);border-radius:var(--r2);padding:16px;min-width:260px;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.5);animation:popIn .15s ease}
+@keyframes popIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.cal-popover-title{font-size:14px;font-weight:600;margin-bottom:4px}
+.cal-popover-sub{font-size:11px;color:var(--text2);margin-bottom:12px}
+.cal-popover-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border)}
+.cal-popover-row:last-of-type{border-bottom:none}
+.cal-popover-label{color:var(--text3)}
+.cal-popover-val{color:var(--text);font-weight:500;font-family:'DM Mono',monospace;font-size:11px}
+.cal-popover-actions{display:flex;gap:8px;margin-top:12px}
 .cal-swatch{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;flex-shrink:0}
 .cal-swatch:hover{transform:scale(1.15)}
 .cal-swatch.selected{border-color:#fff;box-shadow:0 0 0 2px var(--accent);transform:scale(1.15)}
@@ -482,30 +491,29 @@ td.editing{background:rgba(108,99,255,0.05)!important}
     </div>
 
     <div id="tab-calendar" style="display:none">
-      <div class="panel">
-        <div class="ph">
-          <div class="pt">📅 FinanceDash Calendar <span class="pc" id="cal-count">0 events</span></div>
-          <div class="pa" style="gap:8px;">
-            <button class="btn" onclick="calNav(-1)">← Prev</button>
-            <span id="cal-month-label" style="font-size:13px;font-weight:500;min-width:160px;text-align:center;color:var(--text);"></span>
-            <button class="btn" onclick="calNav(1)">Next →</button>
-            <button class="btn" onclick="calGoToday()" style="font-size:11px;">Today</button>
-            <input id="cal-search" class="fi" placeholder="Search events…" oninput="renderCalendar()" style="width:160px;padding:5px 10px;font-size:11px;">
-            <button class="btn btn-a" onclick="openCalEventModal()">+ Event</button>
-            <button class="btn btn-a" onclick="calSync()">↻ Sync</button>
-          </div>
+      <!-- Calendar toolbar -->
+      <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--s1);border-radius:var(--r2) var(--r2) 0 0;flex-wrap:wrap;">
+        <button class="btn" onclick="calNav(-1)" style="padding:6px 12px;">←</button>
+        <span id="cal-month-label" style="font-size:15px;font-weight:600;min-width:180px;text-align:center;color:var(--text);"></span>
+        <button class="btn" onclick="calNav(1)" style="padding:6px 12px;">→</button>
+        <button class="btn" onclick="calGoToday()" style="font-size:11px;">Today</button>
+        <div style="flex:1;min-width:140px;max-width:220px;">
+          <input id="cal-search" class="fi" placeholder="🔍 Search events…" oninput="renderCalendar()" style="padding:6px 10px;font-size:11px;width:100%;">
         </div>
-        <div id="cal-grid" style="padding:12px;"></div>
+        <button class="btn btn-a" onclick="openCalEventModal(null)">+ New event</button>
+        <button class="btn" onclick="calSync()" style="font-size:11px;">↻ Sync</button>
       </div>
+      <!-- Calendar grid -->
+      <div id="cal-grid" style="padding:12px;background:var(--bg);border-radius:0 0 var(--r2) var(--r2);"></div>
     </div>
 
     <!-- CALENDAR EVENT MODAL -->
-    <div class="mo" id="cal-mo" onclick="closeCalMo(event)" style="display:none;z-index:1100;">
+    <div class="mo" id="cal-mo" onclick="closeCalMo(event)">
       <div class="md" style="max-width:520px;">
         <div class="mtit" id="cal-mo-title">New Event</div>
         <input type="hidden" id="cal-ev-id">
         <div style="display:flex;flex-direction:column;gap:11px;">
-          <div class="fgr full"><label class="fl">Title</label><input class="fi" id="cal-ev-title" placeholder="Event title"></div>
+          <div class="fgr"><label class="fl">Title</label><input class="fi" id="cal-ev-title" placeholder="Event title…"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
             <div class="fgr"><label class="fl">Date</label><input class="fi" id="cal-ev-date" type="date"></div>
             <div class="fgr"><label class="fl">All day?</label>
@@ -516,10 +524,10 @@ td.editing{background:rgba(108,99,255,0.05)!important}
             </div>
           </div>
           <div id="cal-time-row" style="display:none;grid-template-columns:1fr 1fr;gap:11px;" class="fg">
-            <div class="fgr"><label class="fl">Start time</label><input class="fi" id="cal-ev-start" type="time"></div>
-            <div class="fgr"><label class="fl">End time</label><input class="fi" id="cal-ev-end" type="time"></div>
+            <div class="fgr"><label class="fl">Start time</label><input class="fi" id="cal-ev-start" type="time" value="09:00"></div>
+            <div class="fgr"><label class="fl">End time</label><input class="fi" id="cal-ev-end" type="time" value="10:00"></div>
           </div>
-          <div class="fgr full"><label class="fl">Recurrence</label>
+          <div class="fgr"><label class="fl">Recurrence</label>
             <select class="fs" id="cal-ev-recur">
               <option value="">Does not repeat</option>
               <option value="RRULE:FREQ=DAILY">Daily</option>
@@ -528,35 +536,35 @@ td.editing{background:rgba(108,99,255,0.05)!important}
               <option value="RRULE:FREQ=YEARLY">Yearly</option>
             </select>
           </div>
-          <div class="fgr full"><label class="fl">Location / Address</label>
-            <input class="fi" id="cal-ev-location" placeholder="Search address or place…" oninput="calLocationSearch()" autocomplete="off">
-            <div id="cal-location-results" style="background:var(--s2);border:1px solid var(--border2);border-radius:8px;margin-top:4px;display:none;max-height:160px;overflow-y:auto;"></div>
+          <div class="fgr"><label class="fl">Location / Address</label>
+            <input class="fi" id="cal-ev-location" placeholder="Search a place…" oninput="calLocationSearch()" autocomplete="off">
+            <div id="cal-location-results" style="background:var(--s2);border:1px solid var(--border2);border-radius:8px;margin-top:4px;display:none;max-height:160px;overflow-y:auto;z-index:200;position:relative;"></div>
           </div>
-          <div class="fgr full"><label class="fl">Notes</label>
-            <textarea class="fi" id="cal-ev-notes" rows="3" placeholder="Add notes…" style="resize:vertical;min-height:70px;"></textarea>
+          <div class="fgr"><label class="fl">Notes</label>
+            <textarea class="fi" id="cal-ev-notes" rows="3" placeholder="Add notes…" style="resize:vertical;min-height:70px;font-family:'DM Sans',sans-serif;"></textarea>
           </div>
-          <div class="fgr full"><label class="fl">Color</label>
+          <div class="fgr"><label class="fl">Color</label>
             <div id="cal-color-picker" style="display:flex;gap:8px;flex-wrap:wrap;padding:4px 0;">
-              <div class="cal-swatch" data-color="1" style="background:#ef4444;" title="Tomato — Expense" onclick="selectCalColor('1',this)"></div>
-              <div class="cal-swatch" data-color="4" style="background:#f97316;" title="Flamingo" onclick="selectCalColor('4',this)"></div>
-              <div class="cal-swatch" data-color="6" style="background:#fb923c;" title="Tangerine — Important" onclick="selectCalColor('6',this)"></div>
-              <div class="cal-swatch" data-color="5" style="background:#f59e0b;" title="Banana — Subscription" onclick="selectCalColor('5',this)"></div>
-              <div class="cal-swatch" data-color="2" style="background:#22c55e;" title="Sage — Income" onclick="selectCalColor('2',this)"></div>
-              <div class="cal-swatch" data-color="10" style="background:#14b8a6;" title="Basil" onclick="selectCalColor('10',this)"></div>
-              <div class="cal-swatch" data-color="9" style="background:#3b82f6;" title="Blueberry — Personal" onclick="selectCalColor('9',this)"></div>
-              <div class="cal-swatch" data-color="11" style="background:#6c63ff;" title="Lavender" onclick="selectCalColor('11',this)"></div>
-              <div class="cal-swatch" data-color="3" style="background:#a855f7;" title="Grape" onclick="selectCalColor('3',this)"></div>
-              <div class="cal-swatch" data-color="7" style="background:#ec4899;" title="Flamingo" onclick="selectCalColor('7',this)"></div>
-              <div class="cal-swatch" data-color="8" style="background:#6b7280;" title="Graphite — Other" onclick="selectCalColor('8',this)"></div>
+              <div class="cal-swatch" data-color="1"  style="background:#ef4444;" title="Tomato"    onclick="selectCalColor('1',this)"></div>
+              <div class="cal-swatch" data-color="4"  style="background:#f97316;" title="Flamingo"  onclick="selectCalColor('4',this)"></div>
+              <div class="cal-swatch" data-color="6"  style="background:#fb923c;" title="Tangerine" onclick="selectCalColor('6',this)"></div>
+              <div class="cal-swatch" data-color="5"  style="background:#f59e0b;" title="Banana"    onclick="selectCalColor('5',this)"></div>
+              <div class="cal-swatch" data-color="2"  style="background:#22c55e;" title="Sage"      onclick="selectCalColor('2',this)"></div>
+              <div class="cal-swatch" data-color="10" style="background:#14b8a6;" title="Basil"     onclick="selectCalColor('10',this)"></div>
+              <div class="cal-swatch" data-color="9"  style="background:#3b82f6;" title="Blueberry" onclick="selectCalColor('9',this)"></div>
+              <div class="cal-swatch" data-color="11" style="background:#6c63ff;" title="Lavender"  onclick="selectCalColor('11',this)"></div>
+              <div class="cal-swatch" data-color="3"  style="background:#a855f7;" title="Grape"     onclick="selectCalColor('3',this)"></div>
+              <div class="cal-swatch" data-color="7"  style="background:#ec4899;" title="Pink"      onclick="selectCalColor('7',this)"></div>
+              <div class="cal-swatch" data-color="8"  style="background:#6b7280;" title="Graphite"  onclick="selectCalColor('8',this)"></div>
             </div>
             <input type="hidden" id="cal-ev-color" value="9">
-            <div id="cal-color-label" style="font-size:11px;color:var(--text3);margin-top:4px;">Blueberry — Personal</div>
+            <div id="cal-color-label" style="font-size:11px;color:var(--text3);margin-top:4px;">Blueberry</div>
           </div>
         </div>
         <div class="mac">
-          <button class="btn" id="cal-delete-btn" style="display:none;color:var(--red);border-color:rgba(239,68,68,.4);" onclick="calDeleteCurrentEvent()">Delete</button>
+          <button class="btn" id="cal-delete-btn" style="display:none;color:var(--red);border-color:rgba(239,68,68,.4);margin-right:auto;" onclick="calDeleteCurrentEvent()">🗑 Delete</button>
           <button class="btn" onclick="closeCalMo()">Cancel</button>
-          <button class="btn btn-a" onclick="saveCalEvent()">Save to Google Calendar</button>
+          <button class="btn btn-a" onclick="saveCalEvent()">Save</button>
         </div>
       </div>
     </div>
@@ -2356,22 +2364,22 @@ function renderCalendar(){
     let evHtml='';
     subsDue.forEach(s=>{
       const isDue=new Date(dateStr)<=today;
-      evHtml+=`<div class="cal-event ${isDue?'due':'sub'}" onclick="openCalEventModal('${dateStr}')" title="${s.Name} — ${$f(s.Cost)}">${CE[s.Category]||'💳'} ${s.Name}</div>`;
+      evHtml+=`<div class="cal-event ${isDue?'due':'sub'}" onclick="event.stopPropagation();showSubPopover(event,'${escQ(s.Name)}')" title="${esc(s.Name)} — ${$f(s.Cost)}">${CE[s.Category]||'💳'} ${esc(s.Name)}</div>`;
     });
     incomeItems.forEach(m=>{
       if(search&&!(m.Name||'').toLowerCase().includes(search))return;
-      evHtml+=`<div class="cal-event income" title="${m.Name} — +${$f(m.Cost)}">💰 ${m.Name}</div>`;
+      evHtml+=`<div class="cal-event income" onclick="event.stopPropagation();showIncomePopover(event,${m._row})" title="${esc(m.Name)} — +${$f(m.Cost)}">💰 ${esc(m.Name)}</div>`;
     });
     dayEvents.forEach(ev=>{
       const isSub=ev.summary?.includes('💳');
-      if(isSub&&subsDue.length)return; // already shown
+      if(isSub&&subsDue.length)return;
       const color=CAL_COLORS[ev.colorId]||'#6c63ff';
       const time=ev.start?.dateTime?new Date(ev.start.dateTime).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'';
-      evHtml+=`<div class="cal-event" style="background:${color}22;border-left-color:${color};color:${color};" onclick="openCalEventModal('${dateStr}','${ev.id}')" title="${ev.summary}">${time?time+' ':''}${ev.summary||''}</div>`;
+      evHtml+=`<div class="cal-event" style="background:${color}22;border-left-color:${color};color:${color};" onclick="event.stopPropagation();openCalEventModal('${dateStr}','${ev.id}')" title="${ev.summary}">${time?time+' ':''}${ev.summary||''}</div>`;
     });
 
-    html+=`<div class="cal-cell${isOther?' other-month':''}${isToday?' today':''}" ondblclick="openCalEventModal('${dateStr}')">
-      <div class="cal-date">${date}</div>${evHtml}
+    html+=`<div class="cal-cell${isOther?' other-month':''}${isToday?' today':''}" ondblclick="openCalEventModal('${dateStr}',null)">
+      <div class="cal-date" ondblclick="openCalEventModal('${dateStr}',null)">${date}</div>${evHtml}
     </div>`;
   }
   html+='</div>';
@@ -2421,6 +2429,69 @@ function openCalEventModal(dateStr,eventId){
   }
   mo.classList.add('open');
   setTimeout(()=>document.getElementById('cal-ev-title').focus(),100);
+}
+
+// ── CALENDAR POPOVER ──
+function showCalPopover(e, html){
+  e.stopPropagation();
+  const pop=document.getElementById('cal-popover');
+  pop.innerHTML=html;
+  pop.style.display='block';
+  // Position near click
+  const x=e.clientX,y=e.clientY;
+  const pw=320,ph=200;
+  pop.style.left=Math.min(x+10,window.innerWidth-pw-20)+'px';
+  pop.style.top=Math.min(y+10,window.innerHeight-ph-20)+'px';
+  // Close on outside click
+  setTimeout(()=>document.addEventListener('click',closeCalPopover,{once:true}),10);
+}
+function closeCalPopover(){
+  document.getElementById('cal-popover').style.display='none';
+}
+function showSubPopover(e,subRow){
+  const s=D.subscriptions.find(x=>x.Name===subRow);
+  if(!s)return;
+  const isDue=dueCls(s.NextRenewal);
+  const html=`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <span style="font-size:20px;">${CE[s.Category]||'💳'}</span>
+      <div>
+        <div class="cal-popover-title">${esc(s.Name)}</div>
+        <div class="cal-popover-sub">Subscription · ${s.Billing||'Monthly'}</div>
+      </div>
+    </div>
+    <div class="cal-popover-row"><span class="cal-popover-label">Cost</span><span class="cal-popover-val">${$f(s.Cost)}</span></div>
+    <div class="cal-popover-row"><span class="cal-popover-label">Monthly</span><span class="cal-popover-val">${$f(calcSubCosts(s).MonthlyCost)}</span></div>
+    <div class="cal-popover-row"><span class="cal-popover-label">Card</span><span class="cal-popover-val">${cardDisplay(s.Card)||'—'}</span></div>
+    <div class="cal-popover-row"><span class="cal-popover-label">Next renewal</span><span class="cal-popover-val ${isDue?'tred':''}">${fmtDate(s.NextRenewal)||'—'}</span></div>
+    <div class="cal-popover-row"><span class="cal-popover-label">Payments made</span><span class="cal-popover-val">${s.Payments||'0'}</span></div>
+    <div class="cal-popover-row"><span class="cal-popover-label">Category</span><span class="cal-popover-val">${s.Category||'—'}</span></div>
+    <div class="cal-popover-actions">
+      <button class="btn btn-p" onclick="paySub(${s._row});closeCalPopover()">✓ Mark Paid</button>
+      <button class="btn" onclick="showTab('subscriptions',document.querySelector('[onclick*=subscriptions]'));closeCalPopover()">→ Go to Subs</button>
+    </div>`;
+  showCalPopover(e,html);
+}
+function showIncomePopover(e,masterRow){
+  const m=D.master.find(x=>x._row===masterRow);
+  if(!m)return;
+  const html=`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <span style="font-size:20px;">💰</span>
+      <div>
+        <div class="cal-popover-title">${esc(m.Name)}</div>
+        <div class="cal-popover-sub">Income · ${m.Source||'—'}</div>
+      </div>
+    </div>
+    <div class="cal-popover-row"><span class="cal-popover-label">Amount</span><span class="cal-popover-val tgrn">+${$f(m.Cost)}</span></div>
+    <div class="cal-popover-row"><span class="cal-popover-label">Date</span><span class="cal-popover-val">${fmtDate(m.Date)||'—'}</span></div>
+    <div class="cal-popover-row"><span class="cal-popover-label">Bank</span><span class="cal-popover-val">${esc(m.Bank||'—')}</span></div>
+    <div class="cal-popover-row"><span class="cal-popover-label">Source</span><span class="cal-popover-val">${esc(m.Source||'—')}</span></div>
+    ${m.Description?`<div class="cal-popover-row"><span class="cal-popover-label">Notes</span><span class="cal-popover-val">${esc(m.Description)}</span></div>`:''}
+    <div class="cal-popover-actions">
+      <button class="btn" onclick="showTab('master',document.querySelector('[onclick*=master]'));closeCalPopover()">→ Go to Master</button>
+    </div>`;
+  showCalPopover(e,html);
 }
 
 function closeCalMo(e){
