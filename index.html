@@ -6,6 +6,7 @@
 <title>💵 Finance Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDR31gST2VMxROFmWWe9GYWn0ySAWcbb18&libraries=places" async defer></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -185,17 +186,23 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .eic{font-size:26px;margin-bottom:7px}
 /* CALENDAR */
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
-.cal-day-header{text-align:center;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;padding:8px 4px}
-.cal-cell{min-height:90px;background:var(--s2);border-radius:6px;padding:6px;position:relative;border:1px solid var(--border)}
+.cal-day-header{text-align:center;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;padding:10px 4px}
+.cal-cell{min-height:130px;background:var(--s2);border-radius:6px;padding:8px;position:relative;border:1px solid var(--border)}
 .cal-cell.today{border-color:var(--accent);background:rgba(108,99,255,0.06)}
 .cal-cell.other-month{opacity:.35}
-.cal-date{font-size:11px;font-weight:500;color:var(--text3);margin-bottom:4px}
+.cal-date{font-size:12px;font-weight:500;color:var(--text3);margin-bottom:5px}
 .cal-cell.today .cal-date{color:var(--accent);font-weight:700}
-.cal-event{font-size:10px;padding:2px 5px;border-radius:4px;margin-bottom:2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .15s}
+.cal-event{font-size:10px;padding:3px 6px;border-radius:4px;margin-bottom:3px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .15s;border-left:2px solid transparent}
 .cal-event:hover{opacity:.8}
-.cal-event.sub{background:rgba(245,158,11,0.2);color:var(--amber);border-left:2px solid var(--amber)}
-.cal-event.income{background:rgba(34,197,94,0.2);color:var(--green);border-left:2px solid var(--green)}
-.cal-event.due{background:rgba(239,68,68,0.2);color:var(--red);border-left:2px solid var(--red)}
+.cal-event.sub{background:rgba(245,158,11,0.2);color:var(--amber);border-left-color:var(--amber)}
+.cal-event.income{background:rgba(34,197,94,0.2);color:var(--green);border-left-color:var(--green)}
+.cal-event.due{background:rgba(239,68,68,0.2);color:var(--red);border-left-color:var(--red)}
+#cal-location-results div:last-child{border-bottom:none}
+.cal-swatch{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;flex-shrink:0}
+.cal-swatch:hover{transform:scale(1.15)}
+.cal-swatch.selected{border-color:#fff;box-shadow:0 0 0 2px var(--accent);transform:scale(1.15)}
+/* Full bleed calendar when on cal tab */
+#tab-calendar{margin:-24px;}
 
 /* SORT BAR */
 .sort-bar{display:flex;align-items:center;gap:6px;padding:9px 18px;border-bottom:1px solid var(--border);background:var(--s2);flex-wrap:wrap}
@@ -480,12 +487,77 @@ td.editing{background:rgba(108,99,255,0.05)!important}
           <div class="pt">📅 FinanceDash Calendar <span class="pc" id="cal-count">0 events</span></div>
           <div class="pa" style="gap:8px;">
             <button class="btn" onclick="calNav(-1)">← Prev</button>
-            <span id="cal-month-label" style="font-size:13px;font-weight:500;min-width:140px;text-align:center;color:var(--text);"></span>
+            <span id="cal-month-label" style="font-size:13px;font-weight:500;min-width:160px;text-align:center;color:var(--text);"></span>
             <button class="btn" onclick="calNav(1)">Next →</button>
-            <button class="btn btn-a" onclick="calSync()">↻ Sync Calendar</button>
+            <button class="btn" onclick="calGoToday()" style="font-size:11px;">Today</button>
+            <input id="cal-search" class="fi" placeholder="Search events…" oninput="renderCalendar()" style="width:160px;padding:5px 10px;font-size:11px;">
+            <button class="btn btn-a" onclick="openCalEventModal()">+ Event</button>
+            <button class="btn btn-a" onclick="calSync()">↻ Sync</button>
           </div>
         </div>
-        <div id="cal-grid" style="padding:16px;"></div>
+        <div id="cal-grid" style="padding:12px;"></div>
+      </div>
+    </div>
+
+    <!-- CALENDAR EVENT MODAL -->
+    <div class="mo" id="cal-mo" onclick="closeCalMo(event)" style="display:none;z-index:1100;">
+      <div class="md" style="max-width:520px;">
+        <div class="mtit" id="cal-mo-title">New Event</div>
+        <input type="hidden" id="cal-ev-id">
+        <div style="display:flex;flex-direction:column;gap:11px;">
+          <div class="fgr full"><label class="fl">Title</label><input class="fi" id="cal-ev-title" placeholder="Event title"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
+            <div class="fgr"><label class="fl">Date</label><input class="fi" id="cal-ev-date" type="date"></div>
+            <div class="fgr"><label class="fl">All day?</label>
+              <select class="fs" id="cal-ev-allday" onchange="toggleCalTime()">
+                <option value="yes">All day</option>
+                <option value="no">Specific time</option>
+              </select>
+            </div>
+          </div>
+          <div id="cal-time-row" style="display:none;grid-template-columns:1fr 1fr;gap:11px;" class="fg">
+            <div class="fgr"><label class="fl">Start time</label><input class="fi" id="cal-ev-start" type="time"></div>
+            <div class="fgr"><label class="fl">End time</label><input class="fi" id="cal-ev-end" type="time"></div>
+          </div>
+          <div class="fgr full"><label class="fl">Recurrence</label>
+            <select class="fs" id="cal-ev-recur">
+              <option value="">Does not repeat</option>
+              <option value="RRULE:FREQ=DAILY">Daily</option>
+              <option value="RRULE:FREQ=WEEKLY">Weekly</option>
+              <option value="RRULE:FREQ=MONTHLY">Monthly</option>
+              <option value="RRULE:FREQ=YEARLY">Yearly</option>
+            </select>
+          </div>
+          <div class="fgr full"><label class="fl">Location / Address</label>
+            <input class="fi" id="cal-ev-location" placeholder="Search address or place…" oninput="calLocationSearch()" autocomplete="off">
+            <div id="cal-location-results" style="background:var(--s2);border:1px solid var(--border2);border-radius:8px;margin-top:4px;display:none;max-height:160px;overflow-y:auto;"></div>
+          </div>
+          <div class="fgr full"><label class="fl">Notes</label>
+            <textarea class="fi" id="cal-ev-notes" rows="3" placeholder="Add notes…" style="resize:vertical;min-height:70px;"></textarea>
+          </div>
+          <div class="fgr full"><label class="fl">Color</label>
+            <div id="cal-color-picker" style="display:flex;gap:8px;flex-wrap:wrap;padding:4px 0;">
+              <div class="cal-swatch" data-color="1" style="background:#ef4444;" title="Tomato — Expense" onclick="selectCalColor('1',this)"></div>
+              <div class="cal-swatch" data-color="4" style="background:#f97316;" title="Flamingo" onclick="selectCalColor('4',this)"></div>
+              <div class="cal-swatch" data-color="6" style="background:#fb923c;" title="Tangerine — Important" onclick="selectCalColor('6',this)"></div>
+              <div class="cal-swatch" data-color="5" style="background:#f59e0b;" title="Banana — Subscription" onclick="selectCalColor('5',this)"></div>
+              <div class="cal-swatch" data-color="2" style="background:#22c55e;" title="Sage — Income" onclick="selectCalColor('2',this)"></div>
+              <div class="cal-swatch" data-color="10" style="background:#14b8a6;" title="Basil" onclick="selectCalColor('10',this)"></div>
+              <div class="cal-swatch" data-color="9" style="background:#3b82f6;" title="Blueberry — Personal" onclick="selectCalColor('9',this)"></div>
+              <div class="cal-swatch" data-color="11" style="background:#6c63ff;" title="Lavender" onclick="selectCalColor('11',this)"></div>
+              <div class="cal-swatch" data-color="3" style="background:#a855f7;" title="Grape" onclick="selectCalColor('3',this)"></div>
+              <div class="cal-swatch" data-color="7" style="background:#ec4899;" title="Flamingo" onclick="selectCalColor('7',this)"></div>
+              <div class="cal-swatch" data-color="8" style="background:#6b7280;" title="Graphite — Other" onclick="selectCalColor('8',this)"></div>
+            </div>
+            <input type="hidden" id="cal-ev-color" value="9">
+            <div id="cal-color-label" style="font-size:11px;color:var(--text3);margin-top:4px;">Blueberry — Personal</div>
+          </div>
+        </div>
+        <div class="mac">
+          <button class="btn" id="cal-delete-btn" style="display:none;color:var(--red);border-color:rgba(239,68,68,.4);" onclick="calDeleteCurrentEvent()">Delete</button>
+          <button class="btn" onclick="closeCalMo()">Cancel</button>
+          <button class="btn btn-a" onclick="saveCalEvent()">Save to Google Calendar</button>
+        </div>
       </div>
     </div>
 
@@ -2174,38 +2246,37 @@ function initAllDragCols(){
 }
 // ── CALENDAR ──
 let _calYear=new Date().getFullYear();
-let _calMonth=new Date().getMonth(); // 0-based
-let _calEvents=[]; // local cache of GCal events
+let _calMonth=new Date().getMonth();
+let _calEvents=[];
+let _calAutocomplete=null;
+
+const CAL_COLORS={
+  '1':'#ef4444','2':'#22c55e','3':'#a855f7','4':'#f97316',
+  '5':'#f59e0b','6':'#f97316','7':'#14b8a6','8':'#6b7280',
+  '9':'#3b82f6','10':'#22c55e','11':'#6c63ff'
+};
+
+function calGoToday(){_calYear=new Date().getFullYear();_calMonth=new Date().getMonth();calSync();}
+function calNav(dir){_calMonth+=dir;if(_calMonth>11){_calMonth=0;_calYear++;}if(_calMonth<0){_calMonth=11;_calYear--;}calSync();}
 
 async function calSync(){
   toast('Syncing calendar…');
-  console.log('[CAL] calSync started, gapi.client.calendar:', !!gapi.client.calendar);
   if(!gapi.client.calendar){
-    await new Promise((res,rej)=>gapi.client.load('calendar','v3',()=>{
-      console.log('[CAL] calendar API loaded:', !!gapi.client.calendar);
-      if(gapi.client.calendar)res();
-      else rej(new Error('Calendar API failed to load'));
-    }));
+    const loaded=await new Promise(res=>gapi.client.load('calendar','v3',()=>res(!!gapi.client.calendar)));
+    if(!loaded){toast('Could not load Calendar API — check API key restrictions','err');renderCalendar();return;}
   }
   try{
     const start=new Date(_calYear,_calMonth-1,1).toISOString();
     const end=new Date(_calYear,_calMonth+2,1).toISOString();
-    console.log('[CAL] fetching events', CAL_ID, start, end);
     const resp=await gapi.client.calendar.events.list({
-      calendarId:CAL_ID,
-      timeMin:start,timeMax:end,
+      calendarId:CAL_ID,timeMin:start,timeMax:end,
       singleEvents:true,orderBy:'startTime',maxResults:500
     });
     _calEvents=resp.result.items||[];
-    console.log('[CAL] events fetched:', _calEvents.length, _calEvents);
     document.getElementById('cal-count').textContent=_calEvents.length+' events';
     renderCalendar();
     toast('Calendar synced ✓','ok');
-  }catch(e){
-    console.error('[CAL] sync error:', e);
-    renderCalendar();
-    toast('Calendar sync failed: '+e.message,'err');
-  }
+  }catch(e){renderCalendar();toast('Calendar sync failed: '+e.message,'err');}
 }
 
 async function calEnsureSubEvents(){
@@ -2221,12 +2292,8 @@ async function calEnsureSubEvents(){
     try{
       await gapi.client.calendar.events.insert({
         calendarId:CAL_ID,
-        resource:{
-          summary:title,
-          start:{date},end:{date},
-          description:`Subscription: ${s.Name}\nBilling: ${s.Billing}\nCard: ${s.Card||'—'}`,
-          colorId:'5',
-        }
+        resource:{summary:title,start:{date},end:{date},
+          description:`Subscription: ${s.Name}\nBilling: ${s.Billing}\nCard: ${s.Card||'—'}`,colorId:'5'}
       });
       created++;
     }catch(e){console.warn('Cal event create failed:',e);}
@@ -2235,42 +2302,31 @@ async function calEnsureSubEvents(){
   else renderCalendar();
 }
 
-async function calDeleteEvent(eventId){
-  try{
-    await gapi.client.calendar.events.delete({calendarId:CAL_ID,eventId});
-    _calEvents=_calEvents.filter(e=>e.id!==eventId);
-    renderCalendar();
-    toast('Event removed ✓','ok');
-  }catch(e){toast('Delete failed: '+e.message,'err');}
-}
-
-function calNav(dir){
-  _calMonth+=dir;
-  if(_calMonth>11){_calMonth=0;_calYear++;}
-  if(_calMonth<0){_calMonth=11;_calYear--;}
-  calSync();
+// Populate income entries from Master as calendar events display
+function getMasterEventsForDay(dateStr){
+  return D.master.filter(m=>{
+    const d=toSortableDate(m.Date);
+    return d===dateStr&&m.Type==='Income';
+  });
 }
 
 function renderCalendar(){
-  console.log('[CAL] renderCalendar called, _calMonth:', _calMonth, '_calYear:', _calYear);
   const grid=document.getElementById('cal-grid');
-  console.log('[CAL] cal-grid element:', grid);
   if(!grid)return;
   const label=new Date(_calYear,_calMonth,1).toLocaleString('default',{month:'long',year:'numeric'});
   const el=document.getElementById('cal-month-label');
   if(el)el.textContent=label;
 
+  const search=(document.getElementById('cal-search')?.value||'').toLowerCase();
   const today=new Date();
-  const firstDay=new Date(_calYear,_calMonth,1).getDay(); // 0=Sun
+  const firstDay=new Date(_calYear,_calMonth,1).getDay();
   const daysInMonth=new Date(_calYear,_calMonth+1,0).getDate();
   const daysInPrev=new Date(_calYear,_calMonth,0).getDate();
-
   const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
   let html=`<div class="cal-grid">`;
-  // Headers
   html+=days.map(d=>`<div class="cal-day-header">${d}</div>`).join('');
 
-  // Build 6 weeks
   let day=1,nextDay=1;
   for(let i=0;i<42;i++){
     let date,isOther=false;
@@ -2278,53 +2334,209 @@ function renderCalendar(){
     else if(day>daysInMonth){date=nextDay++;isOther=true;}
     else{date=day++;}
 
-    const actualYear=isOther?(i<firstDay?(_calMonth===0?_calYear-1:_calYear):(_calMonth===11?_calYear+1:_calYear)):_calYear;
-    const actualMonth=isOther?(i<firstDay?(_calMonth===0?11:_calMonth-1):(_calMonth===11?0:_calMonth+1)):_calMonth;
-    const dateStr=`${actualYear}-${String(actualMonth+1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
-    const isToday=actualYear===today.getFullYear()&&actualMonth===today.getMonth()&&date===today.getDate();
+    const aY=isOther?(i<firstDay?(_calMonth===0?_calYear-1:_calYear):(_calMonth===11?_calYear+1:_calYear)):_calYear;
+    const aM=isOther?(i<firstDay?(_calMonth===0?11:_calMonth-1):(_calMonth===11?0:_calMonth+1)):_calMonth;
+    const dateStr=`${aY}-${String(aM+1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
+    const isToday=aY===today.getFullYear()&&aM===today.getMonth()&&date===today.getDate();
 
-    // Get events for this day
+    // GCal events
     const dayEvents=_calEvents.filter(e=>{
       const d=e.start?.date||e.start?.dateTime?.slice(0,10);
-      return d===dateStr;
+      if(d!==dateStr)return false;
+      if(search)return(e.summary||'').toLowerCase().includes(search)||(e.description||'').toLowerCase().includes(search);
+      return true;
     });
 
-    // Also show sub due dates from D.subscriptions (normalize date format)
-    const subsDue=D.subscriptions.filter(s=>{
-      if(s.Status==='Cancelled'||!s.NextRenewal)return false;
-      return toSortableDate(s.NextRenewal)===dateStr;
-    });
+    // Sub due dates from app
+    const subsDue=D.subscriptions.filter(s=>s.Status!=='Cancelled'&&toSortableDate(s.NextRenewal)===dateStr);
+
+    // Income from Master
+    const incomeItems=getMasterEventsForDay(dateStr);
 
     let evHtml='';
-    // Sub due dates (from app data, not necessarily on calendar yet)
     subsDue.forEach(s=>{
-      const isDue=isToday||new Date(dateStr)<=new Date();
-      evHtml+=`<div class="cal-event ${isDue?'due':'sub'}" title="${s.Name} — ${$f(s.Cost)}">${CE[s.Category]||'💳'} ${s.Name}</div>`;
+      const isDue=new Date(dateStr)<=today;
+      evHtml+=`<div class="cal-event ${isDue?'due':'sub'}" onclick="openCalEventModal('${dateStr}')" title="${s.Name} — ${$f(s.Cost)}">${CE[s.Category]||'💳'} ${s.Name}</div>`;
     });
-    // Calendar events (income etc)
+    incomeItems.forEach(m=>{
+      if(search&&!(m.Name||'').toLowerCase().includes(search))return;
+      evHtml+=`<div class="cal-event income" title="${m.Name} — +${$f(m.Cost)}">💰 ${m.Name}</div>`;
+    });
     dayEvents.forEach(ev=>{
-      const isIncome=ev.summary?.startsWith('💰');
-      const isSub=ev.summary?.startsWith('💳');
-      if(isSub)return; // already shown from app data above
-      evHtml+=`<div class="cal-event ${isIncome?'income':'sub'}" title="${ev.summary}" onclick="calDeleteEvent('${ev.id}')">${ev.summary}</div>`;
+      const isSub=ev.summary?.includes('💳');
+      if(isSub&&subsDue.length)return; // already shown
+      const color=CAL_COLORS[ev.colorId]||'#6c63ff';
+      const time=ev.start?.dateTime?new Date(ev.start.dateTime).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'';
+      evHtml+=`<div class="cal-event" style="background:${color}22;border-left-color:${color};color:${color};" onclick="openCalEventModal('${dateStr}','${ev.id}')" title="${ev.summary}">${time?time+' ':''}${ev.summary||''}</div>`;
     });
 
-    html+=`<div class="cal-cell${isOther?' other-month':''}${isToday?' today':''}">
-      <div class="cal-date">${date}</div>
-      ${evHtml}
+    html+=`<div class="cal-cell${isOther?' other-month':''}${isToday?' today':''}" ondblclick="openCalEventModal('${dateStr}')">
+      <div class="cal-date">${date}</div>${evHtml}
     </div>`;
   }
   html+='</div>';
   grid.innerHTML=html;
 }
 
+// ── CALENDAR EVENT MODAL ──
+function openCalEventModal(dateStr,eventId){
+  const mo=document.getElementById('cal-mo');
+  const titleEl=document.getElementById('cal-mo-title');
+  const delBtn=document.getElementById('cal-delete-btn');
+  document.getElementById('cal-ev-id').value=eventId||'';
+  document.getElementById('cal-ev-date').value=dateStr||new Date().toISOString().split('T')[0];
+  document.getElementById('cal-ev-title').value='';
+  document.getElementById('cal-ev-notes').value='';
+  document.getElementById('cal-ev-location').value='';
+  document.getElementById('cal-ev-allday').value='yes';
+  document.getElementById('cal-ev-recur').value='';
+  document.getElementById('cal-time-row').style.display='none';
+  document.getElementById('cal-location-results').style.display='none';
+  initCalColorPicker('9');
+
+  if(eventId){
+    // Load existing event
+    const ev=_calEvents.find(e=>e.id===eventId);
+    if(ev){
+      titleEl.textContent='Edit Event';
+      delBtn.style.display='block';
+      document.getElementById('cal-ev-title').value=ev.summary||'';
+      document.getElementById('cal-ev-notes').value=ev.description||'';
+      document.getElementById('cal-ev-location').value=ev.location||'';
+      document.getElementById('cal-ev-color').value=ev.colorId||'9';
+      initCalColorPicker(ev.colorId||'9');
+      if(ev.start?.dateTime){
+        document.getElementById('cal-ev-allday').value='no';
+        document.getElementById('cal-time-row').style.display='grid';
+        document.getElementById('cal-ev-start').value=ev.start.dateTime.slice(11,16);
+        document.getElementById('cal-ev-end').value=(ev.end?.dateTime||'').slice(11,16);
+      }
+      if(ev.recurrence?.length){
+        document.getElementById('cal-ev-recur').value=ev.recurrence[0]||'';
+      }
+    }
+  } else {
+    titleEl.textContent='New Event';
+    delBtn.style.display='none';
+  }
+  mo.classList.add('open');
+  setTimeout(()=>document.getElementById('cal-ev-title').focus(),100);
+}
+
+function closeCalMo(e){
+  if(e&&e.target!==document.getElementById('cal-mo'))return;
+  document.getElementById('cal-mo').classList.remove('open');
+  document.getElementById('cal-location-results').style.display='none';
+}
+
+function toggleCalTime(){
+  const allDay=document.getElementById('cal-ev-allday').value==='yes';
+  document.getElementById('cal-time-row').style.display=allDay?'none':'grid';
+}
+
+async function saveCalEvent(){
+  const id=document.getElementById('cal-ev-id').value;
+  const title=document.getElementById('cal-ev-title').value.trim();
+  const date=document.getElementById('cal-ev-date').value;
+  const allDay=document.getElementById('cal-ev-allday').value==='yes';
+  const startTime=document.getElementById('cal-ev-start').value;
+  const endTime=document.getElementById('cal-ev-end').value;
+  const recur=document.getElementById('cal-ev-recur').value;
+  const notes=document.getElementById('cal-ev-notes').value;
+  const location=document.getElementById('cal-ev-location').value;
+  const colorId=document.getElementById('cal-ev-color').value;
+
+  if(!title){toast('Title is required','err');return;}
+  if(!date){toast('Date is required','err');return;}
+
+  let resource={summary:title,colorId,};
+  if(notes)resource.description=notes;
+  if(location)resource.location=location;
+  if(recur)resource.recurrence=[recur];
+
+  if(allDay){
+    resource.start={date};
+    resource.end={date};
+  } else {
+    const tz=Intl.DateTimeFormat().resolvedOptions().timeZone;
+    resource.start={dateTime:`${date}T${startTime||'09:00'}:00`,timeZone:tz};
+    resource.end={dateTime:`${date}T${endTime||'10:00'}:00`,timeZone:tz};
+  }
+
+  try{
+    if(id){
+      await gapi.client.calendar.events.patch({calendarId:CAL_ID,eventId:id,resource});
+      toast('Event updated ✓','ok');
+    } else {
+      await gapi.client.calendar.events.insert({calendarId:CAL_ID,resource});
+      toast('Event created ✓','ok');
+    }
+    document.getElementById('cal-mo').classList.remove('open');
+    await calSync();
+  }catch(e){toast('Save failed: '+e.message,'err');}
+}
+
+async function calDeleteCurrentEvent(){
+  const id=document.getElementById('cal-ev-id').value;
+  if(!id||!confirm('Delete this event?'))return;
+  await calDeleteEvent(id);
+  document.getElementById('cal-mo').classList.remove('open');
+}
+
+async function calDeleteEvent(eventId){
+  try{
+    await gapi.client.calendar.events.delete({calendarId:CAL_ID,eventId});
+    _calEvents=_calEvents.filter(e=>e.id!==eventId);
+    renderCalendar();
+    toast('Event deleted ✓','ok');
+  }catch(e){toast('Delete failed: '+e.message,'err');}
+}
+
+const CAL_COLOR_NAMES={
+  '1':'Tomato — Expense','2':'Sage — Income','3':'Grape','4':'Flamingo',
+  '5':'Banana — Subscription','6':'Tangerine — Important','7':'Flamingo',
+  '8':'Graphite — Other','9':'Blueberry — Personal','10':'Basil','11':'Lavender'
+};
+function selectCalColor(colorId,el){
+  document.getElementById('cal-ev-color').value=colorId;
+  document.getElementById('cal-color-label').textContent=CAL_COLOR_NAMES[colorId]||'';
+  document.querySelectorAll('.cal-swatch').forEach(s=>s.classList.remove('selected'));
+  el.classList.add('selected');
+}
+function initCalColorPicker(colorId){
+  const id=colorId||'9';
+  document.getElementById('cal-ev-color').value=id;
+  document.getElementById('cal-color-label').textContent=CAL_COLOR_NAMES[id]||'';
+  document.querySelectorAll('.cal-swatch').forEach(s=>{
+    s.classList.toggle('selected',s.dataset.color===id);
+  });
+}
+let _calLocTimer=null;
+function calLocationSearch(){
+  const q=document.getElementById('cal-ev-location').value.trim();
+  const res=document.getElementById('cal-location-results');
+  clearTimeout(_calLocTimer);
+  if(!q){res.style.display='none';return;}
+  _calLocTimer=setTimeout(()=>{
+    if(!window.google?.maps?.places){res.style.display='none';return;}
+    const svc=new google.maps.places.AutocompleteService();
+    svc.getPlacePredictions({input:q},(preds,status)=>{
+      if(!preds||!preds.length){res.style.display='none';return;}
+      res.style.display='block';
+      res.innerHTML=preds.slice(0,5).map(p=>`<div style="padding:8px 12px;cursor:pointer;font-size:12px;color:var(--text2);border-bottom:1px solid var(--border);" onmousedown="pickCalLocation('${esc(p.description)}')" onmouseover="this.style.background='var(--s3)'" onmouseout="this.style.background=''">${p.description}</div>`).join('');
+    });
+  },300);
+}
+function pickCalLocation(loc){
+  document.getElementById('cal-ev-location').value=loc;
+  document.getElementById('cal-location-results').style.display='none';
+}
+
 async function initCalendar(){
   await calSync();
-  // Auto-populate sub events on first load if calendar is empty
-  if(_calEvents.length===0){
-    await calEnsureSubEvents();
-  }
+  if(_calEvents.length===0) await calEnsureSubEvents();
 }
+
 
 // ── INIT ──
 loadColOrders();
