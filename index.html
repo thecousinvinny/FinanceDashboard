@@ -6,7 +6,7 @@
 <title>💵 Finance Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDR31gST2VMxROFmWWe9GYWn0ySAWcbb18&libraries=places" async defer></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDR31gST2VMxROFmWWe9GYWn0ySAWcbb18&libraries=places&callback=initMaps" async defer></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -527,14 +527,31 @@ td.editing{background:rgba(108,99,255,0.05)!important}
             <div class="fgr"><label class="fl">Start time</label><input class="fi" id="cal-ev-start" type="time" value="09:00"></div>
             <div class="fgr"><label class="fl">End time</label><input class="fi" id="cal-ev-end" type="time" value="10:00"></div>
           </div>
-          <div class="fgr"><label class="fl">Recurrence</label>
-            <select class="fs" id="cal-ev-recur">
-              <option value="">Does not repeat</option>
-              <option value="RRULE:FREQ=DAILY">Daily</option>
-              <option value="RRULE:FREQ=WEEKLY">Weekly</option>
-              <option value="RRULE:FREQ=MONTHLY">Monthly</option>
-              <option value="RRULE:FREQ=YEARLY">Yearly</option>
-            </select>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
+            <div class="fgr"><label class="fl">Category</label>
+              <select class="fs" id="cal-ev-category">
+                <option value="">None</option>
+                <option value="Tentative">🤔 Tentative</option>
+                <option value="Confirmed">✅ Confirmed</option>
+                <option value="Personal">👤 Personal</option>
+                <option value="Work">💼 Work</option>
+                <option value="Finance">💵 Finance</option>
+                <option value="Subscription">🔄 Subscription</option>
+                <option value="Income">💰 Income</option>
+                <option value="Repeat">🔁 Repeat</option>
+                <option value="Reminder">⏰ Reminder</option>
+                <option value="Holiday">🎉 Holiday</option>
+              </select>
+            </div>
+            <div class="fgr"><label class="fl">Recurrence</label>
+              <select class="fs" id="cal-ev-recur">
+                <option value="">Does not repeat</option>
+                <option value="RRULE:FREQ=DAILY">Daily</option>
+                <option value="RRULE:FREQ=WEEKLY">Weekly</option>
+                <option value="RRULE:FREQ=MONTHLY">Monthly</option>
+                <option value="RRULE:FREQ=YEARLY">Yearly</option>
+              </select>
+            </div>
           </div>
           <div class="fgr"><label class="fl">Location / Address</label>
             <input class="fi" id="cal-ev-location" placeholder="Search a place…" oninput="calLocationSearch()" autocomplete="off">
@@ -642,6 +659,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
   </div>
 </div>
 <div id="toast"></div>
+<div id="cal-popover" style="display:none;"></div>
 
 <script>
 // ── CONFIG ──
@@ -2364,7 +2382,7 @@ function renderCalendar(){
     let evHtml='';
     subsDue.forEach(s=>{
       const isDue=new Date(dateStr)<=today;
-      evHtml+=`<div class="cal-event ${isDue?'due':'sub'}" onclick="event.stopPropagation();showSubPopover(event,'${escQ(s.Name)}')" title="${esc(s.Name)} — ${$f(s.Cost)}">${CE[s.Category]||'💳'} ${esc(s.Name)}</div>`;
+      evHtml+=`<div class="cal-event ${isDue?'due':'sub'}" onclick="event.stopPropagation();showSubPopover(event,${s._row})" title="${esc(s.Name)} — ${$f(s.Cost)}">${CE[s.Category]||'💳'} ${esc(s.Name)}</div>`;
     });
     incomeItems.forEach(m=>{
       if(search&&!(m.Name||'').toLowerCase().includes(search))return;
@@ -2375,7 +2393,9 @@ function renderCalendar(){
       if(isSub&&subsDue.length)return;
       const color=CAL_COLORS[ev.colorId]||'#6c63ff';
       const time=ev.start?.dateTime?new Date(ev.start.dateTime).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'';
-      evHtml+=`<div class="cal-event" style="background:${color}22;border-left-color:${color};color:${color};" onclick="event.stopPropagation();openCalEventModal('${dateStr}','${ev.id}')" title="${ev.summary}">${time?time+' ':''}${ev.summary||''}</div>`;
+      const evCat=ev.extendedProperties?.private?.category||'';
+      const catEmoji={'Tentative':'🤔','Confirmed':'✅','Personal':'👤','Work':'💼','Finance':'💵','Subscription':'🔄','Income':'💰','Repeat':'🔁','Reminder':'⏰','Holiday':'🎉'}[evCat]||'';
+      evHtml+=`<div class="cal-event" style="background:${color}22;border-left-color:${color};color:${color};" onclick="event.stopPropagation();openCalEventModal('${dateStr}','${ev.id}')" title="${ev.summary}">${catEmoji?catEmoji+' ':''}${time?time+' ':''}${ev.summary||''}</div>`;
     });
 
     html+=`<div class="cal-cell${isOther?' other-month':''}${isToday?' today':''}" ondblclick="openCalEventModal('${dateStr}',null)">
@@ -2422,6 +2442,8 @@ function openCalEventModal(dateStr,eventId){
       if(ev.recurrence?.length){
         document.getElementById('cal-ev-recur').value=ev.recurrence[0]||'';
       }
+      const catSel2=document.getElementById('cal-ev-category');
+      if(catSel2)catSel2.value=ev.extendedProperties?.private?.category||'';
     }
   } else {
     titleEl.textContent='New Event';
@@ -2448,8 +2470,8 @@ function showCalPopover(e, html){
 function closeCalPopover(){
   document.getElementById('cal-popover').style.display='none';
 }
-function showSubPopover(e,subRow){
-  const s=D.subscriptions.find(x=>x.Name===subRow);
+function showSubPopover(e,row){
+  const s=D.subscriptions.find(x=>x._row===row);
   if(!s)return;
   const isDue=dueCls(s.NextRenewal);
   const html=`
@@ -2513,6 +2535,7 @@ async function saveCalEvent(){
   const startTime=document.getElementById('cal-ev-start').value;
   const endTime=document.getElementById('cal-ev-end').value;
   const recur=document.getElementById('cal-ev-recur').value;
+  const category=document.getElementById('cal-ev-category')?.value||'';
   const notes=document.getElementById('cal-ev-notes').value;
   const location=document.getElementById('cal-ev-location').value;
   const colorId=document.getElementById('cal-ev-color').value;
@@ -2521,6 +2544,7 @@ async function saveCalEvent(){
   if(!date){toast('Date is required','err');return;}
 
   let resource={summary:title,colorId,};
+  if(category)resource.extendedProperties={private:{category}};
   if(notes)resource.description=notes;
   if(location)resource.location=location;
   if(recur)resource.recurrence=[recur];
@@ -2583,20 +2607,35 @@ function initCalColorPicker(colorId){
   });
 }
 let _calLocTimer=null;
+let _placesReady=false;
+function initMaps(){_placesReady=true;}
+
 function calLocationSearch(){
   const q=document.getElementById('cal-ev-location').value.trim();
   const res=document.getElementById('cal-location-results');
   clearTimeout(_calLocTimer);
-  if(!q){res.style.display='none';return;}
+  if(q.length<2){res.style.display='none';return;}
   _calLocTimer=setTimeout(()=>{
-    if(!window.google?.maps?.places){res.style.display='none';return;}
-    const svc=new google.maps.places.AutocompleteService();
-    svc.getPlacePredictions({input:q},(preds,status)=>{
-      if(!preds||!preds.length){res.style.display='none';return;}
+    if(!window.google||!window.google.maps||!window.google.maps.places){
+      // Places API not loaded yet — show note
       res.style.display='block';
-      res.innerHTML=preds.slice(0,5).map(p=>`<div style="padding:8px 12px;cursor:pointer;font-size:12px;color:var(--text2);border-bottom:1px solid var(--border);" onmousedown="pickCalLocation('${esc(p.description)}')" onmouseover="this.style.background='var(--s3)'" onmouseout="this.style.background=''">${p.description}</div>`).join('');
-    });
-  },300);
+      res.innerHTML='<div style="padding:10px 14px;font-size:11px;color:var(--text3);">Enable Places API in Google Cloud Console to use location search</div>';
+      return;
+    }
+    try{
+      const svc=new google.maps.places.AutocompleteService();
+      svc.getPlacePredictions({input:q},(preds,status)=>{
+        if(!preds||!preds.length){res.style.display='none';return;}
+        res.style.display='block';
+        res.innerHTML=preds.slice(0,6).map(p=>{
+          const main=p.structured_formatting?.main_text||p.description;
+          const sec=p.structured_formatting?.secondary_text||'';
+          const desc=p.description.replace(/'/g,'&#39;');
+          return`<div style="padding:9px 14px;cursor:pointer;font-size:12px;color:var(--text);border-bottom:1px solid var(--border);line-height:1.4;" onmousedown="pickCalLocation('${desc}')" onmouseover="this.style.background='var(--s3)'" onmouseout="this.style.background=''"><div>${main}</div>${sec?`<div style="font-size:10px;color:var(--text3);">${sec}</div>`:''}</div>`;
+        }).join('');
+      });
+    }catch(err){console.warn('Places error:',err);res.style.display='none';}
+  },350);
 }
 function pickCalLocation(loc){
   document.getElementById('cal-ev-location').value=loc;
