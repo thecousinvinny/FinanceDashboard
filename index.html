@@ -2281,7 +2281,8 @@ async function calSync(){
       singleEvents:true,orderBy:'startTime',maxResults:500
     });
     _calEvents=resp.result.items||[];
-    document.getElementById('cal-count').textContent=_calEvents.length+' events';
+    const countEl=document.getElementById('cal-count');
+    if(countEl)countEl.textContent=_calEvents.length+' events';
     renderCalendar();
     toast('Calendar synced ✓','ok');
   }catch(e){renderCalendar();toast('Calendar sync failed: '+e.message,'err');}
@@ -2324,7 +2325,6 @@ function renderCalendar(){
   const label=new Date(_calYear,_calMonth,1).toLocaleString('default',{month:'long',year:'numeric'});
   const el=document.getElementById('cal-month-label');
   if(el)el.textContent=label;
-
   const search=(document.getElementById('cal-search')?.value||'').toLowerCase();
   const today=new Date();
   const firstDay=new Date(_calYear,_calMonth,1).getDay();
