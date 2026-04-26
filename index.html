@@ -1307,7 +1307,7 @@ function ieEdit(sheet,row,field,val,type,opts,el){
   if(el.querySelector('input,select'))return;
   const td=el.closest('td');td.classList.add('editing');
   const cats=D.categories.map(c=>c.Name);
-  const cards=D.cards.map(cd=>cardLabel(cd));
+  const cards=D.cards.map(cd=>cd.Alias||cd.Name);
   const cardVals=D.cards.map(cd=>cd.Name);
   const banks=D.banks.map(b=>b.Name);
   let input;
@@ -1476,7 +1476,7 @@ function markBought(row){
 }
 function openBuyModal(w){
   const defCard=getDefaultCard();
-  const cardOpts=D.cards.map(cd=>`<option value="${esc(cd.Name)}" ${cd.Name===defCard?'selected':''}>${esc(cardLabel(cd))}</option>`).join('');
+  const cardOpts=D.cards.map(cd=>`<option value="${esc(cd.Name)}" ${cd.Name===defCard?'selected':''}>${esc(cd.Alias||cd.Name)}</option>`).join('');
   document.getElementById('buy-title').textContent=`Move "${w.Name}" to Expenses`;
   document.getElementById('buy-ocost').textContent=w.OCost?$f(w.OCost):'—';
   document.getElementById('buy-cost').value=w.BCost||w.OCost||'';
@@ -1873,15 +1873,17 @@ function getDefaultCard(){
   return def?def.Name:'';
 }
 function cardDisplay(name){
-  // Given a stored card Name, return alias display
-  const card=D.cards.find(cd=>cd.Name===name);
-  if(!card)return name||'—';
-  return cardLabel(card);
+  if(!name)return'—';
+  // Match by Name (primary key), or Alias, or partial string contains Name
+  let card=D.cards.find(cd=>cd.Name===name);
+  if(!card)card=D.cards.find(cd=>cd.Alias&&cd.Alias===name);
+  if(!card)card=D.cards.find(cd=>name.includes(cd.Name)||name.includes(cd.Alias||''));
+  if(!card)return name;
+  return card.Alias||card.Name;
 }
 function cardLabel(card){
-  // Returns the display label for a card: "Alias (••••1234)" or "Name (••••1234)"
-  const label=card.Alias||card.Name;
-  return label+(card.Last4?' (••••'+card.Last4+')':'');
+  // Display label: just the Alias (or Name if no alias)
+  return card.Alias||card.Name;
 }
 async function setDefaultCard(row){
   // Clear all defaults then set this one
@@ -1927,7 +1929,7 @@ function renderBanks(){
       <td>${ie('Banks',bk._row,'Name',bk.Name)}</td>
       <td>${ie('Banks',bk._row,'Type',bk.Type,'sel',['Checking','Savings','Investment','Business'])}</td>
       <td>${ie('Banks',bk._row,'Last4',bk.Last4)}</td>
-      <td>${linked.length?linked.map(cd=>`<span class="tag tdf" style="margin-right:4px;">${esc(cardLabel(cd))}</span>`).join(''):'<span class="td3">No cards</span>'}</td>
+      <td>${linked.length?linked.map(cd=>`<span class="tag tdf" style="margin-right:4px;">${esc(cd.Alias||cd.Name)}</span>`).join(''):'<span class="td3">No cards</span>'}</td>
       <td><button class="btn btn-c btic" onclick="delItem('Banks',bk._row)">✕</button></td>
     </tr>`;
   }).join('');
@@ -1987,7 +1989,7 @@ function openModal(mode,existing){
     if(f.tp==='sel') inp=`<select class="fs" id="mf-${f.k}"><option value="">—</option>${f.o.map(o=>`<option ${o===val?'selected':''}>${o}</option>`).join('')}</select>`;
     else if(f.tp==='cat') inp=`<select class="fs" id="mf-${f.k}"><option value="">—</option>${cats.map(o=>`<option ${o===val?'selected':''}>${o}</option>`).join('')}</select>`;
     else if(f.tp==='bank') inp=`<select class="fs" id="mf-${f.k}"><option value="">—</option>${D.banks.map(bk=>`<option ${bk.Name===val?'selected':''}>${bk.Name}</option>`).join('')}</select>`;
-    else if(f.tp==='card-sel') inp=`<select class="fs" id="mf-${f.k}"><option value="">—</option>${D.cards.map(c=>`<option ${c.Name===val?'selected':''}>${c.Name} (••••${c.Last4})</option>`).join('')}</select>`;
+    else if(f.tp==='card-sel') inp=`<select class="fs" id="mf-${f.k}"><option value="">—</option>${D.cards.map(c=>`<option value="${esc(c.Name)}" ${c.Name===val?'selected':''}>${esc(c.Alias||c.Name)}</option>`).join('')}</select>`;
     else if(f.tp==='num') inp=`<input class="fi" id="mf-${f.k}" type="number" step="0.01" placeholder="0.00" value="${esc(val)}">`;
     else if(f.tp==='date') inp=`<input class="fi" id="mf-${f.k}" type="date" value="${esc(val)}">`;
     else inp=`<input class="fi" id="mf-${f.k}" placeholder="${esc(f.l)}" value="${esc(val)}">`;
@@ -2048,7 +2050,7 @@ function openFoodMo(){
   // Populate card dropdown from D.cards
   const sel=document.getElementById('food-card');
   const defCard=getDefaultCard();
-  sel.innerHTML='<option value="">— No card —</option>'+D.cards.map(cd=>`<option value="${cd.Name}" ${cd.Name===defCard?'selected':''}>${cardLabel(cd)}</option>`).join('');
+  sel.innerHTML='<option value="">— No card —</option>'+D.cards.map(cd=>`<option value="${cd.Name}" ${cd.Name===defCard?'selected':''}>${cd.Alias||cd.Name}</option>`).join('');
   // Default date to today
   document.getElementById('food-date').value=new Date().toISOString().split('T')[0];
   document.getElementById('food-name').value='';
