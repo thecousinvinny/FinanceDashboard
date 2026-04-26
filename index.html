@@ -652,7 +652,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 // ── CONFIG ──
 const SH={expenses:'Expenses',wishlist:'Wishlist',subscriptions:'Subscriptions',categories:'Categories',cards:'Cards',banks:'Banks',master:'Master'};
 const HD={
-  expenses:['Name','Description','Category','Cost','Card','Date','Status','OCost'],
+  expenses:['Name','Description','Category','Cost','Card','Date','Status','OCost','Savings'],
   wishlist:['Name','Description','Category','Link','OCost','BCost','Status'],
   subscriptions:['Name','Billing','Card','Cost','LastRenewal','NextRenewal','Category','Status','Payments','MonthlyCost','AnnualCost'],
   categories:['Name','Color'],
@@ -892,22 +892,23 @@ async function syncAll(){
 
 function parse(rows,hd){
   if(!rows||rows.length<1)return[];
-  // Find the actual header row (in case it got shifted or duplicated)
+  // Find actual header row
   let dataStart=1;
   for(let i=0;i<Math.min(5,rows.length);i++){
     const row=rows[i];
-    // If this row matches expected headers, data starts after it
     if(row&&row[0]&&hd[0]&&row[0].trim()===hd[0].trim()){
-      dataStart=i+1;
-      break;
+      dataStart=i+1;break;
     }
   }
   return rows.slice(dataStart).map((r,i)=>{
     const o={_row:dataStart+i+1};
     hd.forEach((h,j)=>o[h]=r[j]||'');
     return o;
-  // Filter out any rows that look like accidental header duplicates
-  }).filter(r=>r[hd[0]]&&r[hd[0]].trim()!==hd[0]);
+  // Only filter out blank rows and accidental duplicate header rows
+  }).filter(r=>{
+    const first=r[hd[0]]||'';
+    return first.trim()!==''&&first.trim()!==hd[0];
+  });
 }
 
 // ── RENDER ──
