@@ -461,25 +461,22 @@ td.editing{background:rgba(108,99,255,0.05)!important}
       </div>
     </div>
 
-    <div id="tab-master" style="display:none">
-      <div class="panel">
-        <div class="ph">
-          <div class="pt">📊 Master Ledger <span class="pc" id="master-count">0</span></div>
-          <div class="pa">
-            <select id="master-filter" onchange="renderMaster()" class="fs" style="font-size:11px;padding:5px 8px;width:auto;">
-              <option value="">All types</option>
-              <option value="Expense">Expenses</option>
-              <option value="Subscription">Subscriptions</option>
-              <option value="Income">Income</option>
-            </select>
-          </div>
-        </div>
-        <div class="tw"><table>
-          <thead><tr><th class="col-date">Date</th><th class="col-sm">Type</th><th class="col-lg">Name</th><th>Description</th><th class="col-md">Category</th><th class="col-num">Cost</th><th class="col-num">Original</th><th class="col-num">Savings</th><th class="col-md">Card</th><th class="col-md">Bank</th><th class="col-md">Billing</th><th class="col-md">Status</th><th class="col-sm">Source</th><th class="col-act"></th></tr></thead>
-          <tbody id="master-body"><tr><td colspan="13"><div class="empty"><div class="eic">📊</div>Loading...</div></td></tr></tbody>
-        </table></div>
-        <div class="show-more" id="sm-master" onclick="showMore('master')" style="display:none">Show more</div>
+    <div id="tab-master" style="display:none;margin:-24px;">
+      <div style="background:var(--s1);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;gap:12px;">
+        <span style="font-size:13px;font-weight:600;color:var(--text);">📊 Master Ledger</span>
+        <span class="pc" id="master-count">0</span>
+        <select id="master-filter" onchange="renderMaster()" class="fs" style="font-size:11px;padding:5px 8px;width:auto;">
+          <option value="">All types</option>
+          <option value="Expense">Expenses</option>
+          <option value="Subscription">Subscriptions</option>
+          <option value="Income">Income</option>
+        </select>
       </div>
+      <div style="overflow-x:auto;width:100%;"><table style="min-width:1400px;">
+        <thead><tr><th class="col-date">Date</th><th class="col-sm">Type</th><th class="col-lg">Name</th><th style="min-width:200px;">Description</th><th class="col-md">Category</th><th class="col-num">Cost</th><th class="col-num">Original</th><th class="col-num">Savings</th><th class="col-md">Card</th><th class="col-md">Bank</th><th class="col-md">Billing</th><th class="col-md">Status</th><th class="col-sm">Source</th><th class="col-act"></th></tr></thead>
+        <tbody id="master-body"><tr><td colspan="14"><div class="empty"><div class="eic">📊</div>Loading...</div></td></tr></tbody>
+      </table></div>
+      <div class="show-more" id="sm-master" onclick="showMore('master')" style="display:none;margin:0;border-radius:0;">Show more</div>
     </div>
 
     <div id="tab-calendar" style="display:none">
@@ -926,7 +923,7 @@ function ieDateCell(sheet,row,field,val){
   _ieData[key]={sheet,row,field,val:val||'',type:'date',opts:[]};
   return `<span class="ie td3" style="font-size:10px;" data-ie="${key}" onclick="ieEditKey('${key}',this)">${fmtDate(val)||'—'}</span>`;
 }
-function catTag(c){const e=CE[c]||'';return`<span class="tag ${CC[c]||'tdf'}">${e?e+' ':''} ${c||'—'}</span>`;}
+function catTag(c){return`<span class="tag ${CC[c]||'tdf'}">${c||'—'}</span>`;}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 function escQ(s){return String(s).replace(/'/g,"\\'")}
 
@@ -1020,7 +1017,7 @@ function renderDash(){
   set('s-all-savings',$f(allSav));
   set('s-all-subpaid',$f(allSubPaid));set('s-all-subpaid2',`${act.reduce((s,x)=>s+(parseInt(x.Payments)||0),0)} payments`);
   set('s-all-avgmo',$f(avgMo));
-  set('s-all-topcat',topCat?(CE[topCat[0]]||'')+' '+topCat[0]:'—');
+  set('s-all-topcat',topCat?topCat[0]:'—');
   set('s-all-topcat2',topCat?$f(topCat[1])+' all time':'');
   set('s-all-count',allPro.length.toLocaleString());
 
@@ -1045,20 +1042,23 @@ function renderCharts(){
     ));
   }
   function subPayByMonth(months12){
-    // Use actual sub payments from Master ledger
+    // Match sub payments by Source='Sub' OR Type='Subscription'
     return months12.map(k=>Math.round(
-      D.master.filter(m=>m.Type==='Subscription'&&toSortableDate(m.Date).startsWith(k))
+      D.master.filter(m=>(m.Source==='Sub'||m.Type==='Subscription')&&toSortableDate(m.Date).startsWith(k))
               .reduce((s,m)=>s+(parseFloat(m.Cost)||0),0)
     ));
   }
   function catBreakdown(expenses){
     const ct={};
     expenses.forEach(e=>{
-      const cat=e.Category||'Other';
-      ct[cat]=(ct[cat]||0)+(parseFloat(e.Cost)||0);
+      const cat=(e.Category||'Other').trim();
+      const cost=parseFloat(e.Cost)||0;
+      if(!cat||cost===0)return;
+      ct[cat]=(ct[cat]||0)+cost;
     });
+    console.log('[DASH] Category totals:', JSON.stringify(ct));
     const keys=Object.keys(ct).sort((a,z)=>ct[z]-ct[a]);
-    const labels=keys.map(k=>(CE[k]||'')+' '+k).map(s=>s.trim());
+    const labels=keys.map(k=>k);
     return{labels,vals:keys.map(k=>ct[k])};
   }
 
@@ -1806,7 +1806,7 @@ function renderCat(){
   document.getElementById('cc2').textContent=D.categories.length;
   if(!D.categories.length){b.innerHTML='<tr><td colspan="3"><div class="empty"><div class="eic">🏷️</div>No categories</div></td></tr>';return;}
   b.innerHTML=D.categories.map(c=>`<tr>
-    <td><span style="margin-right:6px;font-size:14px;">${CE[c.Name]||'🏷️'}</span>${ie('Categories',c._row,'Name',c.Name)}</td>
+    <td>${ie('Categories',c._row,'Name',c.Name)}</td>
     <td><span style="display:inline-flex;align-items:center;gap:7px;"><span id="cc-${c._row}" style="width:12px;height:12px;border-radius:50%;background:${esc(c.Color||'#666')};display:inline-block"></span>${ie('Categories',c._row,'Color',c.Color)}</span></td>
     <td><button class="btn btn-c btic" onclick="delItem('Categories',${c._row})">✕</button></td>
   </tr>`).join('');
@@ -2353,7 +2353,7 @@ function renderCalendar(){
     let evHtml='';
     subsDue.forEach(s=>{
       const isDue=new Date(dateStr)<=today;
-      evHtml+=`<div class="cal-event ${isDue?'due':'sub'}" onclick="event.stopPropagation();showSubPopover(event,${s._row})" title="${esc(s.Name)} — ${$f(s.Cost)}">${CE[s.Category]||'💳'} ${esc(s.Name)}</div>`;
+      evHtml+=`<div class="cal-event ${isDue?'due':'sub'}" onclick="event.stopPropagation();showSubPopover(event,${s._row})" title="${esc(s.Name)} — ${$f(s.Cost)}">${esc(s.Name)}</div>`;
     });
     incomeItems.forEach(m=>{
       if(search&&!(m.Name||'').toLowerCase().includes(search))return;
@@ -2450,7 +2450,7 @@ function showSubPopover(e,row){
   const isDue=dueCls(s.NextRenewal);
   const html=`
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-      <span style="font-size:20px;">${CE[s.Category]||'💳'}</span>
+
       <div>
         <div class="cal-popover-title">${esc(s.Name)}</div>
         <div class="cal-popover-sub">Subscription · ${s.Billing||'Monthly'}</div>
