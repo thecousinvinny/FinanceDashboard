@@ -652,7 +652,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 // ── CONFIG ──
 const SH={expenses:'Expenses',wishlist:'Wishlist',subscriptions:'Subscriptions',categories:'Categories',cards:'Cards',banks:'Banks',master:'Master'};
 const HD={
-  expenses:['Name','Description','Category','Cost','Card','Date','Status','OCost','Savings'],
+  expenses:['Name','Description','Category','Card','Date','Status','OCost','Cost','Savings'],
   wishlist:['Name','Description','Category','Link','OCost','BCost','Status'],
   subscriptions:['Name','Billing','Card','Cost','LastRenewal','NextRenewal','Category','Status','Payments','MonthlyCost','AnnualCost'],
   categories:['Name','Color'],
@@ -1500,7 +1500,7 @@ async function confirmBuy(){
   const savings=w.OCost?(parseFloat(w.OCost)-parseFloat(cost)).toFixed(2):'0';
   const bank=D.cards.find(cd=>cd.Name===card)?.Bank||'';
   document.getElementById('buy-mo').classList.remove('open');
-  await appendRow('Expenses',[w.Name,w.Description,w.Category,cost,card,date,'Ordered',w.OCost]);
+  await appendRow('Expenses',[w.Name,w.Description,w.Category,card,date,'Ordered',w.OCost,cost,'']);
   await updateRow('Wishlist',row,[w.Name,w.Description,w.Category,w.Link,w.OCost,cost,'Bought']);
   await appendRow('Master',[date,'Expense',w.Name,w.Description,w.Category,cost,w.OCost,savings,card,bank,'','Ordered','Wishlist']);
   await syncAll();toast(w.Name+' → Expenses ✓','ok');
@@ -2073,7 +2073,7 @@ async function saveFoodMo(){
   const today=date||new Date().toISOString().split('T')[0];
   const bank=D.cards.find(cd=>cd.Name===card)?.Bank||'';
   try{
-    await appendRow('Expenses',[name,'','Food',cost,card,today,'Procured',cost]);
+    await appendRow('Expenses',[name,'','Food',card,today,'Procured',cost,cost,'0']);
     await appendRow('Master',[today,'Expense',name,'','Food',cost,cost,'0',card,bank,'','Procured','Food']);
     closeFoodMo();
     await syncAll();
