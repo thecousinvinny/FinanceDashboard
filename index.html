@@ -528,20 +528,23 @@ td.editing{background:rgba(108,99,255,0.05)!important}
             <div class="fgr"><label class="fl">End time</label><input class="fi" id="cal-ev-end" type="time" value="10:00"></div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
-            <div class="fgr"><label class="fl">Category</label>
-              <select class="fs" id="cal-ev-category">
-                <option value="">None</option>
-                <option value="Tentative">🤔 Tentative</option>
-                <option value="Confirmed">✅ Confirmed</option>
-                <option value="Personal">👤 Personal</option>
-                <option value="Work">💼 Work</option>
-                <option value="Finance">💵 Finance</option>
-                <option value="Subscription">🔄 Subscription</option>
-                <option value="Income">💰 Income</option>
-                <option value="Repeat">🔁 Repeat</option>
-                <option value="Reminder">⏰ Reminder</option>
-                <option value="Holiday">🎉 Holiday</option>
+            <div class="fgr"><label class="fl">Category & Color</label>
+              <select class="fs" id="cal-ev-category" onchange="onCalCatChange(this)">
+                <option value="">— None —</option>
+                <option value="Tentative"   data-color="11" data-hex="#6b7280">🤔 Tentative</option>
+                <option value="Confirmed"   data-color="5"  data-hex="#22c55e">✅ Confirmed</option>
+                <option value="Personal"    data-color="7"  data-hex="#3b82f6">👤 Personal</option>
+                <option value="Work"        data-color="8"  data-hex="#6c63ff">💼 Work</option>
+                <option value="Finance"     data-color="4"  data-hex="#f59e0b">💵 Finance</option>
+                <option value="Subscription"data-color="4"  data-hex="#f59e0b">🔄 Subscription</option>
+                <option value="Income"      data-color="5"  data-hex="#22c55e">💰 Income</option>
+                <option value="Expense"     data-color="1"  data-hex="#ef4444">💳 Expense</option>
+                <option value="Repeat"      data-color="9"  data-hex="#a855f7">🔁 Repeat</option>
+                <option value="Reminder"    data-color="3"  data-hex="#f97316">⏰ Reminder</option>
+                <option value="Holiday"     data-color="2"  data-hex="#ec4899">🎉 Holiday</option>
+                <option value="Other"       data-color="10" data-hex="#6b7280">⬛ Other</option>
               </select>
+              <div id="cal-cat-bar" style="height:3px;border-radius:2px;margin-top:6px;background:var(--border);transition:background .2s;"></div>
             </div>
             <div class="fgr"><label class="fl">Recurrence</label>
               <select class="fs" id="cal-ev-recur">
@@ -553,29 +556,13 @@ td.editing{background:rgba(108,99,255,0.05)!important}
               </select>
             </div>
           </div>
+          <input type="hidden" id="cal-ev-color" value="9">
           <div class="fgr"><label class="fl">Location / Address</label>
             <input class="fi" id="cal-ev-location" placeholder="Search a place…" oninput="calLocationSearch()" autocomplete="off">
             <div id="cal-location-results" style="background:var(--s2);border:1px solid var(--border2);border-radius:8px;margin-top:4px;display:none;max-height:160px;overflow-y:auto;z-index:200;position:relative;"></div>
           </div>
           <div class="fgr"><label class="fl">Notes</label>
             <textarea class="fi" id="cal-ev-notes" rows="3" placeholder="Add notes…" style="resize:vertical;min-height:70px;font-family:'DM Sans',sans-serif;"></textarea>
-          </div>
-          <div class="fgr"><label class="fl">Color</label>
-            <div id="cal-color-picker" style="display:flex;gap:8px;flex-wrap:wrap;padding:4px 0;">
-              <div class="cal-swatch" data-color="1"  style="background:#ef4444;" title="Tomato"    onclick="selectCalColor('1',this)"></div>
-              <div class="cal-swatch" data-color="4"  style="background:#f97316;" title="Flamingo"  onclick="selectCalColor('4',this)"></div>
-              <div class="cal-swatch" data-color="6"  style="background:#fb923c;" title="Tangerine" onclick="selectCalColor('6',this)"></div>
-              <div class="cal-swatch" data-color="5"  style="background:#f59e0b;" title="Banana"    onclick="selectCalColor('5',this)"></div>
-              <div class="cal-swatch" data-color="2"  style="background:#22c55e;" title="Sage"      onclick="selectCalColor('2',this)"></div>
-              <div class="cal-swatch" data-color="10" style="background:#14b8a6;" title="Basil"     onclick="selectCalColor('10',this)"></div>
-              <div class="cal-swatch" data-color="9"  style="background:#3b82f6;" title="Blueberry" onclick="selectCalColor('9',this)"></div>
-              <div class="cal-swatch" data-color="11" style="background:#6c63ff;" title="Lavender"  onclick="selectCalColor('11',this)"></div>
-              <div class="cal-swatch" data-color="3"  style="background:#a855f7;" title="Grape"     onclick="selectCalColor('3',this)"></div>
-              <div class="cal-swatch" data-color="7"  style="background:#ec4899;" title="Pink"      onclick="selectCalColor('7',this)"></div>
-              <div class="cal-swatch" data-color="8"  style="background:#6b7280;" title="Graphite"  onclick="selectCalColor('8',this)"></div>
-            </div>
-            <input type="hidden" id="cal-ev-color" value="9">
-            <div id="cal-color-label" style="font-size:11px;color:var(--text3);margin-top:4px;">Blueberry</div>
           </div>
         </div>
         <div class="mac">
@@ -2077,8 +2064,7 @@ async function saveFoodMo(){
   const name=document.getElementById('food-name').value.trim();
   const cost=document.getElementById('food-cost').value.trim();
   const date=document.getElementById('food-date').value;
-  const cardRaw=document.getElementById('food-card').value;
-  const card=cardRaw.replace(/ \(.*\)$/,''); // strip the (••••XXXX) suffix
+  const card=document.getElementById('food-card').value; // value is already the card Name
   if(!name){toast('Name is required','err');return;}
   if(!cost){toast('Cost is required','err');return;}
   const today=date||new Date().toISOString().split('T')[0];
@@ -2418,12 +2404,18 @@ function openCalEventModal(dateStr,eventId){
   document.getElementById('cal-ev-location').value='';
   document.getElementById('cal-ev-allday').value='yes';
   document.getElementById('cal-ev-recur').value='';
+  document.getElementById('cal-ev-start').value='09:00';
+  document.getElementById('cal-ev-end').value='10:00';
   document.getElementById('cal-time-row').style.display='none';
   document.getElementById('cal-location-results').style.display='none';
-  initCalColorPicker('9');
+  // Reset category+color
+  const catSel=document.getElementById('cal-ev-category');
+  catSel.value='';
+  document.getElementById('cal-ev-color').value='9';
+  const bar=document.getElementById('cal-cat-bar');
+  if(bar)bar.style.background='var(--border)';
 
   if(eventId){
-    // Load existing event
     const ev=_calEvents.find(e=>e.id===eventId);
     if(ev){
       titleEl.textContent='Edit Event';
@@ -2431,19 +2423,16 @@ function openCalEventModal(dateStr,eventId){
       document.getElementById('cal-ev-title').value=ev.summary||'';
       document.getElementById('cal-ev-notes').value=ev.description||'';
       document.getElementById('cal-ev-location').value=ev.location||'';
-      document.getElementById('cal-ev-color').value=ev.colorId||'9';
-      initCalColorPicker(ev.colorId||'9');
       if(ev.start?.dateTime){
         document.getElementById('cal-ev-allday').value='no';
         document.getElementById('cal-time-row').style.display='grid';
         document.getElementById('cal-ev-start').value=ev.start.dateTime.slice(11,16);
         document.getElementById('cal-ev-end').value=(ev.end?.dateTime||'').slice(11,16);
       }
-      if(ev.recurrence?.length){
-        document.getElementById('cal-ev-recur').value=ev.recurrence[0]||'';
-      }
-      const catSel2=document.getElementById('cal-ev-category');
-      if(catSel2)catSel2.value=ev.extendedProperties?.private?.category||'';
+      if(ev.recurrence?.length) document.getElementById('cal-ev-recur').value=ev.recurrence[0]||'';
+      // Load category+color
+      const savedCat=ev.extendedProperties?.private?.category||'';
+      initCalColorPicker(ev.colorId||'9', savedCat);
     }
   } else {
     titleEl.textContent='New Event';
@@ -2592,20 +2581,31 @@ const CAL_COLOR_NAMES={
   '5':'Banana — Subscription','6':'Tangerine — Important','7':'Flamingo',
   '8':'Graphite — Other','9':'Blueberry — Personal','10':'Basil','11':'Lavender'
 };
-function selectCalColor(colorId,el){
+function onCalCatChange(sel){
+  const opt=sel.options[sel.selectedIndex];
+  const colorId=opt?.dataset?.color||'9';
+  const hex=opt?.dataset?.hex||'var(--border)';
   document.getElementById('cal-ev-color').value=colorId;
-  document.getElementById('cal-color-label').textContent=CAL_COLOR_NAMES[colorId]||'';
-  document.querySelectorAll('.cal-swatch').forEach(s=>s.classList.remove('selected'));
-  el.classList.add('selected');
+  const bar=document.getElementById('cal-cat-bar');
+  if(bar)bar.style.background=sel.value?hex:'var(--border)';
 }
-function initCalColorPicker(colorId){
-  const id=colorId||'9';
-  document.getElementById('cal-ev-color').value=id;
-  document.getElementById('cal-color-label').textContent=CAL_COLOR_NAMES[id]||'';
-  document.querySelectorAll('.cal-swatch').forEach(s=>{
-    s.classList.toggle('selected',s.dataset.color===id);
-  });
+function initCalColorPicker(colorId,catId){
+  // Set category select based on catId, or find by colorId
+  const sel=document.getElementById('cal-ev-category');
+  if(!sel)return;
+  if(catId){
+    sel.value=catId;
+  } else if(colorId){
+    // Find first option with this colorId
+    for(const opt of sel.options){
+      if(opt.dataset.color===colorId){sel.value=opt.value;break;}
+    }
+  } else {
+    sel.value='';
+  }
+  onCalCatChange(sel);
 }
+function selectCalColor(){} // legacy shim
 let _calLocTimer=null;
 let _placesReady=false;
 function initMaps(){_placesReady=true;}
