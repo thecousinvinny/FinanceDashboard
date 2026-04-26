@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Master Name Fix</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#0c0c0e;color:#ebebeb;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px}
+.card{background:#141416;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:40px;max-width:640px;width:100%}
+h1{font-size:22px;font-weight:600;margin-bottom:8px}
+.sub{color:#8a8a9a;font-size:13px;margin-bottom:20px;line-height:1.7}
+.box{background:#1c1c1f;border-radius:10px;padding:16px;margin-bottom:16px;font-size:12px;line-height:2;color:#8a8a9a}
+.box b{color:#ebebeb}
+.btn{width:100%;padding:14px;background:#6c63ff;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;transition:opacity .2s;margin-bottom:6px}
+.btn:hover{opacity:.85}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.log{margin-top:16px;background:#1c1c1f;border-radius:10px;padding:16px;font-size:11px;font-family:monospace;max-height:380px;overflow-y:auto;line-height:1.9;display:none}
+.ok{color:#22c55e}.err{color:#ef4444}.info{color:#8a8a9a}.warn{color:#f59e0b}
+.progress{height:4px;background:#252529;border-radius:2px;margin-top:12px;display:none}
+.pbar{height:100%;background:#6c63ff;border-radius:2px;width:0%;transition:width .25s}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🔧 Master Name Fix</h1>
+  <div class="sub">Fixes the Name/Description swap in Master, then pulls the correct Name from Expenses.</div>
+  <div class="box">
+    <div><b>Step 1 — Move Master Name → Description:</b> Current Master Name values (e.g. "Click Sling S") become Description. Existing Description is preserved if already set.</div>
+    <div><b>Step 2 — Pull Expense Name → Master Name:</b> Matches Master rows to Expenses by Cost + Date (±3 days), copies the Expense Name (e.g. "Korin Sling") into Master Name.</div>
+  </div>
+  <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:12px 14px;font-size:12px;color:#f59e0b;margin-bottom:16px">
+    ⚠️ Run once. Delete from GitHub after. Preview in the log before anything is written.
+  </div>
+  <button class="btn" id="btn" onclick="run()">🚀 Fix Master Name / Description</button>
+  <div class="progress" id="prog"><div class="pbar" id="pbar"></div></div>
+  <div class="log" id="log"></div>
+</div>
+<script src="https://apis.google.com/js/api.js"></script>
+<script>const API_KEY='AIzaSyDR31gST2VMxROFmWWe9GYWn0ySAWcbb18',CLIENT_ID='161473053231-fijc0tuqno4i3s21sjtlgcvr7d935sdv.apps.googleusercontent.com',SHEET_ID='1x8c8DgqsGERvgFif6S83bWacREdxKeoNkAFLCmwfxkc';
+function log(msg,cls='info'){const el=document.getElementById('log');el.style.display='block';el.innerHTML+=`<div class="${cls}">${msg}</div>`;el.scrollTop=el.scrollHeight;}
+function prog(pct){document.getElementById('prog').style.display='block';document.getElementById('pbar').style.width=pct+'%';}
+function setBtn(t,d){const b=document.getElementById('btn');b.textContent=t;b.disabled=d;}
+function parseCost(s){return Math.round((parseFloat((s||'').replace(/[$,]/g,''))||0)*100)/100;}
+function toISO(s){s=(s||'').trim();const p=s.split('/');if(p.length===3)return p[2]+'-'+p[0].padStart(2,'0')+'-'+p[1].padStart(2,'0');return s;}
+function dateDiff(a,b){try{return Math.abs(new Date(a+'T12:00:00')-new Date(b+'T12:00:00'))/864e5;}catch{return 999;}}
+
+async function run(){
+  setBtn('Connecting…',true);
+  await new Promise(res=>gapi.load('client',res));
+  await gapi.client.init({apiKey:API_KEY,discoveryDocs:['https://sheets.googleapis.com/$discovery/rest?version=v4']});
+  const gs=document.createElement('script');gs.src='https://accounts.google.com/gsi/client';document.head.appendChild(gs);
+  await new Promise(res=>gs.onload=res);
+  await new Promise((res,rej)=>{
+    const tc=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:'https://www.googleapis.com/auth/spreadsheets',callback:r=>r.error?rej(r.error):res()});
+    tc.requestAccessToken({prompt:'select_account'});
+  });
+  log('✓ Connected');prog(5);
+
+  // Read both sheets
+  setBtn('Reading sheets…',true);
+  const [mastResp, expResp] = await Promise.all([
+    gapi.client.sheets.spreadsheets.values.get({spreadsheetId:SHEET_ID,range:'Master!A1:Z10000'}),
+    gapi.client.sheets.spreadsheets.values.get({spreadsheetId:SHEET_ID,range:'Expenses!A1:Z10000'}),
+  ]);
+  const mastRows = mastResp.result.values||[];
+  const expRows  = expResp.result.values||[];
+  const mH = mastRows[0]||[];
+  const eH = expRows[0]||[];
+
+  // Master col indices
+  // HD: Date,Type,Name,Description,Category,Cost,OCost,Savings,Card,Bank,Billing,Status,Source
+  const mNm = mH.indexOf('Name');
+  const mDe = mH.indexOf('Description');
+  const mCo = mH.indexOf('Cost');
+  const mDt = mH.indexOf('Date');
+  log(`Master cols — Name:${mNm} Desc:${mDe} Cost:${mCo} Date:${mDt}`,'info');
+
+  // Expenses col indices
+  // HD: Name,Description,Category,Cost,Card,Date,Status,OCost,Savings
+  const eNm = eH.indexOf('Name');
+  const eDe = eH.indexOf('Description');
+  const eCo = eH.indexOf('Cost');
+  const eDt = eH.indexOf('Date');
+  log(`Expenses cols — Name:${eNm} Desc:${eDe} Cost:${eCo} Date:${eDt}`,'info');
+  prog(15);
+
+  // Build expense index: cost+date → Name
+  const expIndex = expRows.slice(1).map(r=>({
+    name: (r[eNm]||'').trim(),
+    desc: (r[eDe]||'').trim(),
+    cost: parseCost(r[eCo]),
+    date: toISO(r[eDt]||''),
+  })).filter(e=>e.name&&e.cost>0);
+
+  log(`Expenses indexed: ${expIndex.length} rows with name+cost`);
+
+  // Process Master rows
+  let step1=0, step2=0, noMatch=0;
+  const batchData=[];
+  const usedExp=new Set();
+
+  mastRows.slice(1).forEach((r,i)=>{
+    const rowNum=i+2;
+    const currentName=(r[mNm]||'').trim();
+    const currentDesc=(r[mDe]||'').trim();
+    const mCost=parseCost(r[mCo]);
+    const mDate=toISO(r[mDt]||'');
+    const mType=(r[mH.indexOf('Type')]||'').trim();
+
+    // Only process Expense type rows (not Income, not Subscription)
+    if(mType!=='Expense')return;
+
+    const newRow=[...r];
+    while(newRow.length<=Math.max(mNm,mDe))newRow.push('');
+
+    let changed=false;
+
+    // Step 1: Move current Master Name → Description (if desc is empty)
+    if(currentName&&!currentDesc){
+      newRow[mDe]=currentName;
+      step1++;
+      changed=true;
+    }
+
+    // Step 2: Find matching Expense by cost + date, pull its Name
+    const expMatch=expIndex.find((e,idx)=>{
+      if(usedExp.has(idx))return false;
+      if(Math.abs(e.cost-mCost)>0.02)return false;
+      if(mDate&&e.date&&dateDiff(mDate,e.date)>3)return false;
+      // Name in expense should match what's currently in Master Name (description in disguise)
+      // or match the description we just set
+      return true;
+    });
+
+    if(expMatch){
+      const idx=expIndex.indexOf(expMatch);
+      usedExp.add(idx);
+      if(newRow[mNm]!==expMatch.name){
+        newRow[mNm]=expMatch.name;
+        step2++;
+        changed=true;
+      }
+    } else {
+      noMatch++;
+    }
+
+    if(changed){
+      const endCol=String.fromCharCode(65+newRow.length-1);
+      batchData.push({range:`Master!A${rowNum}:${endCol}${rowNum}`,values:[newRow]});
+    }
+  });
+
+  log(`Step 1 (Name→Desc): ${step1} rows`,'ok');
+  log(`Step 2 (Exp Name→Master Name): ${step2} rows`,'ok');
+  log(`No expense match: ${noMatch} rows`,'warn');
+  log(`Total rows to update: ${batchData.length}`);
+  prog(40);
+
+  if(!batchData.length){
+    log('Nothing to update.','warn');
+    setBtn('✓ Done',true);prog(100);return;
+  }
+
+  // Write in batches of 100
+  setBtn(`Writing ${batchData.length} rows…`,true);
+  const BATCH=100;
+  for(let i=0;i<batchData.length;i+=BATCH){
+    await gapi.client.sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId:SHEET_ID,
+      resource:{valueInputOption:'USER_ENTERED',data:batchData.slice(i,i+BATCH)}
+    });
+    prog(40+Math.round(((i+BATCH)/batchData.length)*55));
+    log(`  Wrote ${Math.min(i+BATCH,batchData.length)}/${batchData.length}`,'info');
+  }
+
+  prog(100);
+  log(`✓ Done! ${batchData.length} Master rows fixed.`,'ok');
+  log('Go to dashboard → ↻ Sync','info');
+  setBtn('✓ Done — delete from GitHub',true);
+  document.getElementById('btn').style.background='#22c55e';
+}
+</script>
+</body>
+</html>
