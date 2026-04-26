@@ -263,6 +263,10 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .cal-popover-val{color:var(--text);font-weight:500;font-family:'DM Mono',monospace;font-size:11px}
 .cal-popover-actions{display:flex;gap:8px;margin-top:12px}
 .cal-swatch{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;flex-shrink:0}
+.cal-color-picker-popup{position:fixed;z-index:3000;background:var(--s1);border:1px solid var(--border2);border-radius:10px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,0.5);display:flex;flex-direction:column;gap:8px}
+.cal-color-swatches{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.cal-color-swatch{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s}
+.cal-color-swatch:hover{transform:scale(1.2);border-color:rgba(255,255,255,0.5)}
 .cal-swatch:hover{transform:scale(1.15)}
 .cal-swatch.selected{border-color:#fff;box-shadow:0 0 0 2px var(--accent);transform:scale(1.15)}
 /* Full bleed handled by cal-layout */
@@ -2386,8 +2390,9 @@ async function calSync(){
     _allCalendars=(listResp.result.items||[]).map(cal=>({
       id:cal.id,
       summary:cal.summary,
-      color:cal.backgroundColor||cal.colorId&&CAL_COLORS[cal.colorId]||'#6c63ff',
-      hidden:_hiddenCalIds.has(cal.id), // restore saved hidden state
+      // Use saved override color, then Google's color, then default
+      color:_calColorOverrides[cal.id]||cal.backgroundColor||CAL_COLORS[cal.colorId]||'#6c63ff',
+      hidden:_hiddenCalIds.has(cal.id),
     }));
     renderSidebar();
 
@@ -2484,7 +2489,10 @@ function renderSidebar(){
 
   el.innerHTML=visible.map((cal,i)=>`
     <div class="cal-cal-item${cal.hidden?' hidden':''}" style="position:relative">
-      <div class="cal-cal-dot" style="background:${cal.color};cursor:pointer" onclick="toggleCalendar('${cal.id}')"></div>
+      <div class="cal-cal-dot" style="background:${cal.color};cursor:pointer;position:relative" 
+        onclick="toggleCalendar('${cal.id}')" 
+        ondblclick="event.stopPropagation();openCalColorPicker(event,'${cal.id}')"
+        title="Click to toggle · Double-click to change color"></div>
       <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;font-size:12px" title="${esc(cal.summary)}" onclick="toggleCalendar('${cal.id}')">${esc(cal.summary)}</span>
       <span style="color:var(--text3);font-size:11px;cursor:pointer;padding:2px 4px;border-radius:4px" title="Hide from sidebar" onclick="hideCalFromSidebar('${cal.id}')">✕</span>
     </div>`).join('');
@@ -2497,6 +2505,60 @@ function renderSidebar(){
         <span style="color:var(--accent);font-size:10px;cursor:pointer" onclick="unhideCalFromSidebar('${cal.id}')">Show</span>
       </div>`).join(''):'<div style="font-size:11px;color:var(--text3);padding:4px 0">No hidden calendars</div>';
   }
+}
+
+// Calendar color overrides — persisted to localStorage
+const _calColorOverrides=JSON.parse(localStorage.getItem('cal_colors')||'{}');
+function saveCalColors(){try{localStorage.setItem('cal_colors',JSON.stringify(_calColorOverrides));}catch(e){}}
+
+const CAL_COLOR_PALETTE=[
+  '#ef4444','#f97316','#f59e0b','#eab308','#22c55e','#14b8a6',
+  '#3b82f6','#6c63ff','#a855f7','#ec4899','#6b7280','#ffffff',
+  '#dc2626','#ea580c','#d97706','#ca8a04','#16a34a','#0d9488',
+  '#2563eb','#4f46e5','#9333ea','#db2777','#475569','#94a3b8',
+];
+
+let _calColorPickerTarget=null;
+function openCalColorPicker(e,calId){
+  e.stopPropagation();
+  // Remove any existing picker
+  document.getElementById('cal-color-popup')?.remove();
+  _calColorPickerTarget=calId;
+  const popup=document.createElement('div');
+  popup.id='cal-color-popup';
+  popup.className='cal-color-picker-popup';
+  const cal=_allCalendars.find(c=>c.id===calId);
+  const currentColor=cal?.color||'#6c63ff';
+  popup.innerHTML=`
+    <div style="font-size:11px;color:var(--text3);font-weight:500;">Calendar color</div>
+    <div class="cal-color-swatches">${CAL_COLOR_PALETTE.map(color=>`
+      <div class="cal-color-swatch" style="background:${color};${color===currentColor?'border-color:#fff;transform:scale(1.15)':''}"
+        onclick="applyCalColor('${calId}','${color}')"></div>`).join('')}
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;margin-top:4px">
+      <input type="color" value="${currentColor}" style="width:32px;height:24px;border:none;background:none;cursor:pointer;padding:0" 
+        oninput="applyCalColor('${calId}',this.value)">
+      <span style="font-size:11px;color:var(--text3)">Custom color</span>
+    </div>`;
+  // Position near click
+  document.body.appendChild(popup);
+  const x=Math.min(e.clientX,window.innerWidth-200);
+  const y=Math.min(e.clientY+10,window.innerHeight-220);
+  popup.style.left=x+'px';popup.style.top=y+'px';
+  setTimeout(()=>document.addEventListener('click',closeCalColorPicker,{once:true}),10);
+}
+function closeCalColorPicker(){
+  document.getElementById('cal-color-popup')?.remove();
+  _calColorPickerTarget=null;
+}
+function applyCalColor(calId,color){
+  _calColorOverrides[calId]=color;
+  saveCalColors();
+  const cal=_allCalendars.find(c=>c.id===calId);
+  if(cal)cal.color=color;
+  closeCalColorPicker();
+  renderSidebar();
+  renderCalendar();
 }
 
 function toggleCalendar(calId){
