@@ -291,17 +291,13 @@ td.editing{background:rgba(108,99,255,0.05)!important}
               <span class="dpi active"></span>
               <span class="dpi"></span>
             </div>
-            <div class="sg">
-              <div class="sc"><div class="sl">Spent this month</div><div class="sv danger" id="s-mo">—</div><div class="ss" id="s-mo2">—</div></div>
-              <div class="sc"><div class="sl">Spent this year</div><div class="sv" id="s-yr">—</div><div class="ss" id="s-yr2">—</div></div>
-              <div class="sc"><div class="sl">Est. monthly subs</div><div class="sv warn" id="s-sb">—</div><div class="ss" id="s-sb2">—</div></div>
-              <div class="sc"><div class="sl">Wishlist savings</div><div class="sv good" id="s-sv">—</div><div class="ss">All time</div></div>
-            </div>
-            <div class="sg" style="margin-bottom:20px;">
-              <div class="sc"><div class="sl">Sub payments YTD</div><div class="sv" id="s-subpaid">—</div><div class="ss" id="s-subpaid2">—</div></div>
-              <div class="sc"><div class="sl">Est. annual subs</div><div class="sv warn" id="s-subyr">—</div><div class="ss">Projected</div></div>
-              <div class="sc"><div class="sl">Ordered (in transit)</div><div class="sv" style="color:var(--amber)" id="s-ord">—</div><div class="ss" id="s-ord2">—</div></div>
-              <div class="sc"><div class="sl">YTD savings</div><div class="sv good" id="s-svyr">—</div><div class="ss">vs original price</div></div>
+            <div class="sg" style="margin-bottom:20px;grid-template-columns:repeat(3,1fr);">
+              <div class="sc"><div class="sl">Total expenses this year</div><div class="sv danger" id="s-yr">—</div><div class="ss" id="s-yr2">—</div></div>
+              <div class="sc"><div class="sl">Total savings this year</div><div class="sv good" id="s-svyr">—</div><div class="ss">vs original price</div></div>
+              <div class="sc"><div class="sl">Total sub costs this year</div><div class="sv warn" id="s-subyr">—</div><div class="ss">Projected annual</div></div>
+              <div class="sc"><div class="sl">Total expenses this month</div><div class="sv danger" id="s-mo">—</div><div class="ss" id="s-mo2">—</div></div>
+              <div class="sc"><div class="sl">Total savings this month</div><div class="sv good" id="s-svmo">—</div><div class="ss">vs original price</div></div>
+              <div class="sc"><div class="sl">Total sub costs this month</div><div class="sv warn" id="s-sbmo">—</div><div class="ss" id="s-sbmo2">—</div></div>
             </div>
             <div class="dash-page-label">📅 Current Year</div>
             <div class="cg4">
@@ -319,17 +315,13 @@ td.editing{background:rgba(108,99,255,0.05)!important}
               <span class="dpi"></span>
               <span class="dpi active"></span>
             </div>
-            <div class="sg">
-              <div class="sc"><div class="sl">Total spent (all time)</div><div class="sv danger" id="s-all-total">—</div><div class="ss" id="s-all-total2">—</div></div>
-              <div class="sc"><div class="sl">Total income</div><div class="sv good" id="s-all-income">—</div><div class="ss" id="s-all-income2">—</div></div>
-              <div class="sc"><div class="sl">Total savings</div><div class="sv good" id="s-all-savings">—</div><div class="ss">vs original prices</div></div>
-              <div class="sc"><div class="sl">Total sub payments</div><div class="sv warn" id="s-all-subpaid">—</div><div class="ss" id="s-all-subpaid2">—</div></div>
-            </div>
-            <div class="sg" style="margin-bottom:20px;">
+            <div class="sg" style="margin-bottom:20px;grid-template-columns:repeat(3,1fr);">
+              <div class="sc"><div class="sl">Total expenses all time</div><div class="sv danger" id="s-all-total">—</div><div class="ss" id="s-all-total2">—</div></div>
+              <div class="sc"><div class="sl">Total savings all time</div><div class="sv good" id="s-all-savings">—</div><div class="ss">vs original prices</div></div>
+              <div class="sc"><div class="sl">Total sub costs all time</div><div class="sv warn" id="s-all-subpaid">—</div><div class="ss" id="s-all-subpaid2">—</div></div>
               <div class="sc"><div class="sl">Avg monthly spend</div><div class="sv" id="s-all-avgmo">—</div><div class="ss">All time average</div></div>
               <div class="sc"><div class="sl">Most spent category</div><div class="sv" id="s-all-topcat" style="font-size:16px;">—</div><div class="ss" id="s-all-topcat2">—</div></div>
               <div class="sc"><div class="sl">Total expenses</div><div class="sv" id="s-all-count">—</div><div class="ss">All time</div></div>
-              <div class="sc"><div class="sl">Wishlist savings</div><div class="sv good" id="s-all-wishsav">—</div><div class="ss">From wishlist</div></div>
             </div>
             <div class="dash-page-label">📊 All Time</div>
             <div class="cg4">
@@ -991,58 +983,46 @@ function renderDash(){
   const now=new Date();
   const yr=String(now.getFullYear());
   const mo=`${yr}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  const pro=D.expenses.filter(e=>e.Status==='Procured');
+  const act=D.subscriptions.filter(s=>s.Status!=='Cancelled');
+  // Include Procured AND empty Status (imported rows often have no status)
+  const pro=D.expenses.filter(e=>e.Status==='Procured'||e.Status==='');
   const moE=pro.filter(e=>toSortableDate(e.Date).startsWith(mo));
   const yrE=pro.filter(e=>toSortableDate(e.Date).startsWith(yr));
   const moT=moE.reduce((s,e)=>s+(parseFloat(e.Cost)||0),0);
   const yrT=yrE.reduce((s,e)=>s+(parseFloat(e.Cost)||0),0);
-  const act=D.subscriptions.filter(s=>s.Status!=='Cancelled');
-  const sbT=act.reduce((s,x)=>{const c=parseFloat(x.Cost)||0;return x.Billing==='Annual'?s+c/12:x.Billing==='BiWeekly'?s+c*2.17:s+c;},0);
-  const svT=D.wishlist.reduce((s,w)=>{const o=parseFloat(w.OCost)||0,b=parseFloat(w.BCost)||0;return b>0?s+(o-b):s;},0);
-  const subPaidYr=act.reduce((s,x)=>{const c=parseFloat(x.Cost)||0,p=parseInt(x.Payments)||0;return s+c*p;},0);
-  const ordTotal=D.expenses.filter(e=>e.Status==='Ordered').reduce((s,e)=>s+(parseFloat(e.Cost)||0),0);
-  const yrSavings=D.wishlist.filter(w=>w.Status==='Bought').reduce((s,w)=>{const o=parseFloat(w.OCost)||0,b=parseFloat(w.BCost)||0;return b>0?s+(o-b):s;},0);
-  document.getElementById('s-mo').textContent=$f(moT);
-  document.getElementById('s-mo2').textContent=`${moE.length} expenses this month`;
-  document.getElementById('s-yr').textContent=$f(yrT);
-  document.getElementById('s-yr2').textContent=`${yrE.length} procured in ${yr}`;
-  document.getElementById('s-sb').textContent=$f(sbT)+'/mo';
-  document.getElementById('s-sb2').textContent=`${act.length} active subscriptions`;
-  document.getElementById('s-sv').textContent=$f(svT);
-  const sp=document.getElementById('s-subpaid');if(sp)sp.textContent=$f(subPaidYr);
-  const sp2=document.getElementById('s-subpaid2');if(sp2)sp2.textContent=`${act.reduce((s,x)=>s+(parseInt(x.Payments)||0),0)} total payments`;
-  const sy=document.getElementById('s-subyr');if(sy)sy.textContent=$f(sbT*12);
-  const so=document.getElementById('s-ord');if(so)so.textContent=$f(ordTotal);
-  const so2=document.getElementById('s-ord2');if(so2)so2.textContent=`${D.expenses.filter(e=>e.Status==='Ordered').length} items in transit`;
-  const ssv=document.getElementById('s-svyr');if(ssv)ssv.textContent=$f(yrSavings);
+  // Savings from Expenses Savings column
+  const moSav=moE.reduce((s,e)=>s+(parseFloat(e.Savings)||0),0);
+  const yrSav=yrE.reduce((s,e)=>s+(parseFloat(e.Savings)||0),0);
+  // Sub costs
+  const yrSubCost=act.reduce((s,x)=>{const c=parseFloat(x.Cost)||0;return s+(x.Billing==='Annual'?c:x.Billing==='BiWeekly'?c*26:c*12);},0);
+  const moSubCost=act.reduce((s,x)=>{const c=parseFloat(x.Cost)||0;return s+(x.Billing==='Annual'?c/12:x.Billing==='BiWeekly'?c*2.17:c);},0);
 
-  // ── All-time stat cards (page 2) ──
-  const allPro=D.expenses.filter(e=>e.Status==='Procured');
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set('s-yr',$f(yrT));set('s-yr2',`${yrE.length} expenses in ${yr}`);
+  set('s-svyr',$f(yrSav));set('s-subyr',$f(yrSubCost));
+  set('s-mo',$f(moT));set('s-mo2',`${moE.length} expenses this month`);
+  set('s-svmo',$f(moSav));set('s-sbmo',$f(moSubCost));set('s-sbmo2',`${act.length} active subs`);
+
+  // All time
+  const allPro=pro;
   const allTotal=allPro.reduce((s,e)=>s+(parseFloat(e.Cost)||0),0);
-  const allIncome=D.master.filter(m=>m.Type==='Income').reduce((s,m)=>s+(parseFloat(m.Cost)||0),0);
+  const allSav=allPro.reduce((s,e)=>s+(parseFloat(e.Savings)||0),0);
   const allSubPaid=act.reduce((s,x)=>{const c=parseFloat(x.Cost)||0,p=parseInt(x.Payments)||0;return s+c*p;},0);
-  const allWishSav=D.wishlist.reduce((s,w)=>{const o=parseFloat(w.OCost)||0,b=parseFloat(w.BCost)||0;return b>0?s+(o-b):s;},0);
-  // Avg monthly spend — across all months that have data
   const monthTotals={};
   allPro.forEach(e=>{const k=toSortableDate(e.Date||'').slice(0,7);if(k)monthTotals[k]=(monthTotals[k]||0)+(parseFloat(e.Cost)||0);});
   const monthCount=Object.keys(monthTotals).length||1;
   const avgMo=allTotal/monthCount;
-  // Top category
+  // Top category — raw name only, no emoji prefix
   const catTotals={};
-  allPro.forEach(e=>{catTotals[e.Category||'Other']=(catTotals[e.Category||'Other']||0)+(parseFloat(e.Cost)||0);});
+  allPro.forEach(e=>{const cat=e.Category||'Other';catTotals[cat]=(catTotals[cat]||0)+(parseFloat(e.Cost)||0);});
   const topCat=Object.entries(catTotals).sort((a,b)=>b[1]-a[1])[0];
-  const el=document.getElementById('s-all-total');if(el)el.textContent=$f(allTotal);
-  const el2=document.getElementById('s-all-total2');if(el2)el2.textContent=`${allPro.length} total expenses`;
-  const el3=document.getElementById('s-all-income');if(el3)el3.textContent=$f(allIncome);
-  const el4=document.getElementById('s-all-income2');if(el4)el4.textContent=`From Master ledger`;
-  const el5=document.getElementById('s-all-savings');if(el5)el5.textContent=$f(allWishSav);
-  const el6=document.getElementById('s-all-subpaid');if(el6)el6.textContent=$f(allSubPaid);
-  const el7=document.getElementById('s-all-subpaid2');if(el7)el7.textContent=`${act.reduce((s,x)=>s+(parseInt(x.Payments)||0),0)} total payments`;
-  const el8=document.getElementById('s-all-avgmo');if(el8)el8.textContent=$f(avgMo);
-  const el9=document.getElementById('s-all-topcat');if(el9)el9.textContent=topCat?((CE[topCat[0]]||'')+' '+topCat[0]).trim():'—';
-  const el10=document.getElementById('s-all-topcat2');if(el10)el10.textContent=topCat?$f(topCat[1])+' all time':'';
-  const el11=document.getElementById('s-all-count');if(el11)el11.textContent=allPro.length.toLocaleString();
-  const el12=document.getElementById('s-all-wishsav');if(el12)el12.textContent=$f(allWishSav);
+  set('s-all-total',$f(allTotal));set('s-all-total2',`${allPro.length} expenses`);
+  set('s-all-savings',$f(allSav));
+  set('s-all-subpaid',$f(allSubPaid));set('s-all-subpaid2',`${act.reduce((s,x)=>s+(parseInt(x.Payments)||0),0)} payments`);
+  set('s-all-avgmo',$f(avgMo));
+  set('s-all-topcat',topCat?(CE[topCat[0]]||'')+' '+topCat[0]:'—');
+  set('s-all-topcat2',topCat?$f(topCat[1])+' all time':'');
+  set('s-all-count',allPro.length.toLocaleString());
 
   renderCharts();
   initDashSwipe();
@@ -1051,7 +1031,7 @@ function renderCharts(){
   Chart.defaults.color='#8a8a9a';
   Chart.defaults.font.family="'DM Sans',sans-serif";
   const yr=String(new Date().getFullYear());
-  const pro=D.expenses.filter(e=>e.Status==='Procured');
+  const pro=D.expenses.filter(e=>e.Status==='Procured'||e.Status==='');
   const act=D.subscriptions.filter(s=>s.Status!=='Cancelled');
 
   // ── Helper: build monthly data for a given set of months ──
@@ -1059,27 +1039,27 @@ function renderCharts(){
     return months12.map(k=>Math.round(expenses.filter(e=>toSortableDate(e.Date).startsWith(k)).reduce((s,e)=>s+(parseFloat(e.Cost)||0),0)));
   }
   function monthlySavings(months12){
-    return months12.map(k=>{
-      const bought=D.wishlist.filter(w=>w.Status==='Bought'&&toSortableDate(w.Date||'').startsWith(k));
-      return Math.round(bought.reduce((s,w)=>{const o=parseFloat(w.OCost)||0,b=parseFloat(w.BCost)||0;return b>0?s+(o-b):s;},0));
-    });
+    // Use Savings column from Expenses
+    return months12.map(k=>Math.round(
+      pro.filter(e=>toSortableDate(e.Date).startsWith(k)).reduce((s,e)=>s+(parseFloat(e.Savings)||0),0)
+    ));
   }
   function subPayByMonth(months12){
-    return months12.map(k=>{
-      const mo=act.reduce((s,sub)=>{
-        const cost=parseFloat(sub.Cost)||0;
-        if(sub.Billing==='Monthly'||sub.Billing==='BiWeekly') return s+(sub.Billing==='Monthly'?cost:cost*2);
-        if(sub.Billing==='Annual'&&sub.NextRenewal&&toSortableDate(sub.NextRenewal).startsWith(k)) return s+cost;
-        return s;
-      },0);
-      return Math.round(mo);
-    });
+    // Use actual sub payments from Master ledger
+    return months12.map(k=>Math.round(
+      D.master.filter(m=>m.Type==='Subscription'&&toSortableDate(m.Date).startsWith(k))
+              .reduce((s,m)=>s+(parseFloat(m.Cost)||0),0)
+    ));
   }
   function catBreakdown(expenses){
     const ct={};
-    expenses.forEach(e=>{const label=(CE[e.Category]||'')+' '+(e.Category||'Other');ct[label.trim()]=(ct[label.trim()]||0)+(parseFloat(e.Cost)||0);});
-    const labels=Object.keys(ct).sort((a,z)=>ct[z]-ct[a]);
-    return{labels,vals:labels.map(k=>ct[k])};
+    expenses.forEach(e=>{
+      const cat=e.Category||'Other';
+      ct[cat]=(ct[cat]||0)+(parseFloat(e.Cost)||0);
+    });
+    const keys=Object.keys(ct).sort((a,z)=>ct[z]-ct[a]);
+    const labels=keys.map(k=>(CE[k]||'')+' '+k).map(s=>s.trim());
+    return{labels,vals:keys.map(k=>ct[k])};
   }
 
   // ── CURRENT YEAR ──
@@ -1689,9 +1669,11 @@ function nextRenewalDate(lastRenewal, billing){
 }
 function dueCls(nextRenewal){
   if(!nextRenewal) return '';
-  const diff=(new Date(nextRenewal+'T12:00:00')-new Date())/(1000*60*60*24);
-  if(diff<=0) return 'due-today';
-  if(diff<=1) return 'due-soon';
+  const iso=toSortableDate(nextRenewal);
+  if(!iso) return '';
+  const diff=(new Date(iso+'T12:00:00')-new Date())/(1000*60*60*24);
+  if(diff<=1) return 'due-today';
+  if(diff<=7) return 'due-soon';
   return '';
 }
 
@@ -1765,7 +1747,7 @@ function renderSub(){
   document.getElementById('sc2').textContent=`${act.length} active`;
   const mo=act.reduce((s,x)=>{const c=parseFloat(x.Cost)||0;return x.Billing==='Annual'?s+c/12:x.Billing==='BiWeekly'?s+c*2.17:s+c;},0);
   const yr=act.reduce((s,x)=>{const c=parseFloat(x.Cost)||0;return x.Billing==='Annual'?s+c:x.Billing==='BiWeekly'?s+c*26:s+c*12;},0);
-  const nd=act.filter(s=>s.NextRenewal).sort((a,z)=>a.NextRenewal.localeCompare(z.NextRenewal))[0];
+  const nd=act.filter(s=>s.NextRenewal).sort((a,z)=>toSortableDate(a.NextRenewal).localeCompare(toSortableDate(z.NextRenewal)))[0];
   const totalPaid=act.reduce((s,x)=>{const c=parseFloat(x.Cost)||0,p=parseInt(x.Payments)||0;return s+c*p;},0);
   document.getElementById('ss2').innerHTML=`<span>Monthly est: <strong>${$f(mo)}/mo</strong></span><span>Annual est: <strong>${$f(yr)}/yr</strong></span><span>Total paid: <strong>${$f(totalPaid)}</strong></span><span>Next due: <strong>${nd?nd.Name+' — '+fmtDate(nd.NextRenewal):'—'}</strong></span>`;
   if(!D.subscriptions.length){b.innerHTML=`<tr><td colspan="${_subColOrder.length}"><div class="empty"><div class="eic">🔄</div>No subscriptions yet</div></td></tr>`;initSubDragCols();return;}
