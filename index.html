@@ -2445,13 +2445,12 @@ function getWeekStart(){
 // Collect all visible events for a date range
 function getVisibleEvents(){
   const vis=[];
-  _allCalendars.filter(c=>!c.hidden).forEach(cal=>{
+  _allCalendars.filter(cal=>!_hiddenCalIds.has(cal.id)&&!cal.hidden).forEach(cal=>{
     const evs=_allEvents[cal.id]||[];
     evs.forEach(ev=>{
       vis.push({...ev,_calColor:cal.color,_calId:cal.id});
     });
   });
-  // Also add finance app events (subs, income)
   return vis;
 }
 
@@ -2624,6 +2623,7 @@ function renderMonth(){
 
   // Build dateStr→events map
   const byDate={};
+  const _dbgToday=new Date().toISOString().slice(0,10);
   visEvents.forEach(ev=>{
     const startDate=ev.start?.date||ev.start?.dateTime?.slice(0,10);
     const endDate=ev.end?.date||ev.end?.dateTime?.slice(0,10);
@@ -2666,6 +2666,8 @@ function renderMonth(){
   let html=`<div class="cal-month-grid">`;
   html+=days.map(d=>`<div class="cal-day-hdr">${d}</div>`).join('');
 
+  console.log('[CAL] Events for today ('+_dbgToday+'):', (byDate[_dbgToday]||[]).map(e=>e.summary));
+  console.log('[CAL] visEvents total:', visEvents.length);
   let day=1,nextDay=1;
   for(let i=0;i<42;i++){
     let date,isOther=false;
@@ -2680,7 +2682,7 @@ function renderMonth(){
     const dayEvs=(byDate[dateStr]||[]).slice();
     // Sort: multi-day first, then by time
     dayEvs.sort((a,b)=>(b._isMulti?1:0)-(a._isMulti?1:0));
-    const MAX_SHOW=3;
+    const MAX_SHOW=4;
     let evHtml='';
     dayEvs.slice(0,MAX_SHOW).forEach(ev=>{
       evHtml+=buildEventPill(ev,dateStr);
