@@ -545,6 +545,10 @@ td.editing{background:rgba(108,99,255,0.05)!important}
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
             <div class="cal-sidebar-title" style="margin-bottom:0">My Calendars</div>
           </div>
+          <div style="font-size:10px;color:var(--text3);padding:4px 0 8px;border-bottom:1px solid var(--border);margin-bottom:8px;line-height:1.6">
+            <span style="background:rgba(245,158,11,0.2);color:var(--amber);border-radius:3px;padding:1px 5px;font-size:9px">SUB</span> and 
+            <span style="background:rgba(34,197,94,0.2);color:var(--green);border-radius:3px;padding:1px 5px;font-size:9px">INCOME</span> events come from your app data, not Google Calendar
+          </div>
             <div id="cal-sidebar-list"></div>
           </div>
           <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
@@ -2393,14 +2397,15 @@ async function calSync(){
       // Use saved override color, then Google's color, then default
       color:_calColorOverrides[cal.id]||cal.backgroundColor||CAL_COLORS[cal.colorId]||'#6c63ff',
       hidden:_hiddenCalIds.has(cal.id),
+      accessRole:cal.accessRole, // owner/writer/reader
     }));
     renderSidebar();
 
     // Get date range
     let start,end;
     if(_calView==='month'){
-      start=new Date(_calYear,_calMonth-1,1).toISOString();
-      end=new Date(_calYear,_calMonth+2,1).toISOString();
+      start=new Date(_calYear,_calMonth,1).toISOString();
+      end=new Date(_calYear,_calMonth+1,1).toISOString();
     } else {
       const weekStart=getWeekStart();
       start=new Date(weekStart).toISOString();
@@ -2494,6 +2499,7 @@ function renderSidebar(){
         ondblclick="event.stopPropagation();openCalColorPicker(event,'${cal.id}')"
         title="Click to toggle · Double-click to change color"></div>
       <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;font-size:12px" title="${esc(cal.summary)}" onclick="toggleCalendar('${cal.id}')">${esc(cal.summary)}</span>
+      <span style="font-size:9px;color:var(--text3);flex-shrink:0;background:var(--s3);border-radius:3px;padding:1px 4px;margin-right:2px" title="${cal.id.includes('4afe9194')?'Created in this app, synced to Google':'From your Google Calendar'}">${cal.id.includes('4afe9194')?'APP':'GCal'}</span>
       <span style="color:var(--text3);font-size:11px;cursor:pointer;padding:2px 4px;border-radius:4px" title="Hide from sidebar" onclick="hideCalFromSidebar('${cal.id}')">✕</span>
     </div>`).join('');
 
