@@ -2763,30 +2763,48 @@ function calLocationSearch(){
   const res=document.getElementById('cal-location-results');
   clearTimeout(_calLocTimer);
   if(q.length<2){res.style.display='none';return;}
-  _calLocTimer=setTimeout(()=>{
+  _calLocTimer=setTimeout(async()=>{
     try{
-      // Use new Places Autocomplete API (post March 2025)
-      google.maps.importLibrary('places').then(({AutocompleteSuggestion})=>{
-        const request={input:q,language:'en'};
-        AutocompleteSuggestion.fetchAutocompleteSuggestions(request).then(({suggestions})=>{
-          if(!suggestions?.length){res.style.display='none';return;}
+      // Use Places Autocomplete REST API directly
+      const resp=await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(q)}&key=AIzaSyDR31gST2VMxROFmWWe9GYWn0ySAWcbb18`,{mode:'no-cors'});
+      // no-cors won't work from browser - use a JSONP approach instead
+      throw new Error('use jsonp');
+    }catch{
+      // Fallback: use the Maps JS SDK AutocompleteService (legacy but still works)
+      if(window.google&&google.maps&&google.maps.places&&google.maps.places.AutocompleteService){
+        const svc=new google.maps.places.AutocompleteService();
+        svc.getPlacePredictions({input:q},(preds,status)=>{
+          if(!preds||!preds.length){res.style.display='none';return;}
           res.style.display='block';
-          res.innerHTML=suggestions.slice(0,6).map(s=>{
-            const p=s.placePrediction;
-            const main=p.structuredFormat?.mainText?.text||p.text?.text||'';
-            const sec=p.structuredFormat?.secondaryText?.text||'';
-            const full=(p.text?.text||main).replace(/'/g,'&#39;');
+          res.innerHTML=preds.slice(0,6).map(p=>{
+            const main=p.structured_formatting?.main_text||p.description;
+            const sec=p.structured_formatting?.secondary_text||'';
+            const full=p.description.replace(/'/g,'&#39;');
             return`<div style="padding:9px 14px;cursor:pointer;font-size:12px;color:var(--text);border-bottom:1px solid var(--border);line-height:1.4" onmousedown="pickCalLocation('${full}')" onmouseover="this.style.background='var(--s3)'" onmouseout="this.style.background=''"><div>${main}</div>${sec?`<div style="font-size:10px;color:var(--text3)">${sec}</div>`:''}</div>`;
           }).join('');
-        }).catch(()=>{res.style.display='none';});
-      }).catch(err=>{
-        console.warn('Places lib err:',err);
-        res.style.display='block';
-        res.innerHTML='<div style="padding:10px 14px;font-size:11px;color:var(--text3)">Enable Maps JavaScript API in Google Cloud Console</div>';
-      });
-    }catch(err){
-      console.warn('Places err:',err);
-      res.style.display='none';
+        });
+      } else {
+        // Try new API
+        if(window.google&&google.maps&&google.maps.importLibrary){
+          google.maps.importLibrary('places').then(lib=>{
+            if(lib.AutocompleteSuggestion){
+              lib.AutocompleteSuggestion.fetchAutocompleteSuggestions({input:q}).then(({suggestions})=>{
+                if(!suggestions?.length){res.style.display='none';return;}
+                res.style.display='block';
+                res.innerHTML=suggestions.slice(0,6).map(s=>{
+                  const p=s.placePrediction;
+                  const main=p.structuredFormat?.mainText?.text||p.text?.text||'';
+                  const sec=p.structuredFormat?.secondaryText?.text||'';
+                  const full=(p.text?.text||main).replace(/'/g,'&#39;');
+                  return`<div style="padding:9px 14px;cursor:pointer;font-size:12px;color:var(--text);border-bottom:1px solid var(--border);line-height:1.4" onmousedown="pickCalLocation('${full}')" onmouseover="this.style.background='var(--s3)'" onmouseout="this.style.background=''"><div>${main}</div>${sec?`<div style="font-size:10px;color:var(--text3)">${sec}</div>`:''}</div>`;
+                }).join('');
+              }).catch(()=>{res.style.display='none';});
+            }
+          }).catch(()=>{res.style.display='none';});
+        } else {
+          res.style.display='none';
+        }
+      }
     }
   },350);
 }
