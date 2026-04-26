@@ -2765,7 +2765,7 @@ function calLocationSearch(){
   if(q.length<2){res.style.display='none';return;}
   _calLocTimer=setTimeout(async()=>{
     try{
-      const resp=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=6&addressdetails=1`,{
+      const resp=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=6&addressdetails=1&countrycodes=us&viewbox=-118.5,33.5,-117.5,34.0&bounded=0`,{
         headers:{'Accept-Language':'en','User-Agent':'FinanceDash/1.0'}
       });
       const data=await resp.json();
