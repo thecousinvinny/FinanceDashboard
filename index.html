@@ -1379,28 +1379,37 @@ const MASTER_FIELD_MAP={
 };
 
 async function syncEditToMaster(sheet,item,field,newVal){
-  // Find the Master column index for this field
   const masterField=MASTER_FIELD_MAP[field];
-  if(!masterField)return; // field doesn't exist in Master, skip
+  if(!masterField)return;
 
-  // Find matching Master row by Name + approximate Date
+  const itemName=(item.Name||'').trim().toLowerCase();
+  const itemDesc=(item.Description||'').trim().toLowerCase();
+  const itemCost=parseFloat(item.Cost)||0;
   const itemDate=toSortableDate(item.Date||item.LastRenewal||'');
+
+  // Match by: (Name or Description matches) AND (cost matches) AND (date within ±3 days)
   const match=D.master.find(m=>{
-    if((m.Name||'').trim().toLowerCase()!==(item.Name||'').trim().toLowerCase())return false;
+    const mName=(m.Name||'').trim().toLowerCase();
+    const mDesc=(m.Description||'').trim().toLowerCase();
+    const mCost=parseFloat(m.Cost)||0;
     const mDate=toSortableDate(m.Date||'');
-    // Allow ±3 day window for date matching
+
+    // Name or description must match something
+    const nameMatch=mName===itemName||mName===itemDesc||mDesc===itemName||mDesc===itemDesc;
+    if(!nameMatch)return false;
+    // Cost must match within $0.02
+    if(itemCost>0&&Math.abs(mCost-itemCost)>0.02)return false;
+    // Date within ±3 days
     if(itemDate&&mDate){
-      const diff=Math.abs(new Date(itemDate)-new Date(mDate))/(1000*60*60*24);
-      return diff<=3;
+      const diff=Math.abs(new Date(itemDate+'T12:00:00')-new Date(mDate+'T12:00:00'))/(1000*60*60*24);
+      if(diff>3)return false;
     }
     return true;
   });
 
-  if(!match)return; // no matching Master row found — skip silently
+  if(!match)return;
 
-  // Update the field in Master
   match[masterField]=newVal;
-  // Also recalculate Savings if Cost or OCost changed
   if(field==='Cost'||field==='OCost'){
     const o=parseFloat(match.OCost)||0,cost=parseFloat(match.Cost)||0;
     match.Savings=o>0&&cost>0?(o-cost).toFixed(2):'0';
@@ -1857,10 +1866,13 @@ function getDefaultCard(){
 }
 function cardDisplay(name){
   if(!name)return'—';
-  // Match by Name (primary key), or Alias, or partial string contains Name
+  // 1. Exact Name match (primary key stored in sheet)
   let card=D.cards.find(cd=>cd.Name===name);
-  if(!card)card=D.cards.find(cd=>cd.Alias&&cd.Alias===name);
-  if(!card)card=D.cards.find(cd=>name.includes(cd.Name)||name.includes(cd.Alias||''));
+  // 2. Exact Alias match (in case alias was stored instead of Name)
+  if(!card)card=D.cards.find(cd=>cd.Alias&&cd.Alias.toLowerCase()===name.toLowerCase());
+  // 3. Name contained in stored string (e.g. "A.S 1008" contains "A.S 1008")
+  if(!card)card=D.cards.find(cd=>name===cd.Name||name.startsWith(cd.Name+' '));
+  // Return alias if found, otherwise return raw value as-is
   if(!card)return name;
   return card.Alias||card.Name;
 }
