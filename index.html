@@ -2694,17 +2694,20 @@ function renderMonth(){
 }
 
 function buildEventPill(ev,dateStr){
+  const today=new Date();today.setHours(0,0,0,0);
+  const isPast=new Date(dateStr+'T23:59:59')<today;
+  const pastStyle=isPast?'opacity:0.4;':'';
   if(ev._type==='sub'){
     const cls=ev._isDue?'due':'sub';
-    return`<div class="cal-event ${cls}" onclick="event.stopPropagation();showSubPopover(event,${ev._sub._row})">${esc(ev.summary)}</div>`;
+    return`<div class="cal-event ${cls}" style="${pastStyle}" onclick="event.stopPropagation();showSubPopover(event,${ev._sub._row})">${esc(ev.summary)}</div>`;
   }
   if(ev._type==='income'){
-    return`<div class="cal-event income" onclick="event.stopPropagation();showIncomePopover(event,${ev._master._row})">💰 ${esc(ev.summary)}</div>`;
+    return`<div class="cal-event income" style="${pastStyle}" onclick="event.stopPropagation();showIncomePopover(event,${ev._master._row})">💰 ${esc(ev.summary)}</div>`;
   }
   const color=ev._calColor||'#6c63ff';
   const multiCls=ev._isMulti?(ev._isStart&&ev._isEnd?'multiday alone':ev._isStart?'multiday start':ev._isEnd?'multiday end':'multiday'):'';
   const time=ev.start?.dateTime?new Date(ev.start.dateTime).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+' ':'';
-  return`<div class="cal-event ${multiCls}" style="background:${color}dd;color:#fff;" onclick="event.stopPropagation();openCalEventModal('${dateStr}','${ev.id}')">${time}${esc(ev.summary||'')}</div>`;
+  return`<div class="cal-event ${multiCls}" style="background:${color}dd;color:#fff;${pastStyle}" onclick="event.stopPropagation();openCalEventModal('${dateStr}','${ev.id}')">${time}${esc(ev.summary||'')}</div>`;
 }
 
 // ── RENDER WEEK ──
