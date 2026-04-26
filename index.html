@@ -2423,7 +2423,10 @@ async function calSync(){
     );
     const results=await Promise.all(fetches);
     _allEvents={};
-    results.forEach(({calId,events})=>{_allEvents[calId]=events;});
+    results.forEach(({calId,events})=>{
+      _allEvents[calId]=events;
+      console.log(`[CAL] ${_allCalendars.find(c=>c.id===calId)?.summary}: ${events.length} events`);
+    });
 
     renderCalendar();
     toast('Calendar synced ✓','ok');
