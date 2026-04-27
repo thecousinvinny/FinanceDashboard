@@ -2835,8 +2835,7 @@ function appendMonth(year,month){
   // NO leading grey cells, NO trailing grey cells
   // Month starts exactly on day 1, grid-column set to correct weekday
   // First day cell gets grid-column-start to push it to the right weekday
-  let html=`<div style="padding:8px 10px 4px;font-size:13px;font-weight:600;color:var(--text2);background:var(--bg);border-top:2px solid var(--border);letter-spacing:-.01em">${monthName}</div>`;
-  html+=`<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));">`;
+  let html=`<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:2px solid rgba(255,255,255,0.06);">`;
 
   // This month's days only — first day positioned via grid-column-start
   for(let day=1;day<=daysInMonth;day++){
