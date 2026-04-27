@@ -30,6 +30,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--s4,#3a3a40);border-radius:3px}
 ::-webkit-scrollbar-thumb:hover{background:var(--border2)}
+/* Prevent scrollbar layout shift - always reserve scrollbar space */
+html{scrollbar-gutter:stable;overflow-y:scroll}
+* {scrollbar-width:none}
+*::-webkit-scrollbar{display:none}
 
 /* AUTH */
 #auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px}
@@ -62,7 +66,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .nt{padding:0 14px;font-size:12px;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;display:flex;align-items:center;height:100%;border-radius:0}
 .nt:hover{color:var(--text);background:rgba(255,255,255,0.04)}
 .nt.on{color:var(--text);border-bottom-color:var(--accent);font-weight:600}
-.main{padding:24px;padding-bottom:80px;max-width:1440px;margin:0 auto}
+.main{padding:24px;padding-bottom:84px;max-width:1440px;margin:0 auto}
 
 /* STATS */
 .sg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px}
@@ -301,7 +305,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 #toast.err{border-color:rgba(239,68,68,.4);color:var(--red)}
 @media(max-width:900px){.sg{grid-template-columns:repeat(2,1fr)}.cg{grid-template-columns:1fr}}
 @media(max-width:600px){
-  .main{padding:12px;padding-bottom:80px}
+  .main{padding:12px;padding-bottom:84px}
   .hdr{padding:0 12px}
   /* Hide desktop nav tabs in header on mobile */
   .nav{display:none!important}
@@ -330,14 +334,14 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 #ptr-indicator{position:fixed;top:48px;left:50%;transform:translateX(-50%);background:var(--s1);border:1px solid var(--border2);border-radius:20px;padding:6px 16px;font-size:12px;color:var(--text3);z-index:500;display:none;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(0,0,0,.3)}
 #ptr-indicator.visible{display:flex}
 /* Mobile bottom nav */
-#mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;height:60px;background:rgba(20,20,22,0.95);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--border);z-index:300;align-items:stretch;justify-content:space-around;padding:0;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
+#mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;height:64px;background:rgba(12,12,14,0.7);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border-top:1px solid rgba(255,255,255,0.08);box-shadow:0 -1px 0 rgba(255,255,255,0.04);z-index:300;align-items:stretch;justify-content:space-around;padding:0 4px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
 #mobile-nav::-webkit-scrollbar{display:none}
-.mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--text3);border:none;background:transparent;font-family:'DM Sans',sans-serif;padding:0;min-height:60px;-webkit-tap-highlight-color:transparent}
-.mob-tab.on{color:var(--accent)}
-.mob-tab svg{width:22px;height:22px;flex-shrink:0}
-.mob-tab span{font-size:9px;font-weight:500;letter-spacing:.03em}
+.mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:rgba(255,255,255,0.35);border:none;background:transparent;font-family:'DM Sans',sans-serif;padding:0;min-height:64px;-webkit-tap-highlight-color:transparent;transition:color .15s;min-width:56px}
+.mob-tab.on{color:#fff}.mob-tab.on svg{filter:drop-shadow(0 0 6px rgba(108,99,255,0.8))}
+.mob-tab svg{width:20px;height:20px;flex-shrink:0;transition:filter .15s}
+.mob-tab span{font-size:9px;font-weight:500;letter-spacing:.03em;transition:color .15s}
 /* Mobile FAB */
-#mobile-fab{display:flex;position:fixed;bottom:72px;right:16px;flex-direction:column;gap:10px;z-index:400;align-items:flex-end}
+#mobile-fab{display:flex;position:fixed;bottom:76px;right:16px;flex-direction:column;gap:10px;z-index:400;align-items:flex-end}
 .fab-btn{height:44px;border-radius:22px;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;padding:0 18px;box-shadow:0 4px 16px rgba(0,0,0,.4);display:flex;align-items:center;gap:8px;white-space:nowrap;-webkit-tap-highlight-color:transparent;transition:transform .15s}
 .fab-btn:active{transform:scale(.96)}
 .fab-main{width:56px;height:56px;border-radius:50%;background:var(--accent);color:#fff;font-size:24px;padding:0;justify-content:center}
@@ -381,9 +385,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
       <div class="nt" onclick="showTab('calendar',this)">Calendar</div>
     </nav>
     <div class="hright">
-      <button class="btn btn-a" style="font-size:11px;padding:5px 12px;background:rgba(34,197,94,0.15);border-color:var(--green);color:var(--green);" onclick="openFoodMo()" title="Add food expense (F)">+ Food</button>
-      <button class="btn btn-a" style="font-size:11px;padding:5px 12px;" onclick="openModal('wish')" title="Add to wishlist (W)">+ Wishlist</button>
-      <button class="btn btn-a" style="font-size:11px;padding:5px 12px;background:rgba(34,197,94,0.15);border-color:var(--green);color:var(--green);" onclick="openIncomeMo()" title="Add income (I)">+ Income</button>
+
       <button class="signin-btn" id="signin-btn" onclick="doSignIn()">Sign in</button>
       <button class="sbtn" onclick="syncAll()">↻ Sync</button>
       <button class="sbtn" onclick="repairAllSheets()">Repair</button>
@@ -400,16 +402,17 @@ td.editing{background:rgba(108,99,255,0.05)!important}
           <!-- PAGE 1: Current Year -->
           <div class="dash-page">
             <div class="dash-page-indicator">
-              <span class="dpi active"></span>
-              <span class="dpi"></span>
+              <span class="dpi active"></span><span class="dpi"></span><span class="dpi"></span>
             </div>
-            <div class="sg" style="margin-bottom:20px;grid-template-columns:repeat(3,1fr);">
+            <div class="sg" style="margin-bottom:20px;grid-template-columns:repeat(4,1fr);">
               <div class="sc"><div class="sl">Total expenses this year</div><div class="sv danger" id="s-yr">—</div><div class="ss" id="s-yr2">—</div></div>
               <div class="sc"><div class="sl">Total savings this year</div><div class="sv good" id="s-svyr">—</div><div class="ss">vs original price</div></div>
               <div class="sc"><div class="sl">Total sub costs this year</div><div class="sv warn" id="s-subyr">—</div><div class="ss">Projected annual</div></div>
+              <div class="sc"><div class="sl">Most spent category</div><div class="sv" id="s-yr-topcat" style="font-size:16px;">—</div><div class="ss" id="s-yr-topcat2">—</div></div>
               <div class="sc"><div class="sl">Total expenses this month</div><div class="sv danger" id="s-mo">—</div><div class="ss" id="s-mo2">—</div></div>
               <div class="sc"><div class="sl">Total savings this month</div><div class="sv good" id="s-svmo">—</div><div class="ss">vs original price</div></div>
               <div class="sc"><div class="sl">Total sub costs this month</div><div class="sv warn" id="s-sbmo">—</div><div class="ss" id="s-sbmo2">—</div></div>
+              <div class="sc"><div class="sl">Biggest expense this year</div><div class="sv danger" id="s-yr-big" style="font-size:15px;">—</div><div class="ss" id="s-yr-big2">—</div></div>
             </div>
             <div class="dash-page-label">Current Year</div>
             <div class="cg4">
@@ -418,22 +421,48 @@ td.editing{background:rgba(108,99,255,0.05)!important}
               <div class="cc"><div class="ct">Savings by month</div><div class="cw"><canvas id="c-yr-savings"></canvas></div></div>
               <div class="cc"><div class="ct">Sub payments by month</div><div class="cw"><canvas id="c-yr-submo"></canvas></div></div>
             </div>
-            <div class="swipe-hint">Swipe right for all time →</div>
+            <div class="swipe-hint">Swipe for year vs year →</div>
           </div>
 
-          <!-- PAGE 2: All Time -->
+          <!-- PAGE 2: This Year vs Last Year -->
           <div class="dash-page">
             <div class="dash-page-indicator">
-              <span class="dpi"></span>
-              <span class="dpi active"></span>
+              <span class="dpi"></span><span class="dpi active"></span><span class="dpi"></span>
             </div>
-            <div class="sg" style="margin-bottom:20px;grid-template-columns:repeat(3,1fr);">
+            <div class="sg" style="margin-bottom:20px;grid-template-columns:repeat(4,1fr);">
+              <div class="sc"><div class="sl">Expenses this year</div><div class="sv danger" id="s-cmp-yr">—</div><div class="ss" id="s-cmp-yr2">—</div></div>
+              <div class="sc"><div class="sl">Expenses last year</div><div class="sv" id="s-cmp-ly">—</div><div class="ss" id="s-cmp-ly2">—</div></div>
+              <div class="sc"><div class="sl">Year over year</div><div class="sv" id="s-cmp-diff">—</div><div class="ss" id="s-cmp-diff2">—</div></div>
+              <div class="sc"><div class="sl">Biggest this year</div><div class="sv danger" id="s-cmp-big-yr" style="font-size:15px;">—</div><div class="ss" id="s-cmp-big-yr2">—</div></div>
+              <div class="sc"><div class="sl">Savings this year</div><div class="sv good" id="s-cmp-sav-yr">—</div><div class="ss">vs original price</div></div>
+              <div class="sc"><div class="sl">Savings last year</div><div class="sv good" id="s-cmp-sav-ly">—</div><div class="ss">vs original price</div></div>
+              <div class="sc"><div class="sl">Subs this year</div><div class="sv warn" id="s-cmp-sub-yr">—</div><div class="ss">Projected annual</div></div>
+              <div class="sc"><div class="sl">Biggest this month</div><div class="sv danger" id="s-cmp-big-mo" style="font-size:15px;">—</div><div class="ss" id="s-cmp-big-mo2">—</div></div>
+            </div>
+            <div class="dash-page-label">This Year vs Last Year</div>
+            <div class="cg4">
+              <div class="cc"><div class="ct">Monthly spend: this vs last year</div><div class="cw"><canvas id="c-cmp-trend"></canvas></div></div>
+              <div class="cc"><div class="ct">Category spend: this vs last year</div><div class="cw"><canvas id="c-cmp-cat"></canvas></div></div>
+              <div class="cc"><div class="ct">Savings: this vs last year</div><div class="cw"><canvas id="c-cmp-savings"></canvas></div></div>
+              <div class="cc"><div class="ct">Sub payments: this vs last year</div><div class="cw"><canvas id="c-cmp-sub"></canvas></div></div>
+            </div>
+            <div class="swipe-hint">← Current year · All time →</div>
+          </div>
+
+          <!-- PAGE 3: All Time -->
+          <div class="dash-page">
+            <div class="dash-page-indicator">
+              <span class="dpi"></span><span class="dpi"></span><span class="dpi active"></span>
+            </div>
+            <div class="sg" style="margin-bottom:20px;grid-template-columns:repeat(4,1fr);">
               <div class="sc"><div class="sl">Total expenses all time</div><div class="sv danger" id="s-all-total">—</div><div class="ss" id="s-all-total2">—</div></div>
               <div class="sc"><div class="sl">Total savings all time</div><div class="sv good" id="s-all-savings">—</div><div class="ss">vs original prices</div></div>
               <div class="sc"><div class="sl">Total sub costs all time</div><div class="sv warn" id="s-all-subpaid">—</div><div class="ss" id="s-all-subpaid2">—</div></div>
+              <div class="sc"><div class="sl">Total expenses</div><div class="sv" id="s-all-count">—</div><div class="ss">All time</div></div>
               <div class="sc"><div class="sl">Avg monthly spend</div><div class="sv" id="s-all-avgmo">—</div><div class="ss">All time average</div></div>
               <div class="sc"><div class="sl">Most spent category</div><div class="sv" id="s-all-topcat" style="font-size:16px;">—</div><div class="ss" id="s-all-topcat2">—</div></div>
-              <div class="sc"><div class="sl">Total expenses</div><div class="sv" id="s-all-count">—</div><div class="ss">All time</div></div>
+              <div class="sc"><div class="sl">Biggest expense this year</div><div class="sv danger" id="s-all-big-yr" style="font-size:15px;">—</div><div class="ss" id="s-all-big-yr2">—</div></div>
+              <div class="sc"><div class="sl">Biggest expense this month</div><div class="sv danger" id="s-all-big-mo" style="font-size:15px;">—</div><div class="ss" id="s-all-big-mo2">—</div></div>
             </div>
             <div class="dash-page-label">All Time</div>
             <div class="cg4">
@@ -442,7 +471,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
               <div class="cc"><div class="ct">Savings by month (all time)</div><div class="cw"><canvas id="c-all-savings"></canvas></div></div>
               <div class="cc"><div class="ct">Sub payments by month (all time)</div><div class="cw"><canvas id="c-all-submo"></canvas></div></div>
             </div>
-            <div class="swipe-hint">← Swipe left for current year</div>
+            <div class="swipe-hint">← Swipe left for year vs year</div>
           </div>
 
         </div>
@@ -1110,11 +1139,9 @@ function dashGoTo(page){
   _dashPage=page;
   const slider=document.getElementById('dash-slider');
   if(slider)slider.style.transform=`translateX(-${page*100}%)`;
-  // Update dots
   document.querySelectorAll('.dpi').forEach((d,i)=>{
-    d.classList.toggle('active',Math.floor(i/2)===page||(i%2)===page);
+    d.classList.toggle('active',i===page);
   });
-  // Redraw charts on the newly visible page (Canvas needs a repaint)
   setTimeout(()=>renderCharts(),50);
 }
 
@@ -1131,8 +1158,8 @@ function initDashSwipe(){
     const dx=e.changedTouches[0].clientX-_swipeStartX;
     const dy=e.changedTouches[0].clientY-_swipeStartY;
     if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>40){
-      if(dx<0&&_dashPage===0)dashGoTo(1);
-      else if(dx>0&&_dashPage===1)dashGoTo(0);
+      if(dx<0&&_dashPage<2)dashGoTo(_dashPage+1);
+      else if(dx>0&&_dashPage>0)dashGoTo(_dashPage-1);
     }
     _swiping=false;
   },{passive:true});
@@ -1143,8 +1170,8 @@ function initDashSwipe(){
     if(_mStart===null)return;
     const dx=e.clientX-_mStart;
     if(Math.abs(dx)>60){
-      if(dx<0&&_dashPage===0)dashGoTo(1);
-      else if(dx>0&&_dashPage===1)dashGoTo(0);
+      if(dx<0&&_dashPage<2)dashGoTo(_dashPage+1);
+      else if(dx>0&&_dashPage>0)dashGoTo(_dashPage-1);
     }
     _mStart=null;
   });
@@ -1170,10 +1197,46 @@ function renderDash(){
   const moSubCost=act.reduce((s,x)=>{const c=parseFloat(x.Cost)||0;return s+(x.Billing==='Annual'?c/12:x.Billing==='BiWeekly'?c*2.17:c);},0);
 
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
-  set('s-yr',$f(yrT));set('s-yr2',`${yrE.length} expenses in ${yr}`);
+  set('s-yr',$f(yrT));
+  set('s-yr2',`${yrE.length} expenses in ${yr}`);
   set('s-svyr',$f(yrSav));set('s-subyr',$f(yrSubCost));
   set('s-mo',$f(moT));set('s-mo2',`${moE.length} expenses this month`);
   set('s-svmo',$f(moSav));set('s-sbmo',$f(moSubCost));set('s-sbmo2',`${act.length} active subs`);
+
+  // Biggest expense this year
+  const bigYr=yrE.reduce((b,e)=>(parseFloat(e.Cost)||0)>(parseFloat(b?.Cost)||0)?e:b,null);
+  set('s-yr-big',bigYr?$f(bigYr.Cost):'—');
+  set('s-yr-big2',bigYr?bigYr.Name:'');
+
+  // Most spent category this year
+  const yrCatT={};
+  yrE.forEach(e=>{const cat=e.Category||'Other';yrCatT[cat]=(yrCatT[cat]||0)+(parseFloat(e.Cost)||0);});
+  const yrTopCat=Object.entries(yrCatT).sort((a,b)=>b[1]-a[1])[0];
+  set('s-yr-topcat',yrTopCat?yrTopCat[0]:'—');
+  set('s-yr-topcat2',yrTopCat?$f(yrTopCat[1])+' this year':'');
+
+  // ── COMPARISON: This year vs Last year ──
+  const lastYr=String(parseInt(yr)-1);
+  const lyE=pro.filter(e=>toSortableDate(e.Date).startsWith(lastYr));
+  const lyT=lyE.reduce((s,e)=>s+(parseFloat(e.Cost)||0),0);
+  const lySav=lyE.reduce((s,e)=>s+(parseFloat(e.Savings)||0),0);
+  const diff=yrT-lyT;
+  const diffPct=lyT>0?((diff/lyT)*100).toFixed(1):null;
+  set('s-cmp-yr',$f(yrT));set('s-cmp-yr2',`${yrE.length} expenses`);
+  set('s-cmp-ly',$f(lyT));set('s-cmp-ly2',`${lyE.length} expenses`);
+  set('s-cmp-diff',diff>0?'+'+$f(diff):$f(diff));
+  set('s-cmp-diff2',diffPct?(diff>0?'▲ ':'▼ ')+Math.abs(diffPct)+'% vs last year':'no last year data');
+  const dEl=document.getElementById('s-cmp-diff');
+  if(dEl)dEl.style.color=diff>0?'var(--red)':'var(--green)';
+  set('s-cmp-sav-yr',$f(yrSav));
+  set('s-cmp-sav-ly',$f(lySav));
+  set('s-cmp-sub-yr',$f(yrSubCost));
+  const bigCmpYr=yrE.reduce((b,e)=>(parseFloat(e.Cost)||0)>(parseFloat(b?.Cost)||0)?e:b,null);
+  set('s-cmp-big-yr',bigCmpYr?$f(bigCmpYr.Cost):'—');
+  set('s-cmp-big-yr2',bigCmpYr?bigCmpYr.Name:'');
+  const bigMo=moE.reduce((b,e)=>(parseFloat(e.Cost)||0)>(parseFloat(b?.Cost)||0)?e:b,null);
+  set('s-cmp-big-mo',bigMo?$f(bigMo.Cost):'—');
+  set('s-cmp-big-mo2',bigMo?bigMo.Name:'');
 
   // All time
   const allPro=pro;
@@ -1195,6 +1258,13 @@ function renderDash(){
   set('s-all-topcat',topCat?topCat[0]:'—');
   set('s-all-topcat2',topCat?$f(topCat[1])+' all time':'');
   set('s-all-count',allPro.length.toLocaleString());
+  // Biggest expense this year + this month (on all-time page too)
+  const bigYrAll=yrE.reduce((b,e)=>(parseFloat(e.Cost)||0)>(parseFloat(b?.Cost)||0)?e:b,null);
+  set('s-all-big-yr',bigYrAll?$f(bigYrAll.Cost):'—');
+  set('s-all-big-yr2',bigYrAll?bigYrAll.Name:'');
+  const bigMoAll=moE.reduce((b,e)=>(parseFloat(e.Cost)||0)>(parseFloat(b?.Cost)||0)?e:b,null);
+  set('s-all-big-mo',bigMoAll?$f(bigMoAll.Cost):'—');
+  set('s-all-big-mo2',bigMoAll?bigMoAll.Name:'');
 
   renderCharts();
   initDashSwipe();
@@ -1269,6 +1339,66 @@ function renderCharts(){
   lineChartClean('c-all-trend',allMonths,monthlyData(allKeys,pro),'#1aa378');
   lineChartClean('c-all-savings',allMonths,monthlySavings(allKeys),'#f59e0b');
   lineChartClean('c-all-submo',allMonths,subPayByMonth(allKeys),'#6c63ff');
+
+  // ── PAGE 2: Year vs Last Year comparison charts ──
+  const yr2=String(new Date().getFullYear());
+  const ly2=String(parseInt(yr2)-1);
+  const months12=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const yrKeys2=months12.map((_,i)=>`${yr2}-${String(i+1).padStart(2,'0')}`);
+  const lyKeys2=months12.map((_,i)=>`${ly2}-${String(i+1).padStart(2,'0')}`);
+
+  // Monthly spend comparison
+  const yrMonthlySpend=yrKeys2.map(k=>Math.round(pro.filter(e=>toSortableDate(e.Date).startsWith(k)).reduce((s,e)=>s+(parseFloat(e.Cost)||0),0)));
+  const lyMonthlySpend=lyKeys2.map(k=>Math.round(pro.filter(e=>toSortableDate(e.Date).startsWith(k)).reduce((s,e)=>s+(parseFloat(e.Cost)||0),0)));
+  destroyChart('c-cmp-trend');
+  charts['c-cmp-trend']=new Chart(document.getElementById('c-cmp-trend'),{
+    type:'line',
+    data:{labels:months12,datasets:[
+      {label:yr2,data:yrMonthlySpend,borderColor:'#6c63ff',backgroundColor:'rgba(108,99,255,0.1)',tension:.4,fill:true,pointRadius:3,borderWidth:2},
+      {label:ly2,data:lyMonthlySpend,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.08)',tension:.4,fill:true,pointRadius:3,borderWidth:2,borderDash:[4,4]},
+    ]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{labels:{color:'#8a8a9a',font:{size:10}}},datalabels:{display:false}},scales:{x:{ticks:{color:'#555563',font:{size:9}}},y:{ticks:{color:'#555563',font:{size:9},callback:v=>'$'+v.toLocaleString()}}}}
+  });
+
+  // Category comparison (top 6 categories)
+  const allCats=[...new Set([...pro.map(e=>e.Category||'Other')])].slice(0,6);
+  const yrCatVals=allCats.map(cat=>Math.round(pro.filter(e=>toSortableDate(e.Date).startsWith(yr2)&&(e.Category||'Other')===cat).reduce((s,e)=>s+(parseFloat(e.Cost)||0),0)));
+  const lyCatVals=allCats.map(cat=>Math.round(pro.filter(e=>toSortableDate(e.Date).startsWith(ly2)&&(e.Category||'Other')===cat).reduce((s,e)=>s+(parseFloat(e.Cost)||0),0)));
+  destroyChart('c-cmp-cat');
+  charts['c-cmp-cat']=new Chart(document.getElementById('c-cmp-cat'),{
+    type:'bar',
+    data:{labels:allCats,datasets:[
+      {label:yr2,data:yrCatVals,backgroundColor:'rgba(108,99,255,0.7)',borderRadius:4},
+      {label:ly2,data:lyCatVals,backgroundColor:'rgba(245,158,11,0.5)',borderRadius:4},
+    ]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{labels:{color:'#8a8a9a',font:{size:10}}},datalabels:{display:false}},scales:{x:{ticks:{color:'#555563',font:{size:9}}},y:{ticks:{color:'#555563',font:{size:9},callback:v=>'$'+v.toLocaleString()}}}}
+  });
+
+  // Savings comparison
+  const yrSavMonthly=yrKeys2.map(k=>Math.round(pro.filter(e=>toSortableDate(e.Date).startsWith(k)).reduce((s,e)=>s+(parseFloat(e.Savings)||0),0)));
+  const lySavMonthly=lyKeys2.map(k=>Math.round(pro.filter(e=>toSortableDate(e.Date).startsWith(k)).reduce((s,e)=>s+(parseFloat(e.Savings)||0),0)));
+  destroyChart('c-cmp-savings');
+  charts['c-cmp-savings']=new Chart(document.getElementById('c-cmp-savings'),{
+    type:'line',
+    data:{labels:months12,datasets:[
+      {label:yr2,data:yrSavMonthly,borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,0.1)',tension:.4,fill:true,pointRadius:3,borderWidth:2},
+      {label:ly2,data:lySavMonthly,borderColor:'#14b8a6',backgroundColor:'rgba(20,184,166,0.08)',tension:.4,fill:true,pointRadius:3,borderWidth:2,borderDash:[4,4]},
+    ]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{labels:{color:'#8a8a9a',font:{size:10}}},datalabels:{display:false}},scales:{x:{ticks:{color:'#555563',font:{size:9}}},y:{ticks:{color:'#555563',font:{size:9},callback:v=>'$'+v.toLocaleString()}}}}
+  });
+
+  // Sub payments comparison
+  const yrSubMonthly=yrKeys2.map(k=>Math.round(D.master.filter(m=>(m.Source==='Sub'||m.Type==='Subscription')&&toSortableDate(m.Date).startsWith(k)).reduce((s,m)=>s+(parseFloat(m.Cost)||0),0)));
+  const lySubMonthly=lyKeys2.map(k=>Math.round(D.master.filter(m=>(m.Source==='Sub'||m.Type==='Subscription')&&toSortableDate(m.Date).startsWith(k)).reduce((s,m)=>s+(parseFloat(m.Cost)||0),0)));
+  destroyChart('c-cmp-sub');
+  charts['c-cmp-sub']=new Chart(document.getElementById('c-cmp-sub'),{
+    type:'bar',
+    data:{labels:months12,datasets:[
+      {label:yr2,data:yrSubMonthly,backgroundColor:'rgba(108,99,255,0.7)',borderRadius:4},
+      {label:ly2,data:lySubMonthly,backgroundColor:'rgba(245,158,11,0.5)',borderRadius:4},
+    ]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{labels:{color:'#8a8a9a',font:{size:10}}},datalabels:{display:false}},scales:{x:{ticks:{color:'#555563',font:{size:9}}},y:{ticks:{color:'#555563',font:{size:9},callback:v=>'$'+v.toLocaleString()}}}}
+  });
 }
 
 function donut(id,labels,data,colors){
@@ -3495,10 +3625,11 @@ if(loadCfg()){bootApp();}
   <!-- Pull to refresh indicator -->
   <div id="ptr-indicator">↓ Release to refresh</div>
 
-  <!-- Mobile FAB -->
+  <!-- FAB -->
   <div id="mobile-fab">
-    <button class="fab-btn" style="background:var(--green);color:#fff;" onclick="openFoodMo()">+ Food</button>
-    <button class="fab-btn" style="background:var(--accent);color:#fff;" onclick="openModal('wish')">+ Wishlist</button>
+    <button class="fab-btn" style="background:rgba(34,197,94,0.9);color:#fff;backdrop-filter:blur(8px);" onclick="openFoodMo()">+ Food</button>
+    <button class="fab-btn" style="background:rgba(108,99,255,0.9);color:#fff;backdrop-filter:blur(8px);" onclick="openModal('wish')">+ Wishlist</button>
+    <button class="fab-btn" style="background:rgba(34,197,94,0.9);color:#fff;backdrop-filter:blur(8px);" onclick="openIncomeMo()">+ Income</button>
   </div>
 
   <!-- Bottom nav - all tabs -->
