@@ -2243,7 +2243,11 @@ function showTab(name,el){
   document.getElementById('tab-'+name).style.display='';
   document.querySelectorAll('.nt').forEach(t=>t.classList.remove('on'));
   el.classList.add('on');
-  if(name==='calendar')initCalendar();
+  if(name==='calendar'){
+    initCalendar();
+    // Always scroll to today when entering calendar tab
+    setTimeout(()=>calGoToday(),200);
+  }
 }
 function showApp(){
   document.getElementById('auth-screen').style.display='none';
@@ -2399,14 +2403,18 @@ const CAL_COLORS={
 function calGoToday(){
   _calYear=new Date().getFullYear();_calMonth=new Date().getMonth();_calWeekOffset=0;
   if(_calView==='month'){
+    // Ensure current month is rendered
     appendMonth(_calYear,_calMonth);
+    appendMonth(_calYear,_calMonth-1);
+    appendMonth(_calYear,_calMonth+1);
     const label=document.getElementById('cal-month-label');
     if(label)label.textContent=new Date(_calYear,_calMonth,1).toLocaleString('default',{month:'long',year:'numeric'});
-    setTimeout(()=>{
+    // Double rAF to guarantee layout is complete
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
       const el=document.getElementById(`cm-${_calYear}-${_calMonth}`);
       const wrap=document.getElementById('cal-grid-wrap');
-      if(el&&wrap)wrap.scrollTo({top:el.offsetTop-2,behavior:'smooth'});
-    },50);
+      if(el&&wrap)wrap.scrollTop=el.offsetTop;
+    }));
   } else {
     renderCalendar();
   }
