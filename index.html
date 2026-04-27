@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>💵 Finance Dashboard</title>
+<title>Finance Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDR31gST2VMxROFmWWe9GYWn0ySAWcbb18&libraries=places" async defer></script>
@@ -185,7 +185,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .empty{padding:36px;text-align:center;color:var(--text3);font-size:12px}
 .eic{font-size:26px;margin-bottom:7px}
 /* CALENDAR */
-/* ── CALENDAR ── */
+/*  CALENDAR  */
 #tab-calendar{position:fixed;top:96px;left:0;right:0;bottom:0;z-index:90;display:flex;flex-direction:column;background:var(--bg)}
 #tab-calendar.fs-cal{top:56px;z-index:99}
 /* Keep header above calendar always */
@@ -294,7 +294,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 
 <div id="auth-screen">
   <div class="auth-card">
-    <div class="auth-logo">💵</div>
+    <div class="auth-logo"></div>
     <div class="auth-title">Finance Dashboard</div>
     <div class="auth-sub">Your data lives in Google Sheets. Works across all devices.</div>
     <div class="steps">
@@ -314,14 +314,14 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 
 <div id="app">
   <header class="hdr">
-    <div class="hlogo">💵 Finance Dashboard</div>
+    <div class="hlogo">Finance Dashboard</div>
     <div class="hright">
-      <button class="btn btn-a" style="gap:5px;" onclick="openFoodMo()">🍽️ + Food</button>
-      <button class="btn btn-a" style="gap:5px;" onclick="openModal('wish')">📋 + Wishlist</button>
-      <button class="btn btn-a" style="gap:5px;border-color:var(--green);color:var(--green);" onclick="openIncomeMo()">💰 + Income</button>
+      <button class="btn btn-a" style="gap:5px;" onclick="openFoodMo()">+ Food</button>
+      <button class="btn btn-a" style="gap:5px;" onclick="openModal('wish')">+ Wishlist</button>
+      <button class="btn btn-a" style="gap:5px;border-color:var(--green);color:var(--green);" onclick="openIncomeMo()">+ Income</button>
       <button class="signin-btn" id="signin-btn" onclick="doSignIn()">↗ Sign in</button>
       <button class="sbtn" onclick="syncAll()">↻ Sync</button>
-      <button class="sbtn" onclick="repairAllSheets()" title="Fix missing or mismatched sheet headers">🔧 Repair</button>
+      <button class="sbtn" onclick="repairAllSheets()" title="Fix missing or mismatched sheet headers">Repair</button>
       <button class="btn" onclick="logout()">Disconnect</button>
     </div>
   </header>
@@ -357,7 +357,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
               <div class="sc"><div class="sl">Total savings this month</div><div class="sv good" id="s-svmo">—</div><div class="ss">vs original price</div></div>
               <div class="sc"><div class="sl">Total sub costs this month</div><div class="sv warn" id="s-sbmo">—</div><div class="ss" id="s-sbmo2">—</div></div>
             </div>
-            <div class="dash-page-label">📅 Current Year</div>
+            <div class="dash-page-label">Current Year</div>
             <div class="cg4">
               <div class="cc"><div class="ct">Expenses by category</div><div class="cw"><canvas id="c-yr-cat"></canvas></div></div>
               <div class="cc"><div class="ct">Expenses by month</div><div class="cw"><canvas id="c-yr-trend"></canvas></div></div>
@@ -381,7 +381,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
               <div class="sc"><div class="sl">Most spent category</div><div class="sv" id="s-all-topcat" style="font-size:16px;">—</div><div class="ss" id="s-all-topcat2">—</div></div>
               <div class="sc"><div class="sl">Total expenses</div><div class="sv" id="s-all-count">—</div><div class="ss">All time</div></div>
             </div>
-            <div class="dash-page-label">📊 All Time</div>
+            <div class="dash-page-label">All Time</div>
             <div class="cg4">
               <div class="cc"><div class="ct">Expenses by category</div><div class="cw"><canvas id="c-all-cat"></canvas></div></div>
               <div class="cc"><div class="ct">Expenses by month (all time)</div><div class="cw"><canvas id="c-all-trend"></canvas></div></div>
@@ -397,7 +397,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 
     <div id="tab-wishlist" style="display:none">
       <div class="panel">
-        <div class="ph"><div class="pt">📋 Wishlist <span class="pc" id="wc">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('wish')">+ Add item</button></div></div>
+        <div class="ph"><div class="pt"> Wishlist <span class="pc" id="wc">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('wish')">+ Add item</button></div></div>
         <div class="sort-bar">
           <span class="sort-lbl">Sort</span>
           <button class="sort-btn asc" id="ws-row" data-field="_row" onclick="setSort('wish','_row',this)">Date Added <span class="arr">↑</span></button>
@@ -407,7 +407,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
           <button class="sort-btn" id="ws-savings" data-field="_savings" onclick="setSort('wish','_savings',this)">Savings <span class="arr">↕</span></button>
           <button class="sort-btn" id="ws-status" data-field="Status" onclick="setSort('wish','Status',this)">Status <span class="arr">↕</span></button>
           <div class="sort-divider"></div>
-          <button class="sort-btn" onclick="clearSort('wish')" style="color:var(--text3);font-size:10px;">✕ Clear</button>
+          <button class="sort-btn" onclick="clearSort('wish')" style="color:var(--text3);font-size:10px;"> Clear</button>
         </div>
         <div class="tw"><table>
           <thead><tr><th class="col-lg">Name</th><th>Description</th><th class="col-md">Category</th><th class="col-sm">Link</th><th class="col-num">Original</th><th class="col-num">Bought</th><th class="col-num">Savings</th><th class="col-act"></th><th class="col-act"></th><th class="col-act"></th></tr></thead>
@@ -428,10 +428,10 @@ td.editing{background:rgba(108,99,255,0.05)!important}
         <button class="sort-btn" id="es-savings" data-field="_savings" onclick="setSort('exp','_savings',this)">Savings <span class="arr">↕</span></button>
         <button class="sort-btn" id="es-card" data-field="Card" onclick="setSort('exp','Card',this)">Card <span class="arr">↕</span></button>
         <div class="sort-divider"></div>
-        <button class="sort-btn" onclick="clearSort('exp')" style="color:var(--text3);font-size:10px;">✕ Clear</button>
+        <button class="sort-btn" onclick="clearSort('exp')" style="color:var(--text3);font-size:10px;"> Clear</button>
       </div>
       <div class="panel" id="panel-ordered">
-        <div class="ph"><div class="pt">📦 Ordered <span class="pc" id="ec-ord">0</span></div><div class="pa"><button class="btn" onclick="resetExpColOrder()" style="font-size:10px;color:var(--text3)">Reset cols</button><button class="btn btn-a" onclick="openModal('exp')">+ Add expense</button></div></div>
+        <div class="ph"><div class="pt"> Ordered <span class="pc" id="ec-ord">0</span></div><div class="pa"><button class="btn" onclick="resetExpColOrder()" style="font-size:10px;color:var(--text3)">Reset cols</button><button class="btn btn-a" onclick="openModal('exp')">+ Add expense</button></div></div>
         <div class="tw"><table>
           <thead></thead>
           <tbody id="eb-ord"></tbody>
@@ -439,7 +439,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
         <div class="show-more" id="sm-ord" onclick="showMore('ord')" style="display:none">Show more</div>
       </div>
       <div class="panel" id="panel-procured">
-        <div class="ph"><div class="pt">✅ Procured <span class="pc" id="ec-pro">0</span></div></div>
+        <div class="ph"><div class="pt"> Procured <span class="pc" id="ec-pro">0</span></div></div>
         <div class="tw"><table>
           <thead></thead>
           <tbody id="eb-pro"></tbody>
@@ -447,7 +447,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
         <div class="show-more" id="sm-pro" onclick="showMore('pro')" style="display:none">Show more</div>
       </div>
       <div class="panel" id="panel-food">
-        <div class="ph"><div class="pt">🍔 Food <span class="pc" id="ec-food">0</span></div></div>
+        <div class="ph"><div class="pt"> Food <span class="pc" id="ec-food">0</span></div></div>
         <div class="tw"><table>
           <thead></thead>
           <tbody id="eb-food"></tbody>
@@ -459,7 +459,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
     <div id="tab-subscriptions" style="display:none">
       <div class="panel">
         <div class="ph">
-          <div class="pt">🔄 Subscriptions <span class="pc" id="sc2">0</span></div>
+          <div class="pt">Subscriptions <span class="pc" id="sc2">0</span></div>
           <div class="pa">
             <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);cursor:pointer;">
               <input type="checkbox" id="show-cancelled" onchange="renderSub()" style="accent-color:var(--accent)"> Show cancelled
@@ -479,7 +479,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
           <button class="sort-btn" id="ss-cat" data-field="Category" onclick="setSort('sub','Category',this)">Category <span class="arr">↕</span></button>
           <button class="sort-btn" id="ss-payments" data-field="Payments" onclick="setSort('sub','Payments',this)">Payments <span class="arr">↕</span></button>
           <div class="sort-divider"></div>
-          <button class="sort-btn" onclick="clearSort('sub')" style="color:var(--text3);font-size:10px;">✕ Clear</button>
+          <button class="sort-btn" onclick="clearSort('sub')" style="color:var(--text3);font-size:10px;"> Clear</button>
         </div>
         <div class="tw"><table>
           <thead></thead>
@@ -491,37 +491,37 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 
     <div id="tab-categories" style="display:none">
       <div class="panel">
-        <div class="ph"><div class="pt">🏷️ Categories <span class="pc" id="cc2">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('cat')">+ Add category</button></div></div>
+        <div class="ph"><div class="pt"> Categories <span class="pc" id="cc2">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('cat')">+ Add category</button></div></div>
         <div class="tw"><table>
           <thead><tr><th>Name</th><th class="col-md">Color</th><th class="col-act"></th></tr></thead>
-          <tbody id="cb"><tr><td colspan="3"><div class="empty"><div class="eic">🏷️</div>Loading...</div></td></tr></tbody>
+          <tbody id="cb"><tr><td colspan="3"><div class="empty"><div class="eic"></div>Loading...</div></td></tr></tbody>
         </table></div>
       </div>
     </div>
 
     <div id="tab-cards" style="display:none">
       <div class="panel">
-        <div class="ph"><div class="pt">💳 Cards <span class="pc" id="card-count">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('card')">+ Add card</button></div></div>
+        <div class="ph"><div class="pt"> Cards <span class="pc" id="card-count">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('card')">+ Add card</button></div></div>
         <div class="tw"><table>
           <thead><tr><th>Card Name</th><th>Alias</th><th>Bank</th><th class="col-md">Type</th><th class="col-sm">Last 4</th><th class="col-md">Default</th><th class="col-act"></th></tr></thead>
-          <tbody id="card-body"><tr><td colspan="5"><div class="empty"><div class="eic">💳</div>Loading...</div></td></tr></tbody>
+          <tbody id="card-body"><tr><td colspan="5"><div class="empty"><div class="eic"></div>Loading...</div></td></tr></tbody>
         </table></div>
       </div>
     </div>
 
     <div id="tab-banks" style="display:none">
       <div class="panel">
-        <div class="ph"><div class="pt">🏦 Banks <span class="pc" id="bank-count">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('bank')">+ Add bank</button></div></div>
+        <div class="ph"><div class="pt"> Banks <span class="pc" id="bank-count">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('bank')">+ Add bank</button></div></div>
         <div class="tw"><table>
           <thead><tr><th>Bank Name</th><th class="col-md">Type</th><th class="col-sm">Account #</th><th>Cards</th><th class="col-act"></th></tr></thead>
-          <tbody id="bank-body"><tr><td colspan="5"><div class="empty"><div class="eic">🏦</div>Loading...</div></td></tr></tbody>
+          <tbody id="bank-body"><tr><td colspan="5"><div class="empty"><div class="eic"></div>Loading...</div></td></tr></tbody>
         </table></div>
       </div>
     </div>
 
     <div id="tab-master" style="display:none;margin:-24px;">
       <div style="background:var(--s1);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;gap:12px;">
-        <span style="font-size:13px;font-weight:600;color:var(--text);">📊 Master Ledger</span>
+        <span style="font-size:13px;font-weight:600;color:var(--text);">Master Ledger</span>
         <span class="pc" id="master-count">0</span>
         <select id="master-filter" onchange="renderMaster()" class="fs" style="font-size:11px;padding:5px 8px;width:auto;">
           <option value="">All types</option>
@@ -532,7 +532,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
       </div>
       <div style="overflow-x:auto;width:100%;"><table style="min-width:1400px;">
         <thead><tr><th class="col-date">Date</th><th class="col-sm">Type</th><th class="col-lg">Name</th><th style="min-width:200px;">Description</th><th class="col-md">Category</th><th class="col-num">Cost</th><th class="col-num">Original</th><th class="col-num">Savings</th><th class="col-md">Card</th><th class="col-md">Bank</th><th class="col-md">Billing</th><th class="col-md">Status</th><th class="col-sm">Source</th><th class="col-act"></th></tr></thead>
-        <tbody id="master-body"><tr><td colspan="14"><div class="empty"><div class="eic">📊</div>Loading...</div></td></tr></tbody>
+        <tbody id="master-body"><tr><td colspan="14"><div class="empty"><div class="eic"></div>Loading...</div></td></tr></tbody>
       </table></div>
       <div class="show-more" id="sm-master" onclick="showMore('master')" style="display:none;margin:0;border-radius:0;">Show more</div>
     </div>
@@ -546,35 +546,34 @@ td.editing{background:rgba(108,99,255,0.05)!important}
             <div class="cal-sidebar-title" style="margin-bottom:0">My Calendars</div>
           </div>
           <div style="font-size:10px;color:var(--text3);padding:4px 0 8px;border-bottom:1px solid var(--border);margin-bottom:8px;line-height:1.6">
-            <span style="background:rgba(245,158,11,0.2);color:var(--amber);border-radius:3px;padding:1px 5px;font-size:9px">SUB</span> and 
-            <span style="background:rgba(34,197,94,0.2);color:var(--green);border-radius:3px;padding:1px 5px;font-size:9px">INCOME</span> events come from your app data, not Google Calendar
+            SUB and INCOME events come from app data, not Google Calendar
           </div>
             <div id="cal-sidebar-list"></div>
           </div>
           <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
             <div class="cal-sidebar-title" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
-              Hidden <span style="font-size:10px">▾</span>
+              Hidden <span style="font-size:10px"></span>
             </div>
             <div id="cal-hidden-list" style="display:none;margin-top:6px"></div>
           </div>
           <div style="padding-top:8px;border-top:1px solid var(--border)">
-            <button class="btn" onclick="calSync()" style="font-size:11px;padding:7px 12px;width:100%">↻ Sync all</button>
+            <button class="btn" onclick="calSync()" style="font-size:11px;padding:7px 12px;width:100%">↻ Sync</button>
           </div>
         </div>
         <!-- Main -->
         <div class="cal-main">
           <!-- Toolbar -->
           <div class="cal-toolbar">
-            <button class="cal-nav-btn" onclick="toggleCalSidebar()" title="Toggle sidebar" style="font-size:14px;padding:4px 8px;">☰</button>
+            <button class="cal-nav-btn" onclick="toggleCalSidebar()" title="Toggle sidebar" style="font-size:14px;padding:4px 8px;"></button>
             <div class="cal-toolbar-nav">
               <button class="cal-nav-btn" onclick="calNav(-1)">←</button>
               <span id="cal-month-label" class="cal-month-title"></span>
               <button class="cal-nav-btn" onclick="calNav(1)">→</button>
             </div>
             <button class="cal-nav-btn" onclick="calGoToday()" style="font-size:11px;">Today</button>
-            <input id="cal-search" placeholder="🔍 Search…" oninput="renderCalendar()" style="background:var(--s2);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;font-size:11px;color:var(--text);outline:none;width:160px;">
+            <input id="cal-search" placeholder=" Search…" oninput="renderCalendar()" style="background:var(--s2);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;font-size:11px;color:var(--text);outline:none;width:160px;">
             <button class="cal-nav-btn btn-a" onclick="openCalEventModal(null)" style="background:var(--accent);color:#fff;border-color:var(--accent);">+ New event</button>
-            <button id="cal-fs-btn" class="cal-nav-btn" onclick="toggleCalFS()" title="Fullscreen" style="font-size:14px;padding:4px 8px;">⛶</button>
+            <button id="cal-fs-btn" class="cal-nav-btn" onclick="toggleCalFS()" title="Fullscreen" style="font-size:14px;padding:4px 8px;"></button>
             <div class="cal-view-btns">
               <button class="cal-view-btn active" id="vbtn-month" onclick="setCalView('month')">Month</button>
               <button class="cal-view-btn" id="vbtn-week" onclick="setCalView('week')">Week</button>
@@ -613,18 +612,18 @@ td.editing{background:rgba(108,99,255,0.05)!important}
             <div class="fgr"><label class="fl">Category & Color</label>
               <select class="fs" id="cal-ev-category" onchange="onCalCatChange(this)">
                 <option value="">— None —</option>
-                <option value="Tentative"   data-color="11" data-hex="#6b7280">🤔 Tentative</option>
-                <option value="Confirmed"   data-color="5"  data-hex="#22c55e">✅ Confirmed</option>
-                <option value="Personal"    data-color="7"  data-hex="#3b82f6">👤 Personal</option>
-                <option value="Work"        data-color="8"  data-hex="#6c63ff">💼 Work</option>
-                <option value="Finance"     data-color="4"  data-hex="#f59e0b">💵 Finance</option>
-                <option value="Subscription"data-color="4"  data-hex="#f59e0b">🔄 Subscription</option>
-                <option value="Income"      data-color="5"  data-hex="#22c55e">💰 Income</option>
-                <option value="Expense"     data-color="1"  data-hex="#ef4444">💳 Expense</option>
-                <option value="Repeat"      data-color="9"  data-hex="#a855f7">🔁 Repeat</option>
-                <option value="Reminder"    data-color="3"  data-hex="#f97316">⏰ Reminder</option>
-                <option value="Holiday"     data-color="2"  data-hex="#ec4899">🎉 Holiday</option>
-                <option value="Other"       data-color="10" data-hex="#6b7280">⬛ Other</option>
+                <option value="Tentative"   data-color="11" data-hex="#6b7280">Tentative</option>
+                <option value="Confirmed"   data-color="5"  data-hex="#22c55e">Confirmed</option>
+                <option value="Personal"    data-color="7"  data-hex="#3b82f6">Personal</option>
+                <option value="Work"        data-color="8"  data-hex="#6c63ff">Work</option>
+                <option value="Finance"     data-color="4"  data-hex="#f59e0b">Finance</option>
+                <option value="Subscription"data-color="4"  data-hex="#f59e0b">Subscription</option>
+                <option value="Income"      data-color="5"  data-hex="#22c55e">Income</option>
+                <option value="Expense"     data-color="1"  data-hex="#ef4444">Expense</option>
+                <option value="Repeat"      data-color="9"  data-hex="#a855f7">Repeat</option>
+                <option value="Reminder"    data-color="3"  data-hex="#f97316">Reminder</option>
+                <option value="Holiday"     data-color="2"  data-hex="#ec4899">Holiday</option>
+                <option value="Other"       data-color="10" data-hex="#6b7280">Other</option>
               </select>
               <div id="cal-cat-bar" style="height:3px;border-radius:2px;margin-top:6px;background:var(--border);transition:background .2s;"></div>
             </div>
@@ -648,7 +647,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
           </div>
         </div>
         <div class="mac">
-          <button class="btn" id="cal-delete-btn" style="display:none;color:var(--red);border-color:rgba(239,68,68,.4);margin-right:auto;" onclick="calDeleteCurrentEvent()">🗑 Delete</button>
+          <button class="btn" id="cal-delete-btn" style="display:none;color:var(--red);border-color:rgba(239,68,68,.4);margin-right:auto;" onclick="calDeleteCurrentEvent()"> Delete</button>
           <button class="btn" onclick="closeCalMo()">Cancel</button>
           <button class="btn btn-a" onclick="saveCalEvent()">Save</button>
         </div>
@@ -688,7 +687,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 </div>
 <div class="mo" id="food-mo" onclick="closeFoodMo(event)">
   <div class="md" style="max-width:380px;">
-    <div class="mtit">🍽️ Log Food</div>
+    <div class="mtit"> Log Food</div>
     <div style="display:flex;flex-direction:column;gap:10px;">
       <div class="fgr"><label class="fl">What did you eat?</label><input class="fi" id="food-name" placeholder="e.g. Chipotle, Sushi, Groceries" autofocus></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -705,7 +704,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 </div>
 <div class="mo" id="income-mo" onclick="closeIncomeMo(event)">
   <div class="md" style="max-width:420px;">
-    <div class="mtit">💰 Log Income</div>
+    <div class="mtit">Log Income</div>
     <div style="display:flex;flex-direction:column;gap:11px;">
       <div class="fgr"><label class="fl">What was this payment for?</label><input class="fi" id="inc-name" placeholder="e.g. Freelance project, Loan repayment…"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
@@ -745,7 +744,7 @@ const HD={
 const CAL_ID='4afe919405332d0d693bbe06975c2a399e5911c5c68ad5f1224c0162a4bdf157@group.calendar.google.com';
 let D_cal={}; // calendarId -> events cache
 const CC={Fun:'tf',Food:'tfo',Apparel:'tap',Tech:'tte',Home:'tho',Health:'the',Travel:'ttr',Tesla:'tts',PC:'tpc',Life:'tli',Gift:'tgi'};
-const CE={Fun:'🎮',Food:'🍽️',Apparel:'👕',Tech:'📱',Home:'🏠',Health:'🏥',Travel:'✈️',Tesla:'🚗',PC:'🖥️',Life:'🌿',Gift:'🎁'};
+const CE={};
 const CHART_C=['#6c63ff','#22c55e','#f59e0b','#ef4444','#14b8a6','#ec4899','#3b82f6','#f97316','#a855f7','#ff6b6b','#60a5fa'];
 const DOT_C=['#ef4444','#3b82f6','#f97316','#22c55e','#a855f7','#f59e0b','#14b8a6','#ec4899','#6c63ff','#60a5fa','#ff6b6b'];
 const CATS_SEED=[['Fun','#f59e0b'],['Food','#22c55e'],['Apparel','#ec4899'],['Tech','#3b82f6'],['Home','#a855f7'],['Health','#ef4444'],['Travel','#14b8a6'],['Tesla','#ff6b6b'],['PC','#60a5fa'],['Life','#f97316'],['Gift','#f472b6']];
@@ -996,6 +995,10 @@ function parse(rows,hd){
 // ── RENDER ──
 function renderAll(){renderDash();renderWish();renderExp();renderSub();renderCat();renderCards();renderBanks();renderMaster();setTimeout(()=>{initAllDragCols();updateSortBtns('wish');updateSortBtns('exp');updateSortBtns('sub');},0);}
 function $f(n){return'$'+(parseFloat(n)||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});}
+function localToday(){
+  const d=new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 function toSortableDate(d){
   if(!d)return'';
   // Already YYYY-MM-DD
@@ -1874,7 +1877,7 @@ async function paySub(row){
   const bank=D.cards.find(cd=>cd.Name===s.Card)?.Bank||'';
   await appendRow('Master',[today,'Subscription',s.Name,'',s.Category,s.Cost,'','',s.Card,bank,s.Billing,'Paid','Subscription']);
   // Remove old calendar event and create new one for next renewal
-  const oldTitle=`💳 ${s.Name} — ${$f(s.Cost)}`;
+  const oldTitle=` ${s.Name} — ${$f(s.Cost)}`;
   const oldEvent=_calEvents.find(e=>e.summary===oldTitle);
   if(oldEvent)await calDeleteEvent(oldEvent.id);
   // Create next renewal event
@@ -1987,7 +1990,7 @@ async function setDefaultCard(row){
 function renderCards(){
   const b=document.getElementById('card-body');
   document.getElementById('card-count').textContent=D.cards.length;
-  if(!D.cards.length){b.innerHTML='<tr><td colspan="7"><div class="empty"><div class="eic">💳</div>No cards yet</div></td></tr>';return;}
+  if(!D.cards.length){b.innerHTML='<tr><td colspan="7"><div class="empty"><div class="eic"></div>No cards yet</div></td></tr>';return;}
   b.innerHTML=D.cards.map(cd=>{
     const isDefault=cd.Default==='Yes';
     return`<tr>
@@ -2464,11 +2467,11 @@ function toggleCalFS(){
   const btn=document.getElementById('cal-fs-btn');
   if(_calFS){
     tab.classList.add('fs-cal');
-    if(btn)btn.textContent='⛶';
+    if(btn)btn.textContent='⤢';
     if(btn)btn.title='Exit fullscreen';
   } else {
     tab.classList.remove('fs-cal');
-    if(btn)btn.textContent='⛶';
+    if(btn)btn.textContent='⤢';
     if(btn)btn.title='Fullscreen';
   }
 }
@@ -2612,7 +2615,7 @@ function renderCalendar(){
 function renderMonth(){
   const grid=document.getElementById('cal-grid');
   if(!grid)return;
-  const today=new Date();today.setHours(0,0,0,0);
+  const today=new Date();
   const firstDay=new Date(_calYear,_calMonth,1).getDay();
   const daysInMonth=new Date(_calYear,_calMonth+1,0).getDate();
   const daysInPrev=new Date(_calYear,_calMonth,0).getDate();
@@ -2623,7 +2626,7 @@ function renderMonth(){
 
   // Build dateStr→events map
   const byDate={};
-  const _dbgToday=new Date().toISOString().slice(0,10);
+  const _dbgToday=localToday();
   visEvents.forEach(ev=>{
     const startDate=ev.start?.date||ev.start?.dateTime?.slice(0,10);
     const endDate=ev.end?.date||ev.end?.dateTime?.slice(0,10);
@@ -2681,7 +2684,7 @@ function renderMonth(){
     const aM=isOther?(i<firstDay?(_calMonth===0?11:_calMonth-1):(_calMonth===11?0:_calMonth+1)):_calMonth;
     const dateStr=`${aY}-${String(aM+1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
     const cellDate=new Date(dateStr+'T12:00:00');
-    const isToday=cellDate.toDateString()===today.toDateString();
+    const isToday=dateStr===localToday();
     const dayEvs=(byDate[dateStr]||[]).slice();
     // Sort: multi-day first, then by time
     dayEvs.sort((a,b)=>(b._isMulti?1:0)-(a._isMulti?1:0));
@@ -2702,15 +2705,15 @@ function renderMonth(){
 }
 
 function buildEventPill(ev,dateStr){
-  const today=new Date();today.setHours(0,0,0,0);
-  const isPast=new Date(dateStr+'T23:59:59')<today;
+  const todayStr=localToday();
+  const isPast=dateStr<todayStr;
   const pastStyle=isPast?'opacity:0.4;':'';
   if(ev._type==='sub'){
     const cls=ev._isDue?'due':'sub';
     return`<div class="cal-event ${cls}" style="${pastStyle}" onclick="event.stopPropagation();showSubPopover(event,${ev._sub._row})">${esc(ev.summary)}</div>`;
   }
   if(ev._type==='income'){
-    return`<div class="cal-event income" style="${pastStyle}" onclick="event.stopPropagation();showIncomePopover(event,${ev._master._row})">💰 ${esc(ev.summary)}</div>`;
+    return`<div class="cal-event income" style="${pastStyle}" onclick="event.stopPropagation();showIncomePopover(event,${ev._master._row})">${esc(ev.summary)}</div>`;
   }
   const color=ev._calColor||'#6c63ff';
   const multiCls=ev._isMulti?(ev._isStart&&ev._isEnd?'multiday alone':ev._isStart?'multiday start':ev._isEnd?'multiday end':'multiday'):'';
@@ -2730,7 +2733,7 @@ function weekRangeLabel(){
 
 function renderWeek(){
   const grid=document.getElementById('cal-grid');
-  const today=new Date();today.setHours(0,0,0,0);
+  const todayLocal=localToday();
   const ws=getWeekStart();
   const days=[];
   for(let i=0;i<7;i++){const d=new Date(ws);d.setDate(d.getDate()+i);days.push(d);}
@@ -2756,7 +2759,7 @@ function renderWeek(){
   // Corner + day headers
   html+=`<div class="cal-week-hdr"></div>`;
   days.forEach((d,i)=>{
-    const isToday=d.toDateString()===today.toDateString();
+    const isToday=d.toISOString().slice(0,10)===todayLocal;
     html+=`<div class="cal-week-hdr${isToday?' today-col':''}">
       <div style="font-size:11px">${dayNames[d.getDay()]}</div>
       <div style="font-size:${isToday?18:14}px;font-weight:${isToday?700:400};${isToday?'background:var(--accent);color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;margin:2px auto':''}">${d.getDate()}</div>
@@ -2798,19 +2801,21 @@ function renderWeek(){
 async function calEnsureSubEvents(){
   if(!gapi.client.calendar)return;
   const calId='4afe919405332d0d693bbe06975c2a399e5911c5c68ad5f1224c0162a4bdf157@group.calendar.google.com';
-  const finCal=_allCalendars.find(c=>c.id===calId);
   const allEvs=_allEvents[calId]||[];
   const act=D.subscriptions.filter(s=>s.Status!=='Cancelled'&&s.NextRenewal);
   let created=0;
   for(const s of act){
-    const title=`${s.Name} — ${$f(s.Cost)}`;
     const date=toSortableDate(s.NextRenewal);
     if(!date)continue;
-    const exists=allEvs.find(e=>e.summary===title&&e.start?.date===date);
+    // Loose match — any event on this date containing the sub name
+    const exists=allEvs.find(e=>{
+      const eDate=e.start?.date||e.start?.dateTime?.slice(0,10);
+      return eDate===date&&(e.summary||'').includes(s.Name);
+    });
     if(exists)continue;
     try{
       await gapi.client.calendar.events.insert({calendarId:calId,resource:{
-        summary:title,start:{date},end:{date},
+        summary:`${s.Name} — ${$f(s.Cost)}`,start:{date},end:{date},
         description:`Subscription: ${s.Name}\nBilling: ${s.Billing}`,colorId:'5'
       }});
       created++;
