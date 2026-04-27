@@ -20,6 +20,12 @@
   --r:10px;--r2:14px
 }
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+.col-picker-btn{background:var(--s2);border:1px solid var(--border2);border-radius:var(--r);padding:5px 10px;color:var(--text2);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.col-picker-btn:hover{background:var(--s3);color:var(--text)}
+.col-picker-popup{position:fixed;z-index:3000;background:var(--s1);border:1px solid var(--border2);border-radius:10px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.5);min-width:160px}
+.col-picker-item{display:flex;align-items:center;gap:8px;padding:5px 2px;cursor:pointer;font-size:12px;color:var(--text2);border-radius:4px;user-select:none}
+.col-picker-item:hover{color:var(--text)}
+.col-picker-item input{accent-color:var(--accent);cursor:pointer}
 ::-webkit-scrollbar{width:6px;height:6px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--s4,#3a3a40);border-radius:3px}
@@ -108,10 +114,10 @@ tbody td{padding:9px 14px;color:var(--text);vertical-align:middle;white-space:no
 .tstr{text-decoration:line-through;color:var(--text3);font-family:'DM Mono',monospace;font-size:11px}
 /* Column width hints */
 th:first-child,td:first-child{min-width:120px}
-th.col-sm,td.col-sm{width:80px;min-width:60px}
-th.col-md,td.col-md{width:120px;min-width:90px}
+th.col-sm,td.col-sm{width:70px;min-width:55px}
+th.col-md,td.col-md{width:100px;min-width:80px}
 th.col-lg,td.col-lg{min-width:160px}
-th.col-num,td.col-num{width:90px;min-width:70px;text-align:right}
+th.col-num,td.col-num{width:80px;min-width:60px;text-align:right}
 th.col-date,td.col-date{width:100px;min-width:90px}
 th.col-act,td.col-act{width:1%;white-space:nowrap}
 /* Inline edit inputs stay within cell */
@@ -192,11 +198,12 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .eic{font-size:26px;margin-bottom:7px}
 /* CALENDAR */
 /*  CALENDAR  */
-#tab-calendar{position:fixed;top:48px;left:0;right:0;bottom:0;z-index:90;display:flex;flex-direction:column;background:var(--bg)}
-#tab-calendar.fs-cal{top:0;z-index:999}
-/* Keep header above calendar always */
+/* Calendar - normal flow, fills remaining viewport height */
+#tab-calendar{display:flex;flex-direction:column;background:var(--bg);height:calc(100vh - 48px - 48px);border-radius:var(--r2);border:1px solid var(--border);overflow:hidden}
+/* Fullscreen - cover everything */
+#tab-calendar.fs-cal{position:fixed;top:0;left:0;right:0;bottom:0;z-index:999;height:100vh;border-radius:0;border:none}
 .hdr{z-index:200}
-.cal-layout{display:flex;flex:1;overflow:hidden;min-height:0;height:100%}
+.cal-layout{display:flex;flex:1;overflow:hidden;min-height:0}
 /* Sidebar */
 .cal-sidebar{width:200px;flex-shrink:0;border-right:1px solid var(--border);background:var(--s1);padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;transition:width .2s,padding .2s,opacity .2s}.cal-sidebar.collapsed{width:0;padding:0;opacity:0;overflow:hidden}
 .cal-sidebar-title{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
@@ -208,7 +215,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 /* Main area */
 .cal-main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
 /* Toolbar */
-.cal-toolbar{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--s1);flex-shrink:0}
+.cal-toolbar{display:flex;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--s1);flex-shrink:0}
 .cal-toolbar-nav{display:flex;align-items:center;gap:4px}
 .cal-nav-btn{padding:4px 10px;border:1px solid var(--border2);background:transparent;color:var(--text2);border-radius:6px;cursor:pointer;font-size:13px;transition:all .15s}
 .cal-nav-btn:hover{background:var(--s3);color:var(--text)}
@@ -424,7 +431,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
     </div>
 
     <div id="tab-expenses" style="display:none">
-      <div class="sort-bar" style="background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:16px;padding:8px 14px;">
+      <div class="sort-bar" style="background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:16px;padding:8px 14px;"><button class="col-picker-btn" onclick="openColPicker(event,'expenses','exp-body')">⊟ Columns</button>
         <span class="sort-lbl">Sort all</span>
         <button class="sort-btn asc" id="es-row" data-field="_row" onclick="setSort('exp','_row',this)">Date Added <span class="arr">↑</span></button>
         <button class="sort-btn" id="es-date" data-field="Date" onclick="setSort('exp','Date',this)">Date <span class="arr">↕</span></button>
@@ -527,7 +534,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 
     <div id="tab-master" style="display:none;">
       <div style="background:var(--s1);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;gap:12px;">
-        <span style="font-size:13px;font-weight:600;color:var(--text);">Master Ledger</span>
+        <span style="font-size:15px;font-weight:600;">Master Ledger</span>
         <span class="pc" id="master-count">0</span>
         <select id="master-filter" onchange="renderMaster()" class="fs" style="font-size:11px;padding:5px 8px;width:auto;">
           <option value="">All types</option>
@@ -535,6 +542,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
           <option value="Subscription">Subscriptions</option>
           <option value="Income">Income</option>
         </select>
+        <button class="col-picker-btn" onclick="openColPicker(event,'master','master-body')">⊟ Columns</button>
       </div>
       <div style="overflow-x:auto;width:100%;"><table style="min-width:1400px;">
         <thead><tr><th class="col-date">Date</th><th class="col-sm">Type</th><th class="col-lg">Name</th><th style="min-width:200px;">Description</th><th class="col-md">Category</th><th class="col-num">Cost</th><th class="col-num">Original</th><th class="col-num">Savings</th><th class="col-md">Card</th><th class="col-md">Bank</th><th class="col-md">Billing</th><th class="col-md">Status</th><th class="col-sm">Source</th><th class="col-act"></th></tr></thead>
@@ -3142,6 +3150,57 @@ function showIncomePopover(e,masterRow){
     </div>`);
 }
 
+
+// ── COLUMN VISIBILITY ──
+const _colDefs={
+  master:['Date','Type','Name','Description','Category','Cost','Original','Savings','Card','Bank','Billing','Status','Source'],
+  expenses:['Name','Description','Category','Original Cost','Bought Cost','Card','Date'],
+  subscriptions:['Name','Billing','Card','Cost','Monthly','Annual','Due','Last Renewal','Next Renewal','Payments','Category'],
+};
+const _hiddenCols={};
+function loadHiddenCols(){
+  try{const s=localStorage.getItem('hidden_cols');if(s)Object.assign(_hiddenCols,JSON.parse(s));}catch(e){}
+}
+function saveHiddenCols2(){
+  try{localStorage.setItem('hidden_cols',JSON.stringify(_hiddenCols));}catch(e){}
+}
+loadHiddenCols();
+function applyColVisibility(tableId,key){
+  const hidden=_hiddenCols[key]||[];
+  const table=document.getElementById(tableId)?.closest('table')||document.querySelector(`#tab-${key} table`);
+  if(!table)return;
+  const cols=_colDefs[key]||[];
+  cols.forEach((col,i)=>{
+    const colIdx=i; // 0-based header index
+    const isHidden=hidden.includes(col);
+    table.querySelectorAll(`tr > *:nth-child(${colIdx+1})`).forEach(el=>{
+      el.style.display=isHidden?'none':'';
+    });
+  });
+}
+function openColPicker(e,key,tableId,renderFn){
+  e.stopPropagation();
+  document.getElementById('col-picker-popup')?.remove();
+  const hidden=_hiddenCols[key]||[];
+  const cols=_colDefs[key]||[];
+  const popup=document.createElement('div');
+  popup.id='col-picker-popup';
+  popup.className='col-picker-popup';
+  popup.innerHTML='<div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Show / Hide Columns</div>'
+    +cols.map(col=>`<label class="col-picker-item"><input type="checkbox" ${hidden.includes(col)?'':'checked'} onchange="toggleCol('${key}','${tableId}','${col}',this.checked)">${col}</label>`).join('');
+  document.body.appendChild(popup);
+  const rect=e.currentTarget.getBoundingClientRect();
+  popup.style.left=Math.min(rect.left,window.innerWidth-180)+'px';
+  popup.style.top=(rect.bottom+4)+'px';
+  setTimeout(()=>document.addEventListener('click',()=>document.getElementById('col-picker-popup')?.remove(),{once:true}),10);
+}
+function toggleCol(key,tableId,col,visible){
+  if(!_hiddenCols[key])_hiddenCols[key]=[];
+  if(visible)_hiddenCols[key]=_hiddenCols[key].filter(c=>c!==col);
+  else if(!_hiddenCols[key].includes(col))_hiddenCols[key].push(col);
+  saveHiddenCols2();
+  applyColVisibility(tableId,key);
+}
 
 // ── INIT ──
 loadColOrders();
