@@ -2726,11 +2726,14 @@ function renderMonth(){
   // Render months around current
   for(let o=-2;o<=3;o++) appendMonth(_calYear,_calMonth+o);
 
-  // Scroll to current month
+  // Scroll to current month — wait for paint
   setTimeout(()=>{
-    const cur=document.getElementById(`cm-${_calYear}-${_calMonth}`);
-    if(cur)wrap.scrollTop=cur.offsetTop-2;
-  },60);
+    requestAnimationFrame(()=>{
+      const cur=document.getElementById(`cm-${_calYear}-${_calMonth}`);
+      const wrap2=document.getElementById('cal-grid-wrap');
+      if(cur&&wrap2)wrap2.scrollTop=cur.offsetTop-2;
+    });
+  },150);
 
   setupScrollObserver();
 }
