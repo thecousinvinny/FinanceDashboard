@@ -20,6 +20,10 @@
   --r:10px;--r2:14px
 }
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--s4,#3a3a40);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--border2)}
 
 /* AUTH */
 #auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px}
@@ -40,21 +44,23 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 
 /* APP */
 #app{display:none}
-.hdr{background:var(--s1);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100}
-.hlogo{font-size:17px;font-weight:600}
-.hright{display:flex;align-items:center;gap:10px}
-.sbtn{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:7px 13px;color:var(--text2);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
-.sbtn:hover{background:var(--s3);color:var(--text)}
-.signin-btn{background:var(--accent);color:#fff;border:none;border-radius:var(--r);padding:7px 14px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;display:none}
-.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 24px;display:flex;gap:2px;overflow-x:auto}
-.nt{padding:12px 15px;font-size:13px;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
-.nt:hover{color:var(--text)}
-.nt.on{color:var(--text);border-bottom-color:var(--accent);font-weight:500}
+.hdr{background:rgba(20,20,22,0.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0;display:flex;align-items:stretch;justify-content:space-between;height:48px;position:sticky;top:0;z-index:200;gap:0}
+.hlogo{font-size:15px;font-weight:600;padding:0 20px;display:flex;align-items:center;color:var(--text);letter-spacing:-.02em;white-space:nowrap;border-right:1px solid var(--border)}
+.hright{display:flex;align-items:center;gap:6px;padding:0 16px;border-left:1px solid var(--border)}
+.sbtn{background:transparent;border:1px solid var(--border2);border-radius:var(--r);padding:5px 11px;color:var(--text2);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.sbtn:hover{background:var(--s3);color:var(--text);border-color:var(--border2)}
+.signin-btn{background:var(--accent);color:#fff;border:none;border-radius:var(--r);padding:5px 12px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;display:none}
+/* NAV merged into header */
+.nav{display:flex;gap:0;overflow-x:auto;flex:1;align-items:stretch;padding:0 4px;scrollbar-width:none}
+.nav::-webkit-scrollbar{display:none}
+.nt{padding:0 14px;font-size:12px;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;display:flex;align-items:center;height:100%;border-radius:0}
+.nt:hover{color:var(--text);background:rgba(255,255,255,0.04)}
+.nt.on{color:var(--text);border-bottom-color:var(--accent);font-weight:600}
 .main{padding:24px;max-width:1440px;margin:0 auto}
 
 /* STATS */
 .sg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px}
-.sc{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);padding:20px}
+.sc{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);padding:20px;transition:border-color .2s}.sc:hover{border-color:var(--border2)}
 .sl{font-size:10px;color:var(--text3);font-weight:500;letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px}
 .sv{font-size:26px;font-weight:600;font-family:'DM Mono',monospace}
 .ss{font-size:11px;color:var(--text3);margin-top:4px}
@@ -75,7 +81,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .cg4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:24px}
 .chart-group-label{font-size:11px;font-weight:600;color:var(--text3);padding:16px 2px 10px;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border);margin-bottom:14px}
 @media(max-width:1100px){.cg4{grid-template-columns:1fr 1fr}}
-.cc{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);padding:20px}
+.cc{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);padding:20px;transition:border-color .2s}.cc:hover{border-color:var(--border2)}
 .ct{font-size:12px;font-weight:500;color:var(--text2);margin-bottom:14px}
 .cw{position:relative;height:240px}
 
@@ -90,10 +96,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .tw{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:12px;table-layout:auto}
 thead tr{background:var(--s2)}
-thead th{padding:8px 14px;text-align:left;font-size:10px;font-weight:500;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+thead th{padding:8px 14px;text-align:left;font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
 tbody tr:last-child{border-bottom:none}
-tbody tr:hover{background:var(--s2)}
+tbody tr:hover{background:rgba(255,255,255,0.03)}
 tbody td{padding:9px 14px;color:var(--text);vertical-align:middle;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis}
 .tm{font-family:'DM Mono',monospace;font-size:11px}
 .td2{color:var(--text2)}.td3{color:var(--text3)}
@@ -186,8 +192,8 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .eic{font-size:26px;margin-bottom:7px}
 /* CALENDAR */
 /*  CALENDAR  */
-#tab-calendar{position:fixed;top:96px;left:0;right:0;bottom:0;z-index:90;display:flex;flex-direction:column;background:var(--bg)}
-#tab-calendar.fs-cal{top:56px;z-index:99}
+#tab-calendar{position:fixed;top:48px;left:0;right:0;bottom:0;z-index:90;display:flex;flex-direction:column;background:var(--bg)}
+#tab-calendar.fs-cal{top:48px;z-index:99}
 /* Keep header above calendar always */
 .hdr{z-index:200}
 .cal-layout{display:flex;flex:1;overflow:hidden;min-height:0;height:100%}
@@ -315,27 +321,27 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 <div id="app">
   <header class="hdr">
     <div class="hlogo">Finance Dashboard</div>
+    <nav class="nav">
+      <div class="nt on"  onclick="showTab('dashboard',this)">Dashboard</div>
+      <div class="nt" onclick="showTab('wishlist',this)">Wishlist</div>
+      <div class="nt" onclick="showTab('expenses',this)">Expenses</div>
+      <div class="nt" onclick="showTab('subscriptions',this)">Subscriptions</div>
+      <div class="nt" onclick="showTab('categories',this)">Categories</div>
+      <div class="nt" onclick="showTab('cards',this)">Cards</div>
+      <div class="nt" onclick="showTab('banks',this)">Banks</div>
+      <div class="nt" onclick="showTab('master',this)">Master</div>
+      <div class="nt" onclick="showTab('calendar',this)">Calendar</div>
+    </nav>
     <div class="hright">
-      <button class="btn btn-a" style="gap:5px;" onclick="openFoodMo()">+ Food</button>
-      <button class="btn btn-a" style="gap:5px;" onclick="openModal('wish')">+ Wishlist</button>
-      <button class="btn btn-a" style="gap:5px;border-color:var(--green);color:var(--green);" onclick="openIncomeMo()">+ Income</button>
-      <button class="signin-btn" id="signin-btn" onclick="doSignIn()">↗ Sign in</button>
+      <button class="btn btn-a" style="font-size:11px;padding:5px 10px;" onclick="openFoodMo()">+ Food</button>
+      <button class="btn btn-a" style="font-size:11px;padding:5px 10px;" onclick="openModal('wish')">+ Wishlist</button>
+      <button class="btn btn-a" style="font-size:11px;padding:5px 10px;border-color:var(--green);color:var(--green);" onclick="openIncomeMo()">+ Income</button>
+      <button class="signin-btn" id="signin-btn" onclick="doSignIn()">Sign in</button>
       <button class="sbtn" onclick="syncAll()">↻ Sync</button>
-      <button class="sbtn" onclick="repairAllSheets()" title="Fix missing or mismatched sheet headers">Repair</button>
+      <button class="sbtn" onclick="repairAllSheets()">Repair</button>
       <button class="btn" onclick="logout()">Disconnect</button>
     </div>
   </header>
-  <nav class="nav">
-    <div class="nt on"  onclick="showTab('dashboard',this)">Dashboard</div>
-    <div class="nt" onclick="showTab('wishlist',this)">Wishlist</div>
-    <div class="nt" onclick="showTab('expenses',this)">Expenses</div>
-    <div class="nt" onclick="showTab('subscriptions',this)">Subscriptions</div>
-    <div class="nt" onclick="showTab('categories',this)">Categories</div>
-    <div class="nt" onclick="showTab('cards',this)">Cards</div>
-    <div class="nt" onclick="showTab('banks',this)">Banks</div>
-    <div class="nt" onclick="showTab('master',this)">Master</div>
-    <div class="nt" onclick="showTab('calendar',this)">Calendar</div>
-  </nav>
   <div class="main">
 
     <div id="tab-dashboard">
@@ -542,22 +548,20 @@ td.editing{background:rgba(108,99,255,0.05)!important}
         <!-- Sidebar -->
         <div class="cal-sidebar">
           <div>
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-            <div class="cal-sidebar-title" style="margin-bottom:0">My Calendars</div>
-          </div>
-          <div style="padding:0 0 10px;border-bottom:1px solid var(--border);margin-bottom:10px;">
-            <div style="font-size:10px;color:var(--text3);margin-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:.06em">App Events</div>
-            <div class="cal-cal-item" onclick="toggleAppEvents('sub')">
-              <div class="cal-cal-dot" id="sub-dot" style="background:#f59e0b;cursor:pointer" ondblclick="event.stopPropagation();openAppColorPicker(event,'sub')" title="Double-click to change color"></div>
-              <span style="flex:1;font-size:12px;cursor:pointer">Subscriptions</span>
-              <span id="sub-check" class="cal-cal-check">✓</span>
+            <div style="padding:0 0 10px;border-bottom:1px solid var(--border);margin-bottom:10px;">
+              <div class="cal-sidebar-title">App Events</div>
+              <div class="cal-cal-item" onclick="toggleAppEvents('sub')">
+                <div class="cal-cal-dot" id="sub-dot" style="background:#f59e0b;cursor:pointer" ondblclick="event.stopPropagation();openAppColorPicker(event,'sub')" title="Double-click to change color"></div>
+                <span style="flex:1;font-size:12px;cursor:pointer">Subscriptions</span>
+                <span id="sub-check" class="cal-cal-check">✓</span>
+              </div>
+              <div class="cal-cal-item" onclick="toggleAppEvents('income')">
+                <div class="cal-cal-dot" id="income-dot" style="background:#22c55e;cursor:pointer" ondblclick="event.stopPropagation();openAppColorPicker(event,'income')" title="Double-click to change color"></div>
+                <span style="flex:1;font-size:12px;cursor:pointer">Income</span>
+                <span id="income-check" class="cal-cal-check">✓</span>
+              </div>
             </div>
-            <div class="cal-cal-item" onclick="toggleAppEvents('income')">
-              <div class="cal-cal-dot" id="income-dot" style="background:#22c55e;cursor:pointer" ondblclick="event.stopPropagation();openAppColorPicker(event,'income')" title="Double-click to change color"></div>
-              <span style="flex:1;font-size:12px;cursor:pointer">Income</span>
-              <span id="income-check" class="cal-cal-check">✓</span>
-            </div>
-          </div>
+            <div class="cal-sidebar-title">My Calendars</div>
             <div id="cal-sidebar-list"></div>
           </div>
           <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
@@ -919,10 +923,18 @@ async function updateRow(sheet,row,vals){
   await gapi.client.sheets.spreadsheets.values.update({spreadsheetId:cfg.sid,range:`${sheet}!A${row}:${col}${row}`,valueInputOption:'USER_ENTERED',resource:{values:[vals]}});
 }
 async function delRow(sheet,row){
-  const meta=await gapi.client.sheets.spreadsheets.get({spreadsheetId:cfg.sid});
-  const sh=meta.result.sheets.find(s=>s.properties.title===sheet);
-  if(!sh)return;
-  await gapi.client.sheets.spreadsheets.batchUpdate({spreadsheetId:cfg.sid,resource:{requests:[{deleteDimension:{range:{sheetId:sh.properties.sheetId,dimension:'ROWS',startIndex:row-1,endIndex:row}}}]}});
+  try{
+    const meta=await gapi.client.sheets.spreadsheets.get({spreadsheetId:cfg.sid});
+    const sh=meta.result.sheets.find(s=>s.properties.title===sheet);
+    if(!sh){toast(`Sheet "${sheet}" not found`,'err');return false;}
+    await gapi.client.sheets.spreadsheets.batchUpdate({spreadsheetId:cfg.sid,resource:{requests:[{deleteDimension:{range:{sheetId:sh.properties.sheetId,dimension:'ROWS',startIndex:row-1,endIndex:row}}}]}});
+    return true;
+  }catch(e){
+    const msg=e?.result?.error?.message||e?.message||'Unknown error';
+    toast(`Delete failed: ${msg}`,'err');
+    console.error('delRow error:',sheet,row,e);
+    return false;
+  }
 }
 
 // ── SYNC ──
@@ -2035,8 +2047,10 @@ function renderBanks(){
   }).join('');
 }
 async function delItem(sheet,row){
-  if(!confirm('Delete this item?'))return;
-  await delRow(sheet,row);await syncAll();toast('Deleted','ok');
+  const label=sheet==='Expenses'?'expense':sheet==='Banks'?'bank':sheet==='Cards'?'card':sheet==='Categories'?'category':sheet==='Subscriptions'?'subscription':sheet==='Master'?'entry':'item';
+  if(!confirm(`Delete this ${label}?`))return;
+  const ok=await delRow(sheet,row);
+  if(ok){await syncAll();toast('Deleted','ok');}
 }
 
 // ── MODAL ──
