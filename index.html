@@ -300,7 +300,47 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 #toast.ok{border-color:rgba(34,197,94,.4);color:var(--green)}
 #toast.err{border-color:rgba(239,68,68,.4);color:var(--red)}
 @media(max-width:900px){.sg{grid-template-columns:repeat(2,1fr)}.cg{grid-template-columns:1fr}}
-@media(max-width:600px){.main{padding:14px}.hdr{padding:0 14px}}
+@media(max-width:600px){
+  .main{padding:12px;padding-bottom:80px}
+  .hdr{padding:0 12px}
+  /* Hide desktop nav tabs in header on mobile */
+  .nav{display:none}
+  /* Show mobile bottom nav */
+  #mobile-nav{display:flex!important}
+  /* Touch friendly buttons */
+  .btn,.sbtn,.cal-nav-btn,.nt,.sort-btn{min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center}
+  /* Bigger calendar cells */
+  .cal-cell{min-height:80px}
+  .cal-day-hdr{font-size:9px;padding:6px 2px}
+  /* Stack stat cards */
+  .sg{grid-template-columns:1fr!important}
+  /* Full width panels */
+  .panel{margin-bottom:12px}
+  /* Bigger table touch targets */
+  tbody td{padding:12px 10px}
+  /* Modal full screen on mobile */
+  .mbox{width:100%!important;max-width:100%!important;border-radius:16px 16px 0 0!important;position:fixed;bottom:0;left:0;right:0;max-height:90vh;overflow-y:auto}
+  .mo{align-items:flex-end!important;padding:0!important}
+  /* Calendar full height on mobile */
+  #tab-calendar{height:calc(100vh - 48px - 60px)}
+  /* Food/wishlist FAB */
+  #mobile-fab{display:flex!important}
+}
+/* Pull to refresh indicator */
+#ptr-indicator{position:fixed;top:48px;left:50%;transform:translateX(-50%);background:var(--s1);border:1px solid var(--border2);border-radius:20px;padding:6px 16px;font-size:12px;color:var(--text3);z-index:500;display:none;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+#ptr-indicator.visible{display:flex}
+/* Mobile bottom nav */
+#mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:60px;background:rgba(20,20,22,0.95);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--border);z-index:300;align-items:stretch;justify-content:space-around;padding:0}
+.mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--text3);border:none;background:transparent;font-family:'DM Sans',sans-serif;padding:0;min-height:60px;-webkit-tap-highlight-color:transparent}
+.mob-tab.on{color:var(--accent)}
+.mob-tab svg{width:22px;height:22px;flex-shrink:0}
+.mob-tab span{font-size:9px;font-weight:500;letter-spacing:.03em}
+/* Mobile FAB */
+#mobile-fab{display:none;position:fixed;bottom:72px;right:16px;flex-direction:column;gap:10px;z-index:400;align-items:flex-end}
+.fab-btn{height:44px;border-radius:22px;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;padding:0 18px;box-shadow:0 4px 16px rgba(0,0,0,.4);display:flex;align-items:center;gap:8px;white-space:nowrap;-webkit-tap-highlight-color:transparent;transition:transform .15s}
+.fab-btn:active{transform:scale(.96)}
+.fab-main{width:56px;height:56px;border-radius:50%;background:var(--accent);color:#fff;font-size:24px;padding:0;justify-content:center}
+
 </style>
 </head>
 <body>
@@ -340,9 +380,9 @@ td.editing{background:rgba(108,99,255,0.05)!important}
       <div class="nt" onclick="showTab('calendar',this)">Calendar</div>
     </nav>
     <div class="hright">
-      <button class="btn btn-a" style="font-size:11px;padding:5px 10px;" onclick="openFoodMo()">+ Food</button>
-      <button class="btn btn-a" style="font-size:11px;padding:5px 10px;" onclick="openModal('wish')">+ Wishlist</button>
-      <button class="btn btn-a" style="font-size:11px;padding:5px 10px;border-color:var(--green);color:var(--green);" onclick="openIncomeMo()">+ Income</button>
+      <button class="btn btn-a" style="font-size:11px;padding:5px 12px;background:rgba(34,197,94,0.15);border-color:var(--green);color:var(--green);" onclick="openFoodMo()" title="Add food expense (F)">+ Food</button>
+      <button class="btn btn-a" style="font-size:11px;padding:5px 12px;" onclick="openModal('wish')" title="Add to wishlist (W)">+ Wishlist</button>
+      <button class="btn btn-a" style="font-size:11px;padding:5px 12px;background:rgba(34,197,94,0.15);border-color:var(--green);color:var(--green);" onclick="openIncomeMo()" title="Add income (I)">+ Income</button>
       <button class="signin-btn" id="signin-btn" onclick="doSignIn()">Sign in</button>
       <button class="sbtn" onclick="syncAll()">↻ Sync</button>
       <button class="sbtn" onclick="repairAllSheets()">Repair</button>
@@ -3057,6 +3097,70 @@ async function initCalendar(){
   // Don't auto-create sub events - only create when explicitly triggered
 }
 
+// ── MOBILE UX ──
+function initMobileUX(){
+  // Sync mobile nav with showTab
+  const origShowTab=window.showTab;
+  // Pull to refresh
+  let _ptrStart=0,_ptrActive=false;
+  const ptr=document.getElementById('ptr-indicator');
+  document.addEventListener('touchstart',e=>{
+    if(window.scrollY===0&&e.touches.length===1)_ptrStart=e.touches[0].clientY;
+  },{passive:true});
+  document.addEventListener('touchmove',e=>{
+    if(!_ptrStart)return;
+    const dy=e.touches[0].clientY-_ptrStart;
+    if(dy>60&&!_ptrActive){
+      _ptrActive=true;
+      if(ptr){ptr.textContent='↑ Release to refresh';ptr.classList.add('visible');}
+    }
+  },{passive:true});
+  document.addEventListener('touchend',()=>{
+    if(_ptrActive){
+      if(ptr){ptr.textContent='↻ Syncing…';}
+      syncAll().then(()=>{
+        if(ptr){ptr.classList.remove('visible');}
+      });
+    }
+    _ptrStart=0;_ptrActive=false;
+  },{passive:true});
+
+  // Improve dashboard swipe with momentum feel
+  const dashWrap=document.querySelector('.dash-slider-wrap');
+  if(dashWrap){
+    dashWrap.style.cssText+='scroll-snap-type:x mandatory;overflow-x:auto;display:flex;scrollbar-width:none;';
+    dashWrap.querySelectorAll('.dash-page')?.forEach(p=>{
+      p.style.scrollSnapAlign='start';
+      p.style.flexShrink='0';
+      p.style.width='100%';
+    });
+  }
+}
+
+// Sync mobile nav active state with showTab
+const _origShowTab=window.showTab;
+window.showTab=function(name,el){
+  _origShowTab(name,el);
+  document.querySelectorAll('.mob-tab').forEach(t=>{
+    t.classList.toggle('on',t.getAttribute('data-tab')===name);
+  });
+};
+
+document.addEventListener('DOMContentLoaded',initMobileUX);
+
+// Keyboard shortcuts
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.isContentEditable)return;
+  if(e.key==='f'||e.key==='F')openFoodMo();
+  if(e.key==='w'||e.key==='W')openModal('wish');
+  if(e.key==='i'||e.key==='I')openIncomeMo();
+  if(e.key==='Escape'){
+    document.querySelectorAll('.mo.open').forEach(m=>m.classList.remove('open'));
+    document.getElementById('cal-month-picker')?.remove();
+    document.getElementById('cal-color-popup')?.remove();
+  }
+});
+
 // ── MONTH PICKER ──
 let _pickerYear=new Date().getFullYear();
 function openMonthPicker(e){
@@ -3374,5 +3478,37 @@ loadExpColOrder();
 loadSortState();
 if(loadCfg()){bootApp();}
 </script>
+  <!-- Pull to refresh indicator -->
+  <div id="ptr-indicator">↓ Release to refresh</div>
+
+  <!-- Mobile FAB -->
+  <div id="mobile-fab">
+    <button class="fab-btn" style="background:var(--green);color:#fff;" onclick="openFoodMo()">+ Food</button>
+    <button class="fab-btn" style="background:var(--accent);color:#fff;" onclick="openModal('wish')">+ Wishlist</button>
+  </div>
+
+  <!-- Mobile bottom nav -->
+  <nav id="mobile-nav">
+    <button class="mob-tab on" onclick="showTab('dashboard',this)" data-tab="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span>Dash</span>
+    </button>
+    <button class="mob-tab" onclick="showTab('expenses',this)" data-tab="expenses">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h12"/></svg>
+      <span>Expenses</span>
+    </button>
+    <button class="mob-tab" onclick="showTab('subscriptions',this)" data-tab="subscriptions">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path d="M12 6v6l4 2"/></svg>
+      <span>Subs</span>
+    </button>
+    <button class="mob-tab" onclick="showTab('master',this)" data-tab="master">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      <span>Master</span>
+    </button>
+    <button class="mob-tab" onclick="showTab('calendar',this)" data-tab="calendar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      <span>Calendar</span>
+    </button>
+  </nav>
 </body>
 </html>
