@@ -2772,20 +2772,8 @@ function appendMonthCells(year,month){
   if(!_calMinMonth||yr<_calMinMonth.yr||(yr===_calMinMonth.yr&&mo<_calMinMonth.mo)) _calMinMonth={yr,mo};
   if(!_calMaxMonth||yr>_calMaxMonth.yr||(yr===_calMaxMonth.yr&&mo>_calMaxMonth.mo)) _calMaxMonth={yr,mo};
 
-  // Build cells for this month
-  // Day 1 needs grid-column-start if it doesn't fall on Sunday
+  // Build cells — day-1 cell is the scroll anchor, no separate anchor element
   const cells=[];
-
-  // Month marker anchor (invisible, for scrolling)
-  const anchor=document.createElement('div');
-  anchor.id=`cm-${yr}-${mo}`;
-  anchor.setAttribute('data-year',yr);
-  anchor.setAttribute('data-month',mo);
-  anchor.style.cssText=`grid-column:1;height:0;overflow:visible;position:relative;`;
-  // Tiny month label inside anchor
-  anchor.innerHTML=`<span style="position:absolute;top:4px;left:4px;font-size:9px;font-weight:600;color:var(--text3);opacity:.7;pointer-events:none;z-index:5;letter-spacing:.05em">${new Date(yr,mo,1).toLocaleString('default',{month:'short'}).toUpperCase()} ${yr}</span>`;
-  cells.push({el:anchor,colStart:firstDay===0?null:null}); // anchor placed before day 1
-
   for(let day=1;day<=daysInMonth;day++){
     const ds=`${yr}-${String(mo+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
     const isToday=ds===localToday();
@@ -2797,25 +2785,28 @@ function appendMonthCells(year,month){
     contEvs.forEach(ev=>{evHtml+=buildEventPill(ev,ds);});
     mainEvs.slice(0,5).forEach(ev=>{evHtml+=buildEventPill(ev,ds);});
     if(mainEvs.length>5)evHtml+=`<div class="cal-more">${mainEvs.length-5} more</div>`;
-
     const cell=document.createElement('div');
     cell.className=`cal-cell${isToday?' today':''}`;
     cell.setAttribute('ondblclick',`openCalEventModal('${ds}',null)`);
-    if(day===1&&firstDay>0) cell.style.gridColumnStart=firstDay+1;
+    // Day 1: set grid column and use as scroll anchor
+    if(day===1){
+      if(firstDay>0)cell.style.gridColumnStart=firstDay+1;
+      cell.id=`cm-${yr}-${mo}`;
+      cell.setAttribute('data-year',yr);
+      cell.setAttribute('data-month',mo);
+    }
     const monthAbbr=new Date(yr,mo,1).toLocaleString('default',{month:'long'});
     const dnLabel=day===1?`${monthAbbr} 1`:String(day);
-    cell.innerHTML=`<div class="cal-dn" style="${day===1?'width:auto;padding:0 4px;border-radius:4px;font-size:11px;':''}">${dnLabel}</div>${evHtml}`;
-    cells.push({el:cell});
+    cell.innerHTML=`<div class="cal-dn" style="${day===1?'width:auto;padding:0 4px;font-size:11px;':''}">${dnLabel}</div>${evHtml}`;
+    cells.push(cell);
   }
 
   // Insert into grid
   if(isPrepend){
-    // Prepend: insert before existing content
-    // The anchor goes at col firstDay+1 of a new row
     const refNode=grid.firstChild;
-    cells.slice().reverse().forEach(({el})=>grid.insertBefore(el,refNode));
+    cells.slice().reverse().forEach(el=>grid.insertBefore(el,refNode));
   } else {
-    cells.forEach(({el})=>grid.appendChild(el));
+    cells.forEach(el=>grid.appendChild(el));
   }
 
   // Move sentinels
