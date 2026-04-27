@@ -2819,29 +2819,26 @@ function appendMonth(year,month){
   section.setAttribute('data-year',yr);
   section.setAttribute('data-month',mo);
 
-  // Month label — full width, no grid
+  // NO leading grey cells, NO trailing grey cells
+  // Month starts exactly on day 1, grid-column set to correct weekday
+  // First day cell gets grid-column-start to push it to the right weekday
   let html=`<div style="padding:8px 10px 4px;font-size:13px;font-weight:600;color:var(--text2);background:var(--bg);border-top:2px solid var(--border);letter-spacing:-.01em">${monthName}</div>`;
   html+=`<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));">`;
 
-  // Leading grey cells (prev month overflow) — greyed out, no interaction
-  const daysInPrev=new Date(yr,mo,0).getDate();
-  for(let i=0;i<firstDay;i++){
-    const dd=daysInPrev-(firstDay-i-1);
-    const prevMo=mo===0?11:mo-1;const prevYr=mo===0?yr-1:yr;
-    const ds=`${prevYr}-${String(prevMo+1).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
-    html+=renderDayCell(dd,ds,true,{...prevByDate,...byDate},today);
-  }
-  // This month's days
+  // This month's days only — first day positioned via grid-column-start
   for(let day=1;day<=daysInMonth;day++){
     const ds=`${yr}-${String(mo+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-    html+=renderDayCell(day,ds,false,byDate,today);
-  }
-  // NO trailing overflow days — next month starts fresh
-  // If last day doesn't end on Saturday, fill with empty cells to complete the row
-  const total=firstDay+daysInMonth;
-  const rem=total%7===0?0:7-(total%7);
-  for(let i=0;i<rem;i++){
-    html+=`<div class="cal-cell other-month"></div>`;
+    const style=day===1&&firstDay>0?`style="grid-column-start:${firstDay+1}"`:'';
+    const isToday2=ds===localToday();
+    const allEvs2=(byDate[ds]||[]).slice();
+    const contEvs2=allEvs2.filter(e=>e._isCont);
+    const mainEvs2=allEvs2.filter(e=>!e._isCont);
+    mainEvs2.sort((a,b)=>((b._isMulti?2:0)+(a._priority||0))-((a._isMulti?2:0)+(b._priority||0)));
+    let evHtml2='';
+    contEvs2.forEach(ev=>{evHtml2+=buildEventPill(ev,ds);});
+    mainEvs2.slice(0,5).forEach(ev=>{evHtml2+=buildEventPill(ev,ds);});
+    if(mainEvs2.length>5)evHtml2+=`<div class="cal-more">${mainEvs2.length-5} more</div>`;
+    html+=`<div class="cal-cell${isToday2?' today':''}" ${style} ondblclick="openCalEventModal('${ds}',null)"><div class="cal-dn">${day}</div>${evHtml2}</div>`;
   }
   html+='</div>';
   section.innerHTML=html;
