@@ -106,6 +106,10 @@ html{scrollbar-gutter:stable;overflow-y:scroll}
 .tw{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:12px;table-layout:auto}
 #tab-master table td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:0}
+/* Column resize handle */
+.col-resize-handle{position:absolute;right:0;top:0;bottom:0;width:5px;cursor:col-resize;user-select:none;z-index:10}
+.col-resize-handle:hover,.col-resize-handle.resizing{background:var(--accent);opacity:.5}
+th{position:relative}
 thead tr{background:var(--s2)}
 thead th{padding:8px 14px;text-align:left;font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
@@ -615,14 +619,8 @@ td.editing{background:rgba(108,99,255,0.05)!important}
         </select>
         
       </div>
-      <div style="overflow-x:auto;width:100%;"><table style="width:100%;table-layout:fixed;min-width:900px;">
-        <colgroup>
-          <col style="width:80px"><col style="width:80px"><col style="width:140px"><col style="width:140px">
-          <col style="width:80px"><col style="width:65px"><col style="width:65px"><col style="width:65px">
-          <col style="width:90px"><col style="width:130px"><col style="width:60px"><col style="width:75px">
-          <col style="width:55px"><col style="width:36px">
-        </colgroup>
-        <thead><tr><th>Date</th><th>Type</th><th>Name</th><th>Description</th><th>Category</th><th>Cost</th><th>Original</th><th>Savings</th><th>Card</th><th>Bank</th><th>Billing</th><th>Status</th><th>Source</th><th></th></tr></thead>
+      <div style="overflow-x:auto;width:100%;"><table id="master-table" style="width:100%;table-layout:auto;">
+<thead><tr><th class="col-date">Date</th><th class="col-sm">Type</th><th class="col-lg">Name</th><th style="min-width:120px">Description</th><th class="col-md">Category</th><th class="col-num">Cost</th><th class="col-num">Original</th><th class="col-num">Savings</th><th class="col-sm">Card</th><th class="col-md">Bank</th><th class="col-sm">Billing</th><th class="col-sm">Status</th><th class="col-sm">Source</th><th class="col-act"></th></tr></thead>
         <tbody id="master-body"><tr><td colspan="14"><div class="empty"><div class="eic"></div>Loading...</div></td></tr></tbody>
       </table></div>
       <div class="show-more" id="sm-master" onclick="showMore('master')" style="display:none;margin:0;border-radius:0;">Show more</div>
@@ -1108,7 +1106,7 @@ function parse(rows,hd){
 }
 
 // ── RENDER ──
-function renderAll(){renderDash();renderWish();renderExp();renderSub();renderCat();renderCards();renderBanks();renderMaster();setTimeout(()=>{initAllDragCols();updateSortBtns('wish');updateSortBtns('exp');updateSortBtns('sub');},0);}
+function renderAll(){renderDash();renderWish();renderExp();renderSub();renderCat();renderCards();renderBanks();renderMaster();setTimeout(()=>{initAllDragCols();updateSortBtns('wish');updateSortBtns('exp');updateSortBtns('sub');initAllColResize();},50);}
 function $f(n){return'$'+(parseFloat(n)||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});}
 function localToday(){
   const d=new Date();
@@ -3638,6 +3636,45 @@ function openColPicker(e,key,tableId,renderFn){
   setTimeout(()=>document.addEventListener('click',()=>document.getElementById('col-picker-popup')?.remove(),{once:true}),10);
 }
 
+
+// ── COLUMN RESIZE ──
+function initColResize(tableEl){
+  if(!tableEl||tableEl._resizeInit)return;
+  tableEl._resizeInit=true;
+  const ths=[...tableEl.querySelectorAll('thead th')];
+  ths.forEach((th,i)=>{
+    // Add resize handle to all but last column
+    if(i===ths.length-1)return;
+    const handle=document.createElement('div');
+    handle.className='col-resize-handle';
+    th.appendChild(handle);
+    let startX,startW;
+    handle.addEventListener('mousedown',e=>{
+      e.preventDefault();e.stopPropagation();
+      startX=e.clientX;
+      startW=th.offsetWidth;
+      handle.classList.add('resizing');
+      const onMove=e=>{
+        const w=Math.max(40,startW+(e.clientX-startX));
+        th.style.width=w+'px';
+        th.style.minWidth=w+'px';
+      };
+      const onUp=()=>{
+        handle.classList.remove('resizing');
+        document.removeEventListener('mousemove',onMove);
+        document.removeEventListener('mouseup',onUp);
+      };
+      document.addEventListener('mousemove',onMove);
+      document.addEventListener('mouseup',onUp);
+    });
+  });
+}
+// Auto-init resize on any table with thead
+function initAllColResize(){
+  document.querySelectorAll('table').forEach(t=>{
+    if(t.querySelector('thead th'))initColResize(t);
+  });
+}
 
 // ── INIT ──
 loadColOrders();
