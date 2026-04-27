@@ -2668,6 +2668,9 @@ function renderMonth(){
 
   console.log('[CAL] Events for today ('+_dbgToday+'):', (byDate[_dbgToday]||[]).map(e=>e.summary));
   console.log('[CAL] visEvents total:', visEvents.length);
+  // Debug: show all VinnyN events and dates
+  const vinnyEvs=visEvents.filter(e=>e._calId&&_allCalendars.find(c=>c.id===e._calId)?.summary==='VinnyN');
+  console.log('[CAL] VinnyN visible events:', vinnyEvs.map(e=>({title:e.summary,date:e.start?.date||e.start?.dateTime?.slice(0,10)})));
   let day=1,nextDay=1;
   for(let i=0;i<42;i++){
     let date,isOther=false;
