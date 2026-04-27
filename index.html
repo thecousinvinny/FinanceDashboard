@@ -66,7 +66,7 @@ html{scrollbar-gutter:stable;overflow-y:scroll}
 .nt{padding:0 14px;font-size:12px;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;display:flex;align-items:center;height:100%;border-radius:0}
 .nt:hover{color:var(--text);background:rgba(255,255,255,0.04)}
 .nt.on{color:var(--text);border-bottom-color:var(--accent);font-weight:600}
-.main{padding:24px;padding-bottom:84px;max-width:1440px;margin:0 auto}
+.main{padding:16px;padding-bottom:84px;max-width:1440px;margin:0 auto}
 
 /* STATS */
 .sg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px}
@@ -379,27 +379,15 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 </div>
 
 <div id="app">
-  <header class="hdr">
-    <div class="hlogo">Finance Dashboard</div>
-    <nav class="nav">
-      <div class="nt on"  onclick="showTab('dashboard',this)">Dashboard</div>
-      <div class="nt" onclick="showTab('wishlist',this)">Wishlist</div>
-      <div class="nt" onclick="showTab('expenses',this)">Expenses</div>
-      <div class="nt" onclick="showTab('subscriptions',this)">Subscriptions</div>
-      <div class="nt" onclick="showTab('categories',this)">Categories</div>
-      <div class="nt" onclick="showTab('cards',this)">Cards</div>
-      <div class="nt" onclick="showTab('banks',this)">Banks</div>
-      <div class="nt" onclick="showTab('master',this)">Master</div>
-      <div class="nt" onclick="showTab('calendar',this)">Calendar</div>
-    </nav>
-    <div class="hright">
-
-      <button class="signin-btn" id="signin-btn" onclick="doSignIn()">Sign in</button>
-      <button class="sbtn" onclick="syncAll()">↻ Sync</button>
-      <button class="sbtn" onclick="repairAllSheets()">Repair</button>
-      <button class="btn" onclick="logout()">Disconnect</button>
-    </div>
-  </header>
+  <!-- Floating menu button -->
+  <div id="app-menu-btn" onclick="toggleAppMenu()" style="position:fixed;top:10px;right:12px;z-index:500;width:36px;height:36px;border-radius:50%;background:rgba(20,20,22,0.7);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--text2);transition:background .15s;" onmouseover="this.style.background='rgba(60,60,70,0.85)'" onmouseout="this.style.background='rgba(20,20,22,0.7)'" title="Menu">⋯</div>
+  <div id="app-menu-popup" style="display:none;position:fixed;top:52px;right:12px;z-index:500;background:var(--s1);border:1px solid var(--border2);border-radius:12px;padding:8px;box-shadow:0 8px 32px rgba(0,0,0,.5);min-width:160px;">
+    <button class="sbtn" onclick="syncAll();toggleAppMenu()" style="width:100%;text-align:left;margin-bottom:4px;">↻ Sync</button>
+    <button class="sbtn" onclick="repairAllSheets();toggleAppMenu()" style="width:100%;text-align:left;margin-bottom:4px;">🔧 Repair</button>
+    <button class="signin-btn" id="signin-btn" onclick="doSignIn()" style="width:100%;text-align:left;margin-bottom:4px;display:none;">Sign in</button>
+    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+    <button class="btn" onclick="logout()" style="width:100%;text-align:left;color:var(--red);">Disconnect</button>
+  </div>
   <div class="main">
 
     <div id="tab-dashboard">
@@ -3314,6 +3302,15 @@ document.addEventListener('keydown',e=>{
   }
 });
 
+function toggleAppMenu(){
+  const p=document.getElementById('app-menu-popup');
+  if(!p)return;
+  const open=p.style.display==='none';
+  p.style.display=open?'block':'none';
+  if(open)setTimeout(()=>document.addEventListener('click',()=>{
+    document.getElementById('app-menu-popup').style.display='none';
+  },{once:true}),10);
+}
 // ── MONTH PICKER ──
 let _pickerYear=new Date().getFullYear();
 function openMonthPicker(e){
