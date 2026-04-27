@@ -1351,7 +1351,7 @@ function renderCharts(){
   const months12=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const yrKeys2=months12.map((_,i)=>`${yr2}-${String(i+1).padStart(2,'0')}`);
   const lyKeys2=months12.map((_,i)=>`${ly2}-${String(i+1).padStart(2,'0')}`);
-  const cmpOpts={responsive:true,maintainAspectRatio:true,plugins:{legend:{labels:{color:'#8a8a9a',font:{size:10}}},datalabels:{display:false}},scales:{x:{ticks:{color:'#555563',font:{size:9}}},y:{ticks:{color:'#555563',font:{size:9},callback:v=>'$'+Math.round(v).toLocaleString()}}}};
+  const cmpOpts={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8a8a9a',font:{size:10}}},datalabels:{display:false}},scales:{x:{ticks:{color:'#555563',font:{size:9}}},y:{ticks:{color:'#555563',font:{size:9},callback:v=>'$'+Math.round(v).toLocaleString()}}}};
 
   const yrMoSpend=yrKeys2.map(k=>Math.round(pro.filter(e=>toSortableDate(e.Date).startsWith(k)).reduce((s,e)=>s+(parseFloat(e.Cost)||0),0)));
   const lyMoSpend=lyKeys2.map(k=>Math.round(pro.filter(e=>toSortableDate(e.Date).startsWith(k)).reduce((s,e)=>s+(parseFloat(e.Cost)||0),0)));
