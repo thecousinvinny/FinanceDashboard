@@ -128,8 +128,9 @@ th.col-md,td.col-md{width:100px;min-width:80px}
 th.col-lg,td.col-lg{min-width:160px}
 th.col-num,td.col-num{width:80px;min-width:60px;text-align:right}
 th.col-date,td.col-date{width:100px;min-width:90px}
-/* Master table uses colgroup widths — remove class min-widths */
-#master-table th,#master-table td{min-width:0!important}
+/* Master table uses colgroup widths — remove class overrides */
+#master-table th{text-align:left!important;min-width:0!important}
+#master-table td{min-width:0!important}
 th.col-act,td.col-act{width:1%;white-space:nowrap}
 /* Inline edit inputs stay within cell */
 .ie-input{max-width:100%;box-sizing:border-box}
@@ -1674,7 +1675,7 @@ function ieCancel(el,val,td){td.classList.remove('editing');el.textContent=val||
 const MASTER_FIELD_MAP={
   // Expense fields
   Name:'Name', Description:'Description', Category:'Category',
-  Cost:'Cost', OCost:'OCost', Card:'Card', Date:'Date', Status:'Status',
+  Cost:'Cost', OCost:'Original', Card:'Card', Date:'Date', Status:'Status',
   // Subscription fields
   Billing:'Billing',
 };
@@ -1711,8 +1712,8 @@ async function syncEditToMaster(sheet,item,field,newVal){
   if(!match)return;
 
   match[masterField]=newVal;
-  if(field==='Cost'||field==='OCost'){
-    const o=parseFloat(match.OCost)||0,cost=parseFloat(match.Cost)||0;
+  if(field==='Cost'||field==='Original'){
+    const o=parseFloat(match.Original)||0,cost=parseFloat(match.Cost)||0;
     match.Savings=o>0&&cost>0?(o-cost).toFixed(2):'0';
   }
   await updateRow('Master',match._row,HD.master.map(h=>match[h]||''));
@@ -2149,7 +2150,7 @@ function renderMaster(){
       <td>${ie('Master',m._row,'Description',m.Description)}</td>
       <td>${m.Category?catTag(m.Category):'—'}</td>
       <td class="${isIncome?'tgrn':'tred'}">${isIncome?'+':'-'}${$f(m.Cost)}</td>
-      <td>${ie('Master',m._row,'OCost',m.OCost,'num')}</td>
+      <td>${ie('Master',m._row,'Original',m.Original,'num')}</td>
       <td class="${savings>0?'tgrn':'td3'}">${savings>0?'+'+$f(savings):'—'}</td>
       <td>${ie('Master',m._row,'Card',m.Card,'card-sel')}</td>
       <td>${ie('Master',m._row,'Bank',m.Bank,'bank-sel')}</td>
