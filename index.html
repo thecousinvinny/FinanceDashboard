@@ -2807,8 +2807,10 @@ function appendMonth(year,month){
 
   const firstDay=new Date(yr,mo,1).getDay();
   const daysInMonth=new Date(yr,mo+1,0).getDate();
-  const daysInPrev=new Date(yr,mo,0).getDate();
   const byDate=getByDate(yr,mo);
+  // Also get events from adjacent months for overflow days
+  const prevByDate=firstDay>0?getByDate(yr,mo-1):{};
+  const nextByDate=getByDate(yr,mo+1);
   const today=new Date();
   const monthName=new Date(yr,mo,1).toLocaleString('default',{month:'long',year:'numeric'});
 
@@ -2817,34 +2819,34 @@ function appendMonth(year,month){
   section.setAttribute('data-year',yr);
   section.setAttribute('data-month',mo);
 
-  // Month label row spanning all 7 cols
-  let html=`<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));">`;
-  html+=`<div style="grid-column:1/-1;padding:6px 10px;font-size:12px;font-weight:600;color:var(--text3);background:var(--bg);border-top:1px solid var(--border);letter-spacing:.02em">${monthName}</div>`;
+  // Month label — full width, no grid
+  let html=`<div style="padding:8px 10px 4px;font-size:13px;font-weight:600;color:var(--text2);background:var(--bg);border-top:2px solid var(--border);letter-spacing:-.01em">${monthName}</div>`;
+  html+=`<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));">`;
 
-  // Prev month filler
+  // Leading grey cells (prev month overflow) — greyed out, no interaction
+  const daysInPrev=new Date(yr,mo,0).getDate();
   for(let i=0;i<firstDay;i++){
     const dd=daysInPrev-(firstDay-i-1);
     const prevMo=mo===0?11:mo-1;const prevYr=mo===0?yr-1:yr;
     const ds=`${prevYr}-${String(prevMo+1).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
-    html+=renderDayCell(dd,ds,true,byDate,today);
+    html+=renderDayCell(dd,ds,true,{...prevByDate,...byDate},today);
   }
-  // This month
+  // This month's days
   for(let day=1;day<=daysInMonth;day++){
     const ds=`${yr}-${String(mo+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
     html+=renderDayCell(day,ds,false,byDate,today);
   }
-  // Next month filler
+  // NO trailing overflow days — next month starts fresh
+  // If last day doesn't end on Saturday, fill with empty cells to complete the row
   const total=firstDay+daysInMonth;
   const rem=total%7===0?0:7-(total%7);
-  for(let i=1;i<=rem;i++){
-    const nextMo=mo===11?0:mo+1;const nextYr=mo===11?yr+1:yr;
-    const ds=`${nextYr}-${String(nextMo+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
-    html+=renderDayCell(i,ds,true,byDate,today);
+  for(let i=0;i<rem;i++){
+    html+=`<div class="cal-cell other-month"></div>`;
   }
   html+='</div>';
   section.innerHTML=html;
 
-  // Insert in order
+  // Insert in chronological order
   const existing=container.querySelectorAll('[data-year]');
   let inserted=false;
   for(const el of existing){
@@ -2854,7 +2856,6 @@ function appendMonth(year,month){
   }
   if(!inserted)container.appendChild(section);
 
-  // Re-observe
   if(_calScrollObserver)_calScrollObserver.observe(section);
 }
 
