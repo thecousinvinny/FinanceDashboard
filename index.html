@@ -2398,17 +2398,37 @@ const CAL_COLORS={
 
 function calGoToday(){
   _calYear=new Date().getFullYear();_calMonth=new Date().getMonth();_calWeekOffset=0;
-  renderCalendar();
+  if(_calView==='month'){
+    appendMonth(_calYear,_calMonth);
+    const label=document.getElementById('cal-month-label');
+    if(label)label.textContent=new Date(_calYear,_calMonth,1).toLocaleString('default',{month:'long',year:'numeric'});
+    setTimeout(()=>{
+      const el=document.getElementById(`cal-month-${_calYear}-${_calMonth}`);
+      const wrap=document.getElementById('cal-grid-wrap');
+      if(el&&wrap)wrap.scrollTo({top:el.offsetTop-4,behavior:'smooth'});
+    },50);
+  } else {
+    renderCalendar();
+  }
 }
 function calNav(dir){
   if(_calView==='month'){
     _calMonth+=dir;
     if(_calMonth>11){_calMonth=0;_calYear++;}
     if(_calMonth<0){_calMonth=11;_calYear--;}
+    // In infinite scroll mode, append and scroll to the target month
+    appendMonth(_calYear,_calMonth);
+    setTimeout(()=>{
+      const el=document.getElementById(`cal-month-${_calYear}-${_calMonth}`);
+      const wrap=document.getElementById('cal-grid-wrap');
+      if(el&&wrap)wrap.scrollTo({top:el.offsetTop-4,behavior:'smooth'});
+    },50);
+    const label=document.getElementById('cal-month-label');
+    if(label)label.textContent=new Date(_calYear,_calMonth,1).toLocaleString('default',{month:'long',year:'numeric'});
   } else {
     _calWeekOffset+=dir;
+    calSync();
   }
-  calSync();
 }
 function setCalView(v){
   _calView=v;
@@ -2685,36 +2705,78 @@ function renderCalendar(){
   renderMonth();
 }
 
-function renderMonth(){
-  const grid=document.getElementById('cal-grid');
-  if(!grid)return;
-  const today=new Date();
-  const firstDay=new Date(_calYear,_calMonth,1).getDay();
-  const daysInMonth=new Date(_calYear,_calMonth+1,0).getDate();
-  const daysInPrev=new Date(_calYear,_calMonth,0).getDate();
-  const search=(document.getElementById('cal-search')?.value||'').toLowerCase();
+// ── INFINITE SCROLL MONTH CALENDAR ──
+let _calScrollYear=new Date().getFullYear();
+let _calScrollMonth=new Date().getMonth();
+let _calScrollObserver=null;
+let _calScrollRendered=new Set(); // "YYYY-MM" keys already rendered
 
-  // Collect all events and sort
+function renderMonth(){
+  const wrap=document.getElementById('cal-grid-wrap');
+  const grid=document.getElementById('cal-grid');
+  if(!grid||!wrap)return;
+
+  // Full reset
+  _calScrollRendered.clear();
+  if(_calScrollObserver){_calScrollObserver.disconnect();_calScrollObserver=null;}
+  grid.innerHTML='';
+
+  // Day headers — sticky
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const hdrHtml=`<div class="cal-month-grid" style="position:sticky;top:0;z-index:20;background:var(--s1);border-bottom:1px solid var(--border);">${days.map(d=>`<div class="cal-day-hdr">${d}</div>`).join('')}</div>`;
+  grid.innerHTML=hdrHtml;
+
+  // Render initial months around current
+  for(let offset=-1;offset<=2;offset++){
+    appendMonth(_calYear,_calMonth+offset);
+  }
+
+  // Scroll to current month
+  setTimeout(()=>{
+    const cur=document.getElementById(`cal-month-${_calYear}-${_calMonth}`);
+    if(cur)wrap.scrollTop=cur.offsetTop-4;
+  },50);
+
+  // Setup intersection observer for infinite scroll
+  setupScrollObserver();
+}
+
+function appendMonth(year,month){
+  // Normalize
+  const d=new Date(year,month,1);
+  const yr=d.getFullYear(),mo=d.getMonth();
+  const key=`${yr}-${mo}`;
+  if(_calScrollRendered.has(key))return;
+  _calScrollRendered.add(key);
+
+  const grid=document.getElementById('cal-grid');
+  const search=(document.getElementById('cal-search')?.value||'').toLowerCase();
+  const today=new Date();
+  const firstDay=new Date(yr,mo,1).getDay();
+  const daysInMonth=new Date(yr,mo+1,0).getDate();
+  const daysInPrev=new Date(yr,mo,0).getDate();
+
+  // Build byDate for this month's visible range
+  const byDate={};
+  const rangeStart=new Date(yr,mo,1);rangeStart.setDate(1-firstDay);
+  const rangeEnd=new Date(yr,mo+1,0);
   const visEvents=getVisibleEvents();
 
-  // Build dateStr→events map
-  const byDate={};
-  const _dbgToday=localToday();
-  // Add subs and income FIRST (lower priority) so GCal events appear on top
+  // Add subs+income first
   D.subscriptions.filter(s=>s.Status!=='Cancelled'&&s.NextRenewal).forEach(s=>{
-    const d=toSortableDate(s.NextRenewal);if(!d)return;
+    const dstr=toSortableDate(s.NextRenewal);if(!dstr)return;
     if(search&&!s.Name.toLowerCase().includes(search))return;
-    if(!byDate[d])byDate[d]=[];
-    byDate[d].push({_type:'sub',_sub:s,summary:s.Name,_isDue:dueCls(s.NextRenewal)==='due-today',start:{date:d},end:{date:d},_priority:1});
+    if(!byDate[dstr])byDate[dstr]=[];
+    byDate[dstr].push({_type:'sub',_sub:s,summary:s.Name,_isDue:dueCls(s.NextRenewal)==='due-today',start:{date:dstr},end:{date:dstr},_priority:1});
   });
   D.master.filter(m=>m.Type==='Income').forEach(m=>{
-    const d=toSortableDate(m.Date);if(!d)return;
+    const dstr=toSortableDate(m.Date);if(!dstr)return;
     if(search&&!m.Name.toLowerCase().includes(search))return;
-    if(!byDate[d])byDate[d]=[];
-    byDate[d].push({_type:'income',_master:m,summary:m.Name,start:{date:d},end:{date:d},_priority:1});
+    if(!byDate[dstr])byDate[dstr]=[];
+    byDate[dstr].push({_type:'income',_master:m,summary:m.Name,start:{date:dstr},end:{date:dstr},_priority:1});
   });
 
-  // Then add GCal events (higher priority - shown first)
+  // Add GCal events
   visEvents.forEach(ev=>{
     const startDate=ev.start?.date||ev.start?.dateTime?.slice(0,10);
     const endDate=ev.end?.date||ev.end?.dateTime?.slice(0,10);
@@ -2724,68 +2786,119 @@ function renderMonth(){
     const eDate=endDate?new Date(endDate+'T12:00:00'):s;
     const eAdj=ev.start?.date?new Date(eDate.getTime()-86400000):eDate;
     const isMulti=s.toDateString()!==eAdj.toDateString();
-
     if(!isMulti){
-      // Single day — add normally
-      const k=startDate;
-      if(!byDate[k])byDate[k]=[];
-      byDate[k].push({...ev,_isMulti:false,_isStart:true,_isEnd:true});
-    } else {
-      // Multi-day — only add to START date for slot counting
-      // Add continuation markers to other days separately (won't count against limit)
       if(!byDate[startDate])byDate[startDate]=[];
-      byDate[startDate].push({...ev,_isMulti:true,_isStart:true,_isEnd:false,_multiEnd:eAdj.toISOString().slice(0,10)});
-      // Add continuation to other days (marked as _isCont so they render but don't take slots)
+      byDate[startDate].push({...ev,_isMulti:false,_isStart:true,_isEnd:true});
+    } else {
+      if(!byDate[startDate])byDate[startDate]=[];
+      byDate[startDate].push({...ev,_isMulti:true,_isStart:true,_isEnd:false});
       let cur=new Date(s);cur.setDate(cur.getDate()+1);
       while(cur<=eAdj){
         const k=cur.toISOString().slice(0,10);
         if(!byDate[k])byDate[k]=[];
-        const isEnd=cur.toDateString()===eAdj.toDateString();
-        byDate[k].push({...ev,_isMulti:true,_isStart:false,_isEnd:isEnd,_isCont:true});
+        byDate[k].push({...ev,_isMulti:true,_isStart:false,_isEnd:cur.toDateString()===eAdj.toDateString(),_isCont:true});
         cur.setDate(cur.getDate()+1);
       }
     }
   });
-  // Also add finance app events
-  // (subs and income injected above GCal events)
 
-  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  let html=`<div class="cal-month-grid">`;
-  html+=days.map(d=>`<div class="cal-day-hdr">${d}</div>`).join('');
+  // Month section
+  const monthName=new Date(yr,mo,1).toLocaleString('default',{month:'long',year:'numeric'});
+  const section=document.createElement('div');
+  section.id=`cal-month-${yr}-${mo}`;
+  section.setAttribute('data-year',yr);
+  section.setAttribute('data-month',mo);
+  section.style.cssText='scroll-margin-top:30px';
 
+  // Month label
+  let html=`<div style="font-size:12px;font-weight:600;color:var(--text3);padding:10px 8px 6px;letter-spacing:.04em;border-bottom:1px solid var(--border);background:var(--bg)">${monthName}</div>`;
+  html+=`<div class="cal-month-grid">`;
 
-  let day=1,nextDay=1;
-  for(let i=0;i<42;i++){
-    let date,isOther=false;
-    if(i<firstDay){date=daysInPrev-(firstDay-i-1);isOther=true;}
-    else if(day>daysInMonth){date=nextDay++;isOther=true;}
-    else{date=day++;}
-    const aY=isOther?(i<firstDay?(_calMonth===0?_calYear-1:_calYear):(_calMonth===11?_calYear+1:_calYear)):_calYear;
-    const aM=isOther?(i<firstDay?(_calMonth===0?11:_calMonth-1):(_calMonth===11?0:_calMonth+1)):_calMonth;
-    const dateStr=`${aY}-${String(aM+1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
-    const cellDate=new Date(dateStr+'T12:00:00');
-    const isToday=dateStr===localToday();
-    const allDayEvs=(byDate[dateStr]||[]).slice();
-    // Separate continuation bars (don't count against limit) from regular events
-    const contEvs=allDayEvs.filter(e=>e._isCont);
-    const mainEvs=allDayEvs.filter(e=>!e._isCont);
-    mainEvs.sort((a,b)=>((b._isMulti?2:0)+(a._priority||0))-((a._isMulti?2:0)+(b._priority||0)));
-    const MAX_SHOW=5;
-    let evHtml='';
-    // Render continuation bars first (thin, no text on non-start days)
-    contEvs.forEach(ev=>{ evHtml+=buildEventPill(ev,dateStr); });
-    // Then render main events up to limit
-    mainEvs.slice(0,MAX_SHOW).forEach(ev=>{ evHtml+=buildEventPill(ev,dateStr); });
-    if(mainEvs.length>MAX_SHOW){
-      evHtml+=`<div class="cal-more" onclick="event.stopPropagation()">${mainEvs.length-MAX_SHOW} more</div>`;
-    }
-    html+=`<div class="cal-cell${isOther?' other-month':''}${isToday?' today':''}" ondblclick="openCalEventModal('${dateStr}',null)">
-      <div class="cal-dn">${date}</div>${evHtml}
-    </div>`;
+  // Blank cells before first day
+  for(let i=0;i<firstDay;i++){
+    const d2=daysInPrev-(firstDay-i-1);
+    const prevMo=mo===0?11:mo-1;
+    const prevYr=mo===0?yr-1:yr;
+    const dateStr=`${prevYr}-${String(prevMo+1).padStart(2,'0')}-${String(d2).padStart(2,'0')}`;
+    html+=renderDayCell(d2,dateStr,true,byDate,today);
+  }
+  // This month's days
+  for(let day=1;day<=daysInMonth;day++){
+    const dateStr=`${yr}-${String(mo+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    html+=renderDayCell(day,dateStr,false,byDate,today);
+  }
+  // Fill remaining cells to complete grid row
+  const totalCells=firstDay+daysInMonth;
+  const remainder=totalCells%7===0?0:7-(totalCells%7);
+  for(let i=1;i<=remainder;i++){
+    const nextMo=mo===11?0:mo+1;
+    const nextYr=mo===11?yr+1:yr;
+    const dateStr=`${nextYr}-${String(nextMo+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+    html+=renderDayCell(i,dateStr,true,byDate,today);
   }
   html+='</div>';
-  grid.innerHTML=html;
+  section.innerHTML=html;
+
+  // Append in correct date order
+  const existing=grid.querySelectorAll('[data-year]');
+  let inserted=false;
+  for(const el of existing){
+    const ey=parseInt(el.getAttribute('data-year'));
+    const em=parseInt(el.getAttribute('data-month'));
+    if(yr<ey||(yr===ey&&mo<em)){
+      grid.insertBefore(section,el);
+      inserted=true;break;
+    }
+  }
+  if(!inserted)grid.appendChild(section);
 }
+
+function renderDayCell(date,dateStr,isOther,byDate,today){
+  const isToday=dateStr===localToday();
+  const allDayEvs=(byDate[dateStr]||[]).slice();
+  const contEvs=allDayEvs.filter(e=>e._isCont);
+  const mainEvs=allDayEvs.filter(e=>!e._isCont);
+  mainEvs.sort((a,b)=>((b._isMulti?2:0)+(a._priority||0))-((a._isMulti?2:0)+(b._priority||0)));
+  const MAX_SHOW=5;
+  let evHtml='';
+  contEvs.forEach(ev=>{evHtml+=buildEventPill(ev,dateStr);});
+  mainEvs.slice(0,MAX_SHOW).forEach(ev=>{evHtml+=buildEventPill(ev,dateStr);});
+  if(mainEvs.length>MAX_SHOW)evHtml+=`<div class="cal-more">${mainEvs.length-MAX_SHOW} more</div>`;
+  return`<div class="cal-cell${isOther?' other-month':''}${isToday?' today':''}" ondblclick="openCalEventModal('${dateStr}',null)"><div class="cal-dn">${date}</div>${evHtml}</div>`;
+}
+
+function setupScrollObserver(){
+  const wrap=document.getElementById('cal-grid-wrap');
+  if(!wrap)return;
+  _calScrollObserver=new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      if(!entry.isIntersecting)return;
+      const el=entry.target;
+      const yr=parseInt(el.getAttribute('data-year'));
+      const mo=parseInt(el.getAttribute('data-month'));
+      // If first month visible, prepend previous
+      const grid=document.getElementById('cal-grid');
+      const allMonths=grid.querySelectorAll('[data-year]');
+      if(el===allMonths[0]){
+        appendMonth(yr,mo-1);
+        appendMonth(yr,mo-2);
+      }
+      // If last month visible, append next
+      if(el===allMonths[allMonths.length-1]){
+        appendMonth(yr,mo+1);
+        appendMonth(yr,mo+2);
+      }
+      // Update header label
+      const label=document.getElementById('cal-month-label');
+      if(label)label.textContent=new Date(yr,mo,1).toLocaleString('default',{month:'long',year:'numeric'});
+      // Update _calYear/_calMonth for nav buttons
+      _calYear=yr;_calMonth=mo;
+    });
+  },{root:wrap,threshold:0.1});
+  // Observe all month sections
+  document.querySelectorAll('[data-year]').forEach(el=>_calScrollObserver.observe(el));
+}
+
 
 function buildEventPill(ev,dateStr){
   const todayStr=localToday();
