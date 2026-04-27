@@ -2404,9 +2404,9 @@ function calGoToday(){
   _calYear=new Date().getFullYear();_calMonth=new Date().getMonth();_calWeekOffset=0;
   if(_calView==='month'){
     // Ensure current month is rendered
-    appendMonth(_calYear,_calMonth);
-    appendMonth(_calYear,_calMonth-1);
-    appendMonth(_calYear,_calMonth+1);
+    appendMonthCells(_calYear,_calMonth);
+    appendMonthCells(_calYear,_calMonth-1);
+    appendMonthCells(_calYear,_calMonth+1);
     const label=document.getElementById('cal-month-label');
     if(label)label.textContent=new Date(_calYear,_calMonth,1).toLocaleString('default',{month:'long',year:'numeric'});
     // Double rAF to guarantee layout is complete
@@ -2424,7 +2424,7 @@ function calNav(dir){
     _calMonth+=dir;
     if(_calMonth>11){_calMonth=0;_calYear++;}
     if(_calMonth<0){_calMonth=11;_calYear--;}
-    appendMonth(_calYear,_calMonth);
+    appendMonthCells(_calYear,_calMonth);
     const label=document.getElementById('cal-month-label');
     if(label)label.textContent=new Date(_calYear,_calMonth,1).toLocaleString('default',{month:'long',year:'numeric'});
     setTimeout(()=>{
@@ -2713,46 +2713,126 @@ function renderCalendar(){
 }
 
 // ── INFINITE SCROLL MONTH CALENDAR ──
-let _calScrollYear=new Date().getFullYear();
-let _calScrollMonth=new Date().getMonth();
+// Single continuous 7-column grid — months share rows, no gaps
 let _calScrollObserver=null;
-let _calScrollRendered=new Set();
-let _calScrolling=false;
+let _calRenderedMonths=new Set(); // "YYYY-MM" keys
+let _calMinMonth=null; // earliest rendered {yr,mo}
+let _calMaxMonth=null; // latest rendered {yr,mo}
 
 function renderMonth(){
   const wrap=document.getElementById('cal-grid-wrap');
   const grid=document.getElementById('cal-grid');
   if(!grid||!wrap)return;
 
-  _calScrollRendered.clear();
+  _calRenderedMonths.clear();
+  _calMinMonth=null;_calMaxMonth=null;
   if(_calScrollObserver){_calScrollObserver.disconnect();_calScrollObserver=null;}
 
-  // Sticky day headers
+  // Day headers sticky
   const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  grid.innerHTML=`<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));position:sticky;top:0;z-index:20;background:var(--s1);border-bottom:2px solid var(--border);">${days.map(d=>`<div class="cal-day-hdr">${d}</div>`).join('')}</div><div id="cal-months-container"></div>`;
+  grid.innerHTML=
+    `<div id="cal-day-hdrs" style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));position:sticky;top:0;z-index:20;background:var(--s1);border-bottom:2px solid var(--border);">`
+    +days.map(d=>`<div class="cal-day-hdr">${d}</div>`).join('')
+    +`</div>`
+    +`<div id="cal-continuous-grid" style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));"></div>`
+    +`<div id="cal-sentinel-top" style="height:1px;"></div>`
+    +`<div id="cal-sentinel-bot" style="height:1px;"></div>`;
 
-  // Render months around current
-  for(let o=-2;o<=3;o++) appendMonth(_calYear,_calMonth+o);
+  // Render current month + surrounding
+  for(let o=-2;o<=3;o++) appendMonthCells(_calYear,_calMonth+o);
 
-  // Scroll to current month after full paint
-  requestAnimationFrame(()=>{
-    requestAnimationFrame(()=>{
-      const cur=document.getElementById(`cm-${_calYear}-${_calMonth}`);
-      const wrap2=document.getElementById('cal-grid-wrap');
-      if(cur&&wrap2){
-        wrap2.scrollTop=cur.offsetTop;
-      }
-    });
-  });
+  // Scroll to today's month
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    const el=document.getElementById(`cm-${_calYear}-${_calMonth}`);
+    if(el&&wrap) wrap.scrollTop=el.offsetTop;
+  }));
 
   setupScrollObserver();
+}
+
+function appendMonthCells(year,month){
+  const d=new Date(year,month,1);
+  const yr=d.getFullYear(),mo=d.getMonth();
+  const key=`${yr}-${mo}`;
+  if(_calRenderedMonths.has(key))return;
+  _calRenderedMonths.add(key);
+
+  const grid=document.getElementById('cal-continuous-grid');
+  if(!grid)return;
+
+  const firstDay=new Date(yr,mo,1).getDay();   // 0=Sun
+  const daysInMonth=new Date(yr,mo+1,0).getDate();
+  const byDate=getByDate(yr,mo);
+
+  // Figure out where this month fits in the continuous grid
+  // We need to insert cells in the right position
+  const isPrepend=_calMinMonth&&(yr<_calMinMonth.yr||(yr===_calMinMonth.yr&&mo<_calMinMonth.mo));
+
+  // Update bounds
+  if(!_calMinMonth||yr<_calMinMonth.yr||(yr===_calMinMonth.yr&&mo<_calMinMonth.mo)) _calMinMonth={yr,mo};
+  if(!_calMaxMonth||yr>_calMaxMonth.yr||(yr===_calMaxMonth.yr&&mo>_calMaxMonth.mo)) _calMaxMonth={yr,mo};
+
+  // Build cells for this month
+  // Day 1 needs grid-column-start if it doesn't fall on Sunday
+  const cells=[];
+
+  // Month marker anchor (invisible, for scrolling)
+  const anchor=document.createElement('div');
+  anchor.id=`cm-${yr}-${mo}`;
+  anchor.setAttribute('data-year',yr);
+  anchor.setAttribute('data-month',mo);
+  anchor.style.cssText=`grid-column:1;height:0;overflow:visible;position:relative;`;
+  // Tiny month label inside anchor
+  anchor.innerHTML=`<span style="position:absolute;top:4px;left:4px;font-size:9px;font-weight:600;color:var(--text3);opacity:.7;pointer-events:none;z-index:5;letter-spacing:.05em">${new Date(yr,mo,1).toLocaleString('default',{month:'short'}).toUpperCase()} ${yr}</span>`;
+  cells.push({el:anchor,colStart:firstDay===0?null:null}); // anchor placed before day 1
+
+  for(let day=1;day<=daysInMonth;day++){
+    const ds=`${yr}-${String(mo+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const isToday=ds===localToday();
+    const allEvs=(byDate[ds]||[]).slice();
+    const contEvs=allEvs.filter(e=>e._isCont);
+    const mainEvs=allEvs.filter(e=>!e._isCont);
+    mainEvs.sort((a,b)=>((b._isMulti?2:0)+(a._priority||0))-((a._isMulti?2:0)+(b._priority||0)));
+    let evHtml='';
+    contEvs.forEach(ev=>{evHtml+=buildEventPill(ev,ds);});
+    mainEvs.slice(0,5).forEach(ev=>{evHtml+=buildEventPill(ev,ds);});
+    if(mainEvs.length>5)evHtml+=`<div class="cal-more">${mainEvs.length-5} more</div>`;
+
+    const cell=document.createElement('div');
+    cell.className=`cal-cell${isToday?' today':''}`;
+    cell.setAttribute('ondblclick',`openCalEventModal('${ds}',null)`);
+    if(day===1&&firstDay>0) cell.style.gridColumnStart=firstDay+1;
+    const monthAbbr=new Date(yr,mo,1).toLocaleString('default',{month:'long'});
+    const dnLabel=day===1?`${monthAbbr} 1`:String(day);
+    cell.innerHTML=`<div class="cal-dn" style="${day===1?'width:auto;padding:0 4px;border-radius:4px;font-size:11px;':''}">${dnLabel}</div>${evHtml}`;
+    cells.push({el:cell});
+  }
+
+  // Insert into grid
+  if(isPrepend){
+    // Prepend: insert before existing content
+    // The anchor goes at col firstDay+1 of a new row
+    const refNode=grid.firstChild;
+    cells.slice().reverse().forEach(({el})=>grid.insertBefore(el,refNode));
+  } else {
+    cells.forEach(({el})=>grid.appendChild(el));
+  }
+
+  // Move sentinels
+  const sentTop=document.getElementById('cal-sentinel-top');
+  const sentBot=document.getElementById('cal-sentinel-bot');
+  if(sentTop)grid.parentNode.insertBefore(sentTop,grid);
+  if(sentBot)grid.parentNode.appendChild(sentBot);
+  if(_calScrollObserver){
+    if(sentTop)_calScrollObserver.observe(sentTop);
+    if(sentBot)_calScrollObserver.observe(sentBot);
+  }
 }
 
 function getByDate(yr,mo){
   const byDate={};
   const search=(document.getElementById('cal-search')?.value||'').toLowerCase();
 
-  // App events
   if(!_appEvState.sub.hidden){
     D.subscriptions.filter(s=>s.Status!=='Cancelled'&&s.NextRenewal).forEach(s=>{
       const d=toSortableDate(s.NextRenewal);if(!d)return;
@@ -2774,9 +2854,7 @@ function getByDate(yr,mo){
     });
   }
 
-  // GCal events
-  const visEvents=getVisibleEvents();
-  visEvents.forEach(ev=>{
+  getVisibleEvents().forEach(ev=>{
     const startDate=ev.start?.date||ev.start?.dateTime?.slice(0,10);
     const endDate=ev.end?.date||ev.end?.dateTime?.slice(0,10);
     if(!startDate)return;
@@ -2789,15 +2867,13 @@ function getByDate(yr,mo){
       if(!byDate[startDate])byDate[startDate]=[];
       byDate[startDate].push({...ev,_isMulti:false,_isStart:true,_isEnd:true});
     } else {
-      // Add to start date
       if(!byDate[startDate])byDate[startDate]=[];
       byDate[startDate].push({...ev,_isMulti:true,_isStart:true,_isEnd:false});
-      // Continuations for days in this month
       let cur=new Date(s);cur.setDate(cur.getDate()+1);
       while(cur<=eAdj){
         const k=cur.toISOString().slice(0,10);
-        const cm=parseInt(k.slice(5,7))-1,cy=parseInt(k.slice(0,4));
-        if(cy===yr&&cm===mo){
+        const cm2=parseInt(k.slice(5,7))-1,cy2=parseInt(k.slice(0,4));
+        if(cy2===yr&&cm2===mo){
           if(!byDate[k])byDate[k]=[];
           byDate[k].push({...ev,_isMulti:true,_isStart:false,_isEnd:cur.toDateString()===eAdj.toDateString(),_isCont:true});
         }
@@ -2808,121 +2884,40 @@ function getByDate(yr,mo){
   return byDate;
 }
 
-function appendMonth(year,month){
-  const d=new Date(year,month,1);
-  const yr=d.getFullYear(),mo=d.getMonth();
-  const key=`${yr}-${mo}`;
-  if(_calScrollRendered.has(key))return;
-  _calScrollRendered.add(key);
-
-  const container=document.getElementById('cal-months-container');
-  if(!container)return;
-
-  const firstDay=new Date(yr,mo,1).getDay();
-  const daysInMonth=new Date(yr,mo+1,0).getDate();
-  const byDate=getByDate(yr,mo);
-  // Also get events from adjacent months for overflow days
-  const prevByDate=firstDay>0?getByDate(yr,mo-1):{};
-  const nextByDate=getByDate(yr,mo+1);
-  const today=new Date();
-  const monthName=new Date(yr,mo,1).toLocaleString('default',{month:'long',year:'numeric'});
-
-  const section=document.createElement('div');
-  section.id=`cm-${yr}-${mo}`;
-  section.setAttribute('data-year',yr);
-  section.setAttribute('data-month',mo);
-
-  // NO leading grey cells, NO trailing grey cells
-  // Month starts exactly on day 1, grid-column set to correct weekday
-  // First day cell gets grid-column-start to push it to the right weekday
-  let html=`<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:2px solid rgba(255,255,255,0.06);">`;
-
-  // This month's days only — first day positioned via grid-column-start
-  for(let day=1;day<=daysInMonth;day++){
-    const ds=`${yr}-${String(mo+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-    const style=day===1&&firstDay>0?`style="grid-column-start:${firstDay+1}"`:'';
-    const isToday2=ds===localToday();
-    const allEvs2=(byDate[ds]||[]).slice();
-    const contEvs2=allEvs2.filter(e=>e._isCont);
-    const mainEvs2=allEvs2.filter(e=>!e._isCont);
-    mainEvs2.sort((a,b)=>((b._isMulti?2:0)+(a._priority||0))-((a._isMulti?2:0)+(b._priority||0)));
-    let evHtml2='';
-    contEvs2.forEach(ev=>{evHtml2+=buildEventPill(ev,ds);});
-    mainEvs2.slice(0,5).forEach(ev=>{evHtml2+=buildEventPill(ev,ds);});
-    if(mainEvs2.length>5)evHtml2+=`<div class="cal-more">${mainEvs2.length-5} more</div>`;
-    html+=`<div class="cal-cell${isToday2?' today':''}" ${style} ondblclick="openCalEventModal('${ds}',null)"><div class="cal-dn">${day}</div>${evHtml2}</div>`;
-  }
-  html+='</div>';
-  section.innerHTML=html;
-
-  // Insert in chronological order
-  const existing=container.querySelectorAll('[data-year]');
-  let inserted=false;
-  for(const el of existing){
-    const ey=parseInt(el.getAttribute('data-year'));
-    const em=parseInt(el.getAttribute('data-month'));
-    if(yr<ey||(yr===ey&&mo<em)){container.insertBefore(section,el);inserted=true;break;}
-  }
-  if(!inserted)container.appendChild(section);
-
-  if(_calScrollObserver)_calScrollObserver.observe(section);
-}
-
-function renderDayCell(date,dateStr,isOther,byDate,today){
-  const isToday=dateStr===localToday();
-  const allEvs=(byDate[dateStr]||[]).slice();
-  const contEvs=allEvs.filter(e=>e._isCont);
-  const mainEvs=allEvs.filter(e=>!e._isCont);
-  mainEvs.sort((a,b)=>((b._isMulti?2:0)+(a._priority||0))-((a._isMulti?2:0)+(b._priority||0)));
-  const MAX=5;
-  let evHtml='';
-  contEvs.forEach(ev=>{evHtml+=buildEventPill(ev,dateStr);});
-  mainEvs.slice(0,MAX).forEach(ev=>{evHtml+=buildEventPill(ev,dateStr);});
-  if(mainEvs.length>MAX)evHtml+=`<div class="cal-more">${mainEvs.length-MAX} more</div>`;
-  return`<div class="cal-cell${isOther?' other-month':''}${isToday?' today':''}" ondblclick="openCalEventModal('${dateStr}',null)"><div class="cal-dn">${date}</div>${evHtml}</div>`;
-}
-
 function setupScrollObserver(){
   const wrap=document.getElementById('cal-grid-wrap');
   if(!wrap)return;
 
-  // Update label on scroll based on which month label is at top of viewport
+  // Scroll listener for header label
   wrap.addEventListener('scroll',()=>{
-    const container=document.getElementById('cal-months-container');
-    if(!container)return;
-    const sections=container.querySelectorAll('[data-year]');
-    const wrapTop=wrap.getBoundingClientRect().top;
-    let bestEl=null,bestDist=Infinity;
-    sections.forEach(el=>{
-      const rect=el.getBoundingClientRect();
-      const dist=Math.abs(rect.top-wrapTop);
-      if(rect.top<=wrapTop+100&&dist<bestDist){bestDist=dist;bestEl=el;}
+    const grid=document.getElementById('cal-continuous-grid');
+    if(!grid)return;
+    const anchors=grid.querySelectorAll('[data-year]');
+    const wrapTop=wrap.getBoundingClientRect().top+40;
+    let best=null;
+    anchors.forEach(a=>{
+      const rect=a.getBoundingClientRect();
+      if(rect.top<=wrapTop) best=a;
     });
-    if(!bestEl&&sections.length)bestEl=sections[0];
-    if(bestEl){
-      const yr=parseInt(bestEl.getAttribute('data-year'));
-      const mo=parseInt(bestEl.getAttribute('data-month'));
+    if(best){
+      const yr=parseInt(best.getAttribute('data-year'));
+      const mo=parseInt(best.getAttribute('data-month'));
       _calYear=yr;_calMonth=mo;
       const label=document.getElementById('cal-month-label');
       if(label)label.textContent=new Date(yr,mo,1).toLocaleString('default',{month:'long',year:'numeric'});
     }
+    // Infinite scroll triggers
+    const scrollBottom=wrap.scrollTop+wrap.clientHeight;
+    const scrollHeight=wrap.scrollHeight;
+    if(wrap.scrollTop<200&&_calMinMonth){
+      appendMonthCells(_calMinMonth.yr,_calMinMonth.mo-1);
+      appendMonthCells(_calMinMonth.yr,_calMinMonth.mo-2);
+    }
+    if(scrollBottom>scrollHeight-400&&_calMaxMonth){
+      appendMonthCells(_calMaxMonth.yr,_calMaxMonth.mo+1);
+      appendMonthCells(_calMaxMonth.yr,_calMaxMonth.mo+2);
+    }
   },{passive:true});
-
-  // IntersectionObserver only for infinite scroll triggering
-  _calScrollObserver=new IntersectionObserver((entries)=>{
-    entries.forEach(entry=>{
-      if(!entry.isIntersecting)return;
-      const el=entry.target;
-      const yr=parseInt(el.getAttribute('data-year'));
-      const mo=parseInt(el.getAttribute('data-month'));
-      const container=document.getElementById('cal-months-container');
-      const all=container?.querySelectorAll('[data-year]');
-      if(!all?.length)return;
-      if(el===all[0]){appendMonth(yr,mo-1);appendMonth(yr,mo-2);}
-      if(el===all[all.length-1]){appendMonth(yr,mo+1);appendMonth(yr,mo+2);}
-    });
-  },{root:wrap,rootMargin:'400px',threshold:0});
-  document.querySelectorAll('#cal-months-container [data-year]').forEach(el=>_calScrollObserver.observe(el));
 }
 
 
