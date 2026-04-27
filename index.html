@@ -856,11 +856,19 @@ function gapiLoaded(){
   });
 }
 
+function isMobileSafari(){
+  return /iP(hone|ad|od)/.test(navigator.userAgent)||
+    (navigator.userAgent.includes('Mac')&&'ontouchend' in document);
+}
+
 function gsiLoaded(){
   _tc=google.accounts.oauth2.initTokenClient({
     client_id:cfg.cid,
     scope:'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/calendar',
     callback:onToken,
+    // Use redirect UX hint for mobile to avoid popup blocking
+    ux_mode: isMobileSafari() ? 'redirect' : 'popup',
+    redirect_uri: window.location.href.split('?')[0],
   });
   doSignIn();
 }
@@ -868,7 +876,12 @@ function gsiLoaded(){
 function doSignIn(){
   if(!_tc){toast('Still loading — please wait...','err');return;}
   document.getElementById('signin-btn').style.display='none';
-  _tc.requestAccessToken({prompt:''});
+  if(isMobileSafari()){
+    // On iOS, must request with prompt so it doesn't silently fail
+    _tc.requestAccessToken({prompt:'select_account'});
+  } else {
+    _tc.requestAccessToken({prompt:''});
+  }
 }
 
 async function onToken(r){
