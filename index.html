@@ -3555,35 +3555,64 @@ const _colDefs={
   expenses:['Name','Description','Category','OCost','Cost','Card','Date'],
   subscriptions:['Name','Billing','Card','Cost','MonthlyCost','AnnualCost','Due','LastRenewal','NextRenewal','Payments','Category'],
 };
-const _hiddenCols={};
-function loadHiddenCols(){
-  try{const s=localStorage.getItem('hidden_cols');if(s)Object.assign(_hiddenCols,JSON.parse(s));}catch(e){}
-}
+// ── COLUMN VISIBILITY (CSS injection) ──
+const _hiddenCols=JSON.parse(localStorage.getItem('hidden_cols')||'{}');
+const _colStyle=document.createElement('style');
+_colStyle.id='col-hide-style';
+document.head.appendChild(_colStyle);
+
 function saveHiddenCols2(){
   try{localStorage.setItem('hidden_cols',JSON.stringify(_hiddenCols));}catch(e){}
 }
-loadHiddenCols();
-function applyColVisibility(tableId,key){
-  try{
-    const hidden=_hiddenCols[key]||[];
-    if(!hidden.length)return; // nothing hidden, skip
+function buildColCSS(){
+  // For each tab, find the table and inject nth-child rules
+  let css='';
+  Object.entries(_hiddenCols).forEach(([key,cols])=>{
+    if(!cols||!cols.length)return;
     const tab=document.getElementById('tab-'+key);
-    const tables=tab?[...tab.querySelectorAll('table')]:[document.getElementById(tableId)?.closest('table')].filter(Boolean);
-    tables.forEach(table=>{
-      if(!table)return;
-      const headers=[...table.querySelectorAll('thead th')];
-      if(!headers.length)return;
-      // Map header text to 1-based column index
-      const idxMap={};
-      headers.forEach((th,i)=>idxMap[th.textContent.trim().toLowerCase()]=i+1);
-      (_colDefs[key]||[]).forEach(col=>{
-        if(!hidden.includes(col))return;
-        const idx=idxMap[col.toLowerCase()];
-        if(!idx)return;
-        table.querySelectorAll(`tr > *:nth-child(${idx})`).forEach(el=>el.style.display='none');
-      });
+    if(!tab)return;
+    const table=tab.querySelector('table');
+    if(!table)return;
+    const headers=[...table.querySelectorAll('thead th')];
+    if(!headers.length)return;
+    const idxMap={};
+    headers.forEach((th,i)=>idxMap[th.textContent.trim().toLowerCase()]=i+1);
+    cols.forEach(col=>{
+      const idx=idxMap[col.toLowerCase()];
+      if(!idx)return;
+      css+=`#tab-${key} table tr > *:nth-child(${idx}){display:none!important}\n`;
     });
-  }catch(e){console.warn('applyColVisibility error:',e);}
+  });
+  _colStyle.textContent=css;
+}
+function applyColVisibility(tableId,key){
+  buildColCSS();
+}
+function toggleCol(key,tableId,col,visible){
+  if(!_hiddenCols[key])_hiddenCols[key]=[];
+  if(visible)_hiddenCols[key]=_hiddenCols[key].filter(c=>c!==col);
+  else if(!_hiddenCols[key].includes(col))_hiddenCols[key].push(col);
+  saveHiddenCols2();
+  buildColCSS();
+}
+function openColPicker(e,key,tableId){
+  e.stopPropagation();
+  document.getElementById('col-picker-popup')?.remove();
+  // Read current headers from the live table
+  const tab=document.getElementById('tab-'+key);
+  const table=tab?.querySelector('table');
+  const headers=table?[...table.querySelectorAll('thead th')].map(th=>th.textContent.trim()).filter(t=>t):(_colDefs[key]||[]);
+  const hidden=_hiddenCols[key]||[];
+  const popup=document.createElement('div');
+  popup.id='col-picker-popup';
+  popup.className='col-picker-popup';
+  popup.innerHTML='<div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Show / Hide Columns</div>'
+    +headers.map(col=>`<label class="col-picker-item"><input type="checkbox" ${hidden.includes(col)?'':'checked'} onchange="toggleCol('${key}','${tableId}','${esc(col)}',this.checked)">${esc(col)||'—'}</label>`).join('');
+  document.body.appendChild(popup);
+  const rect=e.currentTarget.getBoundingClientRect();
+  popup.style.left=Math.min(rect.left,window.innerWidth-200)+'px';
+  popup.style.top=(rect.bottom+4)+'px';
+  setTimeout(()=>document.addEventListener('click',()=>document.getElementById('col-picker-popup')?.remove(),{once:true}),10);
 }
 function openColPicker(e,key,tableId,renderFn){
   e.stopPropagation();
@@ -3601,13 +3630,7 @@ function openColPicker(e,key,tableId,renderFn){
   popup.style.top=(rect.bottom+4)+'px';
   setTimeout(()=>document.addEventListener('click',()=>document.getElementById('col-picker-popup')?.remove(),{once:true}),10);
 }
-function toggleCol(key,tableId,col,visible){
-  if(!_hiddenCols[key])_hiddenCols[key]=[];
-  if(visible)_hiddenCols[key]=_hiddenCols[key].filter(c=>c!==col);
-  else if(!_hiddenCols[key].includes(col))_hiddenCols[key].push(col);
-  saveHiddenCols2();
-  applyColVisibility(tableId,key);
-}
+
 
 // ── INIT ──
 loadColOrders();
