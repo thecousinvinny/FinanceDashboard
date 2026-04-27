@@ -62,7 +62,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .nt{padding:0 14px;font-size:12px;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;display:flex;align-items:center;height:100%;border-radius:0}
 .nt:hover{color:var(--text);background:rgba(255,255,255,0.04)}
 .nt.on{color:var(--text);border-bottom-color:var(--accent);font-weight:600}
-.main{padding:24px;max-width:1440px;margin:0 auto}
+.main{padding:24px;padding-bottom:80px;max-width:1440px;margin:0 auto}
 
 /* STATS */
 .sg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px}
@@ -304,9 +304,8 @@ td.editing{background:rgba(108,99,255,0.05)!important}
   .main{padding:12px;padding-bottom:80px}
   .hdr{padding:0 12px}
   /* Hide desktop nav tabs in header on mobile */
-  .nav{display:none}
-  /* Show mobile bottom nav */
-  #mobile-nav{display:flex!important}
+  .nav{display:none!important}
+  /* Bottom nav already always visible */
   /* Touch friendly buttons */
   .btn,.sbtn,.cal-nav-btn,.nt,.sort-btn{min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center}
   /* Bigger calendar cells */
@@ -323,20 +322,22 @@ td.editing{background:rgba(108,99,255,0.05)!important}
   .mo{align-items:flex-end!important;padding:0!important}
   /* Calendar full height on mobile */
   #tab-calendar{height:calc(100vh - 48px - 60px)}
-  /* Food/wishlist FAB */
-  #mobile-fab{display:flex!important}
+  /* FAB already always visible */
 }
+/* Always use bottom nav - hide top nav */
+.nav{display:none!important}
 /* Pull to refresh indicator */
 #ptr-indicator{position:fixed;top:48px;left:50%;transform:translateX(-50%);background:var(--s1);border:1px solid var(--border2);border-radius:20px;padding:6px 16px;font-size:12px;color:var(--text3);z-index:500;display:none;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(0,0,0,.3)}
 #ptr-indicator.visible{display:flex}
 /* Mobile bottom nav */
-#mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:60px;background:rgba(20,20,22,0.95);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--border);z-index:300;align-items:stretch;justify-content:space-around;padding:0}
+#mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;height:60px;background:rgba(20,20,22,0.95);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--border);z-index:300;align-items:stretch;justify-content:space-around;padding:0;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
+#mobile-nav::-webkit-scrollbar{display:none}
 .mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--text3);border:none;background:transparent;font-family:'DM Sans',sans-serif;padding:0;min-height:60px;-webkit-tap-highlight-color:transparent}
 .mob-tab.on{color:var(--accent)}
 .mob-tab svg{width:22px;height:22px;flex-shrink:0}
 .mob-tab span{font-size:9px;font-weight:500;letter-spacing:.03em}
 /* Mobile FAB */
-#mobile-fab{display:none;position:fixed;bottom:72px;right:16px;flex-direction:column;gap:10px;z-index:400;align-items:flex-end}
+#mobile-fab{display:flex;position:fixed;bottom:72px;right:16px;flex-direction:column;gap:10px;z-index:400;align-items:flex-end}
 .fab-btn{height:44px;border-radius:22px;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;padding:0 18px;box-shadow:0 4px 16px rgba(0,0,0,.4);display:flex;align-items:center;gap:8px;white-space:nowrap;-webkit-tap-highlight-color:transparent;transition:transform .15s}
 .fab-btn:active{transform:scale(.96)}
 .fab-main{width:56px;height:56px;border-radius:50%;background:var(--accent);color:#fff;font-size:24px;padding:0;justify-content:center}
@@ -3500,19 +3501,35 @@ if(loadCfg()){bootApp();}
     <button class="fab-btn" style="background:var(--accent);color:#fff;" onclick="openModal('wish')">+ Wishlist</button>
   </div>
 
-  <!-- Mobile bottom nav -->
+  <!-- Bottom nav - all tabs -->
   <nav id="mobile-nav">
     <button class="mob-tab on" onclick="showTab('dashboard',this)" data-tab="dashboard">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
       <span>Dash</span>
+    </button>
+    <button class="mob-tab" onclick="showTab('wishlist',this)" data-tab="wishlist">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+      <span>Wishlist</span>
     </button>
     <button class="mob-tab" onclick="showTab('expenses',this)" data-tab="expenses">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h12"/></svg>
       <span>Expenses</span>
     </button>
     <button class="mob-tab" onclick="showTab('subscriptions',this)" data-tab="subscriptions">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path d="M12 6v6l4 2"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></svg>
       <span>Subs</span>
+    </button>
+    <button class="mob-tab" onclick="showTab('categories',this)" data-tab="categories">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 7h.01M7 3h5a2 2 0 011.414.586l7 7a2 2 0 010 2.828l-5 5a2 2 0 01-2.828 0l-7-7A2 2 0 013 10V5a2 2 0 012-2h2z"/></svg>
+      <span>Categories</span>
+    </button>
+    <button class="mob-tab" onclick="showTab('cards',this)" data-tab="cards">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>
+      <span>Cards</span>
+    </button>
+    <button class="mob-tab" onclick="showTab('banks',this)" data-tab="banks">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 10v11M12 10v11M16 10v11"/></svg>
+      <span>Banks</span>
     </button>
     <button class="mob-tab" onclick="showTab('master',this)" data-tab="master">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
