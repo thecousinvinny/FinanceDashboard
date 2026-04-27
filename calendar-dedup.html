@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Calendar Deduplicator</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#0c0c0e;color:#ebebeb;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px}
+.card{background:#141416;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:40px;max-width:640px;width:100%}
+h1{font-size:22px;font-weight:600;margin-bottom:8px}
+.sub{color:#8a8a9a;font-size:13px;margin-bottom:20px;line-height:1.7}
+.btn{width:100%;padding:14px;background:#6c63ff;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;transition:opacity .2s;margin-bottom:6px}
+.btn:hover{opacity:.85}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.danger{background:#ef4444}
+.log{margin-top:16px;background:#1c1c1f;border-radius:10px;padding:16px;font-size:11px;font-family:monospace;max-height:400px;overflow-y:auto;line-height:1.9;display:none}
+.ok{color:#22c55e}.err{color:#ef4444}.info{color:#8a8a9a}.warn{color:#f59e0b}
+.progress{height:4px;background:#252529;border-radius:2px;margin-top:12px;display:none}
+.pbar{height:100%;background:#ef4444;border-radius:2px;width:0%;transition:width .25s}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🧹 Calendar Deduplicator</h1>
+  <div class="sub">Scans your FinanceDash calendar for duplicate events (same title + same date) and deletes all but the first occurrence. Preview first, then delete.</div>
+  <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:12px 14px;font-size:12px;color:#f59e0b;margin-bottom:16px">
+    ⚠️ Delete from GitHub after use. Only affects FinanceDash calendar.
+  </div>
+  <button class="btn" id="btn-preview" onclick="run(true)">🔍 Preview duplicates</button>
+  <button class="btn danger" id="btn-delete" onclick="run(false)" style="display:none">🗑 Delete duplicates</button>
+  <div class="progress" id="prog"><div class="pbar" id="pbar"></div></div>
+  <div class="log" id="log"></div>
+</div>
+<script src="https://apis.google.com/js/api.js"></script>
+<script>const CAL_ID='4afe919405332d0d693bbe06975c2a399e5911c5c68ad5f1224c0162a4bdf157@group.calendar.google.com',API_KEY='AIzaSyDR31gST2VMxROFmWWe9GYWn0ySAWcbb18',CLIENT_ID='161473053231-fijc0tuqno4i3s21sjtlgcvr7d935sdv.apps.googleusercontent.com';
+let _authed=false,_toDelete=[];
+function log(msg,cls='info'){const el=document.getElementById('log');el.style.display='block';el.innerHTML+=`<div class="${cls}">${msg}</div>`;el.scrollTop=el.scrollHeight;}
+function prog(pct){document.getElementById('prog').style.display='block';document.getElementById('pbar').style.width=pct+'%';}
+
+async function auth(){
+  if(_authed)return;
+  await new Promise(res=>gapi.load('client',res));
+  await gapi.client.init({apiKey:API_KEY,discoveryDocs:['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest']});
+  const gs=document.createElement('script');gs.src='https://accounts.google.com/gsi/client';document.head.appendChild(gs);
+  await new Promise(res=>gs.onload=res);
+  await new Promise((res,rej)=>{
+    const tc=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:'https://www.googleapis.com/auth/calendar',callback:r=>r.error?rej(r.error):res()});
+    tc.requestAccessToken({prompt:'select_account'});
+  });
+  _authed=true;log('✓ Connected');
+}
+
+async function fetchAllEvents(){
+  let events=[],pageToken=null;
+  do{
+    const params={calendarId:CAL_ID,maxResults:500,singleEvents:true,orderBy:'startTime'};
+    if(pageToken)params.pageToken=pageToken;
+    const r=await gapi.client.calendar.events.list(params);
+    events=events.concat(r.result.items||[]);
+    pageToken=r.result.nextPageToken;
+  }while(pageToken);
+  return events;
+}
+
+async function run(dryRun){
+  document.getElementById('btn-preview').disabled=true;
+  document.getElementById('btn-delete').style.display='none';
+  await auth();prog(10);
+
+  log('Fetching all events from FinanceDash calendar…');
+  const events=await fetchAllEvents();
+  log(`Total events: ${events.length}`,'info');prog(30);
+
+  // Group by title+date key, keep first, mark rest as duplicates
+  const seen={};
+  _toDelete=[];
+  events.forEach(ev=>{
+    const date=ev.start?.date||ev.start?.dateTime?.slice(0,10)||'';
+    const key=(ev.summary||'')+'|'+date;
+    if(seen[key]){
+      _toDelete.push(ev);
+    } else {
+      seen[key]=ev;
+    }
+  });
+
+  log(`Duplicates found: ${_toDelete.length}`,'ok');prog(50);
+
+  if(_toDelete.length===0){
+    log('No duplicates — calendar is clean! ✓','ok');
+    document.getElementById('btn-preview').disabled=false;
+    prog(100);return;
+  }
+
+  // Show preview
+  const byTitle={};
+  _toDelete.forEach(ev=>{
+    const date=ev.start?.date||ev.start?.dateTime?.slice(0,10)||'';
+    const key=(ev.summary||'')+'|'+date;
+    if(!byTitle[key])byTitle[key]=0;
+    byTitle[key]++;
+  });
+  Object.entries(byTitle).forEach(([k,n])=>{
+    const [title,date]=k.split('|');
+    log(`  ${date}: "${title}" — ${n} duplicate${n>1?'s':''} to delete`,'warn');
+  });
+  log(`──────────────────────`,'info');
+  log(`${dryRun?'Preview':'Delete'} complete. ${_toDelete.length} events to delete.`);
+  prog(100);
+
+  if(dryRun){
+    document.getElementById('btn-delete').style.display='block';
+    document.getElementById('btn-preview').disabled=false;
+    return;
+  }
+
+  // Delete duplicates
+  log('Deleting…');
+  let deleted=0;
+  for(const ev of _toDelete){
+    try{
+      await gapi.client.calendar.events.delete({calendarId:CAL_ID,eventId:ev.id});
+      deleted++;
+      prog(50+Math.round((deleted/_toDelete.length)*45));
+    }catch(e){log(`Failed to delete "${ev.summary}": ${e.message}`,'err');}
+  }
+  prog(100);
+  log(`✓ Deleted ${deleted} duplicate events.`,'ok');
+  log('Refresh your calendar to confirm.','info');
+  document.getElementById('btn-delete').textContent='✓ Done — delete this file from GitHub';
+  document.getElementById('btn-delete').style.background='#22c55e';
+}
+</script>
+</body>
+</html>
