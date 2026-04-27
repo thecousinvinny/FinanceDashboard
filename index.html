@@ -2426,10 +2426,7 @@ async function calSync(){
     );
     const results=await Promise.all(fetches);
     _allEvents={};
-    results.forEach(({calId,events})=>{
-      _allEvents[calId]=events;
-      console.log(`[CAL] ${_allCalendars.find(c=>c.id===calId)?.summary}: ${events.length} events`);
-    });
+    results.forEach(({calId,events})=>{_allEvents[calId]=events;});
 
     renderCalendar();
     toast('Calendar synced ✓','ok');
@@ -2627,6 +2624,21 @@ function renderMonth(){
   // Build dateStr→events map
   const byDate={};
   const _dbgToday=localToday();
+  // Add subs and income FIRST (lower priority) so GCal events appear on top
+  D.subscriptions.filter(s=>s.Status!=='Cancelled'&&s.NextRenewal).forEach(s=>{
+    const d=toSortableDate(s.NextRenewal);if(!d)return;
+    if(search&&!s.Name.toLowerCase().includes(search))return;
+    if(!byDate[d])byDate[d]=[];
+    byDate[d].push({_type:'sub',_sub:s,summary:s.Name,_isDue:dueCls(s.NextRenewal)==='due-today',start:{date:d},end:{date:d},_priority:1});
+  });
+  D.master.filter(m=>m.Type==='Income').forEach(m=>{
+    const d=toSortableDate(m.Date);if(!d)return;
+    if(search&&!m.Name.toLowerCase().includes(search))return;
+    if(!byDate[d])byDate[d]=[];
+    byDate[d].push({_type:'income',_master:m,summary:m.Name,start:{date:d},end:{date:d},_priority:1});
+  });
+
+  // Then add GCal events (higher priority - shown first)
   visEvents.forEach(ev=>{
     const startDate=ev.start?.date||ev.start?.dateTime?.slice(0,10);
     const endDate=ev.end?.date||ev.end?.dateTime?.slice(0,10);
@@ -2651,29 +2663,13 @@ function renderMonth(){
     }
   });
   // Also add finance app events
-  D.subscriptions.filter(s=>s.Status!=='Cancelled'&&s.NextRenewal).forEach(s=>{
-    const d=toSortableDate(s.NextRenewal);if(!d)return;
-    if(search&&!s.Name.toLowerCase().includes(search))return;
-    if(!byDate[d])byDate[d]=[];
-    const isDue=dueCls(s.NextRenewal)==='due-today';
-    byDate[d].push({_type:'sub',_sub:s,summary:s.Name,_isDue:isDue,start:{date:d},end:{date:d}});
-  });
-  D.master.filter(m=>m.Type==='Income').forEach(m=>{
-    const d=toSortableDate(m.Date);if(!d)return;
-    if(search&&!m.Name.toLowerCase().includes(search))return;
-    if(!byDate[d])byDate[d]=[];
-    byDate[d].push({_type:'income',_master:m,summary:m.Name,start:{date:d},end:{date:d}});
-  });
+  // (subs and income injected above GCal events)
 
   const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   let html=`<div class="cal-month-grid">`;
   html+=days.map(d=>`<div class="cal-day-hdr">${d}</div>`).join('');
 
-  console.log('[CAL] Events for today ('+_dbgToday+'):', (byDate[_dbgToday]||[]).map(e=>e.summary));
-  console.log('[CAL] visEvents total:', visEvents.length);
-  // Debug: show all VinnyN events and dates
-  const vinnyEvs=visEvents.filter(e=>e._calId&&_allCalendars.find(c=>c.id===e._calId)?.summary==='VinnyN');
-  console.log('[CAL] VinnyN visible events:', vinnyEvs.map(e=>({title:e.summary,date:e.start?.date||e.start?.dateTime?.slice(0,10)})));
+
   let day=1,nextDay=1;
   for(let i=0;i<42;i++){
     let date,isOther=false;
@@ -2687,8 +2683,8 @@ function renderMonth(){
     const isToday=dateStr===localToday();
     const dayEvs=(byDate[dateStr]||[]).slice();
     // Sort: multi-day first, then by time
-    dayEvs.sort((a,b)=>(b._isMulti?1:0)-(a._isMulti?1:0));
-    const MAX_SHOW=4;
+    dayEvs.sort((a,b)=>((b._isMulti?2:0)+(a._priority||0))-((a._isMulti?2:0)+(b._priority||0)));
+    const MAX_SHOW=6;
     let evHtml='';
     dayEvs.slice(0,MAX_SHOW).forEach(ev=>{
       evHtml+=buildEventPill(ev,dateStr);
