@@ -2699,11 +2699,14 @@ function getVisibleEvents(){
 
 // ── APP EVENT VISIBILITY ──
 let _appEvState={
-  sub:{hidden:false,color:JSON.parse(localStorage.getItem('cal_app_colors')||'{}').sub||'#f59e0b'},
-  income:{hidden:false,color:JSON.parse(localStorage.getItem('cal_app_colors')||'{}').income||'#22c55e'},
+  sub:{hidden:JSON.parse(localStorage.getItem('cal_app_state')||'{}').subHidden||false,color:JSON.parse(localStorage.getItem('cal_app_colors')||'{}').sub||'#f59e0b'},
+  income:{hidden:JSON.parse(localStorage.getItem('cal_app_state')||'{}').incomeHidden||false,color:JSON.parse(localStorage.getItem('cal_app_colors')||'{}').income||'#22c55e'},
 };
 function saveAppColors(){
   try{localStorage.setItem('cal_app_colors',JSON.stringify({sub:_appEvState.sub.color,income:_appEvState.income.color}));}catch(e){}
+}
+function saveAppState(){
+  try{localStorage.setItem('cal_app_state',JSON.stringify({subHidden:_appEvState.sub.hidden,incomeHidden:_appEvState.income.hidden}));}catch(e){}
 }
 function toggleAppEvents(type){
   _appEvState[type].hidden=!_appEvState[type].hidden;
@@ -2711,6 +2714,7 @@ function toggleAppEvents(type){
   if(check)check.textContent=_appEvState[type].hidden?'':'✓';
   const dot=document.getElementById(type+'-dot');
   if(dot)dot.style.opacity=_appEvState[type].hidden?'0.3':'1';
+  saveAppState();
   renderCalendar();
 }
 function openAppColorPicker(e,type){
@@ -3241,9 +3245,13 @@ async function calDeleteEvent(calId,eventId){
 
 async function initCalendar(){
   await calSync();
-  const calId='4afe919405332d0d693bbe06975c2a399e5911c5c68ad5f1224c0162a4bdf157@group.calendar.google.com';
-  const allEvs=_allEvents[calId]||[];
-  // Don't auto-create sub events - only create when explicitly triggered
+  // Restore app event visual state from persisted data
+  ['sub','income'].forEach(type=>{
+    const dot=document.getElementById(type+'-dot');
+    const check=document.getElementById(type+'-check');
+    if(dot)dot.style.opacity=_appEvState[type].hidden?'0.3':'1';
+    if(check)check.textContent=_appEvState[type].hidden?'':'✓';
+  });
 }
 
 // ── MOBILE UX ──
