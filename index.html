@@ -587,14 +587,9 @@ td.editing{background:rgba(108,99,255,0.05)!important}
           <!-- Toolbar -->
           <div class="cal-toolbar" style="padding:8px 16px;">
             <button class="cal-nav-btn" onclick="toggleCalSidebar()" title="Toggle sidebar" style="font-size:14px;padding:4px 8px;"></button>
-            <div class="cal-toolbar-nav">
-              <button class="cal-nav-btn" onclick="calNav(-1)">←</button>
-              <span id="cal-month-label" class="cal-month-title"></span>
-              <button class="cal-nav-btn" onclick="calNav(1)">→</button>
-            </div>
+            <span id="cal-month-label" class="cal-month-title" onclick="openMonthPicker(event)" style="cursor:pointer;user-select:none;padding:4px 8px;border-radius:6px;transition:background .15s;" onmouseover="this.style.background='var(--s3)'" onmouseout="this.style.background=''" title="Click to jump to a month"></span>
             <button class="cal-nav-btn" onclick="calGoToday()" style="font-size:11px;">Today</button>
-            <input id="cal-search" placeholder=" Search…" oninput="renderCalendar()" style="background:var(--s2);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;font-size:11px;color:var(--text);outline:none;width:160px;">
-            <button class="cal-nav-btn btn-a" onclick="openCalEventModal(null)" style="background:var(--accent);color:#fff;border-color:var(--accent);">+ New event</button>
+            <input id="cal-search" placeholder="Search…" oninput="renderCalendar()" style="background:var(--s2);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;font-size:11px;color:var(--text);outline:none;width:160px;">
             <button id="cal-fs-btn" class="cal-nav-btn" onclick="toggleCalFS()" title="Fullscreen" style="font-size:14px;padding:4px 8px;"></button>
             <div class="cal-view-btns">
               <button class="cal-view-btn active" id="vbtn-month" onclick="setCalView('month')">Month</button>
@@ -3062,7 +3057,52 @@ async function initCalendar(){
   // Don't auto-create sub events - only create when explicitly triggered
 }
 
-// ── LOCATION SEARCH ──
+// ── MONTH PICKER ──
+let _pickerYear=new Date().getFullYear();
+function openMonthPicker(e){
+  e.stopPropagation();
+  document.getElementById('cal-month-picker')?.remove();
+  _pickerYear=_calYear;
+  const popup=document.createElement('div');
+  popup.id='cal-month-picker';
+  popup.style.cssText='position:fixed;z-index:3000;background:var(--s1);border:1px solid var(--border2);border-radius:12px;padding:16px;box-shadow:0 8px 32px rgba(0,0,0,.5);min-width:240px;';
+  renderMonthPicker(popup);
+  document.body.appendChild(popup);
+  const rect=e.currentTarget.getBoundingClientRect();
+  popup.style.left=Math.min(rect.left,window.innerWidth-260)+'px';
+  popup.style.top=(rect.bottom+6)+'px';
+  setTimeout(()=>document.addEventListener('click',()=>document.getElementById('cal-month-picker')?.remove(),{once:true}),10);
+}
+function renderMonthPicker(popup){
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  popup.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <button onclick="event.stopPropagation();_pickerYear--;renderMonthPicker(document.getElementById('cal-month-picker'))" style="background:var(--s3);border:none;color:var(--text);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px;">‹</button>
+      <span style="font-size:14px;font-weight:600;">${_pickerYear}</span>
+      <button onclick="event.stopPropagation();_pickerYear++;renderMonthPicker(document.getElementById('cal-month-picker'))" style="background:var(--s3);border:none;color:var(--text);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px;">›</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+      ${months.map((m,i)=>{
+        const isActive=_pickerYear===_calYear&&i===_calMonth;
+        return`<button onclick="event.stopPropagation();jumpToMonth(${_pickerYear},${i})" style="padding:8px 4px;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:500;background:${isActive?'var(--accent)':'var(--s3)'};color:${isActive?'#fff':'var(--text2)'};transition:all .15s;" onmouseover="if(!${isActive})this.style.background='var(--s4,#3a3a40)'" onmouseout="if(!${isActive})this.style.background='var(--s3)'">${m}</button>`;
+      }).join('')}
+    </div>`;
+}
+function jumpToMonth(yr,mo){
+  document.getElementById('cal-month-picker')?.remove();
+  _calYear=yr;_calMonth=mo;
+  // Ensure month is rendered
+  appendMonthCells(yr,mo);
+  appendMonthCells(yr,mo-1);
+  appendMonthCells(yr,mo+1);
+  const label=document.getElementById('cal-month-label');
+  if(label)label.textContent=new Date(yr,mo,1).toLocaleString('default',{month:'long',year:'numeric'});
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    const el=document.getElementById(`cm-${yr}-${mo}`);
+    const wrap=document.getElementById('cal-grid-wrap');
+    if(el&&wrap)wrap.scrollTop=el.offsetTop;
+  }));
+}
 let _calLocTimer=null;
 function calLocationSearch(){
   const q=document.getElementById('cal-ev-location').value.trim();
