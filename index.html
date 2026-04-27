@@ -479,9 +479,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
     </div>
 
     <div id="tab-wishlist" style="display:none">
-      <div class="panel">
-        <div class="ph"><div class="pt"> Wishlist <span class="pc" id="wc">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('wish')">+ Add item</button></div></div>
-        <div class="sort-bar">
+      <div class="sort-bar" style="background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:16px;padding:8px 14px;"><button class="col-picker-btn" onclick="openColPicker(event,'wishlist','wb')">⊟ Columns</button>
           <span class="sort-lbl">Sort</span>
           <button class="sort-btn asc" id="ws-row" data-field="_row" onclick="setSort('wish','_row',this)">Date Added <span class="arr">↑</span></button>
           <button class="sort-btn" id="ws-name" data-field="Name" onclick="setSort('wish','Name',this)">Name <span class="arr">↕</span></button>
@@ -492,6 +490,8 @@ td.editing{background:rgba(108,99,255,0.05)!important}
           <div class="sort-divider"></div>
           <button class="sort-btn" onclick="clearSort('wish')" style="color:var(--text3);font-size:10px;"> Clear</button>
         </div>
+      <div class="panel">
+        <div class="ph"><div class="pt"> Wishlist <span class="pc" id="wc">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('wish')">+ Add item</button></div></div>
         <div class="tw"><table>
           <thead><tr><th class="col-lg">Name</th><th>Description</th><th class="col-md">Category</th><th class="col-sm">Link</th><th class="col-num">Original</th><th class="col-num">Bought</th><th class="col-num">Savings</th><th class="col-act"></th><th class="col-act"></th><th class="col-act"></th></tr></thead>
           <tbody id="wb"></tbody>
@@ -540,6 +540,18 @@ td.editing{background:rgba(108,99,255,0.05)!important}
     </div>
 
     <div id="tab-subscriptions" style="display:none">
+      <div class="sort-bar" style="background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:16px;padding:8px 14px;"><button class="col-picker-btn" onclick="openColPicker(event,'subscriptions','sub-body')">⊟ Columns</button>
+          <span class="sort-lbl">Sort</span>
+          <button class="sort-btn asc" id="ss-row" data-field="_row" onclick="setSort('sub','_row',this)">Date Added <span class="arr">↑</span></button>
+          <button class="sort-btn" id="ss-billing" data-field="Billing" onclick="setSort('sub','Billing',this)">Billing <span class="arr">↕</span></button>
+          <button class="sort-btn" id="ss-name" data-field="Name" onclick="setSort('sub','Name',this)">Name <span class="arr">↕</span></button>
+          <button class="sort-btn" id="ss-cost" data-field="Cost" onclick="setSort('sub','Cost',this)">Cost <span class="arr">↕</span></button>
+          <button class="sort-btn" id="ss-due" data-field="NextRenewal" onclick="setSort('sub','NextRenewal',this)">Due Date <span class="arr">↕</span></button>
+          <button class="sort-btn" id="ss-cat" data-field="Category" onclick="setSort('sub','Category',this)">Category <span class="arr">↕</span></button>
+          <button class="sort-btn" id="ss-payments" data-field="Payments" onclick="setSort('sub','Payments',this)">Payments <span class="arr">↕</span></button>
+          <div class="sort-divider"></div>
+          <button class="sort-btn" onclick="clearSort('sub')" style="color:var(--text3);font-size:10px;"> Clear</button>
+        </div>
       <div class="panel">
         <div class="ph">
           <div class="pt">Subscriptions <span class="pc" id="sc2">0</span></div>
@@ -552,18 +564,6 @@ td.editing{background:rgba(108,99,255,0.05)!important}
           </div>
         </div>
         <div class="sub-sum" id="ss2">—</div>
-        <div class="sort-bar">
-          <span class="sort-lbl">Sort</span>
-          <button class="sort-btn asc" id="ss-row" data-field="_row" onclick="setSort('sub','_row',this)">Date Added <span class="arr">↑</span></button>
-          <button class="sort-btn" id="ss-billing" data-field="Billing" onclick="setSort('sub','Billing',this)">Billing <span class="arr">↕</span></button>
-          <button class="sort-btn" id="ss-name" data-field="Name" onclick="setSort('sub','Name',this)">Name <span class="arr">↕</span></button>
-          <button class="sort-btn" id="ss-cost" data-field="Cost" onclick="setSort('sub','Cost',this)">Cost <span class="arr">↕</span></button>
-          <button class="sort-btn" id="ss-due" data-field="NextRenewal" onclick="setSort('sub','NextRenewal',this)">Due Date <span class="arr">↕</span></button>
-          <button class="sort-btn" id="ss-cat" data-field="Category" onclick="setSort('sub','Category',this)">Category <span class="arr">↕</span></button>
-          <button class="sort-btn" id="ss-payments" data-field="Payments" onclick="setSort('sub','Payments',this)">Payments <span class="arr">↕</span></button>
-          <div class="sort-divider"></div>
-          <button class="sort-btn" onclick="clearSort('sub')" style="color:var(--text3);font-size:10px;"> Clear</button>
-        </div>
         <div class="tw"><table>
           <thead></thead>
           <tbody id="sb2"></tbody>
@@ -3548,6 +3548,7 @@ function showIncomePopover(e,masterRow){
 
 // ── COLUMN VISIBILITY ──
 const _colDefs={
+  wishlist:['Name','Description','Category','Link','Original','Bought','Savings'],
   master:['Date','Type','Name','Description','Category','Cost','Original','Savings','Card','Bank','Billing','Status','Source'],
   expenses:['Name','Description','Category','Original Cost','Bought Cost','Card','Date'],
   subscriptions:['Name','Billing','Card','Cost','Monthly','Annual','Due','Last Renewal','Next Renewal','Payments','Category'],
@@ -3562,14 +3563,17 @@ function saveHiddenCols2(){
 loadHiddenCols();
 function applyColVisibility(tableId,key){
   const hidden=_hiddenCols[key]||[];
-  const table=document.getElementById(tableId)?.closest('table')||document.querySelector(`#tab-${key} table`);
-  if(!table)return;
   const cols=_colDefs[key]||[];
-  cols.forEach((col,i)=>{
-    const colIdx=i; // 0-based header index
-    const isHidden=hidden.includes(col);
-    table.querySelectorAll(`tr > *:nth-child(${colIdx+1})`).forEach(el=>{
-      el.style.display=isHidden?'none':'';
+  // Find all tables in the relevant tab
+  const tab=document.getElementById('tab-'+key);
+  const tables=tab?tab.querySelectorAll('table'):[document.getElementById(tableId)?.closest('table')].filter(Boolean);
+  tables.forEach(table=>{
+    if(!table)return;
+    cols.forEach((col,i)=>{
+      const isHidden=hidden.includes(col);
+      table.querySelectorAll(`tr > *:nth-child(${i+1})`).forEach(el=>{
+        el.style.display=isHidden?'none':'';
+      });
     });
   });
 }
