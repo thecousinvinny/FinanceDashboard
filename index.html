@@ -545,8 +545,18 @@ td.editing{background:rgba(108,99,255,0.05)!important}
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
             <div class="cal-sidebar-title" style="margin-bottom:0">My Calendars</div>
           </div>
-          <div style="font-size:10px;color:var(--text3);padding:4px 0 8px;border-bottom:1px solid var(--border);margin-bottom:8px;line-height:1.6">
-            SUB and INCOME events come from app data, not Google Calendar
+          <div style="padding:0 0 10px;border-bottom:1px solid var(--border);margin-bottom:10px;">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:.06em">App Events</div>
+            <div class="cal-cal-item" onclick="toggleAppEvents('sub')">
+              <div class="cal-cal-dot" id="sub-dot" style="background:#f59e0b;cursor:pointer" ondblclick="event.stopPropagation();openAppColorPicker(event,'sub')" title="Double-click to change color"></div>
+              <span style="flex:1;font-size:12px;cursor:pointer">Subscriptions</span>
+              <span id="sub-check" class="cal-cal-check">✓</span>
+            </div>
+            <div class="cal-cal-item" onclick="toggleAppEvents('income')">
+              <div class="cal-cal-dot" id="income-dot" style="background:#22c55e;cursor:pointer" ondblclick="event.stopPropagation();openAppColorPicker(event,'income')" title="Double-click to change color"></div>
+              <span style="flex:1;font-size:12px;cursor:pointer">Income</span>
+              <span id="income-check" class="cal-cal-check">✓</span>
+            </div>
           </div>
             <div id="cal-sidebar-list"></div>
           </div>
@@ -2454,6 +2464,50 @@ function getVisibleEvents(){
   return vis;
 }
 
+// ── APP EVENT VISIBILITY ──
+let _appEvState={
+  sub:{hidden:false,color:JSON.parse(localStorage.getItem('cal_app_colors')||'{}').sub||'#f59e0b'},
+  income:{hidden:false,color:JSON.parse(localStorage.getItem('cal_app_colors')||'{}').income||'#22c55e'},
+};
+function saveAppColors(){
+  try{localStorage.setItem('cal_app_colors',JSON.stringify({sub:_appEvState.sub.color,income:_appEvState.income.color}));}catch(e){}
+}
+function toggleAppEvents(type){
+  _appEvState[type].hidden=!_appEvState[type].hidden;
+  const check=document.getElementById(type+'-check');
+  if(check)check.textContent=_appEvState[type].hidden?'':'✓';
+  const dot=document.getElementById(type+'-dot');
+  if(dot)dot.style.opacity=_appEvState[type].hidden?'0.3':'1';
+  renderCalendar();
+}
+function openAppColorPicker(e,type){
+  e.stopPropagation();
+  document.getElementById('cal-color-popup')?.remove();
+  const popup=document.createElement('div');
+  popup.id='cal-color-popup';
+  popup.className='cal-color-picker-popup';
+  const cur=_appEvState[type].color;
+  popup.innerHTML=`<div style="font-size:11px;color:var(--text3);font-weight:500">${type==='sub'?'Subscription':'Income'} color</div>
+    <div class="cal-color-swatches">${CAL_COLOR_PALETTE.map(color=>`<div class="cal-color-swatch" style="background:${color};${color===cur?'border-color:#fff;transform:scale(1.15)':''}" onclick="applyAppColor('${type}','${color}')"></div>`).join('')}</div>
+    <div style="display:flex;gap:6px;align-items:center;margin-top:4px">
+      <input type="color" value="${cur}" style="width:32px;height:24px;border:none;background:none;cursor:pointer;padding:0" oninput="applyAppColor('${type}',this.value)">
+      <span style="font-size:11px;color:var(--text3)">Custom</span>
+    </div>`;
+  document.body.appendChild(popup);
+  const x=Math.min(e.clientX,window.innerWidth-200);
+  const y=Math.min(e.clientY+10,window.innerHeight-220);
+  popup.style.left=x+'px';popup.style.top=y+'px';
+  setTimeout(()=>document.addEventListener('click',closeCalColorPicker,{once:true}),10);
+}
+function applyAppColor(type,color){
+  _appEvState[type].color=color;
+  saveAppColors();
+  const dot=document.getElementById(type+'-dot');
+  if(dot)dot.style.background=color;
+  closeCalColorPicker();
+  renderCalendar();
+}
+
 // ── FULLSCREEN & SIDEBAR ──
 let _calFS=false;
 let _sidebarCollapsed=false;
@@ -2644,22 +2698,30 @@ function renderMonth(){
     const endDate=ev.end?.date||ev.end?.dateTime?.slice(0,10);
     if(!startDate)return;
     if(search&&!(ev.summary||'').toLowerCase().includes(search))return;
-    // For multi-day events, add to each day in range
     const s=new Date(startDate+'T12:00:00');
     const eDate=endDate?new Date(endDate+'T12:00:00'):s;
-    // end date is exclusive for all-day events in GCal
     const eAdj=ev.start?.date?new Date(eDate.getTime()-86400000):eDate;
-    let cur=new Date(s);
-    while(cur<=eAdj){
-      const k=cur.toISOString().slice(0,10);
+    const isMulti=s.toDateString()!==eAdj.toDateString();
+
+    if(!isMulti){
+      // Single day — add normally
+      const k=startDate;
       if(!byDate[k])byDate[k]=[];
-      const isMulti=s.toDateString()!==eAdj.toDateString();
-      byDate[k].push({...ev,
-        _isMulti:isMulti,
-        _isStart:cur.toDateString()===s.toDateString(),
-        _isEnd:cur.toDateString()===eAdj.toDateString(),
-      });
-      cur.setDate(cur.getDate()+1);
+      byDate[k].push({...ev,_isMulti:false,_isStart:true,_isEnd:true});
+    } else {
+      // Multi-day — only add to START date for slot counting
+      // Add continuation markers to other days separately (won't count against limit)
+      if(!byDate[startDate])byDate[startDate]=[];
+      byDate[startDate].push({...ev,_isMulti:true,_isStart:true,_isEnd:false,_multiEnd:eAdj.toISOString().slice(0,10)});
+      // Add continuation to other days (marked as _isCont so they render but don't take slots)
+      let cur=new Date(s);cur.setDate(cur.getDate()+1);
+      while(cur<=eAdj){
+        const k=cur.toISOString().slice(0,10);
+        if(!byDate[k])byDate[k]=[];
+        const isEnd=cur.toDateString()===eAdj.toDateString();
+        byDate[k].push({...ev,_isMulti:true,_isStart:false,_isEnd:isEnd,_isCont:true});
+        cur.setDate(cur.getDate()+1);
+      }
     }
   });
   // Also add finance app events
@@ -2681,16 +2743,19 @@ function renderMonth(){
     const dateStr=`${aY}-${String(aM+1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
     const cellDate=new Date(dateStr+'T12:00:00');
     const isToday=dateStr===localToday();
-    const dayEvs=(byDate[dateStr]||[]).slice();
-    // Sort: multi-day first, then by time
-    dayEvs.sort((a,b)=>((b._isMulti?2:0)+(a._priority||0))-((a._isMulti?2:0)+(b._priority||0)));
-    const MAX_SHOW=6;
+    const allDayEvs=(byDate[dateStr]||[]).slice();
+    // Separate continuation bars (don't count against limit) from regular events
+    const contEvs=allDayEvs.filter(e=>e._isCont);
+    const mainEvs=allDayEvs.filter(e=>!e._isCont);
+    mainEvs.sort((a,b)=>((b._isMulti?2:0)+(a._priority||0))-((a._isMulti?2:0)+(b._priority||0)));
+    const MAX_SHOW=5;
     let evHtml='';
-    dayEvs.slice(0,MAX_SHOW).forEach(ev=>{
-      evHtml+=buildEventPill(ev,dateStr);
-    });
-    if(dayEvs.length>MAX_SHOW){
-      evHtml+=`<div class="cal-more" onclick="event.stopPropagation()">${dayEvs.length-MAX_SHOW} more</div>`;
+    // Render continuation bars first (thin, no text on non-start days)
+    contEvs.forEach(ev=>{ evHtml+=buildEventPill(ev,dateStr); });
+    // Then render main events up to limit
+    mainEvs.slice(0,MAX_SHOW).forEach(ev=>{ evHtml+=buildEventPill(ev,dateStr); });
+    if(mainEvs.length>MAX_SHOW){
+      evHtml+=`<div class="cal-more" onclick="event.stopPropagation()">${mainEvs.length-MAX_SHOW} more</div>`;
     }
     html+=`<div class="cal-cell${isOther?' other-month':''}${isToday?' today':''}" ondblclick="openCalEventModal('${dateStr}',null)">
       <div class="cal-dn">${date}</div>${evHtml}
@@ -2705,16 +2770,31 @@ function buildEventPill(ev,dateStr){
   const isPast=dateStr<todayStr;
   const pastStyle=isPast?'opacity:0.4;':'';
   if(ev._type==='sub'){
-    const cls=ev._isDue?'due':'sub';
-    return`<div class="cal-event ${cls}" style="${pastStyle}" onclick="event.stopPropagation();showSubPopover(event,${ev._sub._row})">${esc(ev.summary)}</div>`;
+    if(_appEvState.sub.hidden)return'';
+    const color=_appEvState.sub.color;
+    const bg=ev._isDue?'rgba(239,68,68,0.3)':color+'33';
+    const tc=ev._isDue?'#ef4444':color;
+    return`<div class="cal-event" style="background:${bg};color:${tc};border-left:2px solid ${tc};${pastStyle}" onclick="event.stopPropagation();showSubPopover(event,${ev._sub._row})">${esc(ev._sub.Name)} — ${$f(ev._sub.Cost)}</div>`;
   }
   if(ev._type==='income'){
-    return`<div class="cal-event income" style="${pastStyle}" onclick="event.stopPropagation();showIncomePopover(event,${ev._master._row})">${esc(ev.summary)}</div>`;
+    if(_appEvState.income.hidden)return'';
+    const color=_appEvState.income.color;
+    return`<div class="cal-event" style="background:${color}33;color:${color};border-left:2px solid ${color};${pastStyle}" onclick="event.stopPropagation();showIncomePopover(event,${ev._master._row})">${esc(ev.summary)}</div>`;
   }
   const color=ev._calColor||'#6c63ff';
   const multiCls=ev._isMulti?(ev._isStart&&ev._isEnd?'multiday alone':ev._isStart?'multiday start':ev._isEnd?'multiday end':'multiday'):'';
+  const isAllDay=!!ev.start?.date; // all-day = has date, not dateTime
   const time=ev.start?.dateTime?new Date(ev.start.dateTime).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+' ':'';
-  return`<div class="cal-event ${multiCls}" style="background:${color}dd;color:#fff;${pastStyle}" onclick="event.stopPropagation();openCalEventModal('${dateStr}','${ev.id}')">${time}${esc(ev.summary||'')}</div>`;
+  // Continuation bars
+  if(ev._isCont){
+    return`<div class="cal-event multiday${ev._isEnd?' end':''}" style="background:${color}99;color:transparent;font-size:6px;padding:1px 6px;margin-bottom:1px;" onclick="event.stopPropagation();openCalEventModal('${dateStr}','${ev.id}')"> </div>`;
+  }
+  if(isAllDay||ev._isMulti){
+    // All-day/multi-day: colored background, white text
+    return`<div class="cal-event ${multiCls}" style="background:${color}dd;color:#fff;${pastStyle}" onclick="event.stopPropagation();openCalEventModal('${dateStr}','${ev.id}')">${esc(ev.summary||'')}</div>`;
+  }
+  // Timed events: no background, colored dot + colored text
+  return`<div class="cal-event" style="background:transparent;color:${color};${pastStyle}" onclick="event.stopPropagation();openCalEventModal('${dateStr}','${ev.id}')"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${color};margin-right:4px;flex-shrink:0;vertical-align:middle;"></span>${time}${esc(ev.summary||'')}</div>`;
 }
 
 // ── RENDER WEEK ──
@@ -2812,7 +2892,6 @@ async function calEnsureSubEvents(){
     try{
       await gapi.client.calendar.events.insert({calendarId:calId,resource:{
         summary:`${s.Name} — ${$f(s.Cost)}`,start:{date},end:{date},
-        description:`Subscription: ${s.Name}\nBilling: ${s.Billing}`,colorId:'5'
       }});
       created++;
     }catch(e){}
