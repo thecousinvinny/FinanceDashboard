@@ -2726,14 +2726,16 @@ function renderMonth(){
   // Render months around current
   for(let o=-2;o<=3;o++) appendMonth(_calYear,_calMonth+o);
 
-  // Scroll to current month — wait for paint
-  setTimeout(()=>{
+  // Scroll to current month after full paint
+  requestAnimationFrame(()=>{
     requestAnimationFrame(()=>{
       const cur=document.getElementById(`cm-${_calYear}-${_calMonth}`);
       const wrap2=document.getElementById('cal-grid-wrap');
-      if(cur&&wrap2)wrap2.scrollTop=cur.offsetTop-2;
+      if(cur&&wrap2){
+        wrap2.scrollTop=cur.offsetTop;
+      }
     });
-  },150);
+  });
 
   setupScrollObserver();
 }
@@ -2876,24 +2878,43 @@ function renderDayCell(date,dateStr,isOther,byDate,today){
 function setupScrollObserver(){
   const wrap=document.getElementById('cal-grid-wrap');
   if(!wrap)return;
+
+  // Update label on scroll based on which month label is at top of viewport
+  wrap.addEventListener('scroll',()=>{
+    const container=document.getElementById('cal-months-container');
+    if(!container)return;
+    const sections=container.querySelectorAll('[data-year]');
+    const wrapTop=wrap.getBoundingClientRect().top;
+    let bestEl=null,bestDist=Infinity;
+    sections.forEach(el=>{
+      const rect=el.getBoundingClientRect();
+      const dist=Math.abs(rect.top-wrapTop);
+      if(rect.top<=wrapTop+100&&dist<bestDist){bestDist=dist;bestEl=el;}
+    });
+    if(!bestEl&&sections.length)bestEl=sections[0];
+    if(bestEl){
+      const yr=parseInt(bestEl.getAttribute('data-year'));
+      const mo=parseInt(bestEl.getAttribute('data-month'));
+      _calYear=yr;_calMonth=mo;
+      const label=document.getElementById('cal-month-label');
+      if(label)label.textContent=new Date(yr,mo,1).toLocaleString('default',{month:'long',year:'numeric'});
+    }
+  },{passive:true});
+
+  // IntersectionObserver only for infinite scroll triggering
   _calScrollObserver=new IntersectionObserver((entries)=>{
     entries.forEach(entry=>{
       if(!entry.isIntersecting)return;
       const el=entry.target;
       const yr=parseInt(el.getAttribute('data-year'));
       const mo=parseInt(el.getAttribute('data-month'));
-      // Update header
-      _calYear=yr;_calMonth=mo;
-      const label=document.getElementById('cal-month-label');
-      if(label)label.textContent=new Date(yr,mo,1).toLocaleString('default',{month:'long',year:'numeric'});
-      // Append adjacent months
       const container=document.getElementById('cal-months-container');
       const all=container?.querySelectorAll('[data-year]');
       if(!all?.length)return;
       if(el===all[0]){appendMonth(yr,mo-1);appendMonth(yr,mo-2);}
       if(el===all[all.length-1]){appendMonth(yr,mo+1);appendMonth(yr,mo+2);}
     });
-  },{root:wrap,rootMargin:'200px',threshold:0});
+  },{root:wrap,rootMargin:'400px',threshold:0});
   document.querySelectorAll('#cal-months-container [data-year]').forEach(el=>_calScrollObserver.observe(el));
 }
 
