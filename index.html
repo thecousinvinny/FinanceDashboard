@@ -2403,9 +2403,9 @@ function calGoToday(){
     const label=document.getElementById('cal-month-label');
     if(label)label.textContent=new Date(_calYear,_calMonth,1).toLocaleString('default',{month:'long',year:'numeric'});
     setTimeout(()=>{
-      const el=document.getElementById(`cal-month-${_calYear}-${_calMonth}`);
+      const el=document.getElementById(`cm-${_calYear}-${_calMonth}`);
       const wrap=document.getElementById('cal-grid-wrap');
-      if(el&&wrap)wrap.scrollTo({top:el.offsetTop-4,behavior:'smooth'});
+      if(el&&wrap)wrap.scrollTo({top:el.offsetTop-2,behavior:'smooth'});
     },50);
   } else {
     renderCalendar();
@@ -2416,15 +2416,14 @@ function calNav(dir){
     _calMonth+=dir;
     if(_calMonth>11){_calMonth=0;_calYear++;}
     if(_calMonth<0){_calMonth=11;_calYear--;}
-    // In infinite scroll mode, append and scroll to the target month
     appendMonth(_calYear,_calMonth);
-    setTimeout(()=>{
-      const el=document.getElementById(`cal-month-${_calYear}-${_calMonth}`);
-      const wrap=document.getElementById('cal-grid-wrap');
-      if(el&&wrap)wrap.scrollTo({top:el.offsetTop-4,behavior:'smooth'});
-    },50);
     const label=document.getElementById('cal-month-label');
     if(label)label.textContent=new Date(_calYear,_calMonth,1).toLocaleString('default',{month:'long',year:'numeric'});
+    setTimeout(()=>{
+      const el=document.getElementById(`cm-${_calYear}-${_calMonth}`);
+      const wrap=document.getElementById('cal-grid-wrap');
+      if(el&&wrap)wrap.scrollTo({top:el.offsetTop-2,behavior:'smooth'});
+    },50);
   } else {
     _calWeekOffset+=dir;
     calSync();
@@ -2459,8 +2458,8 @@ async function calSync(){
     // Get date range
     let start,end;
     if(_calView==='month'){
-      start=new Date(_calYear,_calMonth,1).toISOString();
-      end=new Date(_calYear,_calMonth+1,1).toISOString();
+      start=new Date(_calYear,_calMonth-6,1).toISOString();
+      end=new Date(_calYear,_calMonth+6,1).toISOString();
     } else {
       const weekStart=getWeekStart();
       start=new Date(weekStart).toISOString();
@@ -2472,7 +2471,7 @@ async function calSync(){
     const fetches=_allCalendars.map(cal=>
       gapi.client.calendar.events.list({
         calendarId:cal.id,timeMin:start,timeMax:end,
-        singleEvents:true,orderBy:'startTime',maxResults:250
+        singleEvents:true,orderBy:'startTime',maxResults:1000
       }).then(r=>({calId:cal.id,events:r.result.items||[]}))
        .catch(()=>({calId:cal.id,events:[]}))
     );
@@ -2709,74 +2708,61 @@ function renderCalendar(){
 let _calScrollYear=new Date().getFullYear();
 let _calScrollMonth=new Date().getMonth();
 let _calScrollObserver=null;
-let _calScrollRendered=new Set(); // "YYYY-MM" keys already rendered
+let _calScrollRendered=new Set();
+let _calScrolling=false;
 
 function renderMonth(){
   const wrap=document.getElementById('cal-grid-wrap');
   const grid=document.getElementById('cal-grid');
   if(!grid||!wrap)return;
 
-  // Full reset
   _calScrollRendered.clear();
   if(_calScrollObserver){_calScrollObserver.disconnect();_calScrollObserver=null;}
-  grid.innerHTML='';
 
-  // Day headers — sticky
+  // Sticky day headers
   const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const hdrHtml=`<div class="cal-month-grid" style="position:sticky;top:0;z-index:20;background:var(--s1);border-bottom:1px solid var(--border);">${days.map(d=>`<div class="cal-day-hdr">${d}</div>`).join('')}</div>`;
-  grid.innerHTML=hdrHtml;
+  grid.innerHTML=`<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));position:sticky;top:0;z-index:20;background:var(--s1);border-bottom:2px solid var(--border);">${days.map(d=>`<div class="cal-day-hdr">${d}</div>`).join('')}</div><div id="cal-months-container"></div>`;
 
-  // Render initial months around current
-  for(let offset=-1;offset<=2;offset++){
-    appendMonth(_calYear,_calMonth+offset);
-  }
+  // Render months around current
+  for(let o=-2;o<=3;o++) appendMonth(_calYear,_calMonth+o);
 
   // Scroll to current month
   setTimeout(()=>{
-    const cur=document.getElementById(`cal-month-${_calYear}-${_calMonth}`);
-    if(cur)wrap.scrollTop=cur.offsetTop-4;
-  },50);
+    const cur=document.getElementById(`cm-${_calYear}-${_calMonth}`);
+    if(cur)wrap.scrollTop=cur.offsetTop-2;
+  },60);
 
-  // Setup intersection observer for infinite scroll
   setupScrollObserver();
 }
 
-function appendMonth(year,month){
-  // Normalize
-  const d=new Date(year,month,1);
-  const yr=d.getFullYear(),mo=d.getMonth();
-  const key=`${yr}-${mo}`;
-  if(_calScrollRendered.has(key))return;
-  _calScrollRendered.add(key);
-
-  const grid=document.getElementById('cal-grid');
-  const search=(document.getElementById('cal-search')?.value||'').toLowerCase();
-  const today=new Date();
-  const firstDay=new Date(yr,mo,1).getDay();
-  const daysInMonth=new Date(yr,mo+1,0).getDate();
-  const daysInPrev=new Date(yr,mo,0).getDate();
-
-  // Build byDate for this month's visible range
+function getByDate(yr,mo){
   const byDate={};
-  const rangeStart=new Date(yr,mo,1);rangeStart.setDate(1-firstDay);
-  const rangeEnd=new Date(yr,mo+1,0);
+  const search=(document.getElementById('cal-search')?.value||'').toLowerCase();
+
+  // App events
+  if(!_appEvState.sub.hidden){
+    D.subscriptions.filter(s=>s.Status!=='Cancelled'&&s.NextRenewal).forEach(s=>{
+      const d=toSortableDate(s.NextRenewal);if(!d)return;
+      if(search&&!s.Name.toLowerCase().includes(search))return;
+      const dm=parseInt(d.slice(5,7))-1,dy=parseInt(d.slice(0,4));
+      if(dy!==yr||dm!==mo)return;
+      if(!byDate[d])byDate[d]=[];
+      byDate[d].push({_type:'sub',_sub:s,summary:s.Name,_isDue:dueCls(s.NextRenewal)==='due-today',start:{date:d},end:{date:d},_priority:1});
+    });
+  }
+  if(!_appEvState.income.hidden){
+    D.master.filter(m=>m.Type==='Income').forEach(m=>{
+      const d=toSortableDate(m.Date);if(!d)return;
+      if(search&&!m.Name.toLowerCase().includes(search))return;
+      const dm=parseInt(d.slice(5,7))-1,dy=parseInt(d.slice(0,4));
+      if(dy!==yr||dm!==mo)return;
+      if(!byDate[d])byDate[d]=[];
+      byDate[d].push({_type:'income',_master:m,summary:m.Name,start:{date:d},end:{date:d},_priority:1});
+    });
+  }
+
+  // GCal events
   const visEvents=getVisibleEvents();
-
-  // Add subs+income first
-  D.subscriptions.filter(s=>s.Status!=='Cancelled'&&s.NextRenewal).forEach(s=>{
-    const dstr=toSortableDate(s.NextRenewal);if(!dstr)return;
-    if(search&&!s.Name.toLowerCase().includes(search))return;
-    if(!byDate[dstr])byDate[dstr]=[];
-    byDate[dstr].push({_type:'sub',_sub:s,summary:s.Name,_isDue:dueCls(s.NextRenewal)==='due-today',start:{date:dstr},end:{date:dstr},_priority:1});
-  });
-  D.master.filter(m=>m.Type==='Income').forEach(m=>{
-    const dstr=toSortableDate(m.Date);if(!dstr)return;
-    if(search&&!m.Name.toLowerCase().includes(search))return;
-    if(!byDate[dstr])byDate[dstr]=[];
-    byDate[dstr].push({_type:'income',_master:m,summary:m.Name,start:{date:dstr},end:{date:dstr},_priority:1});
-  });
-
-  // Add GCal events
   visEvents.forEach(ev=>{
     const startDate=ev.start?.date||ev.start?.dateTime?.slice(0,10);
     const endDate=ev.end?.date||ev.end?.dateTime?.slice(0,10);
@@ -2790,80 +2776,99 @@ function appendMonth(year,month){
       if(!byDate[startDate])byDate[startDate]=[];
       byDate[startDate].push({...ev,_isMulti:false,_isStart:true,_isEnd:true});
     } else {
+      // Add to start date
       if(!byDate[startDate])byDate[startDate]=[];
       byDate[startDate].push({...ev,_isMulti:true,_isStart:true,_isEnd:false});
+      // Continuations for days in this month
       let cur=new Date(s);cur.setDate(cur.getDate()+1);
       while(cur<=eAdj){
         const k=cur.toISOString().slice(0,10);
-        if(!byDate[k])byDate[k]=[];
-        byDate[k].push({...ev,_isMulti:true,_isStart:false,_isEnd:cur.toDateString()===eAdj.toDateString(),_isCont:true});
+        const cm=parseInt(k.slice(5,7))-1,cy=parseInt(k.slice(0,4));
+        if(cy===yr&&cm===mo){
+          if(!byDate[k])byDate[k]=[];
+          byDate[k].push({...ev,_isMulti:true,_isStart:false,_isEnd:cur.toDateString()===eAdj.toDateString(),_isCont:true});
+        }
         cur.setDate(cur.getDate()+1);
       }
     }
   });
+  return byDate;
+}
 
-  // Month section
+function appendMonth(year,month){
+  const d=new Date(year,month,1);
+  const yr=d.getFullYear(),mo=d.getMonth();
+  const key=`${yr}-${mo}`;
+  if(_calScrollRendered.has(key))return;
+  _calScrollRendered.add(key);
+
+  const container=document.getElementById('cal-months-container');
+  if(!container)return;
+
+  const firstDay=new Date(yr,mo,1).getDay();
+  const daysInMonth=new Date(yr,mo+1,0).getDate();
+  const daysInPrev=new Date(yr,mo,0).getDate();
+  const byDate=getByDate(yr,mo);
+  const today=new Date();
   const monthName=new Date(yr,mo,1).toLocaleString('default',{month:'long',year:'numeric'});
+
   const section=document.createElement('div');
-  section.id=`cal-month-${yr}-${mo}`;
+  section.id=`cm-${yr}-${mo}`;
   section.setAttribute('data-year',yr);
   section.setAttribute('data-month',mo);
-  section.style.cssText='scroll-margin-top:30px';
 
-  // Month label
-  let html=`<div style="font-size:12px;font-weight:600;color:var(--text3);padding:10px 8px 6px;letter-spacing:.04em;border-bottom:1px solid var(--border);background:var(--bg)">${monthName}</div>`;
-  html+=`<div class="cal-month-grid">`;
+  // Month label row spanning all 7 cols
+  let html=`<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));">`;
+  html+=`<div style="grid-column:1/-1;padding:6px 10px;font-size:12px;font-weight:600;color:var(--text3);background:var(--bg);border-top:1px solid var(--border);letter-spacing:.02em">${monthName}</div>`;
 
-  // Blank cells before first day
+  // Prev month filler
   for(let i=0;i<firstDay;i++){
-    const d2=daysInPrev-(firstDay-i-1);
-    const prevMo=mo===0?11:mo-1;
-    const prevYr=mo===0?yr-1:yr;
-    const dateStr=`${prevYr}-${String(prevMo+1).padStart(2,'0')}-${String(d2).padStart(2,'0')}`;
-    html+=renderDayCell(d2,dateStr,true,byDate,today);
+    const dd=daysInPrev-(firstDay-i-1);
+    const prevMo=mo===0?11:mo-1;const prevYr=mo===0?yr-1:yr;
+    const ds=`${prevYr}-${String(prevMo+1).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
+    html+=renderDayCell(dd,ds,true,byDate,today);
   }
-  // This month's days
+  // This month
   for(let day=1;day<=daysInMonth;day++){
-    const dateStr=`${yr}-${String(mo+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-    html+=renderDayCell(day,dateStr,false,byDate,today);
+    const ds=`${yr}-${String(mo+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    html+=renderDayCell(day,ds,false,byDate,today);
   }
-  // Fill remaining cells to complete grid row
-  const totalCells=firstDay+daysInMonth;
-  const remainder=totalCells%7===0?0:7-(totalCells%7);
-  for(let i=1;i<=remainder;i++){
-    const nextMo=mo===11?0:mo+1;
-    const nextYr=mo===11?yr+1:yr;
-    const dateStr=`${nextYr}-${String(nextMo+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
-    html+=renderDayCell(i,dateStr,true,byDate,today);
+  // Next month filler
+  const total=firstDay+daysInMonth;
+  const rem=total%7===0?0:7-(total%7);
+  for(let i=1;i<=rem;i++){
+    const nextMo=mo===11?0:mo+1;const nextYr=mo===11?yr+1:yr;
+    const ds=`${nextYr}-${String(nextMo+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+    html+=renderDayCell(i,ds,true,byDate,today);
   }
   html+='</div>';
   section.innerHTML=html;
 
-  // Append in correct date order
-  const existing=grid.querySelectorAll('[data-year]');
+  // Insert in order
+  const existing=container.querySelectorAll('[data-year]');
   let inserted=false;
   for(const el of existing){
     const ey=parseInt(el.getAttribute('data-year'));
     const em=parseInt(el.getAttribute('data-month'));
-    if(yr<ey||(yr===ey&&mo<em)){
-      grid.insertBefore(section,el);
-      inserted=true;break;
-    }
+    if(yr<ey||(yr===ey&&mo<em)){container.insertBefore(section,el);inserted=true;break;}
   }
-  if(!inserted)grid.appendChild(section);
+  if(!inserted)container.appendChild(section);
+
+  // Re-observe
+  if(_calScrollObserver)_calScrollObserver.observe(section);
 }
 
 function renderDayCell(date,dateStr,isOther,byDate,today){
   const isToday=dateStr===localToday();
-  const allDayEvs=(byDate[dateStr]||[]).slice();
-  const contEvs=allDayEvs.filter(e=>e._isCont);
-  const mainEvs=allDayEvs.filter(e=>!e._isCont);
+  const allEvs=(byDate[dateStr]||[]).slice();
+  const contEvs=allEvs.filter(e=>e._isCont);
+  const mainEvs=allEvs.filter(e=>!e._isCont);
   mainEvs.sort((a,b)=>((b._isMulti?2:0)+(a._priority||0))-((a._isMulti?2:0)+(b._priority||0)));
-  const MAX_SHOW=5;
+  const MAX=5;
   let evHtml='';
   contEvs.forEach(ev=>{evHtml+=buildEventPill(ev,dateStr);});
-  mainEvs.slice(0,MAX_SHOW).forEach(ev=>{evHtml+=buildEventPill(ev,dateStr);});
-  if(mainEvs.length>MAX_SHOW)evHtml+=`<div class="cal-more">${mainEvs.length-MAX_SHOW} more</div>`;
+  mainEvs.slice(0,MAX).forEach(ev=>{evHtml+=buildEventPill(ev,dateStr);});
+  if(mainEvs.length>MAX)evHtml+=`<div class="cal-more">${mainEvs.length-MAX} more</div>`;
   return`<div class="cal-cell${isOther?' other-month':''}${isToday?' today':''}" ondblclick="openCalEventModal('${dateStr}',null)"><div class="cal-dn">${date}</div>${evHtml}</div>`;
 }
 
@@ -2876,27 +2881,19 @@ function setupScrollObserver(){
       const el=entry.target;
       const yr=parseInt(el.getAttribute('data-year'));
       const mo=parseInt(el.getAttribute('data-month'));
-      // If first month visible, prepend previous
-      const grid=document.getElementById('cal-grid');
-      const allMonths=grid.querySelectorAll('[data-year]');
-      if(el===allMonths[0]){
-        appendMonth(yr,mo-1);
-        appendMonth(yr,mo-2);
-      }
-      // If last month visible, append next
-      if(el===allMonths[allMonths.length-1]){
-        appendMonth(yr,mo+1);
-        appendMonth(yr,mo+2);
-      }
-      // Update header label
+      // Update header
+      _calYear=yr;_calMonth=mo;
       const label=document.getElementById('cal-month-label');
       if(label)label.textContent=new Date(yr,mo,1).toLocaleString('default',{month:'long',year:'numeric'});
-      // Update _calYear/_calMonth for nav buttons
-      _calYear=yr;_calMonth=mo;
+      // Append adjacent months
+      const container=document.getElementById('cal-months-container');
+      const all=container?.querySelectorAll('[data-year]');
+      if(!all?.length)return;
+      if(el===all[0]){appendMonth(yr,mo-1);appendMonth(yr,mo-2);}
+      if(el===all[all.length-1]){appendMonth(yr,mo+1);appendMonth(yr,mo+2);}
     });
-  },{root:wrap,threshold:0.1});
-  // Observe all month sections
-  document.querySelectorAll('[data-year]').forEach(el=>_calScrollObserver.observe(el));
+  },{root:wrap,rootMargin:'200px',threshold:0});
+  document.querySelectorAll('#cal-months-container [data-year]').forEach(el=>_calScrollObserver.observe(el));
 }
 
 
@@ -3047,7 +3044,7 @@ async function initCalendar(){
   await calSync();
   const calId='4afe919405332d0d693bbe06975c2a399e5911c5c68ad5f1224c0162a4bdf157@group.calendar.google.com';
   const allEvs=_allEvents[calId]||[];
-  if(allEvs.length===0)await calEnsureSubEvents();
+  // Don't auto-create sub events - only create when explicitly triggered
 }
 
 // ── LOCATION SEARCH ──
