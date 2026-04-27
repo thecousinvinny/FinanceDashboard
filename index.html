@@ -3550,10 +3550,10 @@ function showIncomePopover(e,masterRow){
 
 // ── COLUMN VISIBILITY ──
 const _colDefs={
-  wishlist:['Name','Description','Category','Link','Original','Bought','Savings','Actions'],
+  wishlist:['Name','Description','Category','Link','Original','Bought','Savings'],
   master:['Date','Type','Name','Description','Category','Cost','Original','Savings','Card','Bank','Billing','Status','Source'],
-  expenses:['Name','Description','Category','OCost','Cost','Card','Date','Actions'],
-  subscriptions:['Name','Billing','Card','Cost','MonthlyCost','AnnualCost','Due','LastRenewal','NextRenewal','Payments','Category','Actions'],
+  expenses:['Name','Description','Category','OCost','Cost','Card','Date'],
+  subscriptions:['Name','Billing','Card','Cost','MonthlyCost','AnnualCost','Due','LastRenewal','NextRenewal','Payments','Category'],
 };
 const _hiddenCols={};
 function loadHiddenCols(){
@@ -3564,41 +3564,26 @@ function saveHiddenCols2(){
 }
 loadHiddenCols();
 function applyColVisibility(tableId,key){
-  const hidden=_hiddenCols[key]||[];
-  const tab=document.getElementById('tab-'+key);
-  const tables=tab?tab.querySelectorAll('table'):[document.getElementById(tableId)?.closest('table')].filter(Boolean);
-  tables.forEach(table=>{
-    if(!table)return;
-    // Find headers and hide by their text content matching colDef names
-    const headers=[...table.querySelectorAll('thead th')];
-    if(!headers.length){
-      // Dynamic headers not yet rendered — retry shortly
-      setTimeout(()=>applyColVisibility(tableId,key),200);
-      return;
-    }
-    // Build colIndex map from actual rendered headers
-    const idxMap={};
-    headers.forEach((th,i)=>{
-      const txt=th.textContent.trim().toLowerCase();
-      idxMap[txt]=i+1;
-    });
-    const allCols=_colDefs[key]||[];
-    allCols.forEach(col=>{
-      const idx=idxMap[col.toLowerCase()];
-      if(!idx)return;
-      const isHidden=hidden.includes(col);
-      table.querySelectorAll(`tr > *:nth-child(${idx})`).forEach(el=>{
-        el.style.display=isHidden?'none':'';
+  try{
+    const hidden=_hiddenCols[key]||[];
+    if(!hidden.length)return; // nothing hidden, skip
+    const tab=document.getElementById('tab-'+key);
+    const tables=tab?[...tab.querySelectorAll('table')]:[document.getElementById(tableId)?.closest('table')].filter(Boolean);
+    tables.forEach(table=>{
+      if(!table)return;
+      const headers=[...table.querySelectorAll('thead th')];
+      if(!headers.length)return;
+      // Map header text to 1-based column index
+      const idxMap={};
+      headers.forEach((th,i)=>idxMap[th.textContent.trim().toLowerCase()]=i+1);
+      (_colDefs[key]||[]).forEach(col=>{
+        if(!hidden.includes(col))return;
+        const idx=idxMap[col.toLowerCase()];
+        if(!idx)return;
+        table.querySelectorAll(`tr > *:nth-child(${idx})`).forEach(el=>el.style.display='none');
       });
     });
-  });
-}
-// Call applyColVisibility after any tab's table renders
-function applyAllColVisibility(){
-  ['master','expenses','subscriptions','wishlist'].forEach(key=>{
-    if(Object.keys(_hiddenCols[key]||{}).length||(_hiddenCols[key]||[]).length)
-      applyColVisibility(key+'-body',key);
-  });
+  }catch(e){console.warn('applyColVisibility error:',e);}
 }
 function openColPicker(e,key,tableId,renderFn){
   e.stopPropagation();
