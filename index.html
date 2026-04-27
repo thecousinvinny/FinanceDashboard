@@ -826,7 +826,7 @@ const HD={
   categories:['Name','Color'],
   cards:['Name','Bank','Type','Last4','Alias','Default'],
   banks:['Name','Type','Last4'],
-  master:['Date','Type','Name','Description','Category','Cost','OCost','Savings','Card','Bank','Billing','Status','Source'],
+  master:['Date','Type','Name','Description','Category','Cost','Original','Savings','Card','Bank','Billing','Status','Source'],
 };
 const CAL_ID='4afe919405332d0d693bbe06975c2a399e5911c5c68ad5f1224c0162a4bdf157@group.calendar.google.com';
 let D_cal={}; // calendarId -> events cache
@@ -1947,6 +1947,7 @@ function renderExp(){
   renderTable('eb-ord','sm-ord',ordered,8,'ord',['📦','No ordered items']);
   renderTable('eb-pro','sm-pro',procured,8,'pro',['✅','No procured items yet']);
   renderTable('eb-food','sm-food',food,7,'food',['🍔','No food expenses']);
+  setTimeout(()=>applyColVisibility('eb-pro','expenses'),100);
 }
 async function markPro(row){
   const e=D.expenses.find(x=>x._row===row);if(!e)return;
@@ -2063,6 +2064,7 @@ function renderSub(){
   let ci=0;
   b.innerHTML=paged.map(s=>subRow(s,ci++)).join('');
   initSubDragCols();
+  setTimeout(()=>applyColVisibility('sb2','subscriptions'),50);
 }
 async function paySub(row){
   const s=D.subscriptions.find(x=>x._row===row);if(!s)return;
@@ -3548,10 +3550,10 @@ function showIncomePopover(e,masterRow){
 
 // ── COLUMN VISIBILITY ──
 const _colDefs={
-  wishlist:['Name','Description','Category','Link','Original','Bought','Savings'],
+  wishlist:['Name','Description','Category','Link','Original','Bought','Savings','Actions'],
   master:['Date','Type','Name','Description','Category','Cost','Original','Savings','Card','Bank','Billing','Status','Source'],
-  expenses:['Name','Description','Category','Original Cost','Bought Cost','Card','Date'],
-  subscriptions:['Name','Billing','Card','Cost','Monthly','Annual','Due','Last Renewal','Next Renewal','Payments','Category'],
+  expenses:['Name','Description','Category','OCost','Cost','Card','Date','Actions'],
+  subscriptions:['Name','Billing','Card','Cost','MonthlyCost','AnnualCost','Due','LastRenewal','NextRenewal','Payments','Category','Actions'],
 };
 const _hiddenCols={};
 function loadHiddenCols(){
@@ -3563,18 +3565,39 @@ function saveHiddenCols2(){
 loadHiddenCols();
 function applyColVisibility(tableId,key){
   const hidden=_hiddenCols[key]||[];
-  const cols=_colDefs[key]||[];
-  // Find all tables in the relevant tab
   const tab=document.getElementById('tab-'+key);
   const tables=tab?tab.querySelectorAll('table'):[document.getElementById(tableId)?.closest('table')].filter(Boolean);
   tables.forEach(table=>{
     if(!table)return;
-    cols.forEach((col,i)=>{
+    // Find headers and hide by their text content matching colDef names
+    const headers=[...table.querySelectorAll('thead th')];
+    if(!headers.length){
+      // Dynamic headers not yet rendered — retry shortly
+      setTimeout(()=>applyColVisibility(tableId,key),200);
+      return;
+    }
+    // Build colIndex map from actual rendered headers
+    const idxMap={};
+    headers.forEach((th,i)=>{
+      const txt=th.textContent.trim().toLowerCase();
+      idxMap[txt]=i+1;
+    });
+    const allCols=_colDefs[key]||[];
+    allCols.forEach(col=>{
+      const idx=idxMap[col.toLowerCase()];
+      if(!idx)return;
       const isHidden=hidden.includes(col);
-      table.querySelectorAll(`tr > *:nth-child(${i+1})`).forEach(el=>{
+      table.querySelectorAll(`tr > *:nth-child(${idx})`).forEach(el=>{
         el.style.display=isHidden?'none':'';
       });
     });
+  });
+}
+// Call applyColVisibility after any tab's table renders
+function applyAllColVisibility(){
+  ['master','expenses','subscriptions','wishlist'].forEach(key=>{
+    if(Object.keys(_hiddenCols[key]||{}).length||(_hiddenCols[key]||[]).length)
+      applyColVisibility(key+'-body',key);
   });
 }
 function openColPicker(e,key,tableId,renderFn){
