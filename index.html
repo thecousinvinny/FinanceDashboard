@@ -664,15 +664,17 @@ td.editing{background:rgba(108,99,255,0.05)!important}
         <!-- Main -->
         <div class="cal-main">
           <!-- Toolbar -->
-          <div class="cal-toolbar" style="padding:8px 16px;">
-            <button class="cal-nav-btn" onclick="toggleCalSidebar()" title="Toggle sidebar" style="font-size:14px;padding:4px 8px;"></button>
-            <span id="cal-month-label" class="cal-month-title" onclick="openMonthPicker(event)" style="cursor:pointer;user-select:none;padding:4px 8px;border-radius:6px;transition:background .15s;" onmouseover="this.style.background='var(--s3)'" onmouseout="this.style.background=''" title="Click to jump to a month"></span>
-            <button class="cal-nav-btn" onclick="calGoToday()" style="font-size:11px;">Today</button>
-            <input id="cal-search" placeholder="Search…" oninput="renderCalendar()" style="background:var(--s2);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;font-size:11px;color:var(--text);outline:none;width:160px;">
-            <button id="cal-fs-btn" class="cal-nav-btn" onclick="toggleCalFS()" title="Fullscreen" style="font-size:14px;padding:4px 8px;"></button>
-            <div class="cal-view-btns">
-              <button class="cal-view-btn active" id="vbtn-month" onclick="setCalView('month')">Month</button>
-              <button class="cal-view-btn" id="vbtn-week" onclick="setCalView('week')">Week</button>
+          <div class="cal-toolbar" style="padding:6px 16px;gap:10px;">
+            <span id="cal-month-label" class="cal-month-title" onclick="openMonthPicker(event)" style="cursor:pointer;user-select:none;padding:4px 10px;border-radius:8px;transition:background .15s;font-size:16px;font-weight:600;" onmouseover="this.style.background='var(--s3)'" onmouseout="this.style.background=''" title="Click to jump to a month"></span>
+            <button class="cal-nav-btn" onclick="calGoToday()" style="font-size:11px;padding:5px 12px;">Today</button>
+            <input id="cal-search" placeholder="Search…" oninput="renderCalendar()" style="background:var(--s2);border:1px solid var(--border2);border-radius:8px;padding:5px 12px;font-size:11px;color:var(--text);outline:none;width:180px;">
+            <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+              <button class="cal-nav-btn" onclick="toggleCalSidebar()" title="Toggle sidebar" style="font-size:13px;padding:5px 10px;">☰</button>
+              <button id="cal-fs-btn" class="cal-nav-btn" onclick="toggleCalFS()" title="Fullscreen" style="font-size:13px;padding:5px 10px;">⛶</button>
+              <div class="cal-view-btns">
+                <button class="cal-view-btn active" id="vbtn-month" onclick="setCalView('month')">Month</button>
+                <button class="cal-view-btn" id="vbtn-week" onclick="setCalView('week')">Week</button>
+              </div>
             </div>
           </div>
           <!-- Grid -->
