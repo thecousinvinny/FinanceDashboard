@@ -692,17 +692,23 @@ td.editing{background:rgba(108,99,255,0.05)!important}
           <div class="fgr"><label class="fl">Calendar</label><select class="fs" id="cal-ev-calid"></select></div>
           <div class="fgr"><label class="fl">Title</label><input class="fi" id="cal-ev-title" placeholder="Event title…"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
-            <div class="fgr"><label class="fl">Date</label><input class="fi" id="cal-ev-date" type="date"></div>
+            <div class="fgr"><label class="fl">Date</label>
+              <input class="fi" id="cal-ev-date" type="date" style="color-scheme:dark;background:var(--s2);border:1px solid var(--border2);color:var(--text);">
+            </div>
             <div class="fgr"><label class="fl">All day?</label>
               <select class="fs" id="cal-ev-allday" onchange="toggleCalTime()">
-                <option value="yes">All day</option>
                 <option value="no">Specific time</option>
+                <option value="yes">All day</option>
               </select>
             </div>
           </div>
-          <div id="cal-time-row" style="display:none;grid-template-columns:1fr 1fr;gap:11px;" class="fg">
-            <div class="fgr"><label class="fl">Start time</label><input class="fi" id="cal-ev-start" type="time" value="09:00"></div>
-            <div class="fgr"><label class="fl">End time</label><input class="fi" id="cal-ev-end" type="time" value="10:00"></div>
+          <div id="cal-time-row" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;" class="fg">
+            <div class="fgr"><label class="fl">Start time</label>
+              <select class="fs" id="cal-ev-start" onchange="autoSetEndTime()"></select>
+            </div>
+            <div class="fgr"><label class="fl">End time</label>
+              <select class="fs" id="cal-ev-end"></select>
+            </div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
             <div class="fgr"><label class="fl">Category & Color</label>
@@ -3382,11 +3388,10 @@ function openCalEventModal(dateStr,eventId){
   document.getElementById('cal-ev-title').value='';
   document.getElementById('cal-ev-notes').value='';
   document.getElementById('cal-ev-location').value='';
-  document.getElementById('cal-ev-allday').value='yes';
+  document.getElementById('cal-ev-allday').value='no';
+  document.getElementById('cal-time-row').style.display='grid';
+  populateTimePickers('12:00','13:00');
   document.getElementById('cal-ev-recur').value='';
-  document.getElementById('cal-ev-start').value='09:00';
-  document.getElementById('cal-ev-end').value='10:00';
-  document.getElementById('cal-time-row').style.display='none';
   document.getElementById('cal-location-results').style.display='none';
   initCalColorPicker(null,null);
   const titleEl=document.getElementById('cal-mo-title');
@@ -3414,8 +3419,13 @@ function openCalEventModal(dateStr,eventId){
       if(ev.start?.dateTime){
         document.getElementById('cal-ev-allday').value='no';
         document.getElementById('cal-time-row').style.display='grid';
-        document.getElementById('cal-ev-start').value=ev.start.dateTime.slice(11,16);
-        document.getElementById('cal-ev-end').value=(ev.end?.dateTime||'').slice(11,16);
+        const startT=ev.start.dateTime.slice(11,16);
+        const endT=(ev.end?.dateTime||'').slice(11,16)||'10:00';
+        populateTimePickers(startT,endT);
+      } else {
+        document.getElementById('cal-ev-allday').value='yes';
+        document.getElementById('cal-time-row').style.display='none';
+        populateTimePickers();
       }
       if(ev.recurrence?.length)document.getElementById('cal-ev-recur').value=ev.recurrence[0]||'';
       initCalColorPicker(ev.colorId,ev.extendedProperties?.private?.category||null);
@@ -3436,6 +3446,38 @@ function closeCalMo(e){
 function toggleCalTime(){
   const allDay=document.getElementById('cal-ev-allday').value==='yes';
   document.getElementById('cal-time-row').style.display=allDay?'none':'grid';
+}
+function buildTimeOptions(){
+  const opts=[];
+  for(let h=0;h<24;h++){
+    for(let m=0;m<60;m+=15){
+      const hh=String(h).padStart(2,'0');
+      const mm=String(m).padStart(2,'0');
+      const ampm=h<12?'AM':'PM';
+      const displayH=h===0?12:h>12?h-12:h;
+      opts.push({val:`${hh}:${mm}`,label:`${displayH}:${mm} ${ampm}`});
+    }
+  }
+  return opts;
+}
+function populateTimePickers(startVal='09:00',endVal='10:00'){
+  const opts=buildTimeOptions();
+  const optHtml=opts.map(o=>`<option value="${o.val}">${o.label}</option>`).join('');
+  const startEl=document.getElementById('cal-ev-start');
+  const endEl=document.getElementById('cal-ev-end');
+  if(startEl){startEl.innerHTML=optHtml;startEl.value=startVal;}
+  if(endEl){endEl.innerHTML=optHtml;endEl.value=endVal;}
+}
+function autoSetEndTime(){
+  const startEl=document.getElementById('cal-ev-start');
+  const endEl=document.getElementById('cal-ev-end');
+  if(!startEl||!endEl)return;
+  const [h,m]=startEl.value.split(':').map(Number);
+  // Default end = start + 1 hour
+  const endMin=(h*60+m+60)%(24*60);
+  const eh=String(Math.floor(endMin/60)).padStart(2,'0');
+  const em=String(endMin%60).padStart(2,'0');
+  endEl.value=`${eh}:${em}`;
 }
 async function saveCalEvent(){
   const combined=document.getElementById('cal-ev-id').value;
