@@ -1153,6 +1153,17 @@ async function readSheet(name){
   });
   return r.result.values||[];
 }
+
+async function batchReadSheets(names){
+  const r=await gapi.client.sheets.spreadsheets.values.batchGet({
+    spreadsheetId:cfg.sid,
+    ranges:names.map(n=>`${n}!A1:Z10000`),
+  });
+  const vrs=r.result.valueRanges||[];
+  const out={};
+  names.forEach((n,i)=>out[n]=vrs[i]?.values||[]);
+  return out;
+}
 async function appendRow(sheet,vals){
   await gapi.client.sheets.spreadsheets.values.append({spreadsheetId:cfg.sid,range:sheet,valueInputOption:'USER_ENTERED',resource:{values:[vals]}});
 }
@@ -1207,30 +1218,25 @@ async function syncAll(){
   const lbl=document.getElementById('sync-label');
   if(ind){ind.style.display='flex';if(icon)icon.classList.add('spinning');if(lbl)lbl.textContent='Syncing…';}
   try{
-    const[er,wr,sr,cr,kar,bar,mr]=await Promise.all([
-      readSheet('Expenses'),readSheet('Wishlist'),
-      readSheet('Subscriptions'),readSheet('Categories'),
-      readSheet('Cards'),readSheet('Banks'),readSheet('Master')
-    ]);
-    D.expenses=parse(er,HD.expenses);
-    D.wishlist=parse(wr,HD.wishlist);
-    D.subscriptions=parse(sr,HD.subscriptions);
-    D.categories=parse(cr,HD.categories);
-    D.cards=parse(kar,HD.cards);
-    D.banks=parse(bar,HD.banks);
-    D.master=parse(mr,HD.master);
-    await writeBackCalculated();
+    const sheets=await batchReadSheets(['Expenses','Wishlist','Subscriptions','Categories','Cards','Banks','Master']);
+    D.expenses=parse(sheets.Expenses,HD.expenses);
+    D.wishlist=parse(sheets.Wishlist,HD.wishlist);
+    D.subscriptions=parse(sheets.Subscriptions,HD.subscriptions);
+    D.categories=parse(sheets.Categories,HD.categories);
+    D.cards=parse(sheets.Cards,HD.cards);
+    D.banks=parse(sheets.Banks,HD.banks);
+    D.master=parse(sheets.Master,HD.master);
     renderAll();
     toast('Synced ✓','ok');
     if(ind&&icon&&lbl){
       icon.classList.remove('spinning');
       lbl.textContent='Synced ✓';
-      ind.style.color='var(--green)';
+      ind.style.color='#22c55e';
       setTimeout(()=>{ind.style.display='none';ind.style.color='';},1800);
     }
   }catch(e){
     console.error('syncAll error:',e);
-    if(ind&&icon){icon.classList.remove('spinning');ind.style.color='var(--red)';if(lbl)lbl.textContent='Failed';setTimeout(()=>{ind.style.display='none';ind.style.color='';},2500);}
+    if(ind&&icon){icon.classList.remove('spinning');ind.style.color='#ef4444';if(lbl)lbl.textContent='Failed';setTimeout(()=>{ind.style.display='none';ind.style.color='';},2500);}
     if(e&&e.status===401){
       toast('Session expired — signing in again...','err');
       doSignIn();
