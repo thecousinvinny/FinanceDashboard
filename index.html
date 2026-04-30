@@ -1085,8 +1085,6 @@ async function writeBackCalculated(){
 async function syncAll(){
   const btns=document.querySelectorAll('[onclick*="syncAll"]');
   btns.forEach(b=>{b._origText=b.textContent;b.textContent='↻';b.style.animation='spin 1s linear infinite';});
-  const b=document.querySelector('.sbtn');
-  if(b){b.textContent='↻ Syncing…';}
   try{
     const[er,wr,sr,cr,kar,bar,mr]=await Promise.all([
       readSheet('Expenses'),readSheet('Wishlist'),
@@ -1100,19 +1098,26 @@ async function syncAll(){
     D.cards=parse(kar,HD.cards);
     D.banks=parse(bar,HD.banks);
     D.master=parse(mr,HD.master);
-    // Write calculated subscription costs back to sheet if stale
     await writeBackCalculated();
     renderAll();
     toast('Synced ✓','ok');
+    // Show ✓ on buttons briefly
+    btns.forEach(b=>{
+      b.style.animation='';
+      b.textContent='✓';
+      setTimeout(()=>{b.textContent=b._origText||'↻ Sync';},1500);
+    });
   }catch(e){
-    if(e.status===401){
+    console.error('syncAll error:',e);
+    btns.forEach(b=>{b.style.animation='';b.textContent=b._origText||'↻ Sync';});
+    if(e&&e.status===401){
       toast('Session expired — signing in again...','err');
       doSignIn();
     } else {
-      toast('Sync failed: '+e.message,'err');
+      const msg=(e&&(e.message||e.result?.error?.message))||'unknown error';
+      toast('Sync failed: '+msg,'err');
     }
   }
-  if(b){b.textContent='↻ Sync';}
 }
 
 function parse(rows,hd){
