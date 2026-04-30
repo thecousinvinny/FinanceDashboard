@@ -1018,15 +1018,30 @@ function isMobileSafari(){
     (navigator.userAgent.includes('Mac')&&'ontouchend' in document);
 }
 
+// Check for token in URL hash (after OAuth redirect)
+function checkOAuthRedirect(){
+  const hash=window.location.hash;
+  if(!hash)return false;
+  const params=new URLSearchParams(hash.substring(1));
+  const token=params.get('access_token');
+  if(!token)return false;
+  // Clear hash from URL
+  history.replaceState(null,'',window.location.pathname);
+  // Use the token
+  _tc={getToken:()=>token};
+  gapi.client.setToken({access_token:token});
+  onToken({access_token:token});
+  return true;
+}
+
 function gsiLoaded(){
   _tc=google.accounts.oauth2.initTokenClient({
     client_id:cfg.cid,
     scope:'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/calendar',
     callback:onToken,
-    // Use redirect UX hint for mobile to avoid popup blocking
-    ux_mode: isMobileSafari() ? 'redirect' : 'popup',
-    redirect_uri: window.location.href.split('?')[0],
   });
+  // Check if returning from redirect first
+  if(checkOAuthRedirect())return;
   doSignIn();
 }
 
@@ -1034,8 +1049,11 @@ function doSignIn(){
   if(!_tc){toast('Still loading — please wait...','err');return;}
   document.getElementById('signin-btn').style.display='none';
   if(isMobileSafari()){
-    // On iOS, must request with prompt so it doesn't silently fail
-    _tc.requestAccessToken({prompt:'select_account'});
+    // On iOS Safari, do a full page redirect to Google OAuth
+    const redirectUri=encodeURIComponent(window.location.href.split('?')[0].split('#')[0]);
+    const scope=encodeURIComponent('https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/calendar');
+    const url=`https://accounts.google.com/o/oauth2/v2/auth?client_id=${cfg.cid}&redirect_uri=${redirectUri}&response_type=token&scope=${scope}&prompt=select_account`;
+    window.location.href=url;
   } else {
     _tc.requestAccessToken({prompt:''});
   }
@@ -1047,6 +1065,9 @@ async function onToken(r){
     document.getElementById('signin-btn').style.display='block';
     return;
   }
+  // Handle both GSI callback {access_token} and direct token object
+  const token=r.access_token||r;
+  if(typeof token==='string')gapi.client.setToken({access_token:token});
   document.getElementById('signin-btn').style.display='none';
   await ensureSheets();
   await syncAll();
