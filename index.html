@@ -907,6 +907,91 @@ tbody td{padding:12px 10px}
     </div>
   </div>
 </div>
+<!-- ── HOME CARD EDIT MODALS ── -->
+<!-- Wishlist Edit -->
+<div class="mo" id="hc-wish-mo" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="md" style="max-width:440px">
+    <div class="mtit">Edit Wishlist Item</div>
+    <div class="fg"><div class="fgr"><label class="fl">Name</label><input class="fi" id="hcw-name"></div>
+    <div class="fgr"><label class="fl">Category</label><select class="fs" id="hcw-cat"></select></div></div>
+    <div class="fgr" style="margin-top:11px"><label class="fl">Description</label><input class="fi" id="hcw-desc"></div>
+    <div class="fg" style="margin-top:11px">
+      <div class="fgr"><label class="fl">Original Cost</label><input class="fi" id="hcw-ocost" type="number" min="0" step="0.01"></div>
+      <div class="fgr"><label class="fl">Bought Cost</label><input class="fi" id="hcw-bcost" type="number" min="0" step="0.01"></div>
+    </div>
+    <div class="fgr" style="margin-top:11px"><label class="fl">Link</label><input class="fi" id="hcw-link" placeholder="https://..."></div>
+    <div style="display:flex;gap:8px;margin-top:18px">
+      <button class="btn btn-a" style="flex:1" onclick="saveHomeWishEdit()">Save</button>
+      <button class="btn" onclick="document.getElementById('hc-wish-mo').classList.remove('open')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Expense Edit -->
+
+<div class="mo" id="hc-exp-mo" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="md" style="max-width:440px">
+    <div class="mtit">Edit Expense</div>
+    <div class="fg"><div class="fgr"><label class="fl">Name</label><input class="fi" id="hce-name"></div>
+    <div class="fgr"><label class="fl">Category</label><select class="fs" id="hce-cat"></select></div></div>
+    <div class="fgr" style="margin-top:11px"><label class="fl">Description</label><input class="fi" id="hce-desc"></div>
+    <div class="fg" style="margin-top:11px">
+      <div class="fgr"><label class="fl">Cost Paid</label><input class="fi" id="hce-cost" type="number" min="0" step="0.01"></div>
+      <div class="fgr"><label class="fl">Original Cost</label><input class="fi" id="hce-orig" type="number" min="0" step="0.01"></div>
+    </div>
+    <div class="fg" style="margin-top:11px">
+      <div class="fgr"><label class="fl">Card</label><select class="fs" id="hce-card"></select></div>
+      <div class="fgr"><label class="fl">Date</label><input class="fi" id="hce-date" type="date" style="color-scheme:dark"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:18px">
+      <button class="btn btn-a" style="flex:1" onclick="saveHomeExpEdit()">Save</button>
+      <button class="btn" onclick="document.getElementById('hc-exp-mo').classList.remove('open')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Subscription Edit -->
+
+<div class="mo" id="hc-sub-mo" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="md" style="max-width:440px">
+    <div class="mtit">Edit Subscription</div>
+    <div class="fg"><div class="fgr"><label class="fl">Name</label><input class="fi" id="hcs-name"></div>
+    <div class="fgr"><label class="fl">Category</label><select class="fs" id="hcs-cat"></select></div></div>
+    <div class="fg" style="margin-top:11px">
+      <div class="fgr"><label class="fl">Cost</label><input class="fi" id="hcs-cost" type="number" min="0" step="0.01"></div>
+      <div class="fgr"><label class="fl">Billing</label><select class="fs" id="hcs-billing"><option>Monthly</option><option>Annual</option><option>Weekly</option><option>Quarterly</option></select></div>
+    </div>
+    <div class="fg" style="margin-top:11px">
+      <div class="fgr"><label class="fl">Card</label><select class="fs" id="hcs-card"></select></div>
+      <div class="fgr"><label class="fl">Next Renewal</label><input class="fi" id="hcs-renewal" type="date" style="color-scheme:dark"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:18px">
+      <button class="btn btn-a" style="flex:1" onclick="saveHomeSubEdit()">Save</button>
+      <button class="btn" onclick="document.getElementById('hc-sub-mo').classList.remove('open')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Income Edit -->
+
+<div class="mo" id="hc-income-mo" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="md" style="max-width:440px">
+    <div class="mtit">Edit Income</div>
+    <div class="fg"><div class="fgr"><label class="fl">Name</label><input class="fi" id="hci-name"></div>
+    <div class="fgr"><label class="fl">Category</label><select class="fs" id="hci-cat"></select></div></div>
+    <div class="fgr" style="margin-top:11px"><label class="fl">Description</label><input class="fi" id="hci-desc"></div>
+    <div class="fg" style="margin-top:11px">
+      <div class="fgr"><label class="fl">Amount</label><input class="fi" id="hci-cost" type="number" min="0" step="0.01"></div>
+      <div class="fgr"><label class="fl">Date</label><input class="fi" id="hci-date" type="date" style="color-scheme:dark"></div>
+    </div>
+    <div class="fgr" style="margin-top:11px"><label class="fl">Bank</label><select class="fs" id="hci-bank"></select></div>
+    <div style="display:flex;gap:8px;margin-top:18px">
+      <button class="btn btn-a" style="flex:1" onclick="saveHomeIncomeEdit()">Save</button>
+      <button class="btn" onclick="document.getElementById('hc-income-mo').classList.remove('open')">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div class="mo" id="food-mo" onclick="closeFoodMo(event)">
   <div class="md" style="max-width:380px;">
     <div class="mtit"> Log Food</div>
@@ -3585,7 +3670,7 @@ function renderHomeWish(){
     const bought=parseFloat(w.BCost||0);
     const sav=orig&&bought&&orig>bought?orig-bought:0;
     const price=orig||bought;
-    return`<div class="home-card">
+    return`<div class="home-card" onclick="openHomeWishEdit(${w._row})" style="cursor:pointer">
       <div class="home-card-top">
         <div class="home-card-info">
           <div class="home-card-name">${esc(w.Name||'—')}</div>
@@ -3623,7 +3708,7 @@ function renderHomeExp(){
     const cost=parseFloat(e.Cost||0);
     const orig=parseFloat(e.Original||e.OCost||0);
     const sav=parseFloat(e.Savings||0);
-    return`<div class="home-card">
+    return`<div class="home-card" onclick="openHomeExpEdit(${e._row})" style="cursor:pointer">
       <div class="home-card-top">
         <div class="home-card-info">
           <div class="home-card-name">${esc(e.Name||'—')}</div>
@@ -3660,7 +3745,7 @@ function renderHomeSub(){
     const monthly=parseFloat(s.MonthlyCost||s.Cost||0);
     const annual=parseFloat(s.AnnualCost||0);
     const payments=parseInt(s.Payments||0);
-    return`<div class="home-card" style="${due==='due-today'?'border-color:rgba(239,68,68,0.3);':due==='due-soon'?'border-color:rgba(245,158,11,0.25);':''}">
+    return`<div class="home-card" onclick="openHomeSubEdit(${s._row})" style="cursor:pointer;${due==='due-today'?'border-color:rgba(239,68,68,0.3);':due==='due-soon'?'border-color:rgba(245,158,11,0.25);':''}">
       <div class="home-card-top">
         <div class="home-card-info">
           <div class="home-card-name">${esc(s.Name||'—')}</div>
@@ -3689,7 +3774,7 @@ function renderHomeIncome(){
   const lim=_homeLimits.income;
   el.innerHTML=income.slice(0,lim).map(m=>{
     const amt=parseFloat(m.Cost||0);
-    return`<div class="home-card">
+    return`<div class="home-card" onclick="openHomeIncomeEdit(${m._row})" style="cursor:pointer">
       <div class="home-card-top">
         <div class="home-card-info">
           <div class="home-card-name">${esc(m.Name||'—')}</div>
@@ -3747,6 +3832,119 @@ function showDataTab(name,el){
   else if(name==='banks')renderBanks();
 }
 
+// ── HOME CARD EDIT MODALS ──
+let _hcEditRow=null,_hcEditSheet=null;
+
+function openHomeWishEdit(row){
+  const w=D.wishlist.find(x=>x._row===row);if(!w)return;
+  _hcEditRow=row;_hcEditSheet='Wishlist';
+  document.getElementById('hcw-name').value=w.Name||'';
+  document.getElementById('hcw-desc').value=w.Description||'';
+  document.getElementById('hcw-link').value=w.Link||'';
+  document.getElementById('hcw-ocost').value=w.OCost||'';
+  document.getElementById('hcw-bcost').value=w.BCost||'';
+  const catSel=document.getElementById('hcw-cat');
+  catSel.innerHTML=D.categories.map(c=>`<option${c.Name===w.Category?' selected':''}>${esc(c.Name)}</option>`).join('');
+  document.getElementById('hc-wish-mo').classList.add('open');
+}
+async function saveHomeWishEdit(){
+  const w=D.wishlist.find(x=>x._row===_hcEditRow);if(!w)return;
+  w.Name=document.getElementById('hcw-name').value;
+  w.Description=document.getElementById('hcw-desc').value;
+  w.Category=document.getElementById('hcw-cat').value;
+  w.Link=document.getElementById('hcw-link').value;
+  w.OCost=document.getElementById('hcw-ocost').value;
+  w.BCost=document.getElementById('hcw-bcost').value;
+  const vals=[w.Name,w.Description,w.Category,w.Link,w.OCost,w.BCost,w.Status];
+  await updateRow('Wishlist',_hcEditRow,vals);
+  document.getElementById('hc-wish-mo').classList.remove('open');
+  await syncAll();
+}
+
+function openHomeExpEdit(row){
+  const e=D.expenses.find(x=>x._row===row);if(!e)return;
+  _hcEditRow=row;_hcEditSheet='Expenses';
+  document.getElementById('hce-name').value=e.Name||'';
+  document.getElementById('hce-desc').value=e.Description||'';
+  document.getElementById('hce-cost').value=e.Cost||'';
+  document.getElementById('hce-orig').value=e.Original||e.OCost||'';
+  document.getElementById('hce-date').value=toSortableDate(e.Date||'')||'';
+  const catSel=document.getElementById('hce-cat');
+  catSel.innerHTML=D.categories.map(c=>`<option${c.Name===e.Category?' selected':''}>${esc(c.Name)}</option>`).join('');
+  const cardSel=document.getElementById('hce-card');
+  cardSel.innerHTML=D.cards.map(c=>`<option value="${esc(c.Name)}"${c.Name===e.Card?' selected':''}>${esc(c.Alias||c.Name)}</option>`).join('');
+  document.getElementById('hc-exp-mo').classList.add('open');
+}
+async function saveHomeExpEdit(){
+  const e=D.expenses.find(x=>x._row===_hcEditRow);if(!e)return;
+  e.Name=document.getElementById('hce-name').value;
+  e.Description=document.getElementById('hce-desc').value;
+  e.Category=document.getElementById('hce-cat').value;
+  e.Cost=document.getElementById('hce-cost').value;
+  const orig=document.getElementById('hce-orig').value;
+  const sav=orig&&e.Cost?Math.max(0,parseFloat(orig)-parseFloat(e.Cost)).toFixed(2):'';
+  e.Card=document.getElementById('hce-card').value;
+  e.Date=document.getElementById('hce-date').value;
+  const vals=[e.Name,e.Description,e.Category,e.Card,e.Date,e.Status,orig,e.Cost,sav];
+  await updateRow('Expenses',_hcEditRow,vals);
+  document.getElementById('hc-exp-mo').classList.remove('open');
+  await syncAll();
+}
+
+function openHomeSubEdit(row){
+  const s=D.subscriptions.find(x=>x._row===row);if(!s)return;
+  _hcEditRow=row;_hcEditSheet='Subscriptions';
+  document.getElementById('hcs-name').value=s.Name||'';
+  document.getElementById('hcs-cost').value=s.Cost||'';
+  document.getElementById('hcs-billing').value=s.Billing||'Monthly';
+  document.getElementById('hcs-renewal').value=toSortableDate(s.NextRenewal||'')||'';
+  const catSel=document.getElementById('hcs-cat');
+  catSel.innerHTML=D.categories.map(c=>`<option${c.Name===s.Category?' selected':''}>${esc(c.Name)}</option>`).join('');
+  const cardSel=document.getElementById('hcs-card');
+  cardSel.innerHTML=D.cards.map(c=>`<option value="${esc(c.Name)}"${c.Name===s.Card?' selected':''}>${esc(c.Alias||c.Name)}</option>`).join('');
+  document.getElementById('hc-sub-mo').classList.add('open');
+}
+async function saveHomeSubEdit(){
+  const s=D.subscriptions.find(x=>x._row===_hcEditRow);if(!s)return;
+  s.Name=document.getElementById('hcs-name').value;
+  s.Cost=document.getElementById('hcs-cost').value;
+  s.Billing=document.getElementById('hcs-billing').value;
+  s.Card=document.getElementById('hcs-card').value;
+  s.Category=document.getElementById('hcs-cat').value;
+  s.NextRenewal=document.getElementById('hcs-renewal').value;
+  const vals=[s.Name,s.Billing,s.Card,s.Cost,s.LastRenewal,s.NextRenewal,s.Category,s.Status,s.Payments,s.MonthlyCost,s.AnnualCost];
+  await updateRow('Subscriptions',_hcEditRow,vals);
+  document.getElementById('hc-sub-mo').classList.remove('open');
+  await syncAll();
+}
+
+function openHomeIncomeEdit(row){
+  const m=D.master.find(x=>x._row===row);if(!m)return;
+  _hcEditRow=row;_hcEditSheet='Master';
+  document.getElementById('hci-name').value=m.Name||'';
+  document.getElementById('hci-desc').value=m.Description||'';
+  document.getElementById('hci-cost').value=m.Cost||'';
+  document.getElementById('hci-date').value=toSortableDate(m.Date||'')||'';
+  const catSel=document.getElementById('hci-cat');
+  catSel.innerHTML=D.categories.map(c=>`<option${c.Name===m.Category?' selected':''}>${esc(c.Name)}</option>`).join('');
+  const bankSel=document.getElementById('hci-bank');
+  bankSel.innerHTML=D.banks.map(b=>`<option${b.Name===m.Bank?' selected':''}>${esc(b.Name)}</option>`).join('');
+  document.getElementById('hc-income-mo').classList.add('open');
+}
+async function saveHomeIncomeEdit(){
+  const m=D.master.find(x=>x._row===_hcEditRow);if(!m)return;
+  m.Name=document.getElementById('hci-name').value;
+  m.Description=document.getElementById('hci-desc').value;
+  m.Cost=document.getElementById('hci-cost').value;
+  m.Date=document.getElementById('hci-date').value;
+  m.Category=document.getElementById('hci-cat').value;
+  m.Bank=document.getElementById('hci-bank').value;
+  const vals=[m.Date,m.Type,m.Name,m.Description,m.Category,m.Cost,m.Original,m.Savings,m.Card,m.Bank,m.Billing,m.Status,m.Source];
+  await updateRow('Master',_hcEditRow,vals);
+  document.getElementById('hc-income-mo').classList.remove('open');
+  await syncAll();
+}
+
 // ── HOME SWIPE ──
 function initHomeSwipe(){
   const wrap=document.getElementById('home-slider-wrap');
@@ -3754,7 +3952,7 @@ function initHomeSwipe(){
   wrap._swipeInit=true;
   let startX=null;
   const onSwipe=(dx)=>{
-    if(Math.abs(dx)<40)return;
+    if(Math.abs(dx)<90)return;
     // Swipe LEFT (dx<0) = go forward (higher index)
     // Swipe RIGHT (dx>0) = go back (lower index)
     const next=dx<0?Math.min(_homePanel+1,3):Math.max(_homePanel-1,0);
