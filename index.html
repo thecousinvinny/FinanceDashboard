@@ -8,6 +8,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDR31gST2VMxROFmWWe9GYWn0ySAWcbb18&libraries=places" async defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -22,12 +24,12 @@
 }
 @keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
 .skeleton{border-radius:6px;background:linear-gradient(90deg,var(--s2) 25%,var(--s3) 50%,var(--s2) 75%);background-size:800px 100%;animation:shimmer 1.4s infinite}
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
 @keyframes spin{to{transform:rotate(360deg)}}
 #sync-icon.spinning{animation:spin 1s linear infinite;transform-origin:center}
 @keyframes tabIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .tab-enter{animation:tabIn .18s ease both}
-.col-picker-btn{background:var(--s2);border:1px solid var(--border2);border-radius:var(--r);padding:5px 10px;color:var(--text2);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.col-picker-btn{background:var(--s2);border:1px solid var(--border2);border-radius:var(--r);padding:5px 10px;color:var(--text2);font-size:11px;cursor:pointer;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;transition:all .15s}
 .col-picker-btn:hover{background:var(--s3);color:var(--text)}
 .col-picker-popup{position:fixed;z-index:3000;background:var(--s1);border:1px solid var(--border2);border-radius:10px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.5);min-width:160px}
 .col-picker-item{display:flex;align-items:center;gap:8px;padding:5px 2px;cursor:pointer;font-size:12px;color:var(--text2);border-radius:4px;user-select:none}
@@ -53,10 +55,10 @@ html{scrollbar-gutter:stable}
 .step{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;font-size:12px;color:var(–text2)}
 .step:last-child{margin-bottom:0}
 .sn{background:var(–accent);color:#fff;border-radius:50%;width:17px;height:17px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;flex-shrink:0;margin-top:1px}
-.ai{width:100%;background:var(–s2);border:1px solid var(–border2);border-radius:var(–r);padding:11px 14px;color:var(–text);font-family:‘DM Mono’,monospace;font-size:12px;margin-bottom:10px;outline:none;transition:border-color .2s}
+.ai{width:100%;background:var(–s2);border:1px solid var(–border2);border-radius:var(–r);padding:11px 14px;color:var(–text);font-family:‘DM Mono’,‘SF Mono’,‘Courier New’,monospace;font-size:12px;margin-bottom:10px;outline:none;transition:border-color .2s}
 .ai:focus{border-color:var(–accent)}
 .ai::placeholder{color:var(–text3)}
-.bp{width:100%;padding:13px;background:var(–accent);color:#fff;border:none;border-radius:var(–r);font-family:‘DM Sans’,sans-serif;font-size:14px;font-weight:500;cursor:pointer}
+.bp{width:100%;padding:13px;background:var(–accent);color:#fff;border:none;border-radius:var(–r);font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;font-size:14px;font-weight:500;cursor:pointer}
 .anote{font-size:11px;color:var(–text3);margin-top:14px}
 
 /* APP */
@@ -64,9 +66,9 @@ html{scrollbar-gutter:stable}
 .hdr{background:rgba(20,20,22,0.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(–border);padding:0;display:flex;align-items:stretch;justify-content:space-between;height:48px;position:sticky;top:0;z-index:200;gap:0}
 .hlogo{font-size:15px;font-weight:600;padding:0 20px;display:flex;align-items:center;color:var(–text);letter-spacing:-.02em;white-space:nowrap;border-right:1px solid var(–border)}
 .hright{display:flex;align-items:center;gap:6px;padding:0 16px;border-left:1px solid var(–border)}
-.sbtn{background:transparent;border:1px solid var(–border2);border-radius:var(–r);padding:5px 11px;color:var(–text2);font-size:11px;cursor:pointer;font-family:‘DM Sans’,sans-serif;transition:all .15s}
+.sbtn{background:transparent;border:1px solid var(–border2);border-radius:var(–r);padding:5px 11px;color:var(–text2);font-size:11px;cursor:pointer;font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;transition:all .15s}
 .sbtn:hover{background:var(–s3);color:var(–text);border-color:var(–border2)}
-.signin-btn{background:var(–accent);color:#fff;border:none;border-radius:var(–r);padding:5px 12px;font-size:11px;cursor:pointer;font-family:‘DM Sans’,sans-serif;display:none}
+.signin-btn{background:var(–accent);color:#fff;border:none;border-radius:var(–r);padding:5px 12px;font-size:11px;cursor:pointer;font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;display:none}
 /* NAV merged into header */
 .nav{display:flex;gap:0;overflow-x:auto;flex:1;align-items:stretch;padding:0 4px;scrollbar-width:none}
 .nav::-webkit-scrollbar{display:none}
@@ -79,7 +81,7 @@ html{scrollbar-gutter:stable}
 .sg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px}
 .sc{background:var(–s1);border:1px solid var(–border);border-radius:var(–r2);padding:20px;transition:border-color .2s}.sc:hover{border-color:var(–border2)}
 .sl{font-size:10px;color:var(–text3);font-weight:500;letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px}
-.sv{font-size:26px;font-weight:600;font-family:‘DM Mono’,ui-monospace,monospace}
+.sv{font-size:26px;font-weight:600;font-family:‘DM Mono’,‘SF Mono’,‘Courier New’,monospace}
 .ss{font-size:11px;color:var(–text3);margin-top:4px}
 .sv.danger{color:var(–red);color:#ef4444}.sv.warn{color:var(–amber);color:#f59e0b}.sv.good{color:var(–green);color:#22c55e}
 
@@ -130,11 +132,11 @@ thead tr{background:var(–s2)}
 thead th{padding:8px 14px;text-align:left;font-size:10px;font-weight:600;color:var(–text3);letter-spacing:.07em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 tbody tr:hover{background:rgba(255,255,255,0.03)}
 tbody td{padding:9px 14px;color:var(–text);vertical-align:middle;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis}
-.tm{font-family:‘DM Mono’,monospace;font-size:11px}
+.tm{font-family:‘DM Mono’,‘SF Mono’,‘Courier New’,monospace;font-size:11px}
 .td2{color:var(–text2)}.td3{color:var(–text3)}
-.tred{color:var(–red);font-family:‘DM Mono’,monospace;font-size:11px;font-weight:500}
-.tgrn{color:var(–green);font-family:‘DM Mono’,monospace;font-size:11px;font-weight:500}
-.tstr{text-decoration:line-through;color:var(–text3);font-family:‘DM Mono’,monospace;font-size:11px}
+.tred{color:var(–red);font-family:‘DM Mono’,‘SF Mono’,‘Courier New’,monospace;font-size:11px;font-weight:500}
+.tgrn{color:var(–green);font-family:‘DM Mono’,‘SF Mono’,‘Courier New’,monospace;font-size:11px;font-weight:500}
+.tstr{text-decoration:line-through;color:var(–text3);font-family:‘DM Mono’,‘SF Mono’,‘Courier New’,monospace;font-size:11px}
 /* Column width hints */
 th:first-child,td:first-child{min-width:120px}
 th.col-sm,td.col-sm{width:70px;min-width:55px}
@@ -172,7 +174,7 @@ th.col-act,td.col-act{width:1%;white-space:nowrap}
 .s-can{background:var(–s3);color:var(–text3)}
 
 /* BUTTONS */
-.btn{font-size:11px;font-weight:500;padding:5px 11px;border-radius:7px;border:1px solid var(–border2);background:transparent;color:var(–text2);cursor:pointer;font-family:‘DM Sans’,sans-serif;transition:all .15s;white-space:nowrap}
+.btn{font-size:11px;font-weight:500;padding:5px 11px;border-radius:7px;border:1px solid var(–border2);background:transparent;color:var(–text2);cursor:pointer;font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;transition:all .15s;white-space:nowrap}
 .btn:hover{background:var(–s3);color:var(–text)}
 .btn-a{border-color:var(–accent);color:var(–accent2)}.btn-a:hover{background:rgba(108,99,255,.1)}
 .btn-p{border-color:rgba(34,197,94,.4);color:var(–green)}.btn-p:hover{background:rgba(34,197,94,.1)}
@@ -193,7 +195,7 @@ th.col-act,td.col-act{width:1%;white-space:nowrap}
 .fgr{display:flex;flex-direction:column;gap:5px}
 .fgr.full{grid-column:1/-1}
 .fl{font-size:10px;font-weight:500;color:var(–text3);text-transform:uppercase;letter-spacing:.06em}
-.fi,.fs{background:var(–s2);border:1px solid var(–border2);border-radius:8px;padding:8px 11px;color:var(–text);font-family:‘DM Sans’,sans-serif;font-size:12px;outline:none;transition:border-color .15s;width:100%}
+.fi,.fs{background:var(–s2);border:1px solid var(–border2);border-radius:8px;padding:8px 11px;color:var(–text);font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;font-size:12px;outline:none;transition:border-color .15s;width:100%}
 .fi:focus,.fs:focus{border-color:var(–accent)}
 .fs option{background:var(–s2)}
 .mac{display:flex;gap:9px;justify-content:flex-end;margin-top:18px}
@@ -218,8 +220,8 @@ thead th:hover .drag-handle{opacity:1}
 /* INLINE EDIT */
 .ie{cursor:pointer;border-radius:5px;padding:2px 4px;transition:background .1s;min-width:30px;display:inline-block}
 .ie:hover{background:var(–s3)}
-.ie-input{background:var(–s2);border:1px solid var(–accent);border-radius:5px;padding:2px 6px;color:var(–text);font-family:‘DM Sans’,sans-serif;font-size:12px;outline:none;width:100%;min-width:80px}
-.ie-sel{background:var(–s2);border:1px solid var(–accent);border-radius:5px;padding:2px 4px;color:var(–text);font-family:‘DM Sans’,sans-serif;font-size:11px;outline:none;cursor:pointer}
+.ie-input{background:var(–s2);border:1px solid var(–accent);border-radius:5px;padding:2px 6px;color:var(–text);font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;font-size:12px;outline:none;width:100%;min-width:80px}
+.ie-sel{background:var(–s2);border:1px solid var(–accent);border-radius:5px;padding:2px 4px;color:var(–text);font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;font-size:11px;outline:none;cursor:pointer}
 td.editing{background:rgba(108,99,255,0.05)!important}
 .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;display:inline-block}
 .sub-sum{display:flex;gap:20px;padding:11px 18px;border-bottom:1px solid var(–border);background:var(–s2);font-size:11px;color:var(–text2)}
@@ -251,7 +253,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .cal-nav-btn:hover{background:var(–s3);color:var(–text)}
 .cal-month-title{font-size:16px;font-weight:600;min-width:180px;text-align:center;color:var(–text)}
 .cal-view-btns{display:flex;border:1px solid var(–border2);border-radius:6px;overflow:hidden;margin-left:auto}
-.cal-view-btn{padding:5px 14px;background:transparent;color:var(–text2);border:none;cursor:pointer;font-size:12px;font-family:‘DM Sans’,sans-serif;transition:all .15s}
+.cal-view-btn{padding:5px 14px;background:transparent;color:var(–text2);border:none;cursor:pointer;font-size:12px;font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;transition:all .15s}
 .cal-view-btn:hover{background:var(–s3)}
 .cal-view-btn.active{background:var(–s3);color:var(–text)}
 /* Month grid */
@@ -293,7 +295,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .cal-popover-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(–border)}
 .cal-popover-row:last-of-type{border-bottom:none}
 .cal-popover-label{color:var(–text3)}
-.cal-popover-val{color:var(–text);font-weight:500;font-family:‘DM Mono’,monospace;font-size:11px}
+.cal-popover-val{color:var(–text);font-weight:500;font-family:‘DM Mono’,‘SF Mono’,‘Courier New’,monospace;font-size:11px}
 .cal-popover-actions{display:flex;gap:8px;margin-top:12px}
 #cal-location-results div:last-child{border-bottom:none}
 .cal-popover{position:fixed;z-index:2000;background:var(–s1);border:1px solid var(–border2);border-radius:var(–r2);padding:16px;min-width:260px;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.5);animation:popIn .15s ease}
@@ -303,7 +305,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .cal-popover-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(–border)}
 .cal-popover-row:last-of-type{border-bottom:none}
 .cal-popover-label{color:var(–text3)}
-.cal-popover-val{color:var(–text);font-weight:500;font-family:‘DM Mono’,monospace;font-size:11px}
+.cal-popover-val{color:var(–text);font-weight:500;font-family:‘DM Mono’,‘SF Mono’,‘Courier New’,monospace;font-size:11px}
 .cal-popover-actions{display:flex;gap:8px;margin-top:12px}
 .cal-swatch{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;flex-shrink:0}
 .cal-color-picker-popup{position:fixed;z-index:3000;background:var(–s1);border:1px solid var(–border2);border-radius:10px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,0.5);display:flex;flex-direction:column;gap:8px}
@@ -317,7 +319,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 /* SORT BAR */
 .sort-bar{display:flex;align-items:center;gap:6px;padding:8px 0 14px;border-bottom:none;background:transparent;flex-wrap:wrap;margin-bottom:14px}
 .sort-lbl{font-size:10px;color:var(–text3);font-weight:500;text-transform:uppercase;letter-spacing:.06em;margin-right:2px;flex-shrink:0}
-.sort-btn{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(–border2);background:transparent;color:var(–text2);cursor:pointer;font-family:‘DM Sans’,sans-serif;transition:all .15s;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;position:relative}
+.sort-btn{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(–border2);background:transparent;color:var(–text2);cursor:pointer;font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;transition:all .15s;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;position:relative}
 .sort-btn:hover{background:var(–s3);color:var(–text)}
 .sort-btn.asc{background:rgba(108,99,255,0.12);color:var(–accent2);border-color:var(–accent)}
 .sort-btn.desc{background:rgba(108,99,255,0.18);color:var(–accent2);border-color:var(–accent)}
@@ -361,7 +363,7 @@ tbody td{padding:12px 10px}
 /* Always use bottom nav - hide top nav */
 .nav{display:none!important}
 /* ── HOME PANELS ── */
-.home-tab-btn{flex:1;min-width:90px;padding:10px 8px;font-size:12px;font-weight:500;color:var(–text3);background:transparent;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:‘DM Sans’,sans-serif;transition:color .15s,border-color .15s;white-space:nowrap}
+.home-tab-btn{flex:1;min-width:90px;padding:10px 8px;font-size:12px;font-weight:500;color:var(–text3);background:transparent;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;transition:color .15s,border-color .15s;white-space:nowrap}
 .home-tab-btn.on{color:var(–text);border-bottom-color:var(–accent)}
 .home-panel{min-width:100%;width:100%;height:100%;display:flex;flex-direction:column;flex-shrink:0;box-sizing:border-box;}
 .home-panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;font-size:15px;font-weight:600;flex-shrink:0;border-bottom:1px solid var(–border)}
@@ -375,7 +377,7 @@ tbody td{padding:12px 10px}
 .home-card-sub{font-size:11px;color:var(–text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .home-card-amount{font-size:14px;font-weight:600;white-space:nowrap;flex-shrink:0}
 .home-card-action{flex-shrink:0;margin-left:4px}
-.home-show-more{margin:4px 16px 16px;padding:10px;background:var(–s2);border:1px solid var(–border);border-radius:10px;color:var(–text2);font-size:12px;cursor:pointer;font-family:‘DM Sans’,sans-serif;transition:background .15s}
+.home-show-more{margin:4px 16px 16px;padding:10px;background:var(–s2);border:1px solid var(–border);border-radius:10px;color:var(–text2);font-size:12px;cursor:pointer;font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;transition:background .15s}
 .home-show-more:hover{background:var(–s3)}
 .due-soon{color:var(–amber)}
 .due-today{color:var(–red)}
@@ -385,13 +387,13 @@ tbody td{padding:12px 10px}
 /* Mobile bottom nav */
 #mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;height:64px;background:rgba(12,12,14,0.7);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border-top:1px solid rgba(255,255,255,0.08);box-shadow:0 -1px 0 rgba(255,255,255,0.04);z-index:300;align-items:stretch;justify-content:space-around;padding:0 4px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
 #mobile-nav::-webkit-scrollbar{display:none}
-.mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:rgba(255,255,255,0.35);border:none;background:transparent;font-family:‘DM Sans’,sans-serif;padding:0;min-height:64px;-webkit-tap-highlight-color:transparent;transition:color .15s;min-width:56px}
+.mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:rgba(255,255,255,0.35);border:none;background:transparent;font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;padding:0;min-height:64px;-webkit-tap-highlight-color:transparent;transition:color .15s;min-width:56px}
 .mob-tab.on{color:#fff}.mob-tab.on svg{filter:drop-shadow(0 0 6px rgba(108,99,255,0.8))}
 .mob-tab svg{width:20px;height:20px;flex-shrink:0;transition:filter .15s}
 .mob-tab span{font-size:9px;font-weight:500;letter-spacing:.03em;transition:color .15s}
 /* Mobile FAB */
 #mobile-fab{display:flex;position:fixed;bottom:76px;right:16px;flex-direction:column;gap:10px;z-index:400;align-items:flex-end}
-.fab-btn{height:44px;border-radius:22px;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:‘DM Sans’,sans-serif;padding:0 18px;box-shadow:0 4px 16px rgba(0,0,0,.4);display:flex;align-items:center;gap:8px;white-space:nowrap;-webkit-tap-highlight-color:transparent;transition:transform .15s}
+.fab-btn{height:44px;border-radius:22px;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;padding:0 18px;box-shadow:0 4px 16px rgba(0,0,0,.4);display:flex;align-items:center;gap:8px;white-space:nowrap;-webkit-tap-highlight-color:transparent;transition:transform .15s}
 .fab-btn:active{transform:scale(.96)}
 .fab-main{width:56px;height:56px;border-radius:50%;background:var(–accent);color:#fff;font-size:24px;padding:0;justify-content:center}
 
@@ -422,25 +424,25 @@ tbody td{padding:12px 10px}
 <div id="app" style="display:none">
   <!-- Floating menu button -->
   <div style="position:fixed;top:10px;right:12px;z-index:500;display:flex;align-items:center;gap:8px;">
-    <div id="sync-indicator" style="display:none;align-items:center;gap:6px;background:rgba(20,20,22,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:5px 10px;font-size:11px;color:var(--text2);">
+    <div id="sync-indicator" style="display:none;align-items:center;gap:6px;background:rgba(20,20,22,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:5px 10px;font-size:11px;color:#8a8a9a;">
       <svg id="sync-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0"><path d="M21 2v6h-6M3 12a9 9 0 0115-6.7L21 8M3 22v-6h6M21 12a9 9 0 01-15 6.7L3 16"/></svg>
       <span id="sync-label">Syncing…</span>
     </div>
-    <div id="app-menu-btn" onclick="toggleAppMenu()" style="width:36px;height:36px;border-radius:50%;background:rgba(20,20,22,0.7);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--text2);transition:background .15s;" onmouseover="this.style.background='rgba(60,60,70,0.85)'" onmouseout="this.style.background='rgba(20,20,22,0.7)'" title="Menu">⋯</div>
+    <div id="app-menu-btn" onclick="toggleAppMenu()" style="width:36px;height:36px;border-radius:50%;background:rgba(20,20,22,0.7);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:#8a8a9a;transition:background .15s;" onmouseover="this.style.background='rgba(60,60,70,0.85)'" onmouseout="this.style.background='rgba(20,20,22,0.7)'" title="Menu">⋯</div>
   </div>
-  <div id="app-menu-popup" style="display:none;position:fixed;top:52px;right:12px;z-index:500;background:var(--s1);border:1px solid var(--border2);border-radius:12px;padding:8px;box-shadow:0 8px 32px rgba(0,0,0,.5);min-width:160px;">
+  <div id="app-menu-popup" style="display:none;position:fixed;top:52px;right:12px;z-index:500;background:#141416;border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:8px;box-shadow:0 8px 32px rgba(0,0,0,.5);min-width:160px;">
     <button class="sbtn" onclick="syncAll();toggleAppMenu()" style="width:100%;text-align:left;margin-bottom:4px;">↻ Sync</button>
     <button class="sbtn" onclick="repairAllSheets();toggleAppMenu()" style="width:100%;text-align:left;margin-bottom:4px;">🔧 Repair</button>
     <button class="signin-btn" id="signin-btn" onclick="doSignIn()" style="width:100%;text-align:left;margin-bottom:4px;display:none;">Sign in</button>
-    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
-    <button class="btn" onclick="logout()" style="width:100%;text-align:left;color:var(--red);">Disconnect</button>
+    <div style="height:1px;background:rgba(255,255,255,0.07);margin:4px 0;"></div>
+    <button class="btn" onclick="logout()" style="width:100%;text-align:left;color:#ef4444;">Disconnect</button>
   </div>
   <div class="main">
 
 ```
 <div id="tab-home" style="display:block">
   <!-- Panel nav dots -->
-  <div id="home-nav" style="display:flex;align-items:center;justify-content:center;gap:0;background:var(--s1);border-bottom:1px solid var(--border);padding:0;overflow-x:auto;scrollbar-width:none;">
+  <div id="home-nav" style="display:flex;align-items:center;justify-content:center;gap:0;background:#141416;border-bottom:1px solid rgba(255,255,255,0.07);padding:0;overflow-x:auto;scrollbar-width:none;">
     <button class="home-tab-btn on" onclick="homeGoTo(0,this)" data-panel="0">Wishlist</button>
     <button class="home-tab-btn" onclick="homeGoTo(1,this)" data-panel="1">Expenses</button>
     <button class="home-tab-btn" onclick="homeGoTo(2,this)" data-panel="2">Subscriptions</button>
@@ -586,7 +588,7 @@ tbody td{padding:12px 10px}
 
 <div id="tab-data" style="display:none">
   <!-- Sub-nav for data tabs -->
-  <div style="display:flex;gap:8px;padding:8px 16px;background:var(--s1);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;">
+  <div style="display:flex;gap:8px;padding:8px 16px;background:#141416;border-bottom:1px solid rgba(255,255,255,0.07);overflow-x:auto;scrollbar-width:none;">
     <button class="sort-btn on" id="data-sub-btn-wishlist" onclick="showDataTab('wishlist',this)">Wishlist</button>
     <button class="sort-btn" id="data-sub-btn-expenses" onclick="showDataTab('expenses',this)">Expenses</button>
     <button class="sort-btn" id="data-sub-btn-subscriptions" onclick="showDataTab('subscriptions',this)">Subs</button>
@@ -596,7 +598,7 @@ tbody td{padding:12px 10px}
     <button class="sort-btn" id="data-sub-btn-banks" onclick="showDataTab('banks',this)">Banks</button>
   </div>
 <div id="tab-wishlist" style="display:none">
-  <div class="sort-bar" style="background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:16px;padding:8px 14px;">
+  <div class="sort-bar" style="background:#141416;border:1px solid rgba(255,255,255,0.07);border-radius:14px;margin-bottom:16px;padding:8px 14px;">
       <span class="sort-lbl">Sort</span>
       <button class="sort-btn asc" id="ws-row" data-field="_row" onclick="setSort('wish','_row',this)">Date Added <span class="arr">↑</span></button>
       <button class="sort-btn" id="ws-name" data-field="Name" onclick="setSort('wish','Name',this)">Name <span class="arr">↕</span></button>
@@ -605,7 +607,7 @@ tbody td{padding:12px 10px}
       <button class="sort-btn" id="ws-savings" data-field="_savings" onclick="setSort('wish','_savings',this)">Savings <span class="arr">↕</span></button>
       <button class="sort-btn" id="ws-status" data-field="Status" onclick="setSort('wish','Status',this)">Status <span class="arr">↕</span></button>
       <div class="sort-divider"></div>
-      <button class="sort-btn" onclick="clearSort('wish')" style="color:var(--text3);font-size:10px;"> Clear</button>
+      <button class="sort-btn" onclick="clearSort('wish')" style="color:#555563;font-size:10px;"> Clear</button>
     </div>
   <div class="panel">
     <div class="ph"><div class="pt"> Wishlist <span class="pc" id="wc">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('wish')">+ Add item</button></div></div>
@@ -618,7 +620,7 @@ tbody td{padding:12px 10px}
 </div>
 
 <div id="tab-expenses" style="display:none">
-  <div class="sort-bar" style="background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:16px;padding:8px 14px;">
+  <div class="sort-bar" style="background:#141416;border:1px solid rgba(255,255,255,0.07);border-radius:14px;margin-bottom:16px;padding:8px 14px;">
     <span class="sort-lbl">Sort all</span>
     <button class="sort-btn asc" id="es-row" data-field="_row" onclick="setSort('exp','_row',this)">Date Added <span class="arr">↑</span></button>
     <button class="sort-btn" id="es-date" data-field="Date" onclick="setSort('exp','Date',this)">Date <span class="arr">↕</span></button>
@@ -628,10 +630,10 @@ tbody td{padding:12px 10px}
     <button class="sort-btn" id="es-savings" data-field="_savings" onclick="setSort('exp','_savings',this)">Savings <span class="arr">↕</span></button>
     <button class="sort-btn" id="es-card" data-field="Card" onclick="setSort('exp','Card',this)">Card <span class="arr">↕</span></button>
     <div class="sort-divider"></div>
-    <button class="sort-btn" onclick="clearSort('exp')" style="color:var(--text3);font-size:10px;"> Clear</button>
+    <button class="sort-btn" onclick="clearSort('exp')" style="color:#555563;font-size:10px;"> Clear</button>
   </div>
   <div class="panel" id="panel-ordered">
-    <div class="ph"><div class="pt"> Ordered <span class="pc" id="ec-ord">0</span></div><div class="pa"><button class="btn" onclick="resetExpColOrder()" style="font-size:10px;color:var(--text3)">Reset cols</button><button class="btn btn-a" onclick="openModal('exp')">+ Add expense</button></div></div>
+    <div class="ph"><div class="pt"> Ordered <span class="pc" id="ec-ord">0</span></div><div class="pa"><button class="btn" onclick="resetExpColOrder()" style="font-size:10px;color:#555563">Reset cols</button><button class="btn btn-a" onclick="openModal('exp')">+ Add expense</button></div></div>
     <div class="tw"><table>
       <thead></thead>
       <tbody id="eb-ord"></tbody>
@@ -657,7 +659,7 @@ tbody td{padding:12px 10px}
 </div>
 
 <div id="tab-subscriptions" style="display:none">
-  <div class="sort-bar" style="background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:16px;padding:8px 14px;">
+  <div class="sort-bar" style="background:#141416;border:1px solid rgba(255,255,255,0.07);border-radius:14px;margin-bottom:16px;padding:8px 14px;">
       <span class="sort-lbl">Sort</span>
       <button class="sort-btn asc" id="ss-row" data-field="_row" onclick="setSort('sub','_row',this)">Date Added <span class="arr">↑</span></button>
       <button class="sort-btn" id="ss-billing" data-field="Billing" onclick="setSort('sub','Billing',this)">Billing <span class="arr">↕</span></button>
@@ -667,16 +669,16 @@ tbody td{padding:12px 10px}
       <button class="sort-btn" id="ss-cat" data-field="Category" onclick="setSort('sub','Category',this)">Category <span class="arr">↕</span></button>
       <button class="sort-btn" id="ss-payments" data-field="Payments" onclick="setSort('sub','Payments',this)">Payments <span class="arr">↕</span></button>
       <div class="sort-divider"></div>
-      <button class="sort-btn" onclick="clearSort('sub')" style="color:var(--text3);font-size:10px;"> Clear</button>
+      <button class="sort-btn" onclick="clearSort('sub')" style="color:#555563;font-size:10px;"> Clear</button>
     </div>
   <div class="panel">
     <div class="ph">
       <div class="pt">Subscriptions <span class="pc" id="sc2">0</span></div>
       <div class="pa">
-        <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);cursor:pointer;">
-          <input type="checkbox" id="show-cancelled" onchange="renderSub()" style="accent-color:var(--accent)"> Show cancelled
+        <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#8a8a9a;cursor:pointer;">
+          <input type="checkbox" id="show-cancelled" onchange="renderSub()" style="accent-color:#6c63ff"> Show cancelled
         </label>
-        <button class="btn" onclick="resetSubColOrder()" style="font-size:10px;color:var(--text3)">Reset cols</button>
+        <button class="btn" onclick="resetSubColOrder()" style="font-size:10px;color:#555563">Reset cols</button>
         <button class="btn btn-a" onclick="openModal('sub')">+ Add sub</button>
       </div>
     </div>
@@ -720,7 +722,7 @@ tbody td{padding:12px 10px}
 </div>
 
 <div id="tab-master" style="display:none;">
-  <div style="background:var(--s1);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;gap:12px;">
+  <div style="background:#141416;border-bottom:1px solid rgba(255,255,255,0.07);padding:12px 24px;display:flex;align-items:center;gap:12px;">
     <span style="font-size:15px;font-weight:600;">Master Ledger</span>
     <span class="pc" id="master-count">0</span>
     <select id="master-filter" onchange="renderMaster()" class="fs" style="font-size:11px;padding:5px 8px;width:auto;">
@@ -748,7 +750,7 @@ tbody td{padding:12px 10px}
     <!-- Sidebar -->
     <div class="cal-sidebar">
       <div>
-        <div style="padding:0 0 10px;border-bottom:1px solid var(--border);margin-bottom:10px;">
+        <div style="padding:0 0 10px;border-bottom:1px solid rgba(255,255,255,0.07);margin-bottom:10px;">
           <div class="cal-sidebar-title">App Events</div>
           <div class="cal-cal-item" onclick="toggleAppEvents('sub')">
             <div class="cal-cal-dot" id="sub-dot" style="background:#f59e0b;cursor:pointer" ondblclick="event.stopPropagation();openAppColorPicker(event,'sub')" title="Double-click to change color"></div>
@@ -764,13 +766,13 @@ tbody td{padding:12px 10px}
         <div class="cal-sidebar-title">My Calendars</div>
         <div id="cal-sidebar-list"></div>
       </div>
-      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.07)">
         <div class="cal-sidebar-title" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
           Hidden <span style="font-size:10px"></span>
         </div>
         <div id="cal-hidden-list" style="display:none;margin-top:6px"></div>
       </div>
-      <div style="padding-top:8px;border-top:1px solid var(--border)">
+      <div style="padding-top:8px;border-top:1px solid rgba(255,255,255,0.07)">
         <button class="btn" onclick="calSync()" style="font-size:11px;padding:7px 12px;width:100%">↻ Sync</button>
       </div>
     </div>
@@ -780,7 +782,7 @@ tbody td{padding:12px 10px}
       <div class="cal-toolbar" style="padding:6px 16px;gap:10px;">
         <span id="cal-month-label" class="cal-month-title" onclick="openMonthPicker(event)" style="cursor:pointer;user-select:none;padding:4px 10px;border-radius:8px;transition:background .15s;font-size:16px;font-weight:600;" onmouseover="this.style.background='var(--s3)'" onmouseout="this.style.background=''" title="Click to jump to a month"></span>
         <button class="cal-nav-btn" onclick="calGoToday()" style="font-size:11px;padding:5px 12px;">Today</button>
-        <input id="cal-search" placeholder="Search…" oninput="renderCalendar()" style="background:var(--s2);border:1px solid var(--border2);border-radius:8px;padding:5px 12px;font-size:11px;color:var(--text);outline:none;width:180px;">
+        <input id="cal-search" placeholder="Search…" oninput="renderCalendar()" style="background:#1c1c1f;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:5px 12px;font-size:11px;color:#ebebeb;outline:none;width:180px;">
         <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
           <button class="cal-nav-btn" onclick="toggleCalSidebar()" title="Toggle sidebar" style="font-size:13px;padding:5px 10px;">☰</button>
           <button id="cal-fs-btn" class="cal-nav-btn" onclick="toggleCalFS()" title="Fullscreen" style="font-size:13px;padding:5px 10px;">⛶</button>
@@ -808,7 +810,7 @@ tbody td{padding:12px 10px}
       <div class="fgr"><label class="fl">Title</label><input class="fi" id="cal-ev-title" placeholder="Event title…"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
         <div class="fgr"><label class="fl">Date</label>
-          <input class="fi" id="cal-ev-date" type="date" style="color-scheme:dark;background:var(--s2);border:1px solid var(--border2);color:var(--text);">
+          <input class="fi" id="cal-ev-date" type="date" style="color-scheme:dark;background:#1c1c1f;border:1px solid rgba(255,255,255,0.12);color:#ebebeb;">
         </div>
         <div class="fgr"><label class="fl">All day?</label>
           <select class="fs" id="cal-ev-allday" onchange="toggleCalTime()">
@@ -842,7 +844,7 @@ tbody td{padding:12px 10px}
             <option value="Holiday"     data-color="2"  data-hex="#ec4899">Holiday</option>
             <option value="Other"       data-color="10" data-hex="#6b7280">Other</option>
           </select>
-          <div id="cal-cat-bar" style="height:3px;border-radius:2px;margin-top:6px;background:var(--border);transition:background .2s;"></div>
+          <div id="cal-cat-bar" style="height:3px;border-radius:2px;margin-top:6px;background:rgba(255,255,255,0.07);transition:background .2s;"></div>
         </div>
         <div class="fgr"><label class="fl">Recurrence</label>
           <select class="fs" id="cal-ev-recur">
@@ -857,14 +859,14 @@ tbody td{padding:12px 10px}
       <input type="hidden" id="cal-ev-color" value="9">
       <div class="fgr"><label class="fl">Location / Address</label>
         <input class="fi" id="cal-ev-location" placeholder="Search a place…" oninput="calLocationSearch()" autocomplete="off">
-        <div id="cal-location-results" style="background:var(--s2);border:1px solid var(--border2);border-radius:8px;margin-top:4px;display:none;max-height:160px;overflow-y:auto;z-index:200;position:relative;"></div>
+        <div id="cal-location-results" style="background:#1c1c1f;border:1px solid rgba(255,255,255,0.12);border-radius:8px;margin-top:4px;display:none;max-height:160px;overflow-y:auto;z-index:200;position:relative;"></div>
       </div>
       <div class="fgr"><label class="fl">Notes</label>
-        <textarea class="fi" id="cal-ev-notes" rows="3" placeholder="Add notes…" style="resize:vertical;min-height:70px;font-family:'DM Sans',sans-serif;"></textarea>
+        <textarea class="fi" id="cal-ev-notes" rows="3" placeholder="Add notes…" style="resize:vertical;min-height:70px;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;"></textarea>
       </div>
     </div>
     <div class="mac">
-      <button class="btn" id="cal-delete-btn" style="display:none;color:var(--red);border-color:rgba(239,68,68,.4);margin-right:auto;" onclick="calDeleteCurrentEvent()"> Delete</button>
+      <button class="btn" id="cal-delete-btn" style="display:none;color:#ef4444;border-color:rgba(239,68,68,.4);margin-right:auto;" onclick="calDeleteCurrentEvent()"> Delete</button>
       <button class="btn" onclick="closeCalMo()">Cancel</button>
       <button class="btn btn-a" onclick="saveCalEvent()">Save</button>
     </div>
@@ -890,8 +892,8 @@ tbody td{padding:12px 10px}
     <div class="mtit" id="buy-title">Move to Expenses</div>
     <input type="hidden" id="buy-row">
     <div style="display:flex;flex-direction:column;gap:12px;">
-      <div style="background:var(--s2);border-radius:var(--r);padding:12px 16px;font-size:12px;color:var(--text2);">
-        Original price: <strong id="buy-ocost" style="color:var(--text);">—</strong>
+      <div style="background:#1c1c1f;border-radius:10px;padding:12px 16px;font-size:12px;color:#8a8a9a;">
+        Original price: <strong id="buy-ocost" style="color:#ebebeb;">—</strong>
       </div>
       <div class="fgr"><label class="fl">Bought for</label><input class="fi" id="buy-cost" type="number" step="0.01" placeholder="0.00"></div>
       <div class="fgr"><label class="fl">Card used</label><select class="fs" id="buy-card"></select></div>
@@ -940,7 +942,7 @@ tbody td{padding:12px 10px}
     </div>
     <div class="mac">
       <button class="btn" onclick="closeIncomeMo()">Cancel</button>
-      <button class="btn" style="border-color:rgba(34,197,94,.4);color:var(--green);" onclick="saveIncomeMo()">+ Log Income</button>
+      <button class="btn" style="border-color:rgba(34,197,94,.4);color:#22c55e;" onclick="saveIncomeMo()">+ Log Income</button>
     </div>
   </div>
 </div>
@@ -1944,7 +1946,7 @@ function renderWish(){
   // Filter out No Longer Needed
   const visible=D.wishlist.filter(w=>w.Status!=='No Longer Needed');
   document.getElementById('wc').textContent=visible.length;
-  if(!visible.length){b.innerHTML='<tr><td colspan="9"><div class="empty"><div style="font-size:40px;margin-bottom:12px">🛍️</div><div style="font-weight:600;margin-bottom:6px">Wishlist is empty</div><div style="color:var(--text3);font-size:12px">Add items you want to buy</div></div></td></tr>';if(sm)sm.style.display='none';return;}
+  if(!visible.length){b.innerHTML='<tr><td colspan="9"><div class="empty"><div style="font-size:40px;margin-bottom:12px">🛍️</div><div style="font-weight:600;margin-bottom:6px">Wishlist is empty</div><div style="color:#555563;font-size:12px">Add items you want to buy</div></div></td></tr>';if(sm)sm.style.display='none';return;}
   const sorted=sortRows(visible,'wish');
   const lim=_pages['wish']||PAGE;
   const paged=sorted.slice(0,lim);
@@ -1965,7 +1967,7 @@ function renderWish(){
         ${!isBought?`<button class="btn btn-m" style="white-space:nowrap" onclick="markBought(${w._row})">→ Expense</button>`:'<span class="tag s-pro">Bought</span>'}
       </td>
       <td>
-        ${!isBought?`<button class="btn" style="font-size:10px;color:var(--text3)" onclick="wishSetStatus(${w._row},'No Longer Needed')">Not interested</button>`:''}
+        ${!isBought?`<button class="btn" style="font-size:10px;color:#555563" onclick="wishSetStatus(${w._row},'No Longer Needed')">Not interested</button>`:''}
       </td>
       <td>
         <button class="btn btn-c btic" onclick="delItem('Wishlist',${w._row})">✕</button>
@@ -2941,11 +2943,11 @@ function openAppColorPicker(e,type){
   popup.id='cal-color-popup';
   popup.className='cal-color-picker-popup';
   const cur=_appEvState[type].color;
-  popup.innerHTML=`<div style="font-size:11px;color:var(--text3);font-weight:500">${type==='sub'?'Subscription':'Income'} color</div>
+  popup.innerHTML=`<div style="font-size:11px;color:#555563;font-weight:500">${type==='sub'?'Subscription':'Income'} color</div>
     <div class="cal-color-swatches">${CAL_COLOR_PALETTE.map(color=>`<div class="cal-color-swatch" style="background:${color};${color===cur?'border-color:#fff;transform:scale(1.15)':''}" onclick="applyAppColor('${type}','${color}')"></div>`).join('')}</div>
     <div style="display:flex;gap:6px;align-items:center;margin-top:4px">
       <input type="color" value="${cur}" style="width:32px;height:24px;border:none;background:none;cursor:pointer;padding:0" oninput="applyAppColor('${type}',this.value)">
-      <span style="font-size:11px;color:var(--text3)">Custom</span>
+      <span style="font-size:11px;color:#555563">Custom</span>
     </div>`;
   document.body.appendChild(popup);
   const x=Math.min(e.clientX,window.innerWidth-200);
@@ -3009,8 +3011,8 @@ function renderSidebar(){
         ondblclick="event.stopPropagation();openCalColorPicker(event,'${cal.id}')"
         title="Click to toggle · Double-click to change color"></div>
       <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;font-size:12px" title="${esc(cal.summary)}" onclick="toggleCalendar('${cal.id}')">${esc(cal.summary)}</span>
-      <span style="font-size:9px;color:var(--text3);flex-shrink:0;background:var(--s3);border-radius:3px;padding:1px 4px;margin-right:2px" title="${cal.id.includes('4afe9194')?'Created in this app, synced to Google':'From your Google Calendar'}">${cal.id.includes('4afe9194')?'APP':'GCal'}</span>
-      <span style="color:var(--text3);font-size:11px;cursor:pointer;padding:2px 4px;border-radius:4px" title="Hide from sidebar" onclick="hideCalFromSidebar('${cal.id}')">✕</span>
+      <span style="font-size:9px;color:#555563;flex-shrink:0;background:#252529;border-radius:3px;padding:1px 4px;margin-right:2px" title="${cal.id.includes('4afe9194')?'Created in this app, synced to Google':'From your Google Calendar'}">${cal.id.includes('4afe9194')?'APP':'GCal'}</span>
+      <span style="color:#555563;font-size:11px;cursor:pointer;padding:2px 4px;border-radius:4px" title="Hide from sidebar" onclick="hideCalFromSidebar('${cal.id}')">✕</span>
     </div>`).join('');
 
   if(hidEl){
@@ -3018,8 +3020,8 @@ function renderSidebar(){
       <div class="cal-cal-item" style="opacity:.6">
         <div class="cal-cal-dot" style="background:${cal.color}"></div>
         <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px">${esc(cal.summary)}</span>
-        <span style="color:var(--accent);font-size:10px;cursor:pointer" onclick="unhideCalFromSidebar('${cal.id}')">Show</span>
-      </div>`).join(''):'<div style="font-size:11px;color:var(--text3);padding:4px 0">No hidden calendars</div>';
+        <span style="color:#6c63ff;font-size:10px;cursor:pointer" onclick="unhideCalFromSidebar('${cal.id}')">Show</span>
+      </div>`).join(''):'<div style="font-size:11px;color:#555563;padding:4px 0">No hidden calendars</div>';
   }
 }
 
@@ -3046,7 +3048,7 @@ function openCalColorPicker(e,calId){
   const cal=_allCalendars.find(c=>c.id===calId);
   const currentColor=cal?.color||'#6c63ff';
   popup.innerHTML=`
-    <div style="font-size:11px;color:var(--text3);font-weight:500;">Calendar color</div>
+    <div style="font-size:11px;color:#555563;font-weight:500;">Calendar color</div>
     <div class="cal-color-swatches">${CAL_COLOR_PALETTE.map(color=>`
       <div class="cal-color-swatch" style="background:${color};${color===currentColor?'border-color:#fff;transform:scale(1.15)':''}"
         onclick="applyCalColor('${calId}','${color}')"></div>`).join('')}
@@ -3054,7 +3056,7 @@ function openCalColorPicker(e,calId){
     <div style="display:flex;gap:6px;align-items:center;margin-top:4px">
       <input type="color" value="${currentColor}" style="width:32px;height:24px;border:none;background:none;cursor:pointer;padding:0" 
         oninput="applyCalColor('${calId}',this.value)">
-      <span style="font-size:11px;color:var(--text3)">Custom color</span>
+      <span style="font-size:11px;color:#555563">Custom color</span>
     </div>`;
   // Position near click
   document.body.appendChild(popup);
@@ -3136,7 +3138,7 @@ function renderMonth(){
   // Day headers sticky
   const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   grid.innerHTML=
-    `<div id="cal-day-hdrs" style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));position:sticky;top:0;z-index:20;background:var(--s1);border-bottom:2px solid var(--border);">`
+    `<div id="cal-day-hdrs" style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));position:sticky;top:0;z-index:20;background:#141416;border-bottom:2px solid rgba(255,255,255,0.07);">`
     +days.map(d=>`<div class="cal-day-hdr">${d}</div>`).join('')
     +`</div>`
     +`<div id="cal-continuous-grid" style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));"></div>`
@@ -3390,15 +3392,15 @@ function renderWeek(){
     const isToday=d.toISOString().slice(0,10)===todayLocal;
     html+=`<div class="cal-week-hdr${isToday?' today-col':''}">
       <div style="font-size:11px">${dayNames[d.getDay()]}</div>
-      <div style="font-size:${isToday?18:14}px;font-weight:${isToday?700:400};${isToday?'background:var(--accent);color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;margin:2px auto':''}">${d.getDate()}</div>
+      <div style="font-size:${isToday?18:14}px;font-weight:${isToday?700:400};${isToday?'background:#6c63ff;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;margin:2px auto':''}">${d.getDate()}</div>
     </div>`;
   });
   // All-day row
-  html+=`<div class="cal-week-time" style="font-size:9px;line-height:28px;height:28px;border-bottom:1px solid var(--border)">all-day</div>`;
+  html+=`<div class="cal-week-time" style="font-size:9px;line-height:28px;height:28px;border-bottom:1px solid rgba(255,255,255,0.07)">all-day</div>`;
   days.forEach(d=>{
     const ds=d.toISOString().slice(0,10);
     const allDay=(byDate[ds]||[]).filter(ev=>ev.start?.date||ev._type);
-    html+=`<div style="border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:2px;min-height:28px;">`;
+    html+=`<div style="border-right:1px solid rgba(255,255,255,0.07);border-bottom:1px solid rgba(255,255,255,0.07);padding:2px;min-height:28px;">`;
     allDay.forEach(ev=>{html+=buildEventPill(ev,ds);});
     html+=`</div>`;
   });
@@ -3575,12 +3577,12 @@ function renderHomeWish(){
     return`<div class="home-card">
       <div class="home-card-info">
         <div class="home-card-name">${esc(w.Name||'—')}</div>
-        <div class="home-card-sub">${esc(w.Category||'')}${w.Description?` · ${esc(w.Description)}`:''}${w.Link?` · <a href="${esc(w.Link)}" target="_blank" style="color:var(--accent)">Link</a>`  :''}</div>
+        <div class="home-card-sub">${esc(w.Category||'')}${w.Description?` · ${esc(w.Description)}`:''}${w.Link?` · <a href="${esc(w.Link)}" target="_blank" style="color:#6c63ff">Link</a>`  :''}</div>
       </div>
-      ${price?`<div class="home-card-amount" style="color:var(--red)">$${parseFloat(price).toLocaleString()}</div>`:''}
+      ${price?`<div class="home-card-amount" style="color:#ef4444">$${parseFloat(price).toLocaleString()}</div>`:''}
       <div class="home-card-action"><button class="btn btn-a" style="font-size:11px;padding:4px 9px;" onclick="markBought(${w._row})">→ Expense</button></div>
     </div>`;
-  }).join('')||'<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">Nothing on wishlist</div>';
+  }).join('')||'<div style="color:#555563;font-size:12px;text-align:center;padding:20px">Nothing on wishlist</div>';
   if(more)more.style.display=items.length>lim?'block':'none';
 }
 
@@ -3602,11 +3604,11 @@ function renderHomeExp(){
       <div class="home-card-name">${esc(e.Name||'—')}</div>
       <div class="home-card-sub">${catTag(e.Category)}${e.Date?` · ${e.Date}`:''}</div>
     </div>
-    <div class="home-card-amount" style="color:var(--red)">-$${parseFloat(e.Cost||0).toLocaleString()}</div>
+    <div class="home-card-amount" style="color:#ef4444">-$${parseFloat(e.Cost||0).toLocaleString()}</div>
     ${showProcure?`<div class="home-card-action"><button class="btn" style="font-size:11px;padding:4px 9px;" onclick="markPro(${e._row})">✓</button></div>`:''}
   </div>`;
   if(ordEl)ordEl.innerHTML=ordered.map(e=>expCard(e,true)).join('')||'';
-  if(proEl)proEl.innerHTML=procured.slice(0,lim).map(e=>expCard(e,false)).join('')||'<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">No expenses yet</div>';
+  if(proEl)proEl.innerHTML=procured.slice(0,lim).map(e=>expCard(e,false)).join('')||'<div style="color:#555563;font-size:12px;text-align:center;padding:20px">No expenses yet</div>';
   if(more)more.style.display=procured.length>lim?'block':'none';
 }
 
@@ -3623,10 +3625,10 @@ function renderHomeSub(){
         <div class="home-card-name">${esc(s.Name||'—')}</div>
         <div class="home-card-sub" style="color:${dueColor}">${dueLabel} · ${s.Billing||'Monthly'}</div>
       </div>
-      <div class="home-card-amount" style="color:var(--amber)">$${parseFloat(s.Cost||0).toLocaleString()}</div>
+      <div class="home-card-amount" style="color:#f59e0b">$${parseFloat(s.Cost||0).toLocaleString()}</div>
       <div class="home-card-action"><button class="btn btn-a" style="font-size:11px;padding:4px 9px;" onclick="paySubNow(${s._row})">Pay</button></div>
     </div>`;
-  }).join('')||'<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">No active subscriptions</div>';
+  }).join('')||'<div style="color:#555563;font-size:12px;text-align:center;padding:20px">No active subscriptions</div>';
 }
 
 function renderHomeIncome(){
@@ -3640,8 +3642,8 @@ function renderHomeIncome(){
       <div class="home-card-name">${esc(m.Name||'—')}</div>
       <div class="home-card-sub">${m.Date||''}${m.Description?` · ${esc(m.Description)}`:''}</div>
     </div>
-    <div class="home-card-amount" style="color:var(--green)">+$${parseFloat(m.Cost||0).toLocaleString()}</div>
-  </div>`).join('')||'<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">No income recorded</div>';
+    <div class="home-card-amount" style="color:#22c55e">+$${parseFloat(m.Cost||0).toLocaleString()}</div>
+  </div>`).join('')||'<div style="color:#555563;font-size:12px;text-align:center;padding:20px">No income recorded</div>';
   if(more)more.style.display=income.length>lim?'block':'none';
 }
 
@@ -3733,14 +3735,14 @@ function renderMonthPicker(popup){
   const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   popup.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-      <button onclick="event.stopPropagation();_pickerYear--;renderMonthPicker(document.getElementById('cal-month-picker'))" style="background:var(--s3);border:none;color:var(--text);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px;">‹</button>
+      <button onclick="event.stopPropagation();_pickerYear--;renderMonthPicker(document.getElementById('cal-month-picker'))" style="background:#252529;border:none;color:#ebebeb;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px;">‹</button>
       <span style="font-size:14px;font-weight:600;">${_pickerYear}</span>
-      <button onclick="event.stopPropagation();_pickerYear++;renderMonthPicker(document.getElementById('cal-month-picker'))" style="background:var(--s3);border:none;color:var(--text);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px;">›</button>
+      <button onclick="event.stopPropagation();_pickerYear++;renderMonthPicker(document.getElementById('cal-month-picker'))" style="background:#252529;border:none;color:#ebebeb;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px;">›</button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
       ${months.map((m,i)=>{
         const isActive=_pickerYear===_calYear&&i===_calMonth;
-        return`<button onclick="event.stopPropagation();jumpToMonth(${_pickerYear},${i})" style="padding:8px 4px;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:500;background:${isActive?'var(--accent)':'var(--s3)'};color:${isActive?'#fff':'var(--text2)'};transition:all .15s;" onmouseover="if(!${isActive})this.style.background='var(--s4,#3a3a40)'" onmouseout="if(!${isActive})this.style.background='var(--s3)'">${m}</button>`;
+        return`<button onclick="event.stopPropagation();jumpToMonth(${_pickerYear},${i})" style="padding:8px 4px;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:500;background:${isActive?'#6c63ff':'#252529'};color:${isActive?'#fff':'#8a8a9a'};transition:all .15s;" onmouseover="if(!${isActive})this.style.background='var(--s4,#3a3a40)'" onmouseout="if(!${isActive})this.style.background='var(--s3)'">${m}</button>`;
       }).join('')}
     </div>`;
 }
@@ -3778,7 +3780,7 @@ function calLocationSearch(){
           const main=p.structured_formatting?.main_text||p.description;
           const sec=p.structured_formatting?.secondary_text||'';
           const full=p.description.replace(/'/g,'&#39;');
-          return`<div style="padding:9px 14px;cursor:pointer;font-size:12px;color:var(--text);border-bottom:1px solid var(--border);line-height:1.4" onmousedown="pickCalLocation('${full}')" onmouseover="this.style.background='var(--s3)'" onmouseout="this.style.background=''"><div>${main}</div>${sec?`<div style="font-size:10px;color:var(--text3)">${sec}</div>`:''}</div>`;
+          return`<div style="padding:9px 14px;cursor:pointer;font-size:12px;color:#ebebeb;border-bottom:1px solid rgba(255,255,255,0.07);line-height:1.4" onmousedown="pickCalLocation('${full}')" onmouseover="this.style.background='var(--s3)'" onmouseout="this.style.background=''"><div>${main}</div>${sec?`<div style="font-size:10px;color:#555563">${sec}</div>`:''}</div>`;
         }).join('');
       });
     }catch(err){console.warn('Places err:',err);res.style.display='none';}
@@ -3808,7 +3810,7 @@ function openCalEventModal(dateStr,eventId){
   // Target calendar selector
   const calSel=document.getElementById('cal-ev-calid');
   if(calSel){
-    calSel.innerHTML=_allCalendars.filter(c=>!c.id.endsWith('#holiday@group.v.calendar.google.com')).map(c=>`<option value="${esc(c.id)}" style="background:var(--s2)">${esc(c.summary)}</option>`).join('');
+    calSel.innerHTML=_allCalendars.filter(c=>!c.id.endsWith('#holiday@group.v.calendar.google.com')).map(c=>`<option value="${esc(c.id)}" style="background:#1c1c1f">${esc(c.summary)}</option>`).join('');
     // Default to FinanceDash
     const fd=_allCalendars.find(c=>c.id.includes('4afe9194'));
     if(fd)calSel.value=fd.id;
@@ -4066,7 +4068,7 @@ function openColPicker(e,key,tableId){
   const popup=document.createElement('div');
   popup.id='col-picker-popup';
   popup.className='col-picker-popup';
-  popup.innerHTML='<div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Show / Hide Columns</div>'
+  popup.innerHTML='<div style="font-size:10px;font-weight:600;color:#555563;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Show / Hide Columns</div>'
     +headers.map(col=>`<label class="col-picker-item"><input type="checkbox" ${hidden.includes(col)?'':'checked'} onchange="toggleCol('${key}','${tableId}','${esc(col)}',this.checked)">${esc(col)||'—'}</label>`).join('');
   document.body.appendChild(popup);
   const rect=e.currentTarget.getBoundingClientRect();
@@ -4082,7 +4084,7 @@ function openColPicker(e,key,tableId,renderFn){
   const popup=document.createElement('div');
   popup.id='col-picker-popup';
   popup.className='col-picker-popup';
-  popup.innerHTML='<div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Show / Hide Columns</div>'
+  popup.innerHTML='<div style="font-size:10px;font-weight:600;color:#555563;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Show / Hide Columns</div>'
     +cols.map(col=>`<label class="col-picker-item"><input type="checkbox" ${hidden.includes(col)?'':'checked'} onchange="toggleCol('${key}','${tableId}','${col}',this.checked)">${col}</label>`).join('');
   document.body.appendChild(popup);
   const rect=e.currentTarget.getBoundingClientRect();
