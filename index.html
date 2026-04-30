@@ -24,6 +24,7 @@
 .skeleton{border-radius:6px;background:linear-gradient(90deg,var(--s2) 25%,var(--s3) 50%,var(--s2) 75%);background-size:800px 100%;animation:shimmer 1.4s infinite}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
 @keyframes spin{to{transform:rotate(360deg)}}
+#sync-icon.spinning{animation:spin 1s linear infinite;transform-origin:center}
 @keyframes tabIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .tab-enter{animation:tabIn .18s ease both}
 .col-picker-btn{background:var(--s2);border:1px solid var(--border2);border-radius:var(--r);padding:5px 10px;color:var(--text2);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
@@ -112,7 +113,7 @@ html{scrollbar-gutter:stable;overflow-y:scroll}
 .tw{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:12px;table-layout:auto}
 tbody tr{transition:background .12s}
-tbody tr .btic,.btn-c,.btn-m{opacity:0;transition:opacity .15s}
+tbody tr .btic,.btn-c,.btn-m{opacity:0.15;transition:opacity .18s}
 tbody tr:hover .btic,tbody tr:hover .btn-c,tbody tr:hover .btn-m{opacity:1}
 #tab-master table td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:0}
 /* Column resize handle */
@@ -397,7 +398,13 @@ tbody td{padding:12px 10px}
 
 <div id="app">
   <!-- Floating menu button -->
-  <div id="app-menu-btn" onclick="toggleAppMenu()" style="position:fixed;top:10px;right:12px;z-index:500;width:36px;height:36px;border-radius:50%;background:rgba(20,20,22,0.7);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--text2);transition:background .15s;" onmouseover="this.style.background='rgba(60,60,70,0.85)'" onmouseout="this.style.background='rgba(20,20,22,0.7)'" title="Menu">⋯</div>
+  <div style="position:fixed;top:10px;right:12px;z-index:500;display:flex;align-items:center;gap:8px;">
+    <div id="sync-indicator" style="display:none;align-items:center;gap:6px;background:rgba(20,20,22,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:5px 10px;font-size:11px;color:var(--text2);">
+      <svg id="sync-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0"><path d="M21 2v6h-6M3 12a9 9 0 0115-6.7L21 8M3 22v-6h6M21 12a9 9 0 01-15 6.7L3 16"/></svg>
+      <span id="sync-label">Syncing…</span>
+    </div>
+    <div id="app-menu-btn" onclick="toggleAppMenu()" style="width:36px;height:36px;border-radius:50%;background:rgba(20,20,22,0.7);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--text2);transition:background .15s;" onmouseover="this.style.background='rgba(60,60,70,0.85)'" onmouseout="this.style.background='rgba(20,20,22,0.7)'" title="Menu">⋯</div>
+  </div>
   <div id="app-menu-popup" style="display:none;position:fixed;top:52px;right:12px;z-index:500;background:var(--s1);border:1px solid var(--border2);border-radius:12px;padding:8px;box-shadow:0 8px 32px rgba(0,0,0,.5);min-width:160px;">
     <button class="sbtn" onclick="syncAll();toggleAppMenu()" style="width:100%;text-align:left;margin-bottom:4px;">↻ Sync</button>
     <button class="sbtn" onclick="repairAllSheets();toggleAppMenu()" style="width:100%;text-align:left;margin-bottom:4px;">🔧 Repair</button>
@@ -1083,8 +1090,11 @@ async function writeBackCalculated(){
 }
 
 async function syncAll(){
-  const btns=document.querySelectorAll('[onclick*="syncAll"]');
-  btns.forEach(b=>{b._origText=b.textContent;b.textContent='↻';b.style.animation='spin 1s linear infinite';});
+  // Show sync indicator
+  const ind=document.getElementById('sync-indicator');
+  const icon=document.getElementById('sync-icon');
+  const lbl=document.getElementById('sync-label');
+  if(ind){ind.style.display='flex';if(icon)icon.classList.add('spinning');if(lbl)lbl.textContent='Syncing…';}
   try{
     const[er,wr,sr,cr,kar,bar,mr]=await Promise.all([
       readSheet('Expenses'),readSheet('Wishlist'),
@@ -1101,15 +1111,15 @@ async function syncAll(){
     await writeBackCalculated();
     renderAll();
     toast('Synced ✓','ok');
-    // Show ✓ on buttons briefly
-    btns.forEach(b=>{
-      b.style.animation='';
-      b.textContent='✓';
-      setTimeout(()=>{b.textContent=b._origText||'↻ Sync';},1500);
-    });
+    if(ind&&icon&&lbl){
+      icon.classList.remove('spinning');
+      lbl.textContent='Synced ✓';
+      ind.style.color='var(--green)';
+      setTimeout(()=>{ind.style.display='none';ind.style.color='';},1800);
+    }
   }catch(e){
     console.error('syncAll error:',e);
-    btns.forEach(b=>{b.style.animation='';b.textContent=b._origText||'↻ Sync';});
+    if(ind&&icon){icon.classList.remove('spinning');ind.style.color='var(--red)';if(lbl)lbl.textContent='Failed';setTimeout(()=>{ind.style.display='none';ind.style.color='';},2500);}
     if(e&&e.status===401){
       toast('Session expired — signing in again...','err');
       doSignIn();
@@ -1142,7 +1152,21 @@ function parse(rows,hd){
 }
 
 // ── RENDER ──
-function renderAll(){renderDash();renderWish();renderExp();renderSub();renderCat();renderCards();renderBanks();renderMaster();setTimeout(()=>{initAllDragCols();updateSortBtns('wish');updateSortBtns('exp');updateSortBtns('sub');initAllColResize();},50);}
+function renderAll(){
+  try{renderDash();}catch(e){console.error('renderDash:',e);}
+  try{renderWish();}catch(e){console.error('renderWish:',e);}
+  try{renderExp();}catch(e){console.error('renderExp:',e);}
+  try{renderSub();}catch(e){console.error('renderSub:',e);}
+  try{renderCat();}catch(e){console.error('renderCat:',e);}
+  try{renderCards();}catch(e){console.error('renderCards:',e);}
+  try{renderBanks();}catch(e){console.error('renderBanks:',e);}
+  try{renderMaster();}catch(e){console.error('renderMaster:',e);}
+  setTimeout(()=>{
+    try{initAllDragCols();}catch(e){}
+    try{updateSortBtns('wish');updateSortBtns('exp');updateSortBtns('sub');}catch(e){}
+    try{initAllColResize();}catch(e){}
+  },50);
+}
 function $f(n){return'$'+(parseFloat(n)||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});}
 function localToday(){
   const d=new Date();
@@ -1244,7 +1268,7 @@ function renderDash(){
 
   const set=(id,v)=>{
     const el=document.getElementById(id);if(!el)return;
-    if(typeof v==='string'&&/^\$[\d,]+$/.test(v)){
+    if(typeof v==='string'&&/^\$[\d,]+$/.test(v)&&parseInt(v.replace(/[$,]/g,''))>0){
       const target=parseInt(v.replace(/[$,]/g,''));
       const prev=parseInt((el.textContent||'0').replace(/[$,]/g,''))||0;
       if(prev===target){el.textContent=v;return;}
@@ -1294,8 +1318,7 @@ function renderDash(){
   const projected=daysElapsed>0?(moT/daysElapsed)*daysInMo:0;
   set('s-pace',$f(projected));
   set('s-pace2',`projected end of ${now.toLocaleString('default',{month:'long'})}`);
-  set('s-yr-big-extra',bigYrAll?$f(bigYrAll.Cost):'—');
-  set('s-yr-big-extra2',bigYrAll?bigYrAll.Name:'');
+
   // Most spent category THIS MONTH
   const moCatT={};
   moE.forEach(e=>{const cat=e.Category||'Other';moCatT[cat]=(moCatT[cat]||0)+(parseFloat(e.Cost)||0);});
@@ -1349,6 +1372,8 @@ function renderDash(){
   const bigYrAll=yrE.reduce((b,e)=>(parseFloat(e.Cost)||0)>(parseFloat(b?.Cost)||0)?e:b,null);
   set('s-all-big-yr',bigYrAll?$f(bigYrAll.Cost):'—');
   set('s-all-big-yr2',bigYrAll?bigYrAll.Name:'');
+  set('s-yr-big-extra',bigYrAll?$f(bigYrAll.Cost):'—');
+  set('s-yr-big-extra2',bigYrAll?bigYrAll.Name:'');
   const bigMoAll=moE.reduce((b,e)=>(parseFloat(e.Cost)||0)>(parseFloat(b?.Cost)||0)?e:b,null);
   set('s-all-big-mo',bigMoAll?$f(bigMoAll.Cost):'—');
   set('s-all-big-mo2',bigMoAll?bigMoAll.Name:'');
@@ -1358,6 +1383,7 @@ function renderDash(){
 }
 function destroyChart(id){if(charts[id]){try{charts[id].destroy();}catch(e){}delete charts[id];}}
 function renderCharts(){
+  if(typeof Chart==='undefined'){setTimeout(renderCharts,300);return;}
   Chart.defaults.color='#8a8a9a';
   Chart.defaults.font.family="'DM Sans',sans-serif";
   const yr=String(new Date().getFullYear());
@@ -2493,12 +2519,13 @@ async function saveIncomeMo(){
 function showTab(name,el){
   document.querySelectorAll('[id^="tab-"]').forEach(t=>t.style.display='none');
   const tab=document.getElementById('tab-'+name);
-  tab.style.display='';
+  if(!tab)return;
+  // Calendar uses flex layout, all others block
+  tab.style.display=name==='calendar'?'flex':'block';
   tab.classList.remove('tab-enter');
-  void tab.offsetWidth; // reflow to restart animation
-  tab.classList.add('tab-enter');
+  requestAnimationFrame(()=>tab.classList.add('tab-enter'));
   document.querySelectorAll('.nt,.mob-tab').forEach(t=>t.classList.remove('on'));
-  el.classList.add('on');
+  if(el)el.classList.add('on');
   if(name==='calendar'){
     initCalendar();
     setTimeout(()=>calGoToday(),200);
