@@ -416,11 +416,6 @@ tbody td{padding:12px 10px}
 .mob-tab.on{color:#fff}.mob-tab.on svg{filter:drop-shadow(0 0 6px rgba(108,99,255,0.8))}
 .mob-tab svg{width:20px;height:20px;flex-shrink:0;transition:filter .15s}
 .mob-tab span{font-size:9px;font-weight:500;letter-spacing:.03em;transition:color .15s}
-/* Mobile FAB */
-#mobile-fab{display:flex;position:fixed;bottom:76px;right:16px;flex-direction:column;gap:10px;z-index:400;align-items:flex-end}
-.fab-btn{height:44px;border-radius:22px;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;padding:0 18px;box-shadow:0 4px 16px rgba(0,0,0,.4);display:flex;align-items:center;gap:8px;white-space:nowrap;-webkit-tap-highlight-color:transparent;transition:transform .15s}
-.fab-btn:active{transform:scale(.96)}
-.fab-main{width:56px;height:56px;border-radius:50%;background:var(–accent);color:#fff;font-size:24px;padding:0;justify-content:center}
 
 </style>
 </head>
@@ -480,7 +475,7 @@ tbody td{padding:12px 10px}
       <div class="home-panel" id="home-panel-0">
         <div class="home-panel-hdr">
           <span>Wishlist</span>
-          <button class="btn btn-a" style="font-size:11px;padding:4px 10px;" onclick="openModal('wish')">+ Add</button>
+          <button class="btn btn-a" style="font-size:11px;padding:4px 10px;" onclick="openModal('wish')">+ Add Wishlist</button>
         </div>
         <div class="home-stats-bar" id="hstats-wish"></div>
         <div class="home-panel-body" id="hp-wish"></div>
@@ -490,7 +485,7 @@ tbody td{padding:12px 10px}
       <div class="home-panel" id="home-panel-1">
         <div class="home-panel-hdr">
           <span>Expenses</span>
-          <button class="btn btn-a" style="font-size:11px;padding:4px 10px;" onclick="openFoodMo()">+ Add</button>
+          <button class="btn btn-a" style="font-size:11px;padding:4px 10px;" onclick="openFoodMo()">+ Add Expense</button>
         </div>
         <div class="home-stats-bar" id="hstats-exp"></div>
         <div class="home-panel-body" id="hp-exp">
@@ -505,7 +500,7 @@ tbody td{padding:12px 10px}
       <div class="home-panel" id="home-panel-2">
         <div class="home-panel-hdr">
           <span>Subscriptions</span>
-          <button class="btn btn-a" style="font-size:11px;padding:4px 10px;" onclick="openModal('sub')">+ Add</button>
+          <button class="btn btn-a" style="font-size:11px;padding:4px 10px;" onclick="openModal('sub')">+ Add Sub</button>
         </div>
         <div class="home-stats-bar" id="hstats-sub"></div>
         <div class="home-panel-body" id="hp-sub"></div>
@@ -514,7 +509,7 @@ tbody td{padding:12px 10px}
       <div class="home-panel" id="home-panel-3">
         <div class="home-panel-hdr">
           <span>Income</span>
-          <button class="btn btn-a" style="font-size:11px;padding:4px 10px;" onclick="openIncomeMo()">+ Add</button>
+          <button class="btn btn-a" style="font-size:11px;padding:4px 10px;" onclick="openIncomeMo()">+ Add Income</button>
         </div>
         <div class="home-stats-bar" id="hstats-income"></div>
         <div class="home-panel-body" id="hp-income"></div>
@@ -1020,18 +1015,19 @@ tbody td{padding:12px 10px}
 
 <div class="mo" id="food-mo" onclick="closeFoodMo(event)">
   <div class="md" style="max-width:380px;">
-    <div class="mtit"> Log Food</div>
+    <div class="mtit">Add Expense</div>
     <div style="display:flex;flex-direction:column;gap:10px;">
-      <div class="fgr"><label class="fl">What did you eat?</label><input class="fi" id="food-name" placeholder="e.g. Chipotle, Sushi, Groceries" autofocus></div>
+      <div class="fgr"><label class="fl">Name</label><input class="fi" id="food-name" placeholder="e.g. Chipotle, Groceries, Amazon…" autofocus></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
         <div class="fgr"><label class="fl">Cost</label><input class="fi" id="food-cost" type="number" step="0.01" placeholder="0.00"></div>
         <div class="fgr"><label class="fl">Date</label><input class="fi" id="food-date" type="date"></div>
       </div>
+      <div class="fgr"><label class="fl">Category</label><select class="fs" id="food-category"></select></div>
       <div class="fgr"><label class="fl">Card Used</label><select class="fs" id="food-card"><option value="">— Select card —</option></select></div>
     </div>
     <div class="mac">
       <button class="btn" onclick="closeFoodMo()">Cancel</button>
-      <button class="btn btn-a" onclick="saveFoodMo()">+ Log Food</button>
+      <button class="btn btn-a" onclick="saveFoodMo()">+ Add Expense</button>
     </div>
   </div>
 </div>
@@ -2679,11 +2675,15 @@ async function saveMo(){
 
 // ── FOOD MODAL ──
 function openFoodMo(){
-  // Populate card dropdown from D.cards
   const sel=document.getElementById('food-card');
   const defCard=getDefaultCard();
   sel.innerHTML='<option value="">— No card —</option>'+D.cards.map(cd=>`<option value="${cd.Name}" ${cd.Name===defCard?'selected':''}>${cd.Alias||cd.Name}</option>`).join('');
-  // Default date to today
+  // Populate categories from sheet, default to Food
+  const catSel=document.getElementById('food-category');
+  const cats=D.categories.map(c=>c.Name).filter(Boolean);
+  const fallback=['Food','Tech','Home','Fun','Health','Travel','Apparel','Tesla','PC','Life','Gift','Other'];
+  const options=[...new Set([...cats,...fallback])];
+  catSel.innerHTML=options.map(c=>`<option value="${esc(c)}" ${c==='Food'?'selected':''}>${esc(c)}</option>`).join('');
   document.getElementById('food-date').value=new Date().toISOString().split('T')[0];
   document.getElementById('food-name').value='';
   document.getElementById('food-cost').value='';
@@ -2698,17 +2698,18 @@ async function saveFoodMo(){
   const name=document.getElementById('food-name').value.trim();
   const cost=document.getElementById('food-cost').value.trim();
   const date=document.getElementById('food-date').value;
-  const card=document.getElementById('food-card').value; // value is already the card Name
+  const card=document.getElementById('food-card').value;
+  const cat=document.getElementById('food-category').value||'Food';
   if(!name){toast('Name is required','err');return;}
   if(!cost){toast('Cost is required','err');return;}
   const today=date||new Date().toISOString().split('T')[0];
   const bank=D.cards.find(cd=>cd.Name===card)?.Bank||'';
   try{
-    await appendRow('Expenses',[name,'','Food',card,today,'Procured',cost,cost,'0']);
-    await appendRow('Master',[today,'Expense',name,'','Food',cost,cost,'0',card,bank,'','Procured','Food']);
+    await appendRow('Expenses',[name,'',cat,card,today,'Procured',cost,cost,'0']);
+    await appendRow('Master',[today,'Expense',name,'',cat,cost,cost,'0',card,bank,'','Procured',cat]);
     closeFoodMo();
     await syncAll();
-    toast('Food logged ✓','ok');
+    toast('Expense added ✓','ok');
   }catch(e){toast('Save failed: '+e.message,'err');}
 }
 
@@ -4715,14 +4716,6 @@ else if(window._earlyToken){bootApp();}
   <!-- Pull to refresh indicator -->
 
   <div id="ptr-indicator">↓ Release to refresh</div>
-
-  <!-- FAB -->
-
-  <div id="mobile-fab">
-    <button class="fab-btn" style="background:rgba(34,197,94,0.9);color:#fff;backdrop-filter:blur(8px);" onclick="openFoodMo()">+ Food</button>
-    <button class="fab-btn" style="background:rgba(108,99,255,0.9);color:#fff;backdrop-filter:blur(8px);" onclick="openModal('wish')">+ Wishlist</button>
-    <button class="fab-btn" style="background:rgba(34,197,94,0.9);color:#fff;backdrop-filter:blur(8px);" onclick="openIncomeMo()">+ Income</button>
-  </div>
 
   <!-- Bottom nav -->
 
