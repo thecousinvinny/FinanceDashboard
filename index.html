@@ -3,10 +3,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0c0c0e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="format-detection" content="telephone=no">
+<meta name="robots" content="noindex">
+<meta name="apple-itunes-app" content="">
 <title>Finance Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
@@ -385,7 +388,16 @@ tbody td{padding:12px 10px}
 .home-card-pill{font-size:10px;font-weight:500;padding:2px 8px;border-radius:20px;white-space:nowrap}
 .home-card-savings{font-size:11px;color:#22c55e;font-weight:600;white-space:nowrap}
 .home-card-action{flex-shrink:0}
-.home-show-more{margin:4px 0 16px;padding:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:12px;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;transition:background .15s;text-align:center;width:100%;box-sizing:border-box}
+.home-stats-bar{display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,0.06);overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
+.home-stats-bar::-webkit-scrollbar{display:none}
+.home-stat{flex:1;min-width:90px;padding:10px 14px;display:flex;flex-direction:column;gap:3px;border-right:1px solid rgba(255,255,255,0.06);}
+.home-stat:last-child{border-right:none}
+.home-stat-label{font-size:9px;font-weight:600;color:rgba(255,255,255,0.35);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.home-stat-val{font-size:15px;font-weight:700;font-family:‘DM Mono’,‘SF Mono’,‘Courier New’,monospace;white-space:nowrap;letter-spacing:-.02em}
+.home-stat-val.red{color:#ef4444}
+.home-stat-val.green{color:#22c55e}
+.home-stat-val.amber{color:#f59e0b}
+.home-stat-val.muted{color:rgba(255,255,255,0.5)}padding:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:12px;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;transition:background .15s;text-align:center;width:100%;box-sizing:border-box}
 .home-show-more:active{background:rgba(255,255,255,0.08)}
 #ptr-indicator{position:fixed;top:48px;left:50%;transform:translateX(-50%);background:var(–s1);border:1px solid var(–border2);border-radius:20px;padding:6px 16px;font-size:12px;color:var(–text3);z-index:500;display:none;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(0,0,0,.3)}
 #ptr-indicator.visible{display:flex}
@@ -462,6 +474,7 @@ tbody td{padding:12px 10px}
           <span>Wishlist</span>
           <button class="btn btn-a" style="font-size:11px;padding:4px 10px;" onclick="openModal('wish')">+ Add</button>
         </div>
+        <div class="home-stats-bar" id="hstats-wish"></div>
         <div class="home-panel-body" id="hp-wish"></div>
         <button class="home-show-more" id="hpm-wish" onclick="homeShowMore('wish')" style="display:none">Show 30 more</button>
       </div>
@@ -471,6 +484,7 @@ tbody td{padding:12px 10px}
           <span>Expenses</span>
           <button class="btn btn-a" style="font-size:11px;padding:4px 10px;" onclick="openFoodMo()">+ Add</button>
         </div>
+        <div class="home-stats-bar" id="hstats-exp"></div>
         <div class="home-panel-body" id="hp-exp">
           <div class="home-section-hdr" id="hp-exp-ord-hdr">ORDERED <span id="hp-exp-ord-count" class="pc">0</span></div>
           <div id="hp-exp-ord" style="display:flex;flex-direction:column;gap:10px;margin-bottom:4px;"></div>
@@ -485,6 +499,7 @@ tbody td{padding:12px 10px}
           <span>Subscriptions</span>
           <button class="btn btn-a" style="font-size:11px;padding:4px 10px;" onclick="openModal('sub')">+ Add</button>
         </div>
+        <div class="home-stats-bar" id="hstats-sub"></div>
         <div class="home-panel-body" id="hp-sub"></div>
       </div>
       <!-- PANEL 3: Income -->
@@ -493,6 +508,7 @@ tbody td{padding:12px 10px}
           <span>Income</span>
           <button class="btn btn-a" style="font-size:11px;padding:4px 10px;" onclick="openIncomeMo()">+ Add</button>
         </div>
+        <div class="home-stats-bar" id="hstats-income"></div>
         <div class="home-panel-body" id="hp-income"></div>
         <button class="home-show-more" id="hpm-income" onclick="homeShowMore('income')" style="display:none">Show 30 more</button>
       </div>
@@ -3665,9 +3681,25 @@ function renderHome(){
 function renderHomeWish(){
   const el=document.getElementById('hp-wish');
   const more=document.getElementById('hpm-wish');
+  const stats=document.getElementById('hstats-wish');
   if(!el)return;
   const items=D.wishlist.filter(w=>w.Status!=='No Longer Needed'&&w.Status!=='Bought');
   const lim=_homeLimits.wish;
+
+  // Stats
+  if(stats){
+    const totalOrig=items.reduce((s,w)=>s+(parseFloat(w.OCost||0)),0);
+    const totalBought=items.reduce((s,w)=>s+(parseFloat(w.BCost||0)),0);
+    const totalSaved=items.reduce((s,w)=>{
+      const o=parseFloat(w.OCost||0),b=parseFloat(w.BCost||0);
+      return s+(o&&b&&o>b?o-b:0);
+    },0);
+    const fmt=v=>v?'$'+v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}):'—';
+    stats.innerHTML=`
+      <div class="home-stat"><div class="home-stat-label">Original</div><div class="home-stat-val red">${fmt(totalOrig)}</div></div>
+      <div class="home-stat"><div class="home-stat-label">Buy Cost</div><div class="home-stat-val amber">${fmt(totalBought)||'—'}</div></div>
+      <div class="home-stat"><div class="home-stat-label">Savings</div><div class="home-stat-val green">${fmt(totalSaved)||'—'}</div></div>`;
+  }
   el.innerHTML=items.slice(0,lim).map(w=>{
     const orig=parseFloat(w.OCost||0);
     const bought=parseFloat(w.BCost||0);
@@ -3704,6 +3736,27 @@ function renderHomeExp(){
   const more=document.getElementById('hpm-exp');
   const ordCount=document.getElementById('hp-exp-ord-count');
   const proCount=document.getElementById('hp-exp-pro-count');
+  const stats=document.getElementById('hstats-exp');
+
+  // Stats
+  if(stats){
+    const now=new Date();
+    const mo=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    const yr=`${now.getFullYear()}`;
+    const fmt=v=>v?'$'+v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}):'$0';
+    const allPro=D.expenses.filter(e=>e.Status!=='Ordered');
+    const moExp=allPro.filter(e=>toSortableDate(e.Date||'').startsWith(mo));
+    const yrExp=allPro.filter(e=>toSortableDate(e.Date||'').startsWith(yr));
+    const spentMo=moExp.reduce((s,e)=>s+(parseFloat(e.Cost)||0),0);
+    const spentYr=yrExp.reduce((s,e)=>s+(parseFloat(e.Cost)||0),0);
+    const savedMo=moExp.reduce((s,e)=>s+(parseFloat(e.Savings)||0),0);
+    const savedYr=yrExp.reduce((s,e)=>s+(parseFloat(e.Savings)||0),0);
+    stats.innerHTML=`
+      <div class="home-stat"><div class="home-stat-label">Spent Month</div><div class="home-stat-val red">${fmt(spentMo)}</div></div>
+      <div class="home-stat"><div class="home-stat-label">Spent Year</div><div class="home-stat-val red">${fmt(spentYr)}</div></div>
+      <div class="home-stat"><div class="home-stat-label">Saved Month</div><div class="home-stat-val green">${fmt(savedMo)}</div></div>
+      <div class="home-stat"><div class="home-stat-label">Saved Year</div><div class="home-stat-val green">${fmt(savedYr)}</div></div>`;
+  }
   if(ordHdr)ordHdr.style.display=ordered.length?'block':'none';
   if(ordCount)ordCount.textContent=ordered.length;
   if(proCount)proCount.textContent=procured.length;
@@ -3738,8 +3791,27 @@ function renderHomeExp(){
 
 function renderHomeSub(){
   const el=document.getElementById('hp-sub');
+  const stats=document.getElementById('hstats-sub');
   if(!el)return;
   const subs=D.subscriptions.filter(s=>s.Status!=='Cancelled').sort((a,b)=>toSortableDate(a.NextRenewal||'9999').localeCompare(toSortableDate(b.NextRenewal||'9999')));
+
+  // Stats
+  if(stats){
+    const now=new Date();
+    const mo=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    const yr=`${now.getFullYear()}`;
+    const fmt=v=>v?'$'+v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}):'$0';
+    // Use master ledger for actual paid subs, fallback to MonthlyCost/AnnualCost
+    const subMaster=D.master.filter(m=>(m.Source==='Sub'||m.Type==='Subscription'));
+    const spentMo=subMaster.filter(m=>toSortableDate(m.Date||'').startsWith(mo)).reduce((s,m)=>s+(parseFloat(m.Cost)||0),0);
+    const spentYr=subMaster.filter(m=>toSortableDate(m.Date||'').startsWith(yr)).reduce((s,m)=>s+(parseFloat(m.Cost)||0),0);
+    // Fallback: use MonthlyCost sum if no master records
+    const moFallback=subs.reduce((s,sub)=>s+(parseFloat(sub.MonthlyCost||sub.Cost||0)),0);
+    const yrFallback=subs.reduce((s,sub)=>s+(parseFloat(sub.AnnualCost||0)),0);
+    stats.innerHTML=`
+      <div class="home-stat"><div class="home-stat-label">Spent Month</div><div class="home-stat-val amber">${fmt(spentMo||moFallback)}</div></div>
+      <div class="home-stat"><div class="home-stat-label">Spent Year</div><div class="home-stat-val amber">${fmt(spentYr||yrFallback)}</div></div>`;
+  }
   el.innerHTML=subs.map(s=>{
     const due=dueCls(s.NextRenewal);
     const dueColor=due==='due-today'?'#ef4444':due==='due-soon'?'#f59e0b':'rgba(255,255,255,0.35)';
@@ -3772,9 +3844,23 @@ function renderHomeSub(){
 function renderHomeIncome(){
   const el=document.getElementById('hp-income');
   const more=document.getElementById('hpm-income');
+  const stats=document.getElementById('hstats-income');
   if(!el)return;
   const income=D.master.filter(m=>m.Type==='Income').sort((a,b)=>toSortableDate(b.Date||'').localeCompare(toSortableDate(a.Date||'')));
   const lim=_homeLimits.income;
+
+  // Stats
+  if(stats){
+    const now=new Date();
+    const mo=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    const yr=`${now.getFullYear()}`;
+    const fmt=v=>v?'$'+v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}):'$0';
+    const gainedMo=income.filter(m=>toSortableDate(m.Date||'').startsWith(mo)).reduce((s,m)=>s+(parseFloat(m.Cost)||0),0);
+    const gainedYr=income.filter(m=>toSortableDate(m.Date||'').startsWith(yr)).reduce((s,m)=>s+(parseFloat(m.Cost)||0),0);
+    stats.innerHTML=`
+      <div class="home-stat"><div class="home-stat-label">Gained Month</div><div class="home-stat-val green">${fmt(gainedMo)}</div></div>
+      <div class="home-stat"><div class="home-stat-label">Gained Year</div><div class="home-stat-val green">${fmt(gainedYr)}</div></div>`;
+  }
   el.innerHTML=income.slice(0,lim).map(m=>{
     const amt=parseFloat(m.Cost||0);
     return`<div class="home-card" onclick="openHomeIncomeEdit(${m._row})" style="cursor:pointer">
