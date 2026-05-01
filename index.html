@@ -51,7 +51,8 @@ html{scrollbar-gutter:stable;background:#0c0c0e;color:#ebebeb}
 *::-webkit-scrollbar{display:none}
 
 /* AUTH */
-#auth-screen{position:fixed;inset:0;z-index:9000;background:var(–bg);display:flex;align-items:center;justify-content:center;padding:40px;overflow-y:auto}
+#auth-screen{position:fixed;inset:0;z-index:9000;background:#0c0c0e;display:flex;align-items:center;justify-content:center;padding:40px;overflow-y:auto}
+#auth-screen.hidden{display:none!important;pointer-events:none!important;}
 .auth-card{background:var(–s1);border:1px solid var(–border);border-radius:var(–r2);padding:48px;max-width:500px;width:100%;text-align:center}
 .auth-logo{font-size:40px;margin-bottom:16px}
 .auth-title{font-size:24px;font-weight:600;margin-bottom:8px}
@@ -68,7 +69,7 @@ html{scrollbar-gutter:stable;background:#0c0c0e;color:#ebebeb}
 .anote{font-size:11px;color:var(–text3);margin-top:14px}
 
 /* APP */
-#app{display:none}
+#app{display:none;background:#0c0c0e}
 .hdr{background:rgba(20,20,22,0.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(–border);padding:0;display:flex;align-items:stretch;justify-content:space-between;height:48px;position:sticky;top:0;z-index:200;gap:0}
 .hlogo{font-size:15px;font-weight:600;padding:0 20px;display:flex;align-items:center;color:var(–text);letter-spacing:-.02em;white-space:nowrap;border-right:1px solid var(–border)}
 .hright{display:flex;align-items:center;gap:6px;padding:0 16px;border-left:1px solid var(–border)}
@@ -401,8 +402,8 @@ tbody td{padding:12px 10px}
 .home-show-more:active{background:rgba(255,255,255,0.08)}
 #ptr-indicator{position:fixed;top:48px;left:50%;transform:translateX(-50%);background:var(–s1);border:1px solid var(–border2);border-radius:20px;padding:6px 16px;font-size:12px;color:var(–text3);z-index:500;display:none;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(0,0,0,.3)}
 /* ── SWIPE TO ACTION ── */
-.swipe-wrap{position:relative;overflow:hidden;border-radius:16px;}
-.swipe-action{position:absolute;top:0;right:0;bottom:0;display:flex;align-items:center;justify-content:flex-end;padding:0 20px;min-width:80px;border-radius:16px;opacity:0;transition:opacity .1s;}
+.swipe-wrap{position:relative;border-radius:16px;}
+.swipe-action{position:absolute;top:0;right:0;bottom:0;display:flex;align-items:center;justify-content:flex-end;padding:0 20px;min-width:80px;border-radius:16px;opacity:0;transition:opacity .1s;overflow:hidden;}
 .swipe-action.delete{background:linear-gradient(to left,#ef4444,#dc2626);}
 .swipe-action.cancel-sub{background:linear-gradient(to left,#f59e0b,#d97706);}
 .swipe-action-label{color:#fff;font-size:11px;font-weight:700;letter-spacing:.04em;display:flex;flex-direction:column;align-items:center;gap:3px;white-space:nowrap;}
@@ -1104,7 +1105,7 @@ function connect(){
 // ── BOOT ──
 function bootApp(){
   // Show app shell immediately
-  document.getElementById('auth-screen').style.display='none';
+  const _as=document.getElementById('auth-screen');_as.style.display='none';_as.classList.add('hidden');
   document.getElementById('app').style.display='block';
   // Load Google API then authenticate
   loadScript('https://apis.google.com/js/api.js', gapiLoaded);
@@ -1184,7 +1185,7 @@ async function onToken(r){
   if(typeof token==='string')gapi.client.setToken({access_token:token});
   document.getElementById('signin-btn').style.display='none';
   // Always hide auth screen and show app
-  document.getElementById('auth-screen').style.display='none';
+  const _as=document.getElementById('auth-screen');_as.style.display='none';_as.classList.add('hidden');
   document.getElementById('app').style.display='block';
   await ensureSheets();
   await syncAll();
@@ -2766,7 +2767,7 @@ function showTab(name,el){
   if(name==='home'){renderHome();}
 }
 function showApp(){
-  document.getElementById('auth-screen').style.display='none';
+  const _as=document.getElementById('auth-screen');_as.style.display='none';_as.classList.add('hidden');
   document.getElementById('app').style.display='block';
 }
 function toast(msg,type=''){
@@ -4633,7 +4634,7 @@ loadSortState();
   const token=params.get('access_token');
   if(!token)return;
   // We have a token from redirect — hide auth immediately
-  document.getElementById('auth-screen').style.display='none';
+  const _as=document.getElementById('auth-screen');_as.style.display='none';_as.classList.add('hidden');
   document.getElementById('app').style.display='block';
   history.replaceState(null,'',window.location.pathname);
   window._earlyToken=token;
@@ -4730,7 +4731,8 @@ html{scrollbar-gutter:stable;background:#0c0c0e;color:#ebebeb}
 *::-webkit-scrollbar{display:none}
 
 /* AUTH */
-#auth-screen{position:fixed;inset:0;z-index:9000;background:var(–bg);display:flex;align-items:center;justify-content:center;padding:40px;overflow-y:auto}
+#auth-screen{position:fixed;inset:0;z-index:9000;background:#0c0c0e;display:flex;align-items:center;justify-content:center;padding:40px;overflow-y:auto}
+#auth-screen.hidden{display:none!important;pointer-events:none!important;}
 .auth-card{background:var(–s1);border:1px solid var(–border);border-radius:var(–r2);padding:48px;max-width:500px;width:100%;text-align:center}
 .auth-logo{font-size:40px;margin-bottom:16px}
 .auth-title{font-size:24px;font-weight:600;margin-bottom:8px}
@@ -4747,7 +4749,7 @@ html{scrollbar-gutter:stable;background:#0c0c0e;color:#ebebeb}
 .anote{font-size:11px;color:var(–text3);margin-top:14px}
 
 /* APP */
-#app{display:none}
+#app{display:none;background:#0c0c0e}
 .hdr{background:rgba(20,20,22,0.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(–border);padding:0;display:flex;align-items:stretch;justify-content:space-between;height:48px;position:sticky;top:0;z-index:200;gap:0}
 .hlogo{font-size:15px;font-weight:600;padding:0 20px;display:flex;align-items:center;color:var(–text);letter-spacing:-.02em;white-space:nowrap;border-right:1px solid var(–border)}
 .hright{display:flex;align-items:center;gap:6px;padding:0 16px;border-left:1px solid var(–border)}
@@ -5080,8 +5082,8 @@ tbody td{padding:12px 10px}
 .home-show-more:active{background:rgba(255,255,255,0.08)}
 #ptr-indicator{position:fixed;top:48px;left:50%;transform:translateX(-50%);background:var(–s1);border:1px solid var(–border2);border-radius:20px;padding:6px 16px;font-size:12px;color:var(–text3);z-index:500;display:none;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(0,0,0,.3)}
 /* ── SWIPE TO ACTION ── */
-.swipe-wrap{position:relative;overflow:hidden;border-radius:16px;}
-.swipe-action{position:absolute;top:0;right:0;bottom:0;display:flex;align-items:center;justify-content:flex-end;padding:0 20px;min-width:80px;border-radius:16px;opacity:0;transition:opacity .1s;}
+.swipe-wrap{position:relative;border-radius:16px;}
+.swipe-action{position:absolute;top:0;right:0;bottom:0;display:flex;align-items:center;justify-content:flex-end;padding:0 20px;min-width:80px;border-radius:16px;opacity:0;transition:opacity .1s;overflow:hidden;}
 .swipe-action.delete{background:linear-gradient(to left,#ef4444,#dc2626);}
 .swipe-action.cancel-sub{background:linear-gradient(to left,#f59e0b,#d97706);}
 .swipe-action-label{color:#fff;font-size:11px;font-weight:700;letter-spacing:.04em;display:flex;flex-direction:column;align-items:center;gap:3px;white-space:nowrap;}
@@ -5783,7 +5785,7 @@ function connect(){
 // ── BOOT ──
 function bootApp(){
   // Show app shell immediately
-  document.getElementById('auth-screen').style.display='none';
+  const _as=document.getElementById('auth-screen');_as.style.display='none';_as.classList.add('hidden');
   document.getElementById('app').style.display='block';
   // Load Google API then authenticate
   loadScript('https://apis.google.com/js/api.js', gapiLoaded);
@@ -5863,7 +5865,7 @@ async function onToken(r){
   if(typeof token==='string')gapi.client.setToken({access_token:token});
   document.getElementById('signin-btn').style.display='none';
   // Always hide auth screen and show app
-  document.getElementById('auth-screen').style.display='none';
+  const _as=document.getElementById('auth-screen');_as.style.display='none';_as.classList.add('hidden');
   document.getElementById('app').style.display='block';
   await ensureSheets();
   await syncAll();
@@ -7445,7 +7447,7 @@ function showTab(name,el){
   if(name==='home'){renderHome();}
 }
 function showApp(){
-  document.getElementById('auth-screen').style.display='none';
+  const _as=document.getElementById('auth-screen');_as.style.display='none';_as.classList.add('hidden');
   document.getElementById('app').style.display='block';
 }
 function toast(msg,type=''){
@@ -9312,7 +9314,7 @@ loadSortState();
   const token=params.get('access_token');
   if(!token)return;
   // We have a token from redirect — hide auth immediately
-  document.getElementById('auth-screen').style.display='none';
+  const _as=document.getElementById('auth-screen');_as.style.display='none';_as.classList.add('hidden');
   document.getElementById('app').style.display='block';
   history.replaceState(null,'',window.location.pathname);
   window._earlyToken=token;
