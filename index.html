@@ -190,22 +190,23 @@ th.col-act,td.col-act{width:1%;white-space:nowrap}
 .btic{padding:5px 8px}
 
 /* MODAL */
-.mo{position:fixed;inset:0;background:rgba(0,0,0,0);display:none;align-items:center;justify-content:center;z-index:1000;transition:background .2s}
-.mo.open{display:flex;background:rgba(0,0,0,.75)}
-.mo.open .md{animation:modalIn .22s cubic-bezier(.34,1.4,.64,1) both}
-@keyframes modalIn{from{opacity:0;transform:scale(.94) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,0);display:none;align-items:center;justify-content:center;z-index:1000;transition:background .25s;padding:16px;box-sizing:border-box;}
+.mo.open{display:flex;background:rgba(0,0,0,.65);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
+.mo.open .md{animation:modalIn .25s cubic-bezier(.34,1.3,.64,1) both}
+@keyframes modalIn{from{opacity:0;transform:scale(.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
 .mo.closing .md{animation:modalOut .16s ease-in both}
 @keyframes modalOut{to{opacity:0;transform:scale(.96) translateY(6px)}}
-.md{background:var(–s1);border:1px solid var(–border2);border-radius:var(–r2);padding:26px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto}
-.mtit{font-size:15px;font-weight:600;margin-bottom:18px}
-.fg{display:grid;grid-template-columns:1fr 1fr;gap:11px}
-.fgr{display:flex;flex-direction:column;gap:5px}
+.md{background:rgba(20,20,24,0.85);backdrop-filter:blur(48px);-webkit-backdrop-filter:blur(48px);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:24px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,0.07);}
+.mtit{font-size:16px;font-weight:600;margin-bottom:20px;letter-spacing:-.02em;}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.fgr{display:flex;flex-direction:column;gap:5px;min-width:0;}
 .fgr.full{grid-column:1/-1}
-.fl{font-size:10px;font-weight:500;color:var(–text3);text-transform:uppercase;letter-spacing:.06em}
-.fi,.fs{background:var(–s2);border:1px solid var(–border2);border-radius:8px;padding:8px 11px;color:var(–text);font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;font-size:12px;outline:none;transition:border-color .15s;width:100%}
-.fi:focus,.fs:focus{border-color:var(–accent)}
-.fs option{background:var(–s2)}
-.mac{display:flex;gap:9px;justify-content:flex-end;margin-top:18px}
+.fl{font-size:10px;font-weight:600;color:rgba(255,255,255,0.38);text-transform:uppercase;letter-spacing:.07em;}
+.fi,.fs{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 12px;color:#ebebeb;font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;font-size:13px;outline:none;transition:border-color .15s,background .15s;width:100%;box-sizing:border-box;}
+.fi:focus,.fs:focus{border-color:rgba(108,99,255,0.7);background:rgba(255,255,255,0.09);}
+.fi::placeholder{color:rgba(255,255,255,0.22);}
+.fs option{background:#1c1c22;color:#ebebeb;}
+.mac{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;}
 
 /* SHOW MORE */
 .show-more{text-align:center;padding:10px;font-size:11px;color:var(–accent2);cursor:pointer;border-top:1px solid var(–border);transition:background .15s}
@@ -808,13 +809,13 @@ tbody td{padding:12px 10px}
 
 <!-- CALENDAR EVENT MODAL -->
 <div class="mo" id="cal-mo" onclick="closeCalMo(event)">
-  <div class="md" style="max-width:520px;">
+  <div class="md">
     <div class="mtit" id="cal-mo-title">New Event</div>
     <input type="hidden" id="cal-ev-id">
     <div style="display:flex;flex-direction:column;gap:11px;">
       <div class="fgr"><label class="fl">Calendar</label><select class="fs" id="cal-ev-calid"></select></div>
       <div class="fgr"><label class="fl">Title</label><input class="fi" id="cal-ev-title" placeholder="Event title…"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
+      <div class="fg">
         <div class="fgr"><label class="fl">Date</label>
           <input class="fi" id="cal-ev-date" type="date" style="color-scheme:dark;background:#1c1c1f;border:1px solid rgba(255,255,255,0.12);color:#ebebeb;">
         </div>
@@ -833,7 +834,7 @@ tbody td{padding:12px 10px}
           <select class="fs" id="cal-ev-end"></select>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
+      <div class="fg">
         <div class="fgr"><label class="fl">Category & Color</label>
           <select class="fs" id="cal-ev-category" onchange="onCalCatChange(this)">
             <option value="">— None —</option>
@@ -894,7 +895,7 @@ tbody td{padding:12px 10px}
   </div>
 </div>
 <div class="mo" id="buy-mo" onclick="closeBuyMo(event)">
-  <div class="md" style="max-width:400px;">
+  <div class="md">
     <div class="mtit" id="buy-title">Move to Expenses</div>
     <input type="hidden" id="buy-row">
     <div style="display:flex;flex-direction:column;gap:12px;">
@@ -914,7 +915,7 @@ tbody td{padding:12px 10px}
 <!-- ── HOME CARD EDIT MODALS ── -->
 <!-- Wishlist Edit -->
 <div class="mo" id="hc-wish-mo" onclick="if(event.target===this)this.classList.remove('open')">
-  <div class="md" style="max-width:440px">
+  <div class="md">
     <div class="mtit">Edit Wishlist Item</div>
     <div class="fg"><div class="fgr"><label class="fl">Name</label><input class="fi" id="hcw-name"></div>
     <div class="fgr"><label class="fl">Category</label><select class="fs" id="hcw-cat"></select></div></div>
@@ -934,7 +935,7 @@ tbody td{padding:12px 10px}
 <!-- Expense Edit -->
 
 <div class="mo" id="hc-exp-mo" onclick="if(event.target===this)this.classList.remove('open')">
-  <div class="md" style="max-width:440px">
+  <div class="md">
     <div class="mtit">Edit Expense</div>
     <div class="fg"><div class="fgr"><label class="fl">Name</label><input class="fi" id="hce-name"></div>
     <div class="fgr"><label class="fl">Category</label><select class="fs" id="hce-cat"></select></div></div>
@@ -957,7 +958,7 @@ tbody td{padding:12px 10px}
 <!-- Subscription Edit -->
 
 <div class="mo" id="hc-sub-mo" onclick="if(event.target===this)this.classList.remove('open')">
-  <div class="md" style="max-width:440px">
+  <div class="md">
     <div class="mtit">Edit Subscription</div>
     <div class="fg"><div class="fgr"><label class="fl">Name</label><input class="fi" id="hcs-name"></div>
     <div class="fgr"><label class="fl">Category</label><select class="fs" id="hcs-cat"></select></div></div>
@@ -979,7 +980,7 @@ tbody td{padding:12px 10px}
 <!-- Income Edit -->
 
 <div class="mo" id="hc-income-mo" onclick="if(event.target===this)this.classList.remove('open')">
-  <div class="md" style="max-width:440px">
+  <div class="md">
     <div class="mtit">Edit Income</div>
     <div class="fg"><div class="fgr"><label class="fl">Name</label><input class="fi" id="hci-name"></div>
     <div class="fgr"><label class="fl">Category</label><select class="fs" id="hci-cat"></select></div></div>
@@ -997,11 +998,11 @@ tbody td{padding:12px 10px}
 </div>
 
 <div class="mo" id="food-mo" onclick="closeFoodMo(event)">
-  <div class="md" style="max-width:380px;">
+  <div class="md">
     <div class="mtit">Add Expense</div>
     <div style="display:flex;flex-direction:column;gap:10px;">
       <div class="fgr"><label class="fl">Name</label><input class="fi" id="food-name" placeholder="e.g. Chipotle, Groceries, Amazon…" autofocus></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="fg">
         <div class="fgr"><label class="fl">Cost</label><input class="fi" id="food-cost" type="number" step="0.01" placeholder="0.00"></div>
         <div class="fgr"><label class="fl">Date</label><input class="fi" id="food-date" type="date"></div>
       </div>
@@ -1015,11 +1016,11 @@ tbody td{padding:12px 10px}
   </div>
 </div>
 <div class="mo" id="income-mo" onclick="closeIncomeMo(event)">
-  <div class="md" style="max-width:420px;">
+  <div class="md">
     <div class="mtit">Log Income</div>
     <div style="display:flex;flex-direction:column;gap:11px;">
       <div class="fgr"><label class="fl">What was this payment for?</label><input class="fi" id="inc-name" placeholder="e.g. Freelance project, Loan repayment…"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
+      <div class="fg">
         <div class="fgr"><label class="fl">Amount received</label><input class="fi" id="inc-amount" type="number" step="0.01" placeholder="0.00"></div>
         <div class="fgr"><label class="fl">Date</label><input class="fi" id="inc-date" type="date"></div>
       </div>
