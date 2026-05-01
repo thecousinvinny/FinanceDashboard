@@ -202,11 +202,19 @@ th.col-act,td.col-act{width:1%;white-space:nowrap}
 .fgr{display:flex;flex-direction:column;gap:5px;min-width:0;}
 .fgr.full{grid-column:1/-1}
 .fl{font-size:10px;font-weight:600;color:rgba(255,255,255,0.38);text-transform:uppercase;letter-spacing:.07em;}
-.fi,.fs{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 12px;color:#ebebeb;font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;font-size:13px;outline:none;transition:border-color .15s,background .15s;width:100%;box-sizing:border-box;}
+.fi,.fs{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 12px;color:#ebebeb;font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;font-size:13px;outline:none;transition:border-color .15s,background .15s;width:100%;box-sizing:border-box;min-width:0;}
 .fi:focus,.fs:focus{border-color:rgba(108,99,255,0.7);background:rgba(255,255,255,0.09);}
 .fi::placeholder{color:rgba(255,255,255,0.22);}
 .fs option{background:#1c1c22;color:#ebebeb;}
-.mac{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;}
+input[type=“date”].fi{color-scheme:dark;}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:12px;min-width:0;}
+.fgr{display:flex;flex-direction:column;gap:5px;min-width:0;width:100%;}
+.mac{display:flex;gap:8px;margin-top:20px;}
+.mac .btn{flex:1;padding:11px;font-size:13px;font-weight:600;border-radius:10px;justify-content:center;text-align:center;}
+.mac .btn-a{background:rgba(108,99,255,0.15);border-color:rgba(108,99,255,0.5);color:#a5a0ff;font-weight:600;}
+.mac .btn-a:hover,.mac .btn-a:active{background:rgba(108,99,255,0.25);border-color:rgba(108,99,255,0.7);}
+.mac .btn:not(.btn-a){background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.1);color:rgba(255,255,255,0.5);}
+.mac .btn:not(.btn-a):hover{background:rgba(255,255,255,0.09);color:rgba(255,255,255,0.7);}
 
 /* SHOW MORE */
 .show-more{text-align:center;padding:10px;font-size:11px;color:var(–accent2);cursor:pointer;border-top:1px solid var(–border);transition:background .15s}
@@ -817,7 +825,7 @@ tbody td{padding:12px 10px}
       <div class="fgr"><label class="fl">Title</label><input class="fi" id="cal-ev-title" placeholder="Event title…"></div>
       <div class="fg">
         <div class="fgr"><label class="fl">Date</label>
-          <input class="fi" id="cal-ev-date" type="date" style="color-scheme:dark;background:#1c1c1f;border:1px solid rgba(255,255,255,0.12);color:#ebebeb;">
+          <input class="fi" id="cal-ev-date" type="date" style="color-scheme:dark;">
         </div>
         <div class="fgr"><label class="fl">All day?</label>
           <select class="fs" id="cal-ev-allday" onchange="toggleCalTime()">
@@ -904,7 +912,7 @@ tbody td{padding:12px 10px}
       </div>
       <div class="fgr"><label class="fl">Bought for</label><input class="fi" id="buy-cost" type="number" step="0.01" placeholder="0.00"></div>
       <div class="fgr"><label class="fl">Card used</label><select class="fs" id="buy-card"></select></div>
-      <div class="fgr"><label class="fl">Date</label><input class="fi" id="buy-date" type="date"></div>
+      <div class="fgr"><label class="fl">Date</label><input class="fi" id="buy-date" type="date" style="color-scheme:dark;"></div>
     </div>
     <div class="mac">
       <button class="btn" onclick="closeBuyMo()">Cancel</button>
@@ -1004,7 +1012,7 @@ tbody td{padding:12px 10px}
       <div class="fgr"><label class="fl">Name</label><input class="fi" id="food-name" placeholder="e.g. Chipotle, Groceries, Amazon…" autofocus></div>
       <div class="fg">
         <div class="fgr"><label class="fl">Cost</label><input class="fi" id="food-cost" type="number" step="0.01" placeholder="0.00"></div>
-        <div class="fgr"><label class="fl">Date</label><input class="fi" id="food-date" type="date"></div>
+        <div class="fgr"><label class="fl">Date</label><input class="fi" id="food-date" type="date" style="color-scheme:dark;"></div>
       </div>
       <div class="fgr"><label class="fl">Category</label><select class="fs" id="food-category"></select></div>
       <div class="fgr"><label class="fl">Card Used</label><select class="fs" id="food-card"><option value="">— Select card —</option></select></div>
@@ -1022,7 +1030,7 @@ tbody td{padding:12px 10px}
       <div class="fgr"><label class="fl">What was this payment for?</label><input class="fi" id="inc-name" placeholder="e.g. Freelance project, Loan repayment…"></div>
       <div class="fg">
         <div class="fgr"><label class="fl">Amount received</label><input class="fi" id="inc-amount" type="number" step="0.01" placeholder="0.00"></div>
-        <div class="fgr"><label class="fl">Date</label><input class="fi" id="inc-date" type="date"></div>
+        <div class="fgr"><label class="fl">Date</label><input class="fi" id="inc-date" type="date" style="color-scheme:dark;"></div>
       </div>
       <div class="fgr"><label class="fl">Account paid to</label><select class="fs" id="inc-bank"><option value="">— Select bank —</option></select></div>
       <div class="fgr"><label class="fl">Source</label><select class="fs" id="inc-source">
