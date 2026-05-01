@@ -402,11 +402,9 @@ tbody td{padding:12px 10px}
 #ptr-indicator{position:fixed;top:48px;left:50%;transform:translateX(-50%);background:var(–s1);border:1px solid var(–border2);border-radius:20px;padding:6px 16px;font-size:12px;color:var(–text3);z-index:500;display:none;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(0,0,0,.3)}
 /* ── SWIPE TO ACTION ── */
 .swipe-wrap{position:relative;border-radius:16px;}
-.swipe-action{position:absolute;top:0;right:0;bottom:0;display:flex;align-items:center;justify-content:flex-end;padding:0 20px;min-width:80px;border-radius:16px;opacity:0;transition:opacity .1s;overflow:hidden;}
-.swipe-action.delete{background:linear-gradient(to left,#ef4444,#dc2626);}
-.swipe-action.cancel-sub{background:linear-gradient(to left,#f59e0b,#d97706);}
-.swipe-action-label{color:#fff;font-size:11px;font-weight:700;letter-spacing:.04em;display:flex;flex-direction:column;align-items:center;gap:3px;white-space:nowrap;}
-.swipe-action-icon{font-size:20px;line-height:1;}
+.swipe-action{position:absolute;top:0;right:0;bottom:0;display:flex;align-items:center;justify-content:flex-end;width:0;border-radius:16px;opacity:0;overflow:hidden;}
+.swipe-action.delete{background:#ef4444;}
+.swipe-action.cancel-sub{background:#f59e0b;}
 .swipe-card{will-change:transform;border-radius:16px;}
 #ptr-indicator.visible{display:flex}
 /* Mobile bottom nav */
@@ -4053,28 +4051,32 @@ function initHomeSwipe(){
   const wrap=document.getElementById('home-slider-wrap');
   if(!wrap||wrap._swipeInit)return;
   wrap._swipeInit=true;
-  let startX=null;
+  let startX=null,startY=null,isHoriz=null;
   const onSwipe=(dx)=>{
     if(Math.abs(dx)<90)return;
-    // Swipe LEFT (dx<0) = go forward (higher index)
-    // Swipe RIGHT (dx>0) = go back (lower index)
     const next=dx<0?Math.min(_homePanel+1,3):Math.max(_homePanel-1,0);
     if(next===_homePanel)return;
     const btn=document.querySelector(`.home-tab-btn[data-panel="${next}"]`);
     homeGoTo(next,btn);
   };
-  wrap.addEventListener('touchstart',e=>{startX=e.touches[0].clientX;},{passive:true});
+  wrap.addEventListener('touchstart',e=>{
+    startX=e.touches[0].clientX;
+    startY=e.touches[0].clientY;
+    isHoriz=null;
+  },{passive:true});
   wrap.addEventListener('touchend',e=>{
     if(startX===null)return;
-    const dx=e.changedTouches[0].clientX-startX;startX=null;
-    onSwipe(dx);
+    const dx=e.changedTouches[0].clientX-startX;
+    // Only fire panel nav if no card swipe is in progress
+    if(!window._cardSwipeActive) onSwipe(dx);
+    startX=null;startY=null;isHoriz=null;
   },{passive:true});
   let mStart=null;
   wrap.addEventListener('mousedown',e=>{mStart=e.clientX;e.preventDefault();});
   wrap.addEventListener('mouseup',e=>{
     if(mStart===null)return;
     const dx=e.clientX-mStart;mStart=null;
-    onSwipe(dx);
+    if(!window._cardSwipeActive) onSwipe(dx);
   });
 }
 
@@ -4082,7 +4084,6 @@ function initHomeSwipe(){
 async function deleteWish(row){
   const w=D.wishlist.find(x=>x._row===row);
   if(!w)return;
-  // Mark as No Longer Needed in sheet
   const vals=[w.Name,w.Description||'',w.Category||'',w.Link||'',w.OCost||'',w.BCost||'','No Longer Needed'];
   await updateRow('Wishlist',row,vals);
   toast(`Removed "${w.Name}" from wishlist`,'ok');
@@ -4107,98 +4108,120 @@ function initSwipeCards(container){
     const action=wrap.querySelector('.swipe-action');
     if(!card||!action)return;
 
-    const THRESHOLD=80; // px to trigger
-    const MAX=120;      // max drag distance
-    let startX=0,startY=0,dx=0,dragging=false,triggered=false,isHoriz=null;
+    const TRIGGER=90;   // px to enter confirm state
+    const MAX=130;      // max visual drag
+    let sx=0,sy=0,dx=0,isHoriz=null,open=false;
+
+    const resetCard=()=>{
+      card.style.transition='transform .3s cubic-bezier(.4,0,.2,1)';
+      action.style.transition='opacity .3s,width .3s';
+      card.style.transform='';
+      action.style.opacity='0';
+      action.style.width='0';
+      window._cardSwipeActive=false;
+      open=false;
+    };
+
+    const snapOpen=()=>{
+      const actionType=wrap.dataset.swipeAction;
+      const isDelete=actionType==='deleteWish';
+      card.style.transition='transform .3s cubic-bezier(.4,0,.2,1)';
+      action.style.transition='opacity .2s,width .3s cubic-bezier(.4,0,.2,1)';
+      card.style.transform=`translateX(-${MAX}px)`;
+      action.style.opacity='1';
+      action.style.width=MAX+'px';
+      action.innerHTML=`
+        <div style="display:flex;flex-direction:column;gap:5px;width:100%;padding:0 10px;box-sizing:border-box;">
+          <button onclick="swipeConfirm(this)" data-action="${actionType}" data-row="${wrap.dataset.row}"
+            style="background:${isDelete?'#ef4444':'#f59e0b'};color:#fff;border:none;border-radius:8px;
+                   padding:8px 0;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;
+                   cursor:pointer;width:100%;letter-spacing:.01em;">
+            ${isDelete?'Delete':'Cancel'}
+          </button>
+          <button onclick="swipeCancel(this)"
+            style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);border:none;border-radius:8px;
+                   padding:8px 0;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif;
+                   cursor:pointer;width:100%;">
+            Keep
+          </button>
+        </div>`;
+      open=true;
+      window._cardSwipeActive=false;
+    };
 
     wrap.addEventListener('touchstart',e=>{
-      startX=e.touches[0].clientX;
-      startY=e.touches[0].clientY;
-      dx=0;dragging=false;triggered=false;isHoriz=null;
+      if(open){resetCard();return;}
+      sx=e.touches[0].clientX;sy=e.touches[0].clientY;
+      dx=0;isHoriz=null;
       card.style.transition='none';
       action.style.transition='none';
     },{passive:true});
 
     wrap.addEventListener('touchmove',e=>{
+      if(open)return;
       const cx=e.touches[0].clientX,cy=e.touches[0].clientY;
-      const adx=Math.abs(cx-startX),ady=Math.abs(cy-startY);
-      // Determine direction on first meaningful movement
-      if(isHoriz===null&&(adx>4||ady>4)) isHoriz=adx>ady;
-      if(!isHoriz)return; // vertical — let scroll happen
-      dx=Math.min(0,cx-startX); // only left swipe (negative)
-      if(dx>0)dx=0;
-      const pct=Math.min(1,Math.abs(dx)/THRESHOLD);
-      card.style.transform=`translateX(${Math.max(dx,-MAX)}px)`;
-      action.style.opacity=String(pct);
-      triggered=Math.abs(dx)>=THRESHOLD;
+      const adx=Math.abs(cx-sx),ady=Math.abs(cy-sy);
+      if(isHoriz===null){
+        if(adx<4&&ady<4)return;
+        isHoriz=adx>ady*1.2;
+      }
+      if(!isHoriz)return;
+      // Lock panel nav while card is being swiped
+      window._cardSwipeActive=true;
+      dx=Math.min(0,cx-sx);
+      const progress=Math.min(1,Math.abs(dx)/TRIGGER);
+      const visual=Math.min(Math.abs(dx),MAX);
+      card.style.transform=`translateX(-${visual}px)`;
+      action.style.opacity=String(progress*0.9);
+      action.style.width=visual+'px';
+      // Show the label text while dragging (clean, no buttons yet)
+      const actionType=wrap.dataset.swipeAction;
+      const label=actionType==='deleteWish'?'Delete':'Cancel';
+      const color=actionType==='deleteWish'?'#ef4444':'#f59e0b';
+      action.innerHTML=`<span style="color:#fff;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;letter-spacing:.02em;padding-right:14px;">${label}</span>`;
+      action.style.background=`linear-gradient(to left,${color},${color}cc)`;
     },{passive:true});
 
     wrap.addEventListener('touchend',()=>{
-      if(!isHoriz){dx=0;return;}
-      card.style.transition='transform .25s cubic-bezier(.4,0,.2,1)';
-      action.style.transition='opacity .25s';
-      if(triggered){
-        // Snap to confirm position — show confirm/cancel buttons in the action area
-        const actionType=wrap.dataset.swipeAction;
-        const row=parseInt(wrap.dataset.row);
-        const isDelete=actionType==='deleteWish';
-        const confirmLabel=isDelete?'Delete':'Cancel Sub';
-        const confirmColor=isDelete?'#ef4444':'#f59e0b';
-
-        // Snap card open to reveal action
-        card.style.transform=`translateX(-130px)`;
-        action.style.opacity='1';
-        action.style.minWidth='130px';
-
-        // Replace action content with Confirm / Undo buttons
-        action.innerHTML=`
-          <div style="display:flex;flex-direction:column;gap:6px;padding:0 12px;width:130px;">
-            <button onclick="swipeConfirm(this)" data-action="${actionType}" data-row="${row}"
-              style="background:${confirmColor};color:#fff;border:none;border-radius:8px;padding:7px 0;font-size:11px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;width:100%;">${confirmLabel}</button>
-            <button onclick="swipeCancel(this)"
-              style="background:rgba(255,255,255,0.12);color:#fff;border:none;border-radius:8px;padding:7px 0;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;width:100%;">Keep</button>
-          </div>`;
+      if(open||isHoriz===null){window._cardSwipeActive=false;return;}
+      if(!isHoriz){window._cardSwipeActive=false;return;}
+      if(Math.abs(dx)>=TRIGGER){
+        snapOpen();
       } else {
-        card.style.transform='';
-        action.style.opacity='0';
+        resetCard();
       }
-      dx=0;triggered=false;isHoriz=null;
+      dx=0;isHoriz=null;
     },{passive:true});
   });
 }
 
 function swipeCancel(btn){
   const wrap=btn.closest('.swipe-wrap');
-  const card=wrap?.querySelector('.swipe-card');
-  const action=wrap?.querySelector('.swipe-action');
-  if(!card||!action)return;
-  // Restore original action icon
+  if(!wrap)return;
+  const card=wrap.querySelector('.swipe-card');
+  const action=wrap.querySelector('.swipe-action');
   const isDelete=wrap.dataset.swipeAction==='deleteWish';
-  action.innerHTML=isDelete
-    ?`<div class="swipe-action-label"><span class="swipe-action-icon">🗑</span>Delete</div>`
-    :`<div class="swipe-action-label"><span class="swipe-action-icon">✕</span>Cancel</div>`;
-  action.style.minWidth='';
-  card.style.transition='transform .25s cubic-bezier(.4,0,.2,1)';
-  action.style.transition='opacity .25s';
-  card.style.transform='';
-  action.style.opacity='0';
+  if(action){
+    action.innerHTML=`<span style="color:#fff;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;letter-spacing:.02em;padding-right:14px;">${isDelete?'Delete':'Cancel'}</span>`;
+  }
+  if(card){card.style.transition='transform .3s cubic-bezier(.4,0,.2,1)';card.style.transform='';}
+  if(action){action.style.transition='opacity .3s,width .3s';action.style.opacity='0';action.style.width='0';}
 }
 
 async function swipeConfirm(btn){
   const wrap=btn.closest('.swipe-wrap');
   const card=wrap?.querySelector('.swipe-card');
-  const action=wrap?.querySelector('.swipe-action');
   const actionType=wrap?.dataset.swipeAction;
   const row=parseInt(wrap?.dataset.row);
-  if(!card||!action)return;
-  // Animate out
+  if(!card)return;
   btn.textContent='…';btn.disabled=true;
-  card.style.transition='transform .2s ease';
-  card.style.transform='translateX(-110%)';
+  card.style.transition='transform .22s ease,opacity .22s';
+  card.style.transform='translateX(-105%)';
+  card.style.opacity='0';
   setTimeout(async()=>{
     if(actionType==='deleteWish') await deleteWish(row);
     else if(actionType==='cancelSub') await cancelSub(row);
-  },180);
+  },200);
 }
 
 // ── MONTH PICKER ──
