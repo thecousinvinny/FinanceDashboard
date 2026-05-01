@@ -418,12 +418,12 @@ tbody td{padding:12px 10px}
 </head>
 <body>
 
-<div id="auth-screen">
+<div id="auth-screen" role="presentation" aria-hidden="false">
   <div class="auth-card">
     <div class="auth-logo"></div>
     <div class="auth-title">Finance Dashboard</div>
     <div class="auth-sub">Your data lives in Google Sheets. Works across all devices.</div>
-    <div class="steps">
+    <div class="steps" data-nosnippet>
       <h4>One-time setup</h4>
       <div class="step"><div class="sn">1</div><div>Go to <strong>console.cloud.google.com</strong> → New project → Enable <strong>Google Sheets API</strong></div></div>
       <div class="step"><div class="sn">2</div><div>Create an <strong>API Key</strong> and an <strong>OAuth 2.0 Client ID</strong> (web app). Add your GitHub Pages URL to authorized origins.</div></div>
@@ -510,7 +510,6 @@ tbody td{padding:12px 10px}
         </div>
         <div class="home-stats-bar" id="hstats-income"></div>
         <div class="home-panel-body" id="hp-income"></div>
-        <button class="home-show-more" id="hpm-income" onclick="homeShowMore('income')" style="display:none">Show 30 more</button>
       </div>
     </div>
   </div>
@@ -3843,7 +3842,7 @@ function renderHomeSub(){
 
 function renderHomeIncome(){
   const el=document.getElementById('hp-income');
-  const more=document.getElementById('hpm-income');
+  const more=null; // show-more now rendered inline
   const stats=document.getElementById('hstats-income');
   if(!el)return;
   const income=D.master.filter(m=>m.Type==='Income').sort((a,b)=>toSortableDate(b.Date||'').localeCompare(toSortableDate(a.Date||'')));
@@ -3861,7 +3860,7 @@ function renderHomeIncome(){
       <div class="home-stat"><div class="home-stat-label">Gained Month</div><div class="home-stat-val green">${fmt(gainedMo)}</div></div>
       <div class="home-stat"><div class="home-stat-label">Gained Year</div><div class="home-stat-val green">${fmt(gainedYr)}</div></div>`;
   }
-  el.innerHTML=income.slice(0,lim).map(m=>{
+  const cards=income.slice(0,lim).map(m=>{
     const amt=parseFloat(m.Cost||0);
     return`<div class="home-card" onclick="openHomeIncomeEdit(${m._row})" style="cursor:pointer">
       <div class="home-card-top">
@@ -3880,7 +3879,8 @@ function renderHomeIncome(){
       </div>
     </div>`;
   }).join('')||'<div style="color:rgba(255,255,255,0.3);font-size:13px;text-align:center;padding:40px 20px">No income recorded</div>';
-  if(more)more.style.display=income.length>lim?'block':'none';
+  const showMoreBtn=income.length>lim?`<button class="home-show-more" onclick="homeShowMore('income')">Show ${Math.min(30,income.length-lim)} more</button>`:'';
+  el.innerHTML=cards+showMoreBtn;
 }
 
 function homeShowMore(key){
