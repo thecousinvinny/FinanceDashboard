@@ -422,25 +422,7 @@ tbody td{padding:12px 10px}
 </head>
 <body>
 
-<div id="auth-screen" role="presentation" aria-hidden="false">
-  <div class="auth-card">
-    <div class="auth-logo"></div>
-    <div class="auth-title">Finance Dashboard</div>
-    <div class="auth-sub">Your data lives in Google Sheets. Works across all devices.</div>
-    <div class="steps" data-nosnippet>
-      <h4>One-time setup</h4>
-      <div class="step"><div class="sn">1</div><div>Go to <strong>console.cloud.google.com</strong> → New project → Enable <strong>Google Sheets API</strong></div></div>
-      <div class="step"><div class="sn">2</div><div>Create an <strong>API Key</strong> and an <strong>OAuth 2.0 Client ID</strong> (web app). Add your GitHub Pages URL to authorized origins.</div></div>
-      <div class="step"><div class="sn">3</div><div>Create a blank <strong>Google Sheet</strong> and copy the ID from the URL.</div></div>
-      <div class="step"><div class="sn">4</div><div>Paste below and click Connect. Everything is created automatically.</div></div>
-    </div>
-    <input class="ai" id="in-cid" placeholder="OAuth Client ID" value="161473053231-fijc0tuqno4i3s21sjtlgcvr7d935sdv.apps.googleusercontent.com">
-    <input class="ai" id="in-key" placeholder="API Key" value="AIzaSyDR31gST2VMxROFmWWe9GYWn0ySAWcbb18">
-    <input class="ai" id="in-sid" placeholder="Google Sheet ID" value="1x8c8DgqsGERvgFif6S83bWacREdxKeoNkAFLCmwfxkc">
-    <button class="bp" onclick="connect()">Connect to Google Sheets →</button>
-    <div class="anote">Credentials saved in your browser only — never sent anywhere except Google.</div>
-  </div>
-</div>
+<div id="auth-screen"></div>
 
 <div id="app" style="display:none">
   <!-- Floating menu button -->
@@ -4763,7 +4745,25 @@ loadSortState();
 })();
 
 function showAuthScreen(){
-  document.getElementById('auth-screen').classList.add('visible');
+  const el=document.getElementById('auth-screen');
+  el.innerHTML=`<div class="auth-card">
+    <div class="auth-logo"></div>
+    <div class="auth-title">Finance Dashboard</div>
+    <div class="auth-sub">Your data lives in Google Sheets. Works across all devices.</div>
+    <div class="steps">
+      <h4>One-time setup</h4>
+      <div class="step"><div class="sn">1</div><div>Go to <strong>console.cloud.google.com</strong> &rarr; New project &rarr; Enable <strong>Google Sheets API</strong></div></div>
+      <div class="step"><div class="sn">2</div><div>Create an <strong>API Key</strong> and an <strong>OAuth 2.0 Client ID</strong> (web app). Add your GitHub Pages URL to authorized origins.</div></div>
+      <div class="step"><div class="sn">3</div><div>Create a blank <strong>Google Sheet</strong> and copy the ID from the URL.</div></div>
+      <div class="step"><div class="sn">4</div><div>Paste below and click Connect. Everything is created automatically.</div></div>
+    </div>
+    <input class="ai" id="in-cid" placeholder="OAuth Client ID" value="161473053231-fijc0tuqno4i3s21sjtlgcvr7d935sdv.apps.googleusercontent.com">
+    <input class="ai" id="in-key" placeholder="API Key" value="AIzaSyDR31gST2VMxROFmWWe9GYWn0ySAWcbb18">
+    <input class="ai" id="in-sid" placeholder="Google Sheet ID" value="1x8c8DgqsGERvgFif6S83bWacREdxKeoNkAFLCmwfxkc">
+    <button class="bp" onclick="connect()">Connect to Google Sheets &rarr;</button>
+    <div class="anote">Credentials saved in your browser only &mdash; never sent anywhere except Google.</div>
+  </div>`;
+  el.classList.add('visible');
   document.getElementById('app').style.display='none';
 }
 
