@@ -4077,6 +4077,33 @@ function renderHomeIncome(){
     Log Income
   </button>`;
 
+  const cards=income.slice(0,lim).map(m=>{
+    const amt=parseFloat(m.Cost||0);
+    const color=getCatColor(m.Category)||'#22c55e';
+    return`<div class="hrow" onclick="openHomeIncomeEdit(${m._row})">
+      <div class="hrow-stripe" style="background:${color}"></div>
+      <div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+      <div class="hrow-body"><div class="hrow-name">${esc(m.Name||'—')}</div><div class="hrow-sub">${m.Bank||m.Source||''}${m.Date?' · '+relDate(m.Date):''}</div></div>
+      <div class="hrow-right"><div class="hrow-amount" style="color:#22c55e">+$${amt.toLocaleString()}</div><div class="hrow-meta">${m.Source||''}</div></div>
+    </div>`;
+  }).join('')||'<div style="color:rgba(255,255,255,0.2);font-size:13px;text-align:center;padding:48px 20px;">No income recorded</div>';
+  const showMoreBtn=income.length>lim?`<button class="home-show-more" onclick="homeShowMore('income')">Show ${Math.min(30,income.length-lim)} more</button>`:'';
+  el.innerHTML=hero+'<div class="hp-divider"></div>'+cards+showMoreBtn;
+  setTimeout(initPendingCharts,50);
+}
+
+function openHomeWishEdit(row){
+  const w=D.wishlist.find(x=>x._row===row);if(!w)return;
+  _hcEditRow=row;_hcEditSheet='Wishlist';
+  document.getElementById('hcw-name').value=w.Name||'';
+  document.getElementById('hcw-desc').value=w.Description||'';
+  document.getElementById('hcw-link').value=w.Link||'';
+  document.getElementById('hcw-ocost').value=w.OCost||'';
+  document.getElementById('hcw-bcost').value=w.BCost||'';
+  const linkBtn=document.getElementById('hcw-link-open');
+  if(linkBtn){linkBtn.href=w.Link||'#';linkBtn.style.display=w.Link?'block':'none';}
+  const catSel=document.getElementById('hcw-cat');
+  catSel.innerHTML=D.categories.map(c=>`<option${c.Name===w.Category?' selected':''}>${esc(c.Name)}</option>`).join('');
   document.getElementById('hc-wish-mo').classList.add('open');
 }
 async function saveHomeWishEdit(){
