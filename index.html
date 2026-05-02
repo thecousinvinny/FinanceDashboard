@@ -449,14 +449,8 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .hrow-progress-bar{height:2px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden;}
 .hrow-progress-fill{height:100%;border-radius:2px;transition:width .6s cubic-bezier(.4,0,.2,1);}
 
-/* ── INTERACTIVE BAR CHART ── */
-.hbar-wrap{display:flex;align-items:flex-end;gap:3px;padding:8px 20px 20px;height:140px;position:relative;}
-.hbar-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;cursor:pointer;position:relative;height:100%;-webkit-tap-highlight-color:transparent;}
-.hbar-bar{width:100%;border-radius:4px 4px 0 0;opacity:.45;transition:opacity .15s,height .4s cubic-bezier(.4,0,.2,1);min-height:3px;}
-.hbar-col.active .hbar-bar{opacity:1;}
-.hbar-label{font-size:8px;color:rgba(255,255,255,0.2);text-align:center;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
-.hbar-tooltip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%) translateY(4px);background:rgba(20,20,30,0.95);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:6px 10px;font-size:11px;color:rgba(255,255,255,0.6);white-space:nowrap;text-align:center;opacity:0;pointer-events:none;transition:opacity .15s,transform .15s;z-index:10;line-height:1.5;}
-.hbar-tooltip strong{color:#f0f0f8;font-size:12px;}
+/* ── DOT GRAPH ── */
+.dgraph-dot{transition:opacity .2s,r .2s;}
 
 /* ── SWIPE TO ACTION ── */
 .swipe-wrap{position:relative;border-radius:16px;}
@@ -3749,54 +3743,75 @@ function updateOrderedBadge(){
 }
 
 // ── INTERACTIVE BAR CHART ──
-function buildBarChart(id,values,labels,color,title){
+function buildDotGraph(id,values,labels,color){
   if(!values.some(v=>v>0))return'';
-  const max=Math.max(...values,1);
-  const min=Math.min(...values.filter(v=>v>0),max);
   const fmt=v=>'$'+v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
-  // Log scale so similar values still look meaningfully different
-  const logScale=v=>{
-    if(v<=0)return 0;
-    const logMin=min>1?Math.log(min*0.5):0;
-    const logMax=Math.log(max*1.1);
-    return Math.max(8,Math.round(((Math.log(v)-logMin)/(logMax-logMin))*92));
-  };
-  const bars=values.map((v,i)=>{
-    const pct=v>0?logScale(v):0;
-    const label=labels[i];
-    return`<div class="hbar-col" onclick="hbarTap(this,'${id}')" data-val="${v}" data-label="${label}">
-      <div class="hbar-tooltip">${label}<br><strong>${fmt(v)}</strong></div>
-      <div class="hbar-bar" style="height:${pct}%;background:${v>0?color:'rgba(255,255,255,0.05)'};"></div>
-      <div class="hbar-label">${label}</div>
-    </div>`;
+  const max=Math.max(...values,1);
+  const W=320,H=80,padX=12,padY=10;
+  const n=values.length;
+
+  // Points
+  const pts=values.map((v,i)=>{
+    const x=padX+(i/(n-1))*(W-padX*2);
+    const y=padY+(1-(v/max))*(H-padY*2);
+    return{x,y,v,label:labels[i]};
+  });
+
+  // Dotted connecting line (dashed)
+  const pathD=pts.map((p,i)=>`${i===0?'M':'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+
+  // Dots — size varies with value
+  const dots=pts.map((p,i)=>{
+    const r=p.v>0?Math.max(2.5,Math.min(5,2.5+(p.v/max)*3)):1.5;
+    const opacity=p.v>0?0.85:0.2;
+    return`<circle class="dgraph-dot" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}"
+      fill="${p.v>0?color:'rgba(255,255,255,0.15)'}" opacity="${opacity}"
+      style="cursor:pointer" onclick="dgraphTap(this,'${id}',${i})"
+      data-val="${p.v}" data-label="${esc(String(p.label))}"/>`;
   }).join('');
-  return`<div class="hbar-wrap" id="${id}">${bars}</div>`;
+
+  // Labels on x-axis (every other one to avoid crowding)
+  const xlabels=pts.map((p,i)=>{
+    if(i%2!==0&&i!==n-1)return'';
+    return`<text x="${p.x.toFixed(1)}" y="${H+4}" text-anchor="middle" fill="rgba(255,255,255,0.2)" font-size="7" font-family="Inter,sans-serif">${esc(String(p.label))}</text>`;
+  }).join('');
+
+  return`<div style="padding:4px 20px 20px;position:relative;" id="${id}-wrap">
+    <div id="${id}-tip" style="text-align:center;height:28px;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:4px;">
+      <span style="font-size:10px;color:rgba(255,255,255,0.28);letter-spacing:.06em;text-transform:uppercase;" id="${id}-tip-label"></span>
+      <span style="font-size:15px;font-weight:600;font-family:'DM Mono',monospace;color:${color};" id="${id}-tip-val"></span>
+    </div>
+    <svg width="100%" viewBox="0 0 ${W} ${H+10}" style="overflow:visible;">
+      <path d="${pathD}" fill="none" stroke="${color}" stroke-width="1" stroke-dasharray="2 4" opacity="0.25"/>
+      ${dots}
+      ${xlabels}
+    </svg>
+  </div>`;
 }
 
-function hbarTap(col,chartId){
-  // Deselect all in this chart
-  const chart=document.getElementById(chartId);
-  if(!chart)return;
-  chart.querySelectorAll('.hbar-col').forEach(c=>{
-    c.classList.remove('active');
-    c.querySelector('.hbar-tooltip').style.opacity='0';
-    c.querySelector('.hbar-tooltip').style.transform='translateY(4px)';
-    c.querySelector('.hbar-bar').style.opacity='0.45';
-  });
-  // Select tapped
-  col.classList.add('active');
-  const tip=col.querySelector('.hbar-tooltip');
-  tip.style.opacity='1';
-  tip.style.transform='translateY(0)';
-  col.querySelector('.hbar-bar').style.opacity='1';
-  // Auto-dismiss after 2s
-  clearTimeout(col._tipTimer);
-  col._tipTimer=setTimeout(()=>{
-    col.classList.remove('active');
-    tip.style.opacity='0';
-    tip.style.transform='translateY(4px)';
-    col.querySelector('.hbar-bar').style.opacity='0.45';
-  },2000);
+function dgraphTap(dot,id,idx){
+  const v=parseFloat(dot.dataset.val);
+  const label=dot.dataset.label;
+  const fmt=v=>'$'+v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+  // Update tip display
+  const tipLabel=document.getElementById(id+'-tip-label');
+  const tipVal=document.getElementById(id+'-tip-val');
+  if(tipLabel)tipLabel.textContent=label;
+  if(tipVal)tipVal.textContent=v>0?fmt(v):'—';
+  // Dim all dots, highlight tapped
+  const wrap=document.getElementById(id+'-wrap');
+  if(!wrap)return;
+  wrap.querySelectorAll('.dgraph-dot').forEach(d=>{d.style.opacity='0.25';d.setAttribute('r',d._origR||d.getAttribute('r'));});
+  dot._origR=dot._origR||dot.getAttribute('r');
+  dot.style.opacity='1';
+  dot.setAttribute('r',parseFloat(dot._origR)+2);
+  // Auto-reset after 2.5s
+  clearTimeout(dot._t);
+  dot._t=setTimeout(()=>{
+    wrap.querySelectorAll('.dgraph-dot').forEach(d=>{d.style.opacity=parseFloat(d.dataset.val)>0?'0.85':'0.2';if(d._origR)d.setAttribute('r',d._origR);});
+    if(tipLabel)tipLabel.textContent='';
+    if(tipVal)tipVal.textContent='';
+  },2500);
 }
 
 // ── HOME PANELS ──
@@ -3906,7 +3921,7 @@ function renderHomeExp(){
   for(let i=13;i>=0;i--){const d=new Date(now);d.setDate(d.getDate()-i);days14.push(d.toISOString().slice(0,10));}
   const dayTotals=days14.map(d=>allPro.filter(e=>toSortableDate(e.Date||'')===d).reduce((s,e)=>s+(parseFloat(e.Cost)||0),0));
   const dayLabels=days14.map(d=>{const dt=new Date(d+'T12:00:00');return dt.getDate();});
-  const barChart=buildBarChart('exp-chart',dayTotals,dayLabels,'#ef4444','Daily Spend');
+  const barChart=buildDotGraph('exp-chart',dayTotals,dayLabels,'#ef4444');
 
   const hero=`<div class="hp-hero">
     <div class="hp-hero-label">Expenses · ${now.toLocaleString('default',{month:'long'})}</div>
@@ -4040,7 +4055,7 @@ function renderHomeIncome(){
   const months8=[];const mLabels=[];
   for(let i=7;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months8.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);mLabels.push(d.toLocaleString('default',{month:'short'}));}
   const moTotals=months8.map(m=>income.filter(x=>toSortableDate(x.Date||'').startsWith(m)).reduce((s,x)=>s+(parseFloat(x.Cost)||0),0));
-  const incomeChart=buildBarChart('inc-chart',moTotals,mLabels,'#22c55e','Monthly Income');
+  const incomeChart=buildDotGraph('inc-chart',moTotals,mLabels,'#22c55e');
 
   const hero=`<div class="hp-hero">
     <div class="hp-hero-label">Income · ${now.toLocaleString('default',{month:'long'})}</div>
