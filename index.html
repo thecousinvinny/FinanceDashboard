@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0c0c0e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -201,7 +201,7 @@ th.col-act,td.col-act{width:1%;white-space:nowrap}
 .fgr{display:flex;flex-direction:column;gap:5px;min-width:0;}
 .fgr.full{grid-column:1/-1}
 .fl{font-size:9px;font-weight:600;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:.09em;margin-bottom:2px;}
-.fi,.fs{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:11px 14px;color:#f0f0f8;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;outline:none;transition:border-color .15s,background .15s;width:100%;box-sizing:border-box;min-width:0;}
+.fi,.fs{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:11px 14px;color:#f0f0f8;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:16px;outline:none;transition:border-color .15s,background .15s;width:100%;box-sizing:border-box;min-width:0;}
 .fi:focus,.fs:focus{border-color:rgba(108,99,255,0.7);background:rgba(255,255,255,0.09);}
 .fi::placeholder{color:rgba(255,255,255,0.18);}
 .fs option{background:#1c1c22;color:#ebebeb;}
@@ -369,8 +369,8 @@ td.editing{background:rgba(108,99,255,0.05)!important}
   /* Bigger table touch targets */
   tbody td{padding:12px 10px}
   /* Modal full screen on mobile */
-  .mbox{width:100%!important;max-width:100%!important;border-radius:16px 16px 0 0!important;position:fixed;bottom:0;left:0;right:0;max-height:90vh;overflow-y:auto}
-  .mo{align-items:flex-end!important;padding:0!important}
+  .mbox{width:100%!important;max-width:calc(100% - 32px)!important;}
+  .mo{align-items:center!important;padding:16px!important}
   /* Calendar full height on mobile */
   #tab-calendar{height:calc(100vh - 48px - 60px)}
   /* FAB already always visible */
