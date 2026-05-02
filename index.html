@@ -413,14 +413,17 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 #ptr-indicator{position:fixed;top:48px;left:50%;transform:translateX(-50%);background:var(--s1);border:1px solid var(--border2);border-radius:20px;padding:6px 16px;font-size:12px;color:var(--text3);z-index:500;display:none;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(0,0,0,.3)}
 
 /* ── UNIX-STYLE HOME PANELS ── */
-.hp-hero{padding:24px 20px 16px;}
-.hp-hero-label{font-size:10px;font-weight:500;color:rgba(255,255,255,0.28);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;}
-.hp-hero-amount{font-size:42px;font-weight:700;font-family:'DM Mono','SF Mono',monospace;letter-spacing:-.04em;line-height:1;color:#f0f0f8;}
-.hp-hero-sub{font-size:12px;color:rgba(255,255,255,0.3);margin-top:6px;letter-spacing:.01em;}
-.hp-hero-stats{display:flex;gap:24px;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06);}
-.hp-hero-stat{display:flex;flex-direction:column;gap:3px;}
+.hp-hero{padding:32px 20px 20px;text-align:center;}
+.hp-hero-label{font-size:10px;font-weight:500;color:rgba(255,255,255,0.28);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px;}
+.hp-hero-amount{font-size:48px;font-weight:700;font-family:'DM Mono','SF Mono',monospace;letter-spacing:-.04em;line-height:1;color:#f0f0f8;}
+.hp-hero-sub{font-size:12px;color:rgba(255,255,255,0.3);margin-top:8px;letter-spacing:.01em;}
+.hp-hero-stats{display:flex;gap:0;margin-top:20px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.06);justify-content:center;}
+.hp-hero-stat{display:flex;flex-direction:column;gap:4px;flex:1;align-items:center;padding:0 8px;}
+.hp-hero-stat+.hp-hero-stat{border-left:1px solid rgba(255,255,255,0.06);}
 .hp-hero-stat-label{font-size:9px;font-weight:500;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:.1em;}
-.hp-hero-stat-val{font-size:14px;font-weight:600;font-family:'DM Mono','SF Mono',monospace;letter-spacing:-.02em;}
+.hp-hero-stat-val{font-size:15px;font-weight:600;font-family:'DM Mono','SF Mono',monospace;letter-spacing:-.02em;}
+/* Graph container */
+.hp-graph{padding:8px 20px 20px;display:flex;justify-content:center;align-items:center;}
 .hp-add-btn{display:flex;align-items:center;gap:6px;margin:0 20px 16px;padding:14px 18px;background:rgba(108,99,255,0.12);border:1px solid rgba(108,99,255,0.2);border-radius:14px;cursor:pointer;color:#9d97ff;font-size:13px;font-weight:500;font-family:'Inter',-apple-system,sans-serif;letter-spacing:-.01em;transition:background .2s,border-color .2s;width:calc(100% - 40px);box-sizing:border-box;justify-content:center;}
 .hp-add-btn:active{background:rgba(108,99,255,0.2);border-color:rgba(108,99,255,0.35);}
 .hp-add-btn svg{opacity:.7;}
@@ -438,6 +441,13 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .hrow-amount{font-size:15px;font-weight:600;font-family:'DM Mono','SF Mono',monospace;letter-spacing:-.02em;}
 .hrow-meta{font-size:10px;color:rgba(255,255,255,0.28);letter-spacing:.01em;}
 .hrow-stripe{position:absolute;left:0;top:20%;bottom:20%;width:2px;border-radius:2px;}
+/* Progress bar rows (wishlist) */
+.hrow-progress{display:flex;flex-direction:column;gap:6px;padding:14px 20px 10px;border-top:1px solid rgba(255,255,255,0.04);}
+.hrow-progress-top{display:flex;justify-content:space-between;align-items:center;}
+.hrow-progress-name{font-size:13px;font-weight:500;color:#f0f0f8;letter-spacing:-.01em;}
+.hrow-progress-price{font-size:13px;font-weight:600;font-family:'DM Mono','SF Mono',monospace;color:rgba(255,255,255,0.5);}
+.hrow-progress-bar{height:2px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden;}
+.hrow-progress-fill{height:100%;border-radius:2px;transition:width .6s cubic-bezier(.4,0,.2,1);}
 
 /* ── SWIPE TO ACTION ── */
 .swipe-wrap{position:relative;border-radius:16px;}
@@ -3767,13 +3777,15 @@ function renderHomeWish(){
   const totalOrig=items.reduce((s,w)=>s+(parseFloat(w.OCost||0)),0);
   const totalSaved=items.reduce((s,w)=>{const o=parseFloat(w.OCost||0),b=parseFloat(w.BCost||0);return s+(o&&b&&o>b?o-b:0);},0);
   const fmt=v=>v?'$'+v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}):'—';
+  const maxPrice=Math.max(...items.map(w=>parseFloat(w.OCost||w.BCost||0)),1);
 
   const hero=`<div class="hp-hero">
     <div class="hp-hero-label">Wishlist · ${items.length} items</div>
     <div class="hp-hero-amount">${fmt(totalOrig)}</div>
     <div class="hp-hero-sub">total original value</div>
-    ${totalSaved?`<div class="hp-hero-stats">
-      <div class="hp-hero-stat"><div class="hp-hero-stat-label">Potential Savings</div><div class="hp-hero-stat-val" style="color:#22c55e">${fmt(totalSaved)}</div></div>
+    ${totalSaved||items.length?`<div class="hp-hero-stats">
+      <div class="hp-hero-stat"><div class="hp-hero-stat-label">Items</div><div class="hp-hero-stat-val">${items.length}</div></div>
+      ${totalSaved?`<div class="hp-hero-stat"><div class="hp-hero-stat-label">Savings</div><div class="hp-hero-stat-val" style="color:#22c55e">${fmt(totalSaved)}</div></div>`:''}
     </div>`:''}</div>
   <button class="hp-add-btn" onclick="openModal('wish')">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -3786,25 +3798,25 @@ function renderHomeWish(){
     const bought=parseFloat(w.BCost||0);
     const price=orig||bought;
     const sav=orig&&bought&&orig>bought?orig-bought:0;
-    const color=getCatColor(w.Category)||'rgba(255,255,255,0.15)';
+    const color=getCatColor(w.Category)||'rgba(108,99,255,0.8)';
+    const pct=price>0?Math.min(100,Math.round((price/maxPrice)*100)):0;
     return`<div class="swipe-wrap" data-swipe-action="deleteWish" data-row="${w._row}">
       <div class="swipe-action delete"></div>
-      <div class="swipe-card hrow" onclick="openHomeWishEdit(${w._row})">
-        <div class="hrow-stripe" style="background:${color}"></div>
-        <div class="hrow-icon" style="background:${color}22;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+      <div class="swipe-card hrow-progress" onclick="openHomeWishEdit(${w._row})">
+        <div class="hrow-progress-top">
+          <span class="hrow-progress-name">${esc(w.Name||'—')}</span>
+          <span class="hrow-progress-price">${price?fmt(price):'—'}</span>
         </div>
-        <div class="hrow-body">
-          <div class="hrow-name">${esc(w.Name||'—')}</div>
-          <div class="hrow-sub">${w.Category||''}${w.Description?' · '+w.Description:''}</div>
+        <div class="hrow-progress-bar">
+          <div class="hrow-progress-fill" style="width:${pct}%;background:${color};"></div>
         </div>
-        <div class="hrow-right">
-          ${price?`<div class="hrow-amount" style="color:#ef4444">$${price.toLocaleString()}</div>`:'<div class="hrow-amount" style="color:rgba(255,255,255,0.2)">—</div>'}
-          ${sav?`<div class="hrow-meta" style="color:#22c55e">save $${sav.toLocaleString()}</div>`:''}
-        </div>
+        ${w.Description||sav?`<div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:10px;color:rgba(255,255,255,0.25);">${esc(w.Description||'')}</span>
+          ${sav?`<span style="font-size:10px;color:#22c55e;">save ${fmt(sav)}</span>`:''}
+        </div>`:''}
       </div>
     </div>`;
-  }).join('')||'<div style="color:rgba(255,255,255,0.2);font-size:13px;text-align:center;padding:48px 20px;letter-spacing:.01em;">Nothing on your wishlist</div>';
+  }).join('')||'<div style="color:rgba(255,255,255,0.2);font-size:13px;text-align:center;padding:48px 20px;">Nothing on your wishlist</div>';
 
   el.innerHTML=hero+rows;
   if(more)more.style.display=items.length>lim?'block':'none';
@@ -3830,6 +3842,22 @@ function renderHomeExp(){
   const savedMo=allPro.filter(e=>toSortableDate(e.Date||'').startsWith(mo)).reduce((s,e)=>s+(parseFloat(e.Savings)||0),0);
   const fmt=v=>'$'+v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
 
+  // Build 14-day sparkline
+  const days14=[];const dayLabels=[];
+  for(let i=13;i>=0;i--){const d=new Date(now);d.setDate(d.getDate()-i);days14.push(d.toISOString().slice(0,10));dayLabels.push(i===0?'Today':i===1?'Yday':'');}
+  const dayTotals=days14.map(d=>allPro.filter(e=>toSortableDate(e.Date||'')===d).reduce((s,e)=>s+(parseFloat(e.Cost)||0),0));
+  const maxDay=Math.max(...dayTotals,1);
+  const W=300,H=50,pad=4;
+  const pts=dayTotals.map((v,i)=>{const x=pad+(i/(days14.length-1))*(W-pad*2);const y=H-pad-(v/maxDay)*(H-pad*2);return`${x},${y}`;}).join(' ');
+  const sparkline=dayTotals.some(v=>v>0)?`<div class="hp-graph" style="padding:4px 20px 16px;">
+    <svg width="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:50px;">
+      <defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ef4444" stop-opacity=".25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0"/></linearGradient></defs>
+      <polygon points="${pts} ${W-pad},${H} ${pad},${H}" fill="url(#sg)"/>
+      <polyline points="${pts}" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+      ${dayTotals.map((v,i)=>v>0?`<circle cx="${pad+(i/(days14.length-1))*(W-pad*2)}" cy="${H-pad-(v/maxDay)*(H-pad*2)}" r="2.5" fill="#ef4444"/>`:'' ).join('')}
+    </svg>
+  </div>`:'';
+
   const hero=`<div class="hp-hero">
     <div class="hp-hero-label">Expenses · ${now.toLocaleString('default',{month:'long'})}</div>
     <div class="hp-hero-amount">${fmt(spentMo)}</div>
@@ -3840,6 +3868,7 @@ function renderHomeExp(){
       ${ordered.length?`<div class="hp-hero-stat"><div class="hp-hero-stat-label">On Order</div><div class="hp-hero-stat-val" style="color:#f59e0b">${ordered.length}</div></div>`:''}
     </div>
   </div>
+  ${sparkline}
   <button class="hp-add-btn" onclick="openFoodMo()">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     Add Expense
@@ -3889,15 +3918,34 @@ function renderHomeSub(){
   const fmt=v=>'$'+v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
   const dueToday=subs.filter(s=>dueCls(s.NextRenewal)==='due-today').length;
 
+  const paidYr=spentYr||yrFallback;
+  const annualEst=subs.reduce((s,sub)=>s+(parseFloat(sub.AnnualCost||0)||(parseFloat(sub.Cost||0)*12)),0);
+  const arcPct=annualEst>0?Math.min(1,paidYr/annualEst):0;
+  const r=52,cx=70,cy=70,sw=5;
+  const circ=2*Math.PI*r;
+  const arcGraph=`<div class="hp-graph">
+    <svg width="140" height="140" viewBox="0 0 140 140">
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="${sw}"/>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#f59e0b" stroke-width="${sw}"
+        stroke-dasharray="${circ*arcPct} ${circ}" stroke-linecap="round"
+        transform="rotate(-90 ${cx} ${cy})"/>
+      <text x="${cx}" y="${cy-8}" text-anchor="middle" fill="#f0f0f8" font-size="13" font-weight="700" font-family="DM Mono,monospace">${fmt(paidYr)}</text>
+      <text x="${cx}" y="${cy+8}" text-anchor="middle" fill="rgba(255,255,255,0.28)" font-size="9" font-family="Inter,sans-serif" letter-spacing="1">PAID THIS YEAR</text>
+      <text x="${cx}" y="${cy+22}" text-anchor="middle" fill="rgba(255,255,255,0.16)" font-size="9" font-family="Inter,sans-serif">of ${fmt(annualEst)} est.</text>
+    </svg>
+  </div>`;
+
   const hero=`<div class="hp-hero">
     <div class="hp-hero-label">Subscriptions · ${subs.length} active</div>
     <div class="hp-hero-amount">${fmt(totalMo)}</div>
     <div class="hp-hero-sub">per month</div>
     <div class="hp-hero-stats">
-      <div class="hp-hero-stat"><div class="hp-hero-stat-label">This Year</div><div class="hp-hero-stat-val" style="color:#f59e0b">${fmt(spentYr||yrFallback)}</div></div>
+      <div class="hp-hero-stat"><div class="hp-hero-stat-label">Annual Est.</div><div class="hp-hero-stat-val" style="color:#f59e0b">${fmt(annualEst)}</div></div>
       ${dueToday?`<div class="hp-hero-stat"><div class="hp-hero-stat-label">Due Today</div><div class="hp-hero-stat-val" style="color:#ef4444">${dueToday}</div></div>`:''}
+      <div class="hp-hero-stat"><div class="hp-hero-stat-label">Paid YTD</div><div class="hp-hero-stat-val">${Math.round(arcPct*100)}%</div></div>
     </div>
   </div>
+  ${arcGraph}
   <button class="hp-add-btn" onclick="openModal('sub')">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     Add Subscription
@@ -3946,6 +3994,22 @@ function renderHomeIncome(){
   const gainedYr=income.filter(m=>toSortableDate(m.Date||'').startsWith(yr)).reduce((s,m)=>s+(parseFloat(m.Cost)||0),0);
   const fmt=v=>'$'+v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
 
+  // Income sparkline - last 8 months
+  const months8=[];const mLabels=[];
+  for(let i=7;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months8.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);mLabels.push(d.toLocaleString('default',{month:'short'}));}
+  const moTotals=months8.map(m=>income.filter(x=>toSortableDate(x.Date||'').startsWith(m)).reduce((s,x)=>s+(parseFloat(x.Cost)||0),0));
+  const maxMo=Math.max(...moTotals,1);
+  const IW=300,IH=50,IP=4;
+  const iPts=moTotals.map((v,i)=>{const x=IP+(i/(months8.length-1))*(IW-IP*2);const y=IH-IP-(v/maxMo)*(IH-IP*2);return`${x},${y}`;}).join(' ');
+  const incomeSparkline=moTotals.some(v=>v>0)?`<div class="hp-graph" style="padding:4px 20px 16px;">
+    <svg width="100%" viewBox="0 0 ${IW} ${IH}" preserveAspectRatio="none" style="height:50px;">
+      <defs><linearGradient id="ig" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#22c55e" stop-opacity=".25"/><stop offset="100%" stop-color="#22c55e" stop-opacity="0"/></linearGradient></defs>
+      <polygon points="${iPts} ${IW-IP},${IH} ${IP},${IH}" fill="url(#ig)"/>
+      <polyline points="${iPts}" fill="none" stroke="#22c55e" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+      ${moTotals.map((v,i)=>v>0?`<circle cx="${IP+(i/(months8.length-1))*(IW-IP*2)}" cy="${IH-IP-(v/maxMo)*(IH-IP*2)}" r="2.5" fill="#22c55e"/>`:'' ).join('')}
+    </svg>
+  </div>`:'';
+
   const hero=`<div class="hp-hero">
     <div class="hp-hero-label">Income · ${now.toLocaleString('default',{month:'long'})}</div>
     <div class="hp-hero-amount" style="color:#22c55e">${fmt(gainedMo)}</div>
@@ -3954,6 +4018,7 @@ function renderHomeIncome(){
       <div class="hp-hero-stat"><div class="hp-hero-stat-label">This Year</div><div class="hp-hero-stat-val" style="color:#22c55e">${fmt(gainedYr)}</div></div>
     </div>
   </div>
+  ${incomeSparkline}
   <button class="hp-add-btn" onclick="openIncomeMo()">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     Log Income
