@@ -2124,7 +2124,7 @@ function openBuyModal(w){
   document.getElementById('buy-ocost').textContent=w.OCost?$f(w.OCost):'—';
   document.getElementById('buy-cost').value=w.BCost||w.OCost||'';
   document.getElementById('buy-card').innerHTML='<option value="">— No card —</option>'+cardOpts;
-  document.getElementById('buy-date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('buy-date').value=localToday();
   document.getElementById('buy-row').value=w._row;
   document.getElementById('buy-mo').classList.add('open');
   document.getElementById('buy-cost').focus();
@@ -2138,7 +2138,7 @@ async function confirmBuy(){
   const w=D.wishlist.find(x=>x._row===row);if(!w)return;
   const cost=document.getElementById('buy-cost').value||w.OCost||'0';
   const card=document.getElementById('buy-card').value;
-  const date=document.getElementById('buy-date').value||new Date().toISOString().split('T')[0];
+  const date=document.getElementById('buy-date').value||localToday();
   const savings=w.OCost?(parseFloat(w.OCost)-parseFloat(cost)).toFixed(2):'0';
   const bank=D.cards.find(cd=>cd.Name===card)?.Bank||'';
   document.getElementById('buy-mo').classList.remove('open');
@@ -2316,7 +2316,7 @@ async function markPro(row){
   await syncEditToMaster('Expenses',e,'Status','Procured');
   const savings=e.OCost&&e.Cost?(parseFloat(e.OCost)-parseFloat(e.Cost)).toFixed(2):'0';
   const bank=D.cards.find(cd=>cd.Name===e.Card)?.Bank||'';
-  const today=new Date().toISOString().split('T')[0];
+  const today=localToday();
   await appendRow('Master',[e.Date||today,'Expense',e.Name,e.Description,e.Category,e.Cost,e.OCost,savings,e.Card,bank,'','Procured','Expense']);
   await syncAll();toast('Marked Procured ✓','ok');
 }
@@ -2428,7 +2428,7 @@ function renderSub(){
 }
 async function paySub(row){
   const s=D.subscriptions.find(x=>x._row===row);if(!s)return;
-  const today=new Date().toISOString().split('T')[0];
+  const today=localToday();
   const newNext=nextRenewalDate(today,s.Billing);
   const payments=(parseInt(s.Payments)||0)+1;
   s.LastRenewal=today;s.NextRenewal=newNext||s.NextRenewal;s.Payments=String(payments);
@@ -2632,7 +2632,7 @@ function openModal(mode,existing){
   document.getElementById('mt').textContent=existing?c.et:c.t;
   document.getElementById('msave').textContent=existing?'Update':'Save';
   const cats=D.categories.map(x=>x.Name);
-  const today=new Date().toISOString().split('T')[0];
+  const today=localToday();
   document.getElementById('mb').innerHTML=`<div class="fg">${c.fields.map(f=>{
     let val=existing?(existing[f.k]||''):(f.tp==='date'?today:'');
     if(!existing&&f.tp==='card-sel'&&!val) val=getDefaultCard();
@@ -2683,7 +2683,7 @@ async function saveMo(){
         const cost=vals[HD.expenses.indexOf('Cost')]||'';
         const ocost=vals[HD.expenses.indexOf('OCost')]||cost;
         const card=vals[HD.expenses.indexOf('Card')]||'';
-        const date=vals[HD.expenses.indexOf('Date')]||new Date().toISOString().split('T')[0];
+        const date=vals[HD.expenses.indexOf('Date')]||localToday();
         const status=vals[HD.expenses.indexOf('Status')]||'';
         const savings=ocost&&cost?(parseFloat(ocost)-parseFloat(cost)).toFixed(2):'0';
         const bank=D.cards.find(cd=>cd.Name===card)?.Bank||'';
@@ -2707,7 +2707,7 @@ function openFoodMo(){
   const fallback=['Food','Tech','Home','Fun','Health','Travel','Apparel','Tesla','PC','Life','Gift','Other'];
   const options=[...new Set([...cats,...fallback])];
   catSel.innerHTML=options.map(c=>`<option value="${esc(c)}" ${c==='Food'?'selected':''}>${esc(c)}</option>`).join('');
-  document.getElementById('food-date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('food-date').value=localToday();
   document.getElementById('food-name').value='';
   document.getElementById('food-cost').value='';
   document.getElementById('food-mo').classList.add('open');
@@ -2725,7 +2725,7 @@ async function saveFoodMo(){
   const cat=document.getElementById('food-category').value||'Food';
   if(!name){toast('Name is required','err');return;}
   if(!cost){toast('Cost is required','err');return;}
-  const today=date||new Date().toISOString().split('T')[0];
+  const today=date||localToday();
   const bank=D.cards.find(cd=>cd.Name===card)?.Bank||'';
   try{
     await appendRow('Expenses',[name,'',cat,card,today,'Procured',cost,cost,'0']);
@@ -2741,7 +2741,7 @@ function openIncomeMo(){
   // Populate bank dropdown
   const sel=document.getElementById('inc-bank');
   sel.innerHTML='<option value="">— Select bank —</option>'+D.banks.map(b=>`<option value="${esc(b.Name)}">${esc(b.Name)}${b.Last4?' (••••'+b.Last4+')':''}</option>`).join('');
-  document.getElementById('inc-date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('inc-date').value=localToday();
   document.getElementById('inc-name').value='';
   document.getElementById('inc-amount').value='';
   document.getElementById('inc-notes').value='';
@@ -2756,7 +2756,7 @@ function closeIncomeMo(e){
 async function saveIncomeMo(){
   const name=document.getElementById('inc-name').value.trim();
   const amount=document.getElementById('inc-amount').value.trim();
-  const date=document.getElementById('inc-date').value||new Date().toISOString().split('T')[0];
+  const date=document.getElementById('inc-date').value||localToday();
   const bank=document.getElementById('inc-bank').value;
   const source=document.getElementById('inc-source').value;
   const notes=document.getElementById('inc-notes').value.trim();
@@ -4475,7 +4475,7 @@ function pickCalLocation(loc){
 function openCalEventModal(dateStr,eventId){
   const mo=document.getElementById('cal-mo');
   document.getElementById('cal-ev-id').value=eventId||'';
-  document.getElementById('cal-ev-date').value=dateStr||new Date().toISOString().split('T')[0];
+  document.getElementById('cal-ev-date').value=dateStr||localToday();
   document.getElementById('cal-ev-title').value='';
   document.getElementById('cal-ev-notes').value='';
   document.getElementById('cal-ev-location').value='';
