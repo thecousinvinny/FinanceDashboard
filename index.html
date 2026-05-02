@@ -3848,6 +3848,30 @@ function updateHomeFAB(idx){
   // Panel 0=Wishlist, 1=Expenses/Food, 2=Subs, 3=Income
 }
 
+
+// ── HERO ROLL ANIMATION ──
+const _heroVals={};
+function animateHero(id,toVal){
+  const el=document.getElementById(id);
+  if(!el)return;
+  const fromVal=_heroVals[id]??-1;
+  if(fromVal<0){_heroVals[id]=toVal;return;} // first render, no animation
+  if(fromVal===toVal){_heroVals[id]=toVal;return;}
+  _heroVals[id]=toVal;
+  const dur=480;
+  const start=performance.now();
+  const diff=toVal-fromVal;
+  function tick(now){
+    const t=Math.min(1,(now-start)/dur);
+    const ease=1-Math.pow(1-t,3);
+    const cur=fromVal+diff*ease;
+    el.textContent='$'+Math.round(cur).toLocaleString();
+    if(t<1)requestAnimationFrame(tick);
+    else el.textContent='$'+Math.round(toVal).toLocaleString();
+  }
+  requestAnimationFrame(tick);
+}
+
 function renderHome(){
   updateOrderedBadge();
   renderHomeWish();
@@ -3874,7 +3898,7 @@ function renderHomeWish(){
 
   const hero=`<div class="hp-hero">
     <div class="hp-hero-label">Wishlist · ${items.length} items</div>
-    <div class="hp-hero-amount">${fmt(totalCost)}</div>
+    <div class="hp-hero-amount" id="hero-wish-amt">${fmt(totalCost)}</div>
     <div class="hp-hero-sub">total cost</div>
   </div>
   <div style="padding:4px 24px 24px;">
@@ -3922,6 +3946,7 @@ function renderHomeWish(){
 
   el.innerHTML=hero+rows;
   if(more)more.style.display=items.length>lim?'block':'none';
+  animateHero('hero-wish-amt',totalCost);
   initSwipeCards(document.getElementById('hp-wish'));
 }
 
@@ -3953,7 +3978,7 @@ function renderHomeExp(){
 
   const hero=`<div class="hp-hero">
     <div class="hp-hero-label">Expenses · ${now.toLocaleString('default',{month:'long'})}</div>
-    <div class="hp-hero-amount" style="color:#ef4444">${fmt(spentMo)}</div>
+    <div class="hp-hero-amount" style="color:#ef4444" id="hero-exp-amt">${fmt(spentMo)}</div>
     <div class="hp-hero-sub">spent this month</div>
     <div class="hp-hero-stats">
       <div class="hp-hero-stat"><div class="hp-hero-stat-label">This Year</div><div class="hp-hero-stat-val" style="color:#ef4444">${fmt(spentYr)}</div></div>
@@ -4001,6 +4026,7 @@ function renderHomeExp(){
   const proHtml=procured.length?`<div class="hp-section-label">Recent</div>`+procured.slice(0,lim).map(e=>expRow(e,false)).join(''):'';
   el.innerHTML=hero+'<div class="hp-divider"></div>'+(ordHtml||'')+(proHtml||(!ordered.length?'<div style="color:rgba(255,255,255,0.2);font-size:13px;text-align:center;padding:48px 20px;">No expenses yet</div>':''));
   if(more)more.style.display=procured.length>lim?'block':'none';
+  animateHero('hero-exp-amt',spentMo);
   setTimeout(initPendingCharts,50);
 }
 
@@ -4013,11 +4039,10 @@ function renderHomeSub(){
   const mo=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const yr=`${now.getFullYear()}`;
   const subMaster=D.master.filter(m=>(m.Source==='Sub'||m.Type==='Subscription'));
-  const spentMo=subMaster.filter(m=>toSortableDate(m.Date||'').startsWith(mo)).reduce((s,m)=>s+(parseFloat(m.Cost)||0),0);
   const spentYr=subMaster.filter(m=>toSortableDate(m.Date||'').startsWith(yr)).reduce((s,m)=>s+(parseFloat(m.Cost)||0),0);
-  const moFallback=subs.reduce((s,sub)=>s+(parseFloat(sub.MonthlyCost||sub.Cost||0)),0);
   const yrFallback=subs.reduce((s,sub)=>s+(parseFloat(sub.AnnualCost||0)),0);
-  const totalMo=spentMo||moFallback;
+  // "Due this month" = subs whose NextRenewal falls in the current month
+  const totalMo=subs.filter(s=>toSortableDate(s.NextRenewal||'').startsWith(mo)).reduce((s,sub)=>s+(parseFloat(sub.Cost)||0),0);
   const fmt=v=>'$'+v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
   const dueToday=subs.filter(s=>dueCls(s.NextRenewal)==='due-today').length;
   const paidYr=spentYr||yrFallback;
@@ -4028,8 +4053,8 @@ function renderHomeSub(){
 
   const hero=`<div class="hp-hero">
     <div class="hp-hero-label">Subscriptions · ${subs.length} active</div>
-    <div class="hp-hero-amount" style="color:#f59e0b">${fmt(totalMo)}</div>
-    <div class="hp-hero-sub">due this month</div>
+    <div class="hp-hero-amount" style="color:#f59e0b" id="hero-sub-amt">${fmt(totalMo)}</div>
+    <div class="hp-hero-sub">paid this month</div>
   </div>
   <div style="padding:4px 24px 24px;">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
@@ -4076,6 +4101,7 @@ function renderHomeSub(){
   }).join('')||'<div style="color:rgba(255,255,255,0.2);font-size:13px;text-align:center;padding:48px 20px;">No active subscriptions</div>';
 
   el.innerHTML=hero+rows;
+  animateHero('hero-sub-amt',totalMo);
   initSwipeCards(document.getElementById('hp-sub'));
 }
 
@@ -4100,7 +4126,7 @@ function renderHomeIncome(){
 
   const hero=`<div class="hp-hero">
     <div class="hp-hero-label">Income · ${now.toLocaleString('default',{month:'long'})}</div>
-    <div class="hp-hero-amount" style="color:#22c55e">${fmt(gainedMo)}</div>
+    <div class="hp-hero-amount" style="color:#22c55e" id="hero-income-amt">${fmt(gainedMo)}</div>
     <div class="hp-hero-sub">received this month</div>
     <div class="hp-hero-stats">
       <div class="hp-hero-stat"><div class="hp-hero-stat-label">This Year</div><div class="hp-hero-stat-val" style="color:#22c55e">${fmt(gainedYr)}</div></div>
@@ -4124,6 +4150,7 @@ function renderHomeIncome(){
   }).join('')||'<div style="color:rgba(255,255,255,0.2);font-size:13px;text-align:center;padding:48px 20px;">No income recorded</div>';
   const showMoreBtn=income.length>lim?`<button class="home-show-more" onclick="homeShowMore('income')">Show ${Math.min(30,income.length-lim)} more</button>`:'';
   el.innerHTML=hero+'<div class="hp-divider"></div>'+cards+showMoreBtn;
+  animateHero('hero-income-amt',gainedMo);
   setTimeout(initPendingCharts,50);
 }
 
