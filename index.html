@@ -830,7 +830,6 @@ td.editing{background:rgba(108,99,255,0.05)!important}
             <button class="cal-nav-btn" onclick="calGoToday()" style="font-size:11px;padding:5px 12px;">Today</button>
             <input id="cal-search" placeholder="Search…" oninput="renderCalendar()" style="background:#1c1c1f;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:5px 12px;font-size:11px;color:#ebebeb;outline:none;width:180px;">
             <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
-              <button class="cal-nav-btn" onclick="rebuildSubCalEvents()" title="Delete all sub events and rebuild from sheet" style="font-size:11px;padding:5px 10px;color:rgba(245,158,11,0.7);">↻ Subs</button>
               <button id="cal-fs-btn" class="cal-nav-btn" onclick="toggleCalFS()" title="Fullscreen" style="font-size:13px;padding:5px 10px;">⛶</button>
               <div class="cal-view-btns">
                 <button class="cal-view-btn active" id="vbtn-month" onclick="setCalView('month')">Month</button>
@@ -4706,53 +4705,6 @@ async function fixSubCalEvent(row){
     toast(`Calendar fixed → ${fmtDate(nextDate)}`,'ok');
     await initCalendar();
   }catch(e){toast('Calendar update failed','err');console.warn(e);}
-}
-
-async function rebuildSubCalEvents(){
-  if(!confirm('Delete all subscription calendar events and rebuild from sheet data?'))return;
-  toast('Rebuilding sub events…');
-
-  // Get all events across all calendars
-  const allEvs=Object.values(_allEvents).flat();
-
-  // 1. Find all sub-style events (title matches "Name — $XX")
-  const subEvs=allEvs.filter(e=>e.summary&&/— \$[\d,]+$/.test(e.summary.trim()));
-
-  // 2. Delete them all
-  let deleted=0;
-  for(const ev of subEvs){
-    // Find which calendar this event belongs to
-    let calId=CAL_ID;
-    for(const [cid,evs] of Object.entries(_allEvents)){
-      if(evs.find(e=>e.id===ev.id)){calId=cid;break;}
-    }
-    try{await calDeleteEvent(calId,ev.id);deleted++;}
-    catch(e){console.warn('Delete failed:',ev.summary,e);}
-  }
-
-  // 3. Recreate one event per active sub at NextRenewal date in FinanceDash calendar
-  const activeSubs=D.subscriptions.filter(s=>s.Status!=='Cancelled'&&s.NextRenewal);
-  let created=0;
-  for(const s of activeSubs){
-    const nextDate=toSortableDate(s.NextRenewal);
-    if(!nextDate)continue;
-    try{
-      await gapi.client.calendar.events.insert({
-        calendarId:CAL_ID,
-        resource:{
-          summary:`${s.Name} — ${$f(s.Cost)}`,
-          start:{date:nextDate},end:{date:nextDate},
-          description:`Subscription: ${s.Name}\nBilling: ${s.Billing||'Monthly'}\nCard: ${s.Card||'—'}`,
-          colorId:'5',
-        }
-      });
-      created++;
-    }catch(e){console.warn('Create failed:',s.Name,e);}
-  }
-
-  toast(`Done — removed ${deleted}, created ${created}`,'ok');
-  await initCalendar();
-  renderCalendar();
 }
 
 function showIncomePopover(e,masterRow){
