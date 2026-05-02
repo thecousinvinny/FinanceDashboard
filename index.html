@@ -3998,20 +3998,19 @@ function renderHomeSub(){
     <div class="hp-hero-label">Subscriptions · ${subs.length} active</div>
     <div class="hp-hero-amount" style="color:#f59e0b">${fmt(totalMo)}</div>
     <div class="hp-hero-sub">due this month</div>
-    <div class="hp-hero-stats">
-      <div class="hp-hero-stat"><div class="hp-hero-stat-label">Paid This Year</div><div class="hp-hero-stat-val" style="color:#f59e0b">${fmt(paidYr)}</div></div>
-      <div class="hp-hero-stat"><div class="hp-hero-stat-label">Annual Est.</div><div class="hp-hero-stat-val">${fmt(annualEst)}</div></div>
-      ${dueToday?`<div class="hp-hero-stat"><div class="hp-hero-stat-label">Due Today</div><div class="hp-hero-stat-val" style="color:#ef4444">${dueToday}</div></div>`:''}
-    </div>
   </div>
-  <div style="display:flex;justify-content:center;padding:4px 20px 16px;">
-    <svg width="160" height="88" viewBox="0 0 160 88" role="img" aria-label="Arc showing ${Math.round(arcPct*100)}% of annual subscriptions paid">
-      <path d="M 16 80 A 64 64 0 0 1 144 80" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="6" stroke-linecap="round"/>
-      <path d="M 16 80 A 64 64 0 0 1 144 80" fill="none" stroke="#f59e0b" stroke-width="6" stroke-linecap="round"
-        stroke-dasharray="${(201*arcPct).toFixed(1)} 201"/>
-      <text x="80" y="54" text-anchor="middle" fill="#f0f0f8" font-size="15" font-weight="600" font-family="DM Mono,monospace">${fmt(paidYr)}</text>
-      <text x="80" y="70" text-anchor="middle" fill="rgba(255,255,255,0.25)" font-size="8" font-family="Inter,sans-serif" letter-spacing="1">PAID OF ${fmt(annualEst)}</text>
-    </svg>
+  <div style="padding:4px 24px 24px;">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+      <span style="font-size:12px;font-family:'DM Mono',monospace;font-weight:600;color:#f59e0b;">${fmt(paidYr)} paid</span>
+      <span style="font-size:11px;color:rgba(255,255,255,0.25);">of ${fmt(annualEst)} est.</span>
+    </div>
+    <div style="height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden;">
+      <div style="height:100%;width:${Math.round(arcPct*100)}%;background:#f59e0b;border-radius:2px;transition:width .8s cubic-bezier(.4,0,.2,1);"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:6px;">
+      <span style="font-size:9px;color:rgba(255,255,255,0.2);letter-spacing:.06em;">${Math.round(arcPct*100)}% of year paid</span>
+      ${dueToday?`<span style="font-size:9px;color:#ef4444;letter-spacing:.06em;">${dueToday} due today</span>`:''}
+    </div>
   </div>
   <button class="hp-add-btn" onclick="openModal('sub')">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
