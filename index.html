@@ -461,10 +461,6 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 #ptr-indicator.visible{display:flex}
 
 /* ── PULL-UP SHEET ── */
-.pull-sheet{position:fixed;left:0;right:0;bottom:0;z-index:250;background:rgba(12,12,20,0.98);border-top:1px solid rgba(255,255,255,0.08);border-radius:24px 24px 0 0;transition:transform .35s cubic-bezier(.4,0,.2,1);padding-bottom:88px;}
-.pull-sheet-handle{width:36px;height:3px;background:rgba(255,255,255,0.15);border-radius:2px;margin:12px auto 0;}
-.pull-sheet-inner{overflow-y:auto;max-height:60vh;padding:0 0 8px;}
-.pull-sheet-inner::-webkit-scrollbar{display:none}
 .txn-group-label{font-size:9px;font-weight:500;color:rgba(255,255,255,0.22);letter-spacing:.12em;text-transform:uppercase;padding:14px 20px 6px;}
 /* ── COHESIVE BAR CHART ── */
 .cbar-wrap{padding:0 20px 0;display:flex;align-items:flex-end;gap:4px;height:100px;}
@@ -529,7 +525,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
           <div class="home-panel" id="home-panel-1">
             <div class="home-panel-hdr" style="display:none"></div>
             <div class="home-stats-bar" id="hstats-exp" style="display:none"></div>
-            <div class="home-panel-body" id="hp-exp" style="padding:0 0 80px;gap:0;">
+            <div class="home-panel-body" id="hp-exp" style="padding:0 0 180px;gap:0;">
               <div id="hp-exp-ord" style="display:flex;flex-direction:column;"></div>
               <div id="hp-exp-pro" style="display:flex;flex-direction:column;"></div>
               <button class="home-show-more" id="hpm-exp" onclick="homeShowMore('exp')" style="display:none">Show 30 more</button>
@@ -545,7 +541,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
           <div class="home-panel" id="home-panel-3">
             <div class="home-panel-hdr" style="display:none"></div>
             <div class="home-stats-bar" id="hstats-income" style="display:none"></div>
-            <div class="home-panel-body" id="hp-income" style="padding:0 0 80px;gap:0;"></div>
+            <div class="home-panel-body" id="hp-income" style="padding:0 0 180px;gap:0;"></div>
           </div>
         </div>
       </div>
@@ -3759,24 +3755,14 @@ function updateOrderedBadge(){
 }
 
 // ── GRADIENT AREA CHART ──
+let _pendingCharts=[];
 function buildAreaChart(id,values,labels,color){
   if(!values.some(v=>v>0))return'';
-  const safeVals=JSON.stringify(values);
-  const safeLbls=JSON.stringify(labels);
-  // Store data on canvas element, init via deferred call
-  _pendingCharts=_pendingCharts||[];
   _pendingCharts.push({id,values,labels,color});
-  return`<div style="padding:0 20px 20px;">
-    <div style="position:relative;height:110px;">
-      <canvas id="${id}" role="img" aria-label="Area chart showing financial data over time"
-        data-vals="${safeVals.replace(/"/g,'&quot;')}" data-lbls="${safeLbls.replace(/"/g,'&quot;')}" data-color="${color}"></canvas>
-    </div>
-  </div>`;
+  return`<div style="padding:0 20px 20px;"><div style="position:relative;height:110px;">
+    <canvas id="${id}" role="img" aria-label="Area chart showing financial data over time"></canvas>
+  </div></div>`;
 }
-
-function dgraphTap(){}
-
-let _pendingCharts=[];
 function initPendingCharts(){
   if(!window.Chart)return;
   (_pendingCharts||[]).forEach(({id,values,labels,color})=>{
@@ -3785,29 +3771,18 @@ function initPendingCharts(){
     if(el._chart){el._chart.destroy();}
     const ctx=el.getContext('2d');
     const grad=ctx.createLinearGradient(0,0,0,110);
-    grad.addColorStop(0,color+'88');
+    grad.addColorStop(0,color+'66');
     grad.addColorStop(1,color+'00');
     el._chart=new Chart(ctx,{
       type:'line',
-      data:{
-        labels:labels,
-        datasets:[{
-          data:values,
-          borderColor:color,
-          borderWidth:2,
-          backgroundColor:grad,
-          fill:true,
-          tension:0.4,
-          pointRadius:3,
-          pointBackgroundColor:color,
-          pointBorderColor:'#080810',
-          pointBorderWidth:2,
-          pointHoverRadius:5,
-          pointHoverBackgroundColor:color,
-          pointHoverBorderColor:'#fff',
-          pointHoverBorderWidth:2,
-        }]
-      },
+      data:{labels,datasets:[{
+        data:values,borderColor:color,borderWidth:2,
+        backgroundColor:grad,fill:true,tension:0.4,
+        pointRadius:3,pointBackgroundColor:color,
+        pointBorderColor:'#080810',pointBorderWidth:2,
+        pointHoverRadius:5,pointHoverBackgroundColor:color,
+        pointHoverBorderColor:'#fff',pointHoverBorderWidth:2,
+      }]},
       options:{
         responsive:true,maintainAspectRatio:false,
         animation:{duration:700,easing:'easeInOutQuart'},
@@ -3832,93 +3807,8 @@ function initPendingCharts(){
   });
   _pendingCharts=[];
 }
-
-
-// ── PULL-UP SHEET ──
-let _pullOpen=false;
-function togglePullSheet(forceOpen){
-  const sheet=document.getElementById('pull-sheet');
-  const chevron=document.getElementById('pull-sheet-chevron');
-  if(!sheet)return;
-  _pullOpen=(forceOpen!==undefined)?forceOpen:!_pullOpen;
-  sheet.style.transform=_pullOpen?'translateY(0)':'translateY(calc(100% - 52px))';
-  if(chevron)chevron.textContent=_pullOpen?'↓':'↑';
-}
-function setPullSheet(title,html){
-  const body=document.getElementById('pull-sheet-body');
-  const titleEl=document.getElementById('pull-sheet-title');
-  if(body)body.innerHTML=html;
-  if(titleEl)titleEl.textContent=title;
-}
-
-// Pull sheet drag
-(function(){
-  let startY=0,startT=0,isDragging=false;
-  const getSheet=()=>document.getElementById('pull-sheet');
-  const getHandle=()=>document.getElementById('pull-sheet-handle');
-  document.addEventListener('touchstart',e=>{
-    const handle=getHandle();
-    const sheet=getSheet();
-    if(!sheet||!handle)return;
-    const titleRow=handle.parentElement;
-    if(!titleRow.contains(e.target)&&!handle.contains(e.target))return;
-    startY=e.touches[0].clientY;startT=Date.now();isDragging=true;
-    sheet.style.transition='none';
-  },{passive:true});
-  document.addEventListener('touchmove',e=>{
-    if(!isDragging)return;
-    const sheet=getSheet();if(!sheet)return;
-    const dy=e.touches[0].clientY-startY;
-    const base=_pullOpen?0:window.innerHeight-52;
-    const newY=Math.max(0,Math.min(window.innerHeight-52,(_pullOpen?dy:window.innerHeight-52+dy)));
-    sheet.style.transform=`translateY(${newY}px)`;
-  },{passive:true});
-  document.addEventListener('touchend',e=>{
-    if(!isDragging)return;
-    isDragging=false;
-    const sheet=getSheet();if(!sheet)return;
-    sheet.style.transition='transform .35s cubic-bezier(.4,0,.2,1)';
-    const dy=e.changedTouches[0].clientY-startY;
-    const fast=Date.now()-startT<250;
-    if(fast){togglePullSheet(dy<0);}
-    else{togglePullSheet(dy<-60);}
-  },{passive:true});
-})();
-
-// ── COHESIVE BAR CHART ──
-function buildCohesiveBar(id,values,labels,color){
-  if(!values.some(v=>v>0))return'';
-  const max=Math.max(...values,1);
-  const maxIdx=values.indexOf(max);
-  const fmt=v=>'$'+Math.round(v).toLocaleString();
-  const H=88; // px, matches cbar-wrap height minus label area
-  const bars=values.map((v,i)=>{
-    const px=v>0?Math.max(4,Math.round((v/max)*H)):3;
-    const isActive=i===maxIdx;
-    const opacity=isActive?1:0.22;
-    return`<div class="cbar-col${isActive?' active':''}" onclick="cbarTap(this,'${id}',${i})" data-val="${v}" data-label="${labels[i]}">
-      <div class="cbar-bar" style="height:${px}px;background:${color};opacity:${opacity};"></div>
-      <div class="cbar-label">${labels[i]}</div>
-    </div>`;
-  }).join('');
-  const initVal=values[maxIdx];
-  return`<div class="cbar-val-row"><span class="cbar-val" id="${id}-val" style="color:${color}">${fmt(initVal)}</span><span style="font-size:10px;color:rgba(255,255,255,0.25);margin-left:6px;" id="${id}-lbl">${labels[maxIdx]}</span></div>
-  <div class="cbar-wrap" id="${id}">${bars}</div>`;
-}
-
-function cbarTap(col,id,idx){
-  const chart=document.getElementById(id);if(!chart)return;
-  chart.querySelectorAll('.cbar-col').forEach(c=>c.classList.remove('active'));
-  chart.querySelectorAll('.cbar-bar').forEach(b=>b.style.opacity='0.25');
-  col.classList.add('active');
-  col.querySelector('.cbar-bar').style.opacity='1';
-  const v=parseFloat(col.dataset.val);
-  const lbl=col.dataset.label;
-  const valEl=document.getElementById(id+'-val');
-  const lblEl=document.getElementById(id+'-lbl');
-  if(valEl)valEl.textContent='$'+Math.round(v).toLocaleString();
-  if(lblEl)lblEl.textContent=lbl;
-}
+function togglePullSheet(){}
+function setPullSheet(){}
 
 // ── HOME PANELS ──
 let _homePanel=0;
@@ -3930,11 +3820,6 @@ function homeGoTo(idx,el){
   if(slider)slider.style.transform=`translateX(-${idx*100}%)`;
   document.querySelectorAll('.home-tab-btn').forEach(b=>b.classList.remove('on'));
   if(el)el.classList.add('on');
-  // Collapse pull sheet on panel switch
-  togglePullSheet(false);
-  // Show/hide pull sheet based on panel (expenses=1, income=3)
-  const sheet=document.getElementById('pull-sheet');
-  if(sheet){sheet.style.display=(idx===1||idx===3)?'block':'none';}
   updateHomeFAB(idx);
 }
 
@@ -4032,7 +3917,7 @@ function renderHomeExp(){
   for(let i=13;i>=0;i--){const d=new Date(now);d.setDate(d.getDate()-i);days14.push(d.toISOString().slice(0,10));}
   const dayTotals=days14.map(d=>allPro.filter(e=>toSortableDate(e.Date||'')===d).reduce((s,e)=>s+(parseFloat(e.Cost)||0),0));
   const dayLabels=days14.map(d=>{const dt=new Date(d+'T12:00:00');return dt.getDate();});
-  const barChart=buildCohesiveBar('exp-chart',dayTotals,dayLabels,'#ef4444');
+  const barChart=buildAreaChart('exp-chart',dayTotals,dayLabels,'#ef4444');
 
   const hero=`<div class="hp-hero">
     <div class="hp-hero-label">Expenses · ${now.toLocaleString('default',{month:'long'})}</div>
@@ -4080,13 +3965,11 @@ function renderHomeExp(){
   const sheetHtml=Object.entries(groups).map(([grp,rows])=>
     `<div class="txn-group-label">${grp}</div>`+rows.slice(0,20).map(e=>expRow(e,e._isOrdered)).join('')
   ).join('');
-  setPullSheet('Transactions',sheetHtml);
-  const ps=document.getElementById('pull-sheet');if(ps)ps.style.display='block';
-
-  el.innerHTML=hero;
-  setTimeout(initPendingCharts,50);
-
+  const ordHtml=ordered.length?`<div class="hp-section-label">On Order · ${ordered.length}</div>`+ordered.map(e=>expRow(e,true)).join(''):'';
+  const proHtml=procured.length?`<div class="hp-section-label">Recent</div>`+procured.slice(0,lim).map(e=>expRow(e,false)).join(''):'';
+  el.innerHTML=hero+'<div class="hp-divider"></div>'+(ordHtml||'')+(proHtml||(!ordered.length?'<div style="color:rgba(255,255,255,0.2);font-size:13px;text-align:center;padding:48px 20px;">No expenses yet</div>':''));
   if(more)more.style.display=procured.length>lim?'block':'none';
+  setTimeout(initPendingCharts,50);
 }
 
 function renderHomeSub(){
@@ -4178,7 +4061,7 @@ function renderHomeIncome(){
   const months8=[];const mLabels=[];
   for(let i=7;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months8.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);mLabels.push(d.toLocaleString('default',{month:'short'}));}
   const moTotals=months8.map(m=>income.filter(x=>toSortableDate(x.Date||'').startsWith(m)).reduce((s,x)=>s+(parseFloat(x.Cost)||0),0));
-  const incomeChart=buildCohesiveBar('inc-chart',moTotals,mLabels,'#22c55e');
+  const incomeChart=buildAreaChart('inc-chart',moTotals,mLabels,'#22c55e');
 
   const hero=`<div class="hp-hero">
     <div class="hp-hero-label">Income · ${now.toLocaleString('default',{month:'long'})}</div>
@@ -4194,119 +4077,6 @@ function renderHomeIncome(){
     Log Income
   </button>`;
 
-  const incGroups={};
-  income.slice(0,50).forEach(m=>{
-    const key=relDate(m.Date)||'Earlier';
-    if(!incGroups[key])incGroups[key]=[];
-    incGroups[key].push(m);
-  });
-  const incSheetHtml=Object.entries(incGroups).map(([grp,rows])=>
-    `<div class="txn-group-label">${grp}</div>`+rows.map(m=>{
-      const amt=parseFloat(m.Cost||0);
-      const color=getCatColor(m.Category)||'#22c55e';
-      return`<div class="hrow" onclick="openHomeIncomeEdit(${m._row})">
-        <div class="hrow-stripe" style="background:${color}"></div>
-        <div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
-        <div class="hrow-body"><div class="hrow-name">${esc(m.Name||'—')}</div><div class="hrow-sub">${m.Bank||m.Source||''}${m.Date?' · '+relDate(m.Date):''}</div></div>
-        <div class="hrow-right"><div class="hrow-amount" style="color:#22c55e">+$${amt.toLocaleString()}</div><div class="hrow-meta">${m.Source||''}</div></div>
-      </div>`;
-    }).join('')
-  ).join('')||'<div style="color:rgba(255,255,255,0.2);font-size:13px;text-align:center;padding:48px 20px;">No income recorded</div>';
-  setPullSheet('Income',incSheetHtml);
-  const ps2=document.getElementById('pull-sheet');if(ps2)ps2.style.display='block';
-
-  el.innerHTML=hero;
-}
-
-function homeShowMore(key){
-  if(key==='wish')_homeLimits.wish+=30;
-  else if(key==='exp')_homeLimits.exp+=30;
-  else if(key==='income')_homeLimits.income+=30;
-  renderHome();
-}
-
-// Pay sub directly from home panel
-async function paySubNow(row){
-  const s=D.subscriptions.find(x=>x._row===row);
-  if(!s)return;
-
-  const today=localToday(); // YYYY-MM-DD
-
-  // Calculate next renewal based on billing cycle
-  function advanceDate(fromStr, billing){
-    const d=new Date((fromStr||today)+'T12:00:00');
-    const b=(billing||'Monthly').toLowerCase();
-    if(b.includes('annual')||b.includes('year'))d.setFullYear(d.getFullYear()+1);
-    else if(b.includes('quarter'))d.setMonth(d.getMonth()+3);
-    else if(b.includes('week'))d.setDate(d.getDate()+7);
-    else d.setMonth(d.getMonth()+1); // default monthly
-    return d.toISOString().split('T')[0];
-  }
-
-  const newLast=today;
-  const newNext=advanceDate(today, s.Billing);
-  const payments=(parseInt(s.Payments||0)+1);
-  const cost=parseFloat(s.Cost||0);
-  const card=s.Card||'';
-  const bank=D.cards.find(c=>c.Name===card)?.Bank||'';
-
-  // cols: Name,Billing,Card,Cost,LastRenewal,NextRenewal,Category,Status,Payments,MonthlyCost,AnnualCost
-  const vals=[
-    s.Name, s.Billing||'Monthly', card, s.Cost||'',
-    newLast, newNext,
-    s.Category||'', s.Status||'Active',
-    String(payments), s.MonthlyCost||'', s.AnnualCost||''
-  ];
-
-  try{
-    await updateRow('Subscriptions', row, vals);
-    // Log to Master
-    await appendRow('Master',[today,'Subscription',s.Name,'',s.Category||'',cost,cost,'0',card,bank,s.Billing||'Monthly','Paid','Sub']);
-    toast(`${s.Name} paid — next due ${newNext}`,'ok');
-    await syncAll();
-  }catch(e){toast('Save failed: '+e.message,'err');}
-}
-
-// ── DATA SUB-TABS ──
-let _activeDataTab='wishlist';
-function showDataTab(name,el){
-  // Hide all data sub-tabs
-  ['wishlist','expenses','subscriptions','master','categories','cards','banks'].forEach(t=>{
-    const tab=document.getElementById('tab-'+t);
-    if(tab)tab.style.display='none';
-  });
-  // Show selected
-  const tab=document.getElementById('tab-'+name);
-  if(tab)tab.style.display='block';
-  _activeDataTab=name;
-  // Update sub-nav buttons
-  document.querySelectorAll('[id^="data-sub-btn-"]').forEach(b=>b.classList.remove('on'));
-  if(el)el.classList.add('on');
-  // Trigger render if needed
-  if(name==='wishlist')renderWish();
-  else if(name==='expenses')renderExp();
-  else if(name==='subscriptions')renderSub();
-  else if(name==='master')renderMaster();
-  else if(name==='categories')renderCat();
-  else if(name==='cards')renderCards();
-  else if(name==='banks')renderBanks();
-}
-
-// ── HOME CARD EDIT MODALS ──
-let _hcEditRow=null,_hcEditSheet=null;
-
-function openHomeWishEdit(row){
-  const w=D.wishlist.find(x=>x._row===row);if(!w)return;
-  _hcEditRow=row;_hcEditSheet='Wishlist';
-  document.getElementById('hcw-name').value=w.Name||'';
-  document.getElementById('hcw-desc').value=w.Description||'';
-  document.getElementById('hcw-link').value=w.Link||'';
-  document.getElementById('hcw-ocost').value=w.OCost||'';
-  document.getElementById('hcw-bcost').value=w.BCost||'';
-  const linkBtn=document.getElementById('hcw-link-open');
-  if(linkBtn){linkBtn.href=w.Link||'#';linkBtn.style.display=w.Link?'block':'none';}
-  const catSel=document.getElementById('hcw-cat');
-  catSel.innerHTML=D.categories.map(c=>`<option${c.Name===w.Category?' selected':''}>${esc(c.Name)}</option>`).join('');
   document.getElementById('hc-wish-mo').classList.add('open');
 }
 async function saveHomeWishEdit(){
@@ -5038,16 +4808,6 @@ else{showAuthScreen();}
 </script>
   <!-- Pull to refresh indicator -->
   <div id="ptr-indicator">↓ Release to refresh</div>
-
-  <!-- Pull-up transaction sheet -->
-  <div class="pull-sheet" id="pull-sheet" style="transform:translateY(calc(100% - 52px));display:none;">
-    <div class="pull-sheet-handle" id="pull-sheet-handle"></div>
-    <div style="padding:12px 20px 4px;display:flex;align-items:center;justify-content:space-between;">
-      <span style="font-size:11px;font-weight:500;color:rgba(255,255,255,0.3);letter-spacing:.06em;text-transform:uppercase;" id="pull-sheet-title">Transactions</span>
-      <span style="font-size:10px;color:rgba(255,255,255,0.2);cursor:pointer;" onclick="togglePullSheet()" id="pull-sheet-chevron">↑</span>
-    </div>
-    <div class="pull-sheet-inner" id="pull-sheet-body"></div>
-  </div>
 
   <!-- Bottom nav -->
   <nav id="mobile-nav">
