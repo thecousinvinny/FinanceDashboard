@@ -2328,7 +2328,9 @@ function nextRenewalDate(lastRenewal, billing){
   if(billing==='Monthly') d.setMonth(d.getMonth()+1);
   else if(billing==='Annual') d.setFullYear(d.getFullYear()+1);
   else if(billing==='BiWeekly') d.setDate(d.getDate()+14);
-  return d.toISOString().split('T')[0];
+  else if(billing==='Weekly') d.setDate(d.getDate()+7);
+  else if(billing==='Quarterly') d.setMonth(d.getMonth()+3);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 function dueCls(nextRenewal){
   if(!nextRenewal) return '';
