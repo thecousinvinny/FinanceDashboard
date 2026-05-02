@@ -968,6 +968,9 @@ td.editing{background:rgba(108,99,255,0.05)!important}
       </div>
       <input class="fi" id="hcw-link" placeholder="https://..." oninput="const a=document.getElementById('hcw-link-open');a.href=this.value;a.style.display=this.value?'block':'none';">
     </div>
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+      <button class="btn" style="width:100%;padding:11px;background:rgba(34,197,94,0.1);border-color:rgba(34,197,94,0.3);color:#22c55e;font-size:12px;font-weight:500;letter-spacing:.01em;" onclick="saveHomeWishEdit(true)">✓ Mark as Purchased → Move to Expenses</button>
+    </div>
     <div class="mac">
       <button class="btn" onclick="document.getElementById('hc-wish-mo').classList.remove('open')">Cancel</button>
       <button class="btn btn-a" onclick="saveHomeWishEdit()">Save</button>
@@ -989,6 +992,9 @@ td.editing{background:rgba(108,99,255,0.05)!important}
     <div class="fg" style="margin-top:11px">
       <div class="fgr"><label class="fl">Card</label><select class="fs" id="hce-card"></select></div>
       <div class="fgr"><label class="fl">Date</label><input class="fi" id="hce-date" type="date" style="color-scheme:dark"></div>
+    </div>
+    <div id="hce-procure-row" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);display:none">
+      <button class="btn" style="width:100%;padding:11px;background:rgba(34,197,94,0.1);border-color:rgba(34,197,94,0.3);color:#22c55e;font-size:12px;font-weight:500;letter-spacing:.01em;" onclick="markProFromModal()">✓ Mark as Procured</button>
     </div>
     <div class="mac">
       <button class="btn" onclick="document.getElementById('hc-exp-mo').classList.remove('open')">Cancel</button>
@@ -4135,7 +4141,7 @@ function openHomeWishEdit(row){
   catSel.innerHTML=D.categories.map(c=>`<option${c.Name===w.Category?' selected':''}>${esc(c.Name)}</option>`).join('');
   document.getElementById('hc-wish-mo').classList.add('open');
 }
-async function saveHomeWishEdit(){
+async function saveHomeWishEdit(purchase){
   const w=D.wishlist.find(x=>x._row===_hcEditRow);if(!w)return;
   w.Name=document.getElementById('hcw-name').value;
   w.Description=document.getElementById('hcw-desc').value;
@@ -4146,6 +4152,7 @@ async function saveHomeWishEdit(){
   const vals=[w.Name,w.Description,w.Category,w.Link,w.OCost,w.BCost,w.Status];
   await updateRow('Wishlist',_hcEditRow,vals);
   document.getElementById('hc-wish-mo').classList.remove('open');
+  if(purchase){openBuyModal(w);return;}
   await syncAll();
 }
 
@@ -4161,7 +4168,14 @@ function openHomeExpEdit(row){
   catSel.innerHTML=D.categories.map(c=>`<option${c.Name===e.Category?' selected':''}>${esc(c.Name)}</option>`).join('');
   const cardSel=document.getElementById('hce-card');
   cardSel.innerHTML=D.cards.map(c=>`<option value="${esc(c.Name)}"${c.Name===e.Card?' selected':''}>${esc(c.Alias||c.Name)}</option>`).join('');
+  const procureRow=document.getElementById('hce-procure-row');
+  if(procureRow)procureRow.style.display=e.Status==='Ordered'?'block':'none';
   document.getElementById('hc-exp-mo').classList.add('open');
+}
+async function markProFromModal(){
+  const row=_hcEditRow;
+  document.getElementById('hc-exp-mo').classList.remove('open');
+  await markPro(row);
 }
 async function saveHomeExpEdit(){
   const e=D.expenses.find(x=>x._row===_hcEditRow);if(!e)return;
