@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -27,22 +26,22 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 
 @keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
-.skeleton{border-radius:6px;background:linear-gradient(90deg,var(–s2) 25%,var(–s3) 50%,var(–s2) 75%);background-size:800px 100%;animation:shimmer 1.4s infinite}
-body{font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;background:#0c0c0e;color:#ebebeb;min-height:100vh;font-size:14px;}
+.skeleton{border-radius:6px;background:linear-gradient(90deg,var(--s2) 25%,var(--s3) 50%,var(--s2) 75%);background-size:800px 100%;animation:shimmer 1.4s infinite}
+body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0c0c0e;color:#ebebeb;min-height:100vh;font-size:14px;}
 @keyframes spin{to{transform:rotate(360deg)}}
 #sync-icon.spinning{animation:spin 1s linear infinite;transform-origin:center}
 @keyframes tabIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .tab-enter{animation:tabIn .18s ease both}
-.col-picker-btn{background:var(–s2);border:1px solid var(–border2);border-radius:var(–r);padding:5px 10px;color:var(–text2);font-size:11px;cursor:pointer;font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;transition:all .15s}
-.col-picker-btn:hover{background:var(–s3);color:var(–text)}
-.col-picker-popup{position:fixed;z-index:3000;background:var(–s1);border:1px solid var(–border2);border-radius:10px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.5);min-width:160px}
-.col-picker-item{display:flex;align-items:center;gap:8px;padding:5px 2px;cursor:pointer;font-size:12px;color:var(–text2);border-radius:4px;user-select:none}
-.col-picker-item:hover{color:var(–text)}
-.col-picker-item input{accent-color:var(–accent);cursor:pointer}
+.col-picker-btn{background:var(--s2);border:1px solid var(--border2);border-radius:var(--r);padding:5px 10px;color:var(--text2);font-size:11px;cursor:pointer;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;transition:all .15s}
+.col-picker-btn:hover{background:var(--s3);color:var(--text)}
+.col-picker-popup{position:fixed;z-index:3000;background:var(--s1);border:1px solid var(--border2);border-radius:10px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.5);min-width:160px}
+.col-picker-item{display:flex;align-items:center;gap:8px;padding:5px 2px;cursor:pointer;font-size:12px;color:var(--text2);border-radius:4px;user-select:none}
+.col-picker-item:hover{color:var(--text)}
+.col-picker-item input{accent-color:var(--accent);cursor:pointer}
 ::-webkit-scrollbar{width:6px;height:6px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(–s4,#3a3a40);border-radius:3px}
-::-webkit-scrollbar-thumb:hover{background:var(–border2)}
+::-webkit-scrollbar-thumb{background:var(--s4,#3a3a40);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--border2)}
 /* Hide scrollbars globally */
 html{scrollbar-gutter:stable;background:#0c0c0e;color:#ebebeb}
 *{scrollbar-width:none;-ms-overflow-style:none}
@@ -51,99 +50,99 @@ html{scrollbar-gutter:stable;background:#0c0c0e;color:#ebebeb}
 /* AUTH */
 #auth-screen{min-height:100vh;display:none;align-items:center;justify-content:center;padding:40px;background:#0c0c0e;}
 #auth-screen.visible{display:flex}
-.auth-card{background:var(–s1);border:1px solid var(–border);border-radius:var(–r2);padding:48px;max-width:500px;width:100%;text-align:center}
+.auth-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);padding:48px;max-width:500px;width:100%;text-align:center}
 .auth-logo{font-size:40px;margin-bottom:16px}
 .auth-title{font-size:24px;font-weight:600;margin-bottom:8px}
-.auth-sub{color:var(–text2);font-size:13px;margin-bottom:28px;line-height:1.6}
-.steps{text-align:left;background:var(–s2);border-radius:var(–r);padding:18px;margin-bottom:20px}
-.steps h4{font-size:11px;font-weight:500;color:var(–text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
-.step{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;font-size:12px;color:var(–text2)}
+.auth-sub{color:var(--text2);font-size:13px;margin-bottom:28px;line-height:1.6}
+.steps{text-align:left;background:var(--s2);border-radius:var(--r);padding:18px;margin-bottom:20px}
+.steps h4{font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+.step{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;font-size:12px;color:var(--text2)}
 .step:last-child{margin-bottom:0}
-.sn{background:var(–accent);color:#fff;border-radius:50%;width:17px;height:17px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;flex-shrink:0;margin-top:1px}
-.ai{width:100%;background:var(–s2);border:1px solid var(–border2);border-radius:var(–r);padding:11px 14px;color:var(–text);font-family:‘DM Mono’,‘SF Mono’,‘Courier New’,monospace;font-size:12px;margin-bottom:10px;outline:none;transition:border-color .2s}
-.ai:focus{border-color:var(–accent)}
-.ai::placeholder{color:var(–text3)}
-.bp{width:100%;padding:13px;background:var(–accent);color:#fff;border:none;border-radius:var(–r);font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;font-size:14px;font-weight:500;cursor:pointer}
-.anote{font-size:11px;color:var(–text3);margin-top:14px}
+.sn{background:var(--accent);color:#fff;border-radius:50%;width:17px;height:17px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;flex-shrink:0;margin-top:1px}
+.ai{width:100%;background:var(--s2);border:1px solid var(--border2);border-radius:var(--r);padding:11px 14px;color:var(--text);font-family:'DM Mono','SF Mono','Courier New',monospace;font-size:12px;margin-bottom:10px;outline:none;transition:border-color .2s}
+.ai:focus{border-color:var(--accent)}
+.ai::placeholder{color:var(--text3)}
+.bp{width:100%;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;font-weight:500;cursor:pointer}
+.anote{font-size:11px;color:var(--text3);margin-top:14px}
 
 /* APP */
 #app{display:none;background:#0c0c0e;}
 #tab-stats,#tab-data,#tab-calendar{height:calc(100vh - 56px);overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
 #tab-stats::-webkit-scrollbar,#tab-data::-webkit-scrollbar,#tab-calendar::-webkit-scrollbar{display:none;}
-.hdr{background:rgba(20,20,22,0.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(–border);padding:0;display:flex;align-items:stretch;justify-content:space-between;height:48px;position:sticky;top:0;z-index:200;gap:0}
-.hlogo{font-size:15px;font-weight:600;padding:0 20px;display:flex;align-items:center;color:var(–text);letter-spacing:-.02em;white-space:nowrap;border-right:1px solid var(–border)}
-.hright{display:flex;align-items:center;gap:6px;padding:0 16px;border-left:1px solid var(–border)}
-.sbtn{background:transparent;border:1px solid var(–border2);border-radius:var(–r);padding:5px 11px;color:var(–text2);font-size:11px;cursor:pointer;font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;transition:all .15s}
-.sbtn:hover{background:var(–s3);color:var(–text);border-color:var(–border2)}
-.signin-btn{background:var(–accent);color:#fff;border:none;border-radius:var(–r);padding:5px 12px;font-size:11px;cursor:pointer;font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;display:none}
+.hdr{background:rgba(20,20,22,0.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0;display:flex;align-items:stretch;justify-content:space-between;height:48px;position:sticky;top:0;z-index:200;gap:0}
+.hlogo{font-size:15px;font-weight:600;padding:0 20px;display:flex;align-items:center;color:var(--text);letter-spacing:-.02em;white-space:nowrap;border-right:1px solid var(--border)}
+.hright{display:flex;align-items:center;gap:6px;padding:0 16px;border-left:1px solid var(--border)}
+.sbtn{background:transparent;border:1px solid var(--border2);border-radius:var(--r);padding:5px 11px;color:var(--text2);font-size:11px;cursor:pointer;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;transition:all .15s}
+.sbtn:hover{background:var(--s3);color:var(--text);border-color:var(--border2)}
+.signin-btn{background:var(--accent);color:#fff;border:none;border-radius:var(--r);padding:5px 12px;font-size:11px;cursor:pointer;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:none}
 /* NAV merged into header */
 .nav{display:flex;gap:0;overflow-x:auto;flex:1;align-items:stretch;padding:0 4px;scrollbar-width:none}
 .nav::-webkit-scrollbar{display:none}
-.nt{padding:0 14px;font-size:12px;color:var(–text3);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;display:flex;align-items:center;height:100%;border-radius:0}
-.nt:hover{color:var(–text);background:rgba(255,255,255,0.04)}
-.nt.on{color:var(–text);border-bottom-color:var(–accent);font-weight:600}
+.nt{padding:0 14px;font-size:12px;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;display:flex;align-items:center;height:100%;border-radius:0}
+.nt:hover{color:var(--text);background:rgba(255,255,255,0.04)}
+.nt.on{color:var(--text);border-bottom-color:var(--accent);font-weight:600}
 .main{padding:16px;padding-bottom:84px;max-width:1440px;margin:0 auto}
 
 /* STATS */
 .sg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px}
-.sc{background:var(–s1);border:1px solid var(–border);border-radius:var(–r2);padding:20px;transition:border-color .2s}.sc:hover{border-color:var(–border2)}
-.sl{font-size:10px;color:var(–text3);font-weight:500;letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px}
-.sv{font-size:26px;font-weight:600;font-family:‘DM Mono’,‘SF Mono’,‘Courier New’,monospace}
-.ss{font-size:11px;color:var(–text3);margin-top:4px}
+.sc{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);padding:20px;transition:border-color .2s}.sc:hover{border-color:var(--border2)}
+.sl{font-size:10px;color:var(--text3);font-weight:500;letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px}
+.sv{font-size:26px;font-weight:600;font-family:'DM Mono','SF Mono','Courier New',monospace}
+.ss{font-size:11px;color:var(--text3);margin-top:4px}
 .sv.danger{color:#ef4444}.sv.warn{color:#f59e0b}.sv.good{color:#22c55e}
 
 /* DASH SWIPER */
 .dash-slider-wrap{overflow:hidden;width:100%}
 .dash-slider{display:flex;transition:transform .35s cubic-bezier(.4,0,.2,1);will-change:transform;align-items:flex-start}
 .dash-page{min-width:100%;width:100%;flex-shrink:0;padding-bottom:8px;box-sizing:border-box}
-.dash-page-label{font-size:11px;font-weight:600;color:var(–text3);padding:14px 2px 10px;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(–border);margin-bottom:14px}
+.dash-page-label{font-size:11px;font-weight:600;color:var(--text3);padding:14px 2px 10px;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border);margin-bottom:14px}
 .dash-page-indicator{display:flex;gap:6px;justify-content:center;margin-bottom:20px}
-.dpi{width:24px;height:3px;border-radius:2px;background:var(–s4);transition:all .25s}
-.dpi.active{background:var(–accent);width:36px}
-.swipe-hint{text-align:center;font-size:11px;color:var(–text3);margin-top:16px;opacity:.6}
+.dpi{width:24px;height:3px;border-radius:2px;background:var(--s4);transition:all .25s}
+.dpi.active{background:var(--accent);width:36px}
+.swipe-hint{text-align:center;font-size:11px;color:var(--text3);margin-top:16px;opacity:.6}
 
 /* CHARTS */
 .cg{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:8px}
 .cg4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:24px}
-.chart-group-label{font-size:11px;font-weight:600;color:var(–text3);padding:16px 2px 10px;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(–border);margin-bottom:14px}
+.chart-group-label{font-size:11px;font-weight:600;color:var(--text3);padding:16px 2px 10px;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border);margin-bottom:14px}
 @media(min-width:1200px){.cg4{grid-template-columns:repeat(4,minmax(0,1fr))}}
-.cc{background:var(–s1);border:1px solid var(–border);border-radius:var(–r2);padding:20px;transition:border-color .2s}.cc:hover{border-color:var(–border2)}
-.ct{font-size:12px;font-weight:500;color:var(–text2);margin-bottom:14px}
+.cc{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);padding:20px;transition:border-color .2s}.cc:hover{border-color:var(--border2)}
+.ct{font-size:12px;font-weight:500;color:var(--text2);margin-bottom:14px}
 .cw{position:relative;height:240px}
 
 /* PANELS */
-.panel{background:var(–s1);border:1px solid var(–border);border-radius:var(–r2);overflow:hidden;margin-bottom:14px}
-.ph{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;border-bottom:1px solid var(–border)}
+.panel{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:14px}
+.ph{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;border-bottom:1px solid var(--border)}
 .pt{font-size:13px;font-weight:500;display:flex;align-items:center;gap:7px}
-.pc{font-size:10px;padding:2px 7px;border-radius:20px;background:var(–s3);color:var(–text3);font-weight:500}
+.pc{font-size:10px;padding:2px 7px;border-radius:20px;background:var(--s3);color:var(--text3);font-weight:500}
 .pa{display:flex;gap:7px;align-items:center}
 
 /* TABLE */
 .tw{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:12px;table-layout:auto}
-tbody tr{border-bottom:1px solid var(–border);transition:background .12s}
+tbody tr{border-bottom:1px solid var(--border);transition:background .12s}
 tbody tr:last-child{border-bottom:none}
 tbody tr:hover{background:rgba(255,255,255,0.03)}
 /* Action buttons visible on touch, subtle on desktop hover */
 tbody tr .btic,.btn-c,.btn-m{opacity:1;transition:opacity .18s}
 @media(hover:hover){
-tbody tr .btic,.btn-c,.btn-m{opacity:0.15}
-tbody tr:hover .btic,tbody tr:hover .btn-c,tbody tr:hover .btn-m{opacity:1}
+  tbody tr .btic,.btn-c,.btn-m{opacity:0.15}
+  tbody tr:hover .btic,tbody tr:hover .btn-c,tbody tr:hover .btn-m{opacity:1}
 }
 #tab-master table td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:0}
 /* Column resize handle */
 .col-resize-handle{position:absolute;right:0;top:0;bottom:0;width:5px;cursor:col-resize;user-select:none;z-index:10}
-.col-resize-handle:hover,.col-resize-handle.resizing{background:var(–accent);opacity:.5}
+.col-resize-handle:hover,.col-resize-handle.resizing{background:var(--accent);opacity:.5}
 th{position:relative}
-thead tr{background:var(–s2)}
-thead th{padding:8px 14px;text-align:left;font-size:10px;font-weight:600;color:var(–text3);letter-spacing:.07em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+thead tr{background:var(--s2)}
+thead th{padding:8px 14px;text-align:left;font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 tbody tr:hover{background:rgba(255,255,255,0.03)}
-tbody td{padding:9px 14px;color:var(–text);vertical-align:middle;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis}
-.tm{font-family:‘DM Mono’,‘SF Mono’,‘Courier New’,monospace;font-size:11px}
-.td2{color:var(–text2)}.td3{color:var(–text3)}
-.tred{color:var(–red);font-family:‘DM Mono’,‘SF Mono’,‘Courier New’,monospace;font-size:11px;font-weight:500}
-.tgrn{color:var(–green);font-family:‘DM Mono’,‘SF Mono’,‘Courier New’,monospace;font-size:11px;font-weight:500}
-.tstr{text-decoration:line-through;color:var(–text3);font-family:‘DM Mono’,‘SF Mono’,‘Courier New’,monospace;font-size:11px}
+tbody td{padding:9px 14px;color:var(--text);vertical-align:middle;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis}
+.tm{font-family:'DM Mono','SF Mono','Courier New',monospace;font-size:11px}
+.td2{color:var(--text2)}.td3{color:var(--text3)}
+.tred{color:var(--red);font-family:'DM Mono','SF Mono','Courier New',monospace;font-size:11px;font-weight:500}
+.tgrn{color:var(--green);font-family:'DM Mono','SF Mono','Courier New',monospace;font-size:11px;font-weight:500}
+.tstr{text-decoration:line-through;color:var(--text3);font-family:'DM Mono','SF Mono','Courier New',monospace;font-size:11px}
 /* Column width hints */
 th:first-child,td:first-child{min-width:120px}
 th.col-sm,td.col-sm{width:70px;min-width:55px}
@@ -161,32 +160,32 @@ th.col-act,td.col-act{width:1%;white-space:nowrap}
 
 /* TAGS */
 .tag{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:500;padding:2px 7px;border-radius:5px;white-space:nowrap}
-.tf{background:rgba(245,158,11,.15);color:var(–amber)}
-.tfo{background:rgba(34,197,94,.15);color:var(–green)}
-.tap{background:rgba(236,72,153,.15);color:var(–pink)}
-.tte{background:rgba(59,130,246,.15);color:var(–blue)}
-.tho{background:rgba(168,85,247,.15);color:var(–purple)}
-.the{background:rgba(239,68,68,.15);color:var(–red)}
-.ttr{background:rgba(20,184,166,.15);color:var(–teal)}
+.tf{background:rgba(245,158,11,.15);color:var(--amber)}
+.tfo{background:rgba(34,197,94,.15);color:var(--green)}
+.tap{background:rgba(236,72,153,.15);color:var(--pink)}
+.tte{background:rgba(59,130,246,.15);color:var(--blue)}
+.tho{background:rgba(168,85,247,.15);color:var(--purple)}
+.the{background:rgba(239,68,68,.15);color:var(--red)}
+.ttr{background:rgba(20,184,166,.15);color:var(--teal)}
 .tts{background:rgba(239,68,68,.12);color:#ff6b6b}
 .tpc{background:rgba(59,130,246,.12);color:#60a5fa}
-.tli{background:rgba(249,115,22,.15);color:var(–orange)}
+.tli{background:rgba(249,115,22,.15);color:var(--orange)}
 .tgi{background:rgba(236,72,153,.12);color:#f472b6}
-.tdf{background:var(–s3);color:var(–text2)}
-.s-ord{background:rgba(245,158,11,.15);color:var(–amber)}
-.s-pro{background:rgba(34,197,94,.15);color:var(–green)}
-.s-int{background:rgba(59,130,246,.15);color:var(–blue)}
-.s-nln{background:var(–s3);color:var(–text3)}
-.s-act{background:rgba(34,197,94,.15);color:var(–green)}
-.s-can{background:var(–s3);color:var(–text3)}
+.tdf{background:var(--s3);color:var(--text2)}
+.s-ord{background:rgba(245,158,11,.15);color:var(--amber)}
+.s-pro{background:rgba(34,197,94,.15);color:var(--green)}
+.s-int{background:rgba(59,130,246,.15);color:var(--blue)}
+.s-nln{background:var(--s3);color:var(--text3)}
+.s-act{background:rgba(34,197,94,.15);color:var(--green)}
+.s-can{background:var(--s3);color:var(--text3)}
 
 /* BUTTONS */
-.btn{font-size:11px;font-weight:500;padding:5px 11px;border-radius:7px;border:1px solid var(–border2);background:transparent;color:var(–text2);cursor:pointer;font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;transition:all .15s;white-space:nowrap}
-.btn:hover{background:var(–s3);color:var(–text)}
-.btn-a{border-color:var(–accent);color:var(–accent2)}.btn-a:hover{background:rgba(108,99,255,.1)}
-.btn-p{border-color:rgba(34,197,94,.4);color:var(–green)}.btn-p:hover{background:rgba(34,197,94,.1)}
-.btn-c{border-color:rgba(239,68,68,.4);color:var(–red)}.btn-c:hover{background:rgba(239,68,68,.1)}
-.btn-m{border-color:rgba(59,130,246,.4);color:var(–blue)}.btn-m:hover{background:rgba(59,130,246,.1)}
+.btn{font-size:11px;font-weight:500;padding:5px 11px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;transition:all .15s;white-space:nowrap}
+.btn:hover{background:var(--s3);color:var(--text)}
+.btn-a{border-color:var(--accent);color:var(--accent2)}.btn-a:hover{background:rgba(108,99,255,.1)}
+.btn-p{border-color:rgba(34,197,94,.4);color:var(--green)}.btn-p:hover{background:rgba(34,197,94,.1)}
+.btn-c{border-color:rgba(239,68,68,.4);color:var(--red)}.btn-c:hover{background:rgba(239,68,68,.1)}
+.btn-m{border-color:rgba(59,130,246,.4);color:var(--blue)}.btn-m:hover{background:rgba(59,130,246,.1)}
 .btic{padding:5px 8px}
 
 /* MODAL */
@@ -202,87 +201,87 @@ th.col-act,td.col-act{width:1%;white-space:nowrap}
 .fgr{display:flex;flex-direction:column;gap:5px;min-width:0;}
 .fgr.full{grid-column:1/-1}
 .fl{font-size:10px;font-weight:600;color:rgba(255,255,255,0.38);text-transform:uppercase;letter-spacing:.07em;}
-.fi,.fs{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.14);border-radius:10px;padding:10px 12px;color:#ebebeb;font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;font-size:13px;outline:none;transition:border-color .15s,background .15s;width:100%;box-sizing:border-box;min-width:0;}
+.fi,.fs{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.14);border-radius:10px;padding:10px 12px;color:#ebebeb;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;outline:none;transition:border-color .15s,background .15s;width:100%;box-sizing:border-box;min-width:0;}
 .fi:focus,.fs:focus{border-color:rgba(108,99,255,0.7);background:rgba(255,255,255,0.09);}
 .fi::placeholder{color:rgba(255,255,255,0.22);}
 .fs option{background:#1c1c22;color:#ebebeb;}
-input[type=“date”].fi{color-scheme:dark;}
+input[type="date"].fi{color-scheme:dark;}
 .fg{display:grid;grid-template-columns:1fr 1fr;gap:12px;min-width:0;}
 .fgr{display:flex;flex-direction:column;gap:5px;min-width:0;width:100%;}
 .mac{display:flex;gap:8px;margin-top:20px;}
-.mac .btn{flex:1;padding:12px;font-size:13px;font-weight:600;border-radius:10px;text-align:center;border:none;cursor:pointer;font-family:‘DM Sans’,-apple-system,sans-serif;transition:opacity .15s;}
+.mac .btn{flex:1;padding:12px;font-size:13px;font-weight:600;border-radius:10px;text-align:center;border:none;cursor:pointer;font-family:'DM Sans',-apple-system,sans-serif;transition:opacity .15s;}
 .mac .btn-a{background:#6c63ff;color:#fff;border:none;}
 .mac .btn-a:hover,.mac .btn-a:active{opacity:.85;}
 .mac .btn:not(.btn-a){background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.6);border:none;}
 .mac .btn:not(.btn-a):hover,.mac .btn:not(.btn-a):active{background:rgba(255,255,255,0.15);}
 
 /* SHOW MORE */
-.show-more{text-align:center;padding:10px;font-size:11px;color:var(–accent2);cursor:pointer;border-top:1px solid var(–border);transition:background .15s}
-.show-more:hover{background:var(–s2)}
+.show-more{text-align:center;padding:10px;font-size:11px;color:var(--accent2);cursor:pointer;border-top:1px solid var(--border);transition:background .15s}
+.show-more:hover{background:var(--s2)}
 
 /* DRAG COLS */
 thead th{position:relative;user-select:none}
 thead th.dragging{opacity:.4}
-thead th.drag-over{border-left:2px solid var(–accent)}
-thead th .drag-handle{position:absolute;right:4px;top:50%;transform:translateY(-50%);color:var(–text3);font-size:10px;cursor:grab;opacity:0;transition:opacity .15s}
+thead th.drag-over{border-left:2px solid var(--accent)}
+thead th .drag-handle{position:absolute;right:4px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:10px;cursor:grab;opacity:0;transition:opacity .15s}
 thead th:hover .drag-handle{opacity:1}
 
 /* DUE HIGHLIGHT */
 .due-soon{background:rgba(245,158,11,0.12)!important}
 .due-today{background:rgba(239,68,68,0.12)!important}
-.due-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 6px;border-radius:5px;background:rgba(239,68,68,0.2);color:var(–red)}
-.section-divider{font-size:10px;font-weight:500;color:var(–text3);text-transform:uppercase;letter-spacing:.06em;padding:10px 18px 6px;border-bottom:1px solid var(–border);background:var(–s2)}
+.due-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 6px;border-radius:5px;background:rgba(239,68,68,0.2);color:var(--red)}
+.section-divider{font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;padding:10px 18px 6px;border-bottom:1px solid var(--border);background:var(--s2)}
 
 /* INLINE EDIT */
 .ie{cursor:pointer;border-radius:5px;padding:2px 4px;transition:background .1s;min-width:30px;display:inline-block}
-.ie:hover{background:var(–s3)}
-.ie-input{background:var(–s2);border:1px solid var(–accent);border-radius:5px;padding:2px 6px;color:var(–text);font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;font-size:12px;outline:none;width:100%;min-width:80px}
-.ie-sel{background:var(–s2);border:1px solid var(–accent);border-radius:5px;padding:2px 4px;color:var(–text);font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;font-size:11px;outline:none;cursor:pointer}
+.ie:hover{background:var(--s3)}
+.ie-input{background:var(--s2);border:1px solid var(--accent);border-radius:5px;padding:2px 6px;color:var(--text);font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:12px;outline:none;width:100%;min-width:80px}
+.ie-sel{background:var(--s2);border:1px solid var(--accent);border-radius:5px;padding:2px 4px;color:var(--text);font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:11px;outline:none;cursor:pointer}
 td.editing{background:rgba(108,99,255,0.05)!important}
 .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;display:inline-block}
-.sub-sum{display:flex;gap:20px;padding:11px 18px;border-bottom:1px solid var(–border);background:var(–s2);font-size:11px;color:var(–text2)}
-.sub-sum strong{color:var(–text);font-weight:500}
-.empty{padding:36px;text-align:center;color:var(–text3);font-size:12px}
+.sub-sum{display:flex;gap:20px;padding:11px 18px;border-bottom:1px solid var(--border);background:var(--s2);font-size:11px;color:var(--text2)}
+.sub-sum strong{color:var(--text);font-weight:500}
+.empty{padding:36px;text-align:center;color:var(--text3);font-size:12px}
 .eic{font-size:26px;margin-bottom:7px}
 /* CALENDAR */
 /*  CALENDAR  */
 /* Calendar - normal flow, fills remaining viewport height */
-#tab-calendar{display:flex;flex-direction:column;background:var(–bg);height:calc(100vh - 48px - 48px);border-radius:var(–r2);border:1px solid var(–border);overflow:hidden}
+#tab-calendar{display:flex;flex-direction:column;background:var(--bg);height:calc(100vh - 48px - 48px);border-radius:var(--r2);border:1px solid var(--border);overflow:hidden}
 /* Fullscreen - cover everything */
 #tab-calendar.fs-cal{position:fixed;top:0;left:0;right:0;bottom:0;z-index:999;height:100vh;border-radius:0;border:none}
 .hdr{z-index:200}
 .cal-layout{display:flex;flex:1;overflow:hidden;min-height:0}
 /* Sidebar */
-.cal-sidebar{width:200px;flex-shrink:0;border-right:1px solid var(–border);background:var(–s1);padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;transition:width .2s,padding .2s,opacity .2s}.cal-sidebar.collapsed{width:0;padding:0;opacity:0;overflow:hidden}
-.cal-sidebar-title{font-size:10px;font-weight:600;color:var(–text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
-.cal-cal-item{display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;border-radius:6px;font-size:12px;color:var(–text2);user-select:none}
-.cal-cal-item:hover{color:var(–text)}
+.cal-sidebar{width:200px;flex-shrink:0;border-right:1px solid var(--border);background:var(--s1);padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;transition:width .2s,padding .2s,opacity .2s}.cal-sidebar.collapsed{width:0;padding:0;opacity:0;overflow:hidden}
+.cal-sidebar-title{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.cal-cal-item{display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;border-radius:6px;font-size:12px;color:var(--text2);user-select:none}
+.cal-cal-item:hover{color:var(--text)}
 .cal-cal-item.hidden{opacity:.4}
 .cal-cal-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
-.cal-cal-check{margin-left:auto;font-size:10px;color:var(–text3)}
+.cal-cal-check{margin-left:auto;font-size:10px;color:var(--text3)}
 /* Main area */
 .cal-main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
 /* Toolbar */
-.cal-toolbar{display:flex;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid var(–border);background:var(–s1);flex-shrink:0}
+.cal-toolbar{display:flex;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--s1);flex-shrink:0}
 .cal-toolbar-nav{display:flex;align-items:center;gap:4px}
-.cal-nav-btn{padding:4px 10px;border:1px solid var(–border2);background:transparent;color:var(–text2);border-radius:6px;cursor:pointer;font-size:13px;transition:all .15s}
-.cal-nav-btn:hover{background:var(–s3);color:var(–text)}
-.cal-month-title{font-size:16px;font-weight:600;min-width:180px;text-align:center;color:var(–text)}
-.cal-view-btns{display:flex;border:1px solid var(–border2);border-radius:6px;overflow:hidden;margin-left:auto}
-.cal-view-btn{padding:5px 14px;background:transparent;color:var(–text2);border:none;cursor:pointer;font-size:12px;font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;transition:all .15s}
-.cal-view-btn:hover{background:var(–s3)}
-.cal-view-btn.active{background:var(–s3);color:var(–text)}
+.cal-nav-btn{padding:4px 10px;border:1px solid var(--border2);background:transparent;color:var(--text2);border-radius:6px;cursor:pointer;font-size:13px;transition:all .15s}
+.cal-nav-btn:hover{background:var(--s3);color:var(--text)}
+.cal-month-title{font-size:16px;font-weight:600;min-width:180px;text-align:center;color:var(--text)}
+.cal-view-btns{display:flex;border:1px solid var(--border2);border-radius:6px;overflow:hidden;margin-left:auto}
+.cal-view-btn{padding:5px 14px;background:transparent;color:var(--text2);border:none;cursor:pointer;font-size:12px;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;transition:all .15s}
+.cal-view-btn:hover{background:var(--s3)}
+.cal-view-btn.active{background:var(--s3);color:var(--text)}
 /* Month grid */
 .cal-grid-wrap{flex:1;overflow-y:auto;padding:0}
 .cal-month-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));width:100%;height:100%}
-.cal-day-hdr{text-align:center;font-size:10px;font-weight:600;color:var(–text3);text-transform:uppercase;letter-spacing:.06em;padding:8px 4px;border-bottom:1px solid var(–border);background:var(–s1);position:sticky;top:0;z-index:10}
-.cal-cell{border-right:1px solid var(–border);border-bottom:1px solid var(–border);padding:6px 4px;min-height:120px;position:relative;vertical-align:top;cursor:default}
+.cal-day-hdr{text-align:center;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;padding:8px 4px;border-bottom:1px solid var(--border);background:var(--s1);position:sticky;top:0;z-index:10}
+.cal-cell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px 4px;min-height:120px;position:relative;vertical-align:top;cursor:default}
 .cal-cell:nth-child(7n){border-right:none}
 .cal-cell.today{background:rgba(108,99,255,0.04)}
-.cal-cell.other-month .cal-dn{color:var(–text3);opacity:.4}
+.cal-cell.other-month .cal-dn{color:var(--text3);opacity:.4}
 .cal-cell.other-month .cal-event{opacity:.5}
-.cal-dn{font-size:12px;font-weight:500;color:var(–text2);margin-bottom:4px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:50%}
-.cal-cell.today .cal-dn{background:var(–accent);color:#fff;font-weight:700}
+.cal-dn{font-size:12px;font-weight:500;color:var(--text2);margin-bottom:4px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:50%}
+.cal-cell.today .cal-dn{background:var(--accent);color:#fff;font-weight:700}
 /* Events */
 .cal-event{font-size:11px;padding:2px 6px;border-radius:4px;margin-bottom:2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .15s;display:block}
 .cal-event:hover{opacity:.85;filter:brightness(1.1)}
@@ -293,93 +292,93 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .cal-event.sub{background:rgba(245,158,11,0.25);color:#f59e0b;border-left:2px solid #f59e0b}
 .cal-event.income{background:rgba(34,197,94,0.25);color:#22c55e;border-left:2px solid #22c55e}
 .cal-event.due{background:rgba(239,68,68,0.25);color:#ef4444;border-left:2px solid #ef4444}
-.cal-more{font-size:10px;color:var(–text3);padding:2px 4px;cursor:pointer}
-.cal-more:hover{color:var(–text)}
+.cal-more{font-size:10px;color:var(--text3);padding:2px 4px;cursor:pointer}
+.cal-more:hover{color:var(--text)}
 /* Week view */
 .cal-week-grid{display:grid;grid-template-columns:50px repeat(7,minmax(0,1fr));width:100%;flex:1;overflow-y:auto}
-.cal-week-hdr{text-align:center;padding:8px 4px;border-bottom:1px solid var(–border);border-right:1px solid var(–border);background:var(–s1);position:sticky;top:0;z-index:10;font-size:11px;color:var(–text3)}
-.cal-week-hdr.today-col{color:var(–accent);font-weight:700}
-.cal-week-time{font-size:10px;color:var(–text3);text-align:right;padding:2px 6px 0 0;border-right:1px solid var(–border);line-height:48px;height:48px}
-.cal-week-cell{border-right:1px solid var(–border);border-bottom:1px solid rgba(255,255,255,0.04);height:48px;position:relative;cursor:pointer}
+.cal-week-hdr{text-align:center;padding:8px 4px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);background:var(--s1);position:sticky;top:0;z-index:10;font-size:11px;color:var(--text3)}
+.cal-week-hdr.today-col{color:var(--accent);font-weight:700}
+.cal-week-time{font-size:10px;color:var(--text3);text-align:right;padding:2px 6px 0 0;border-right:1px solid var(--border);line-height:48px;height:48px}
+.cal-week-cell{border-right:1px solid var(--border);border-bottom:1px solid rgba(255,255,255,0.04);height:48px;position:relative;cursor:pointer}
 .cal-week-cell:hover{background:rgba(255,255,255,0.02)}
 .cal-week-event{position:absolute;left:2px;right:2px;border-radius:4px;padding:2px 4px;font-size:10px;cursor:pointer;overflow:hidden;z-index:2}
 /* Popover */
-.cal-popover{position:fixed;z-index:2000;background:var(–s1);border:1px solid var(–border2);border-radius:var(–r2);padding:16px;min-width:260px;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.5);animation:popIn .15s ease}
+.cal-popover{position:fixed;z-index:2000;background:var(--s1);border:1px solid var(--border2);border-radius:var(--r2);padding:16px;min-width:260px;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.5);animation:popIn .15s ease}
 @keyframes popIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
 .cal-popover-title{font-size:14px;font-weight:600;margin-bottom:4px}
-.cal-popover-sub{font-size:11px;color:var(–text2);margin-bottom:12px}
-.cal-popover-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(–border)}
+.cal-popover-sub{font-size:11px;color:var(--text2);margin-bottom:12px}
+.cal-popover-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border)}
 .cal-popover-row:last-of-type{border-bottom:none}
-.cal-popover-label{color:var(–text3)}
-.cal-popover-val{color:var(–text);font-weight:500;font-family:‘DM Mono’,‘SF Mono’,‘Courier New’,monospace;font-size:11px}
+.cal-popover-label{color:var(--text3)}
+.cal-popover-val{color:var(--text);font-weight:500;font-family:'DM Mono','SF Mono','Courier New',monospace;font-size:11px}
 .cal-popover-actions{display:flex;gap:8px;margin-top:12px}
 #cal-location-results div:last-child{border-bottom:none}
-.cal-popover{position:fixed;z-index:2000;background:var(–s1);border:1px solid var(–border2);border-radius:var(–r2);padding:16px;min-width:260px;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.5);animation:popIn .15s ease}
+.cal-popover{position:fixed;z-index:2000;background:var(--s1);border:1px solid var(--border2);border-radius:var(--r2);padding:16px;min-width:260px;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.5);animation:popIn .15s ease}
 @keyframes popIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
 .cal-popover-title{font-size:14px;font-weight:600;margin-bottom:4px}
-.cal-popover-sub{font-size:11px;color:var(–text2);margin-bottom:12px}
-.cal-popover-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(–border)}
+.cal-popover-sub{font-size:11px;color:var(--text2);margin-bottom:12px}
+.cal-popover-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border)}
 .cal-popover-row:last-of-type{border-bottom:none}
-.cal-popover-label{color:var(–text3)}
-.cal-popover-val{color:var(–text);font-weight:500;font-family:‘DM Mono’,‘SF Mono’,‘Courier New’,monospace;font-size:11px}
+.cal-popover-label{color:var(--text3)}
+.cal-popover-val{color:var(--text);font-weight:500;font-family:'DM Mono','SF Mono','Courier New',monospace;font-size:11px}
 .cal-popover-actions{display:flex;gap:8px;margin-top:12px}
 .cal-swatch{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;flex-shrink:0}
-.cal-color-picker-popup{position:fixed;z-index:3000;background:var(–s1);border:1px solid var(–border2);border-radius:10px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,0.5);display:flex;flex-direction:column;gap:8px}
+.cal-color-picker-popup{position:fixed;z-index:3000;background:var(--s1);border:1px solid var(--border2);border-radius:10px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,0.5);display:flex;flex-direction:column;gap:8px}
 .cal-color-swatches{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
 .cal-color-swatch{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s}
 .cal-color-swatch:hover{transform:scale(1.2);border-color:rgba(255,255,255,0.5)}
 .cal-swatch:hover{transform:scale(1.15)}
-.cal-swatch.selected{border-color:#fff;box-shadow:0 0 0 2px var(–accent);transform:scale(1.15)}
+.cal-swatch.selected{border-color:#fff;box-shadow:0 0 0 2px var(--accent);transform:scale(1.15)}
 /* Full bleed handled by cal-layout */
 
 /* SORT BAR */
 .sort-bar{display:flex;align-items:center;gap:6px;padding:8px 0 14px;border-bottom:none;background:transparent;flex-wrap:wrap;margin-bottom:14px}
-.sort-lbl{font-size:10px;color:var(–text3);font-weight:500;text-transform:uppercase;letter-spacing:.06em;margin-right:2px;flex-shrink:0}
-.sort-btn{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(–border2);background:transparent;color:var(–text2);cursor:pointer;font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;transition:all .15s;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;position:relative}
-.sort-btn:hover{background:var(–s3);color:var(–text)}
-.sort-btn.asc{background:rgba(108,99,255,0.12);color:var(–accent2);border-color:var(–accent)}
-.sort-btn.desc{background:rgba(108,99,255,0.18);color:var(–accent2);border-color:var(–accent)}
+.sort-lbl{font-size:10px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.06em;margin-right:2px;flex-shrink:0}
+.sort-btn{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;transition:all .15s;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;position:relative}
+.sort-btn:hover{background:var(--s3);color:var(--text)}
+.sort-btn.asc{background:rgba(108,99,255,0.12);color:var(--accent2);border-color:var(--accent)}
+.sort-btn.desc{background:rgba(108,99,255,0.18);color:var(--accent2);border-color:var(--accent)}
 .sort-btn .arr{font-size:9px}
-.sort-btn .pri{position:absolute;top:-5px;right:-4px;background:var(–accent);color:#fff;border-radius:50%;width:13px;height:13px;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:1}
-.sort-divider{width:1px;height:16px;background:var(–border2);margin:0 2px;flex-shrink:0}
+.sort-btn .pri{position:absolute;top:-5px;right:-4px;background:var(--accent);color:#fff;border-radius:50%;width:13px;height:13px;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:1}
+.sort-divider{width:1px;height:16px;background:var(--border2);margin:0 2px;flex-shrink:0}
 
-#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(–s1);border:1px solid var(–border2);border-radius:12px;padding:12px 20px;font-size:12px;color:var(–text);z-index:9999;opacity:0;transition:opacity .25s,transform .25s cubic-bezier(.34,1.4,.64,1);pointer-events:none;min-width:180px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--s1);border:1px solid var(--border2);border-radius:12px;padding:12px 20px;font-size:12px;color:var(--text);z-index:9999;opacity:0;transition:opacity .25s,transform .25s cubic-bezier(.34,1.4,.64,1);pointer-events:none;min-width:180px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.4)}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-#toast-bar{position:absolute;bottom:0;left:0;height:2px;background:var(–accent);border-radius:0 0 12px 12px;width:100%;transform-origin:left;transition:transform 3s linear}
-#toast.ok #toast-bar{background:var(–green)}
-#toast.err #toast-bar{background:var(–red)}
+#toast-bar{position:absolute;bottom:0;left:0;height:2px;background:var(--accent);border-radius:0 0 12px 12px;width:100%;transform-origin:left;transition:transform 3s linear}
+#toast.ok #toast-bar{background:var(--green)}
+#toast.err #toast-bar{background:var(--red)}
 #toast.show{transform:translateY(0);opacity:1}
-#toast.ok{border-color:rgba(34,197,94,.4);color:var(–green)}
-#toast.err{border-color:rgba(239,68,68,.4);color:var(–red)}
+#toast.ok{border-color:rgba(34,197,94,.4);color:var(--green)}
+#toast.err{border-color:rgba(239,68,68,.4);color:var(--red)}
 @media(max-width:900px){.sg{grid-template-columns:repeat(2,1fr)!important}.cg{grid-template-columns:1fr}}
 @media(max-width:600px){
-.main{padding:12px;padding-bottom:84px}
-.hdr{padding:0 12px}
-/* Hide desktop nav tabs in header on mobile */
-.nav{display:none!important}
-/* Bottom nav already always visible */
-/* Touch friendly buttons */
-.btn,.sbtn,.cal-nav-btn,.nt,.sort-btn{min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center}
-/* Bigger calendar cells */
-.cal-cell{min-height:80px}
-.cal-day-hdr{font-size:9px;padding:6px 2px}
-/* Stack stat cards */
-.sg{grid-template-columns:1fr!important}
-/* Full width panels */
-.panel{margin-bottom:12px}
-/* Bigger table touch targets */
-tbody td{padding:12px 10px}
-/* Modal full screen on mobile */
-.mbox{width:100%!important;max-width:100%!important;border-radius:16px 16px 0 0!important;position:fixed;bottom:0;left:0;right:0;max-height:90vh;overflow-y:auto}
-.mo{align-items:flex-end!important;padding:0!important}
-/* Calendar full height on mobile */
-#tab-calendar{height:calc(100vh - 48px - 60px)}
-/* FAB already always visible */
+  .main{padding:12px;padding-bottom:84px}
+  .hdr{padding:0 12px}
+  /* Hide desktop nav tabs in header on mobile */
+  .nav{display:none!important}
+  /* Bottom nav already always visible */
+  /* Touch friendly buttons */
+  .btn,.sbtn,.cal-nav-btn,.nt,.sort-btn{min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center}
+  /* Bigger calendar cells */
+  .cal-cell{min-height:80px}
+  .cal-day-hdr{font-size:9px;padding:6px 2px}
+  /* Stack stat cards */
+  .sg{grid-template-columns:1fr!important}
+  /* Full width panels */
+  .panel{margin-bottom:12px}
+  /* Bigger table touch targets */
+  tbody td{padding:12px 10px}
+  /* Modal full screen on mobile */
+  .mbox{width:100%!important;max-width:100%!important;border-radius:16px 16px 0 0!important;position:fixed;bottom:0;left:0;right:0;max-height:90vh;overflow-y:auto}
+  .mo{align-items:flex-end!important;padding:0!important}
+  /* Calendar full height on mobile */
+  #tab-calendar{height:calc(100vh - 48px - 60px)}
+  /* FAB already always visible */
 }
 /* Always use bottom nav - hide top nav */
 .nav{display:none!important}
 /* ── HOME PANELS ── */
-.home-tab-btn{flex:1;padding:8px 6px;font-size:12px;font-weight:500;color:rgba(255,255,255,0.4);background:transparent;border:none;border-radius:10px;cursor:pointer;font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;transition:all .2s;white-space:nowrap;letter-spacing:.01em;-webkit-tap-highlight-color:transparent}
+.home-tab-btn{flex:1;padding:8px 6px;font-size:12px;font-weight:500;color:rgba(255,255,255,0.4);background:transparent;border:none;border-radius:10px;cursor:pointer;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;transition:all .2s;white-space:nowrap;letter-spacing:.01em;-webkit-tap-highlight-color:transparent}
 .home-tab-btn.on{color:#fff;background:rgba(108,99,255,0.3);font-weight:600}
 .home-panel{min-width:100%;width:100%;height:100%;display:flex;flex-direction:column;flex-shrink:0;box-sizing:border-box;}
 .home-panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 16px 12px;font-size:16px;font-weight:600;flex-shrink:0;letter-spacing:-.02em;color:#ebebeb}
@@ -394,7 +393,7 @@ tbody td{padding:12px 10px}
 .home-card-info{flex:1;min-width:0}
 .home-card-name{font-size:14px;font-weight:600;color:#ebebeb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}
 .home-card-desc{font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.home-card-amount{font-size:16px;font-weight:700;white-space:nowrap;flex-shrink:0;font-family:‘DM Mono’,‘SF Mono’,‘Courier New’,monospace}
+.home-card-amount{font-size:16px;font-weight:700;white-space:nowrap;flex-shrink:0;font-family:'DM Mono','SF Mono','Courier New',monospace}
 .home-card-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .home-card-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1;min-width:0}
 .home-card-pill{font-size:10px;font-weight:500;padding:2px 8px;border-radius:20px;white-space:nowrap}
@@ -405,13 +404,13 @@ tbody td{padding:12px 10px}
 .home-stat{flex:1;min-width:90px;padding:10px 14px;display:flex;flex-direction:column;gap:3px;border-right:1px solid rgba(255,255,255,0.06);}
 .home-stat:last-child{border-right:none}
 .home-stat-label{font-size:9px;font-weight:600;color:rgba(255,255,255,0.35);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
-.home-stat-val{font-size:15px;font-weight:700;font-family:‘DM Mono’,‘SF Mono’,‘Courier New’,monospace;white-space:nowrap;letter-spacing:-.02em}
+.home-stat-val{font-size:15px;font-weight:700;font-family:'DM Mono','SF Mono','Courier New',monospace;white-space:nowrap;letter-spacing:-.02em}
 .home-stat-val.red{color:#ef4444}
 .home-stat-val.green{color:#22c55e}
 .home-stat-val.amber{color:#f59e0b}
-.home-stat-val.muted{color:rgba(255,255,255,0.5)}padding:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:12px;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;transition:background .15s;text-align:center;width:100%;box-sizing:border-box}
+.home-stat-val.muted{color:rgba(255,255,255,0.5)}padding:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:12px;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;transition:background .15s;text-align:center;width:100%;box-sizing:border-box}
 .home-show-more:active{background:rgba(255,255,255,0.08)}
-#ptr-indicator{position:fixed;top:48px;left:50%;transform:translateX(-50%);background:var(–s1);border:1px solid var(–border2);border-radius:20px;padding:6px 16px;font-size:12px;color:var(–text3);z-index:500;display:none;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+#ptr-indicator{position:fixed;top:48px;left:50%;transform:translateX(-50%);background:var(--s1);border:1px solid var(--border2);border-radius:20px;padding:6px 16px;font-size:12px;color:var(--text3);z-index:500;display:none;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(0,0,0,.3)}
 /* ── SWIPE TO ACTION ── */
 .swipe-wrap{position:relative;border-radius:16px;}
 .swipe-action{position:absolute;top:0;right:0;bottom:0;display:flex;align-items:center;justify-content:flex-end;width:0;border-radius:16px;opacity:0;overflow:hidden;}
@@ -422,7 +421,7 @@ tbody td{padding:12px 10px}
 /* Mobile bottom nav */
 #mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;height:64px;background:rgba(12,12,14,0.7);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border-top:1px solid rgba(255,255,255,0.08);box-shadow:0 -1px 0 rgba(255,255,255,0.04);z-index:300;align-items:stretch;justify-content:space-around;padding:0 4px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
 #mobile-nav::-webkit-scrollbar{display:none}
-.mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:rgba(255,255,255,0.35);border:none;background:transparent;font-family:‘DM Sans’,-apple-system,BlinkMacSystemFont,‘Segoe UI’,sans-serif;padding:0;min-height:64px;-webkit-tap-highlight-color:transparent;transition:color .15s;min-width:56px}
+.mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:rgba(255,255,255,0.35);border:none;background:transparent;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:0;min-height:64px;-webkit-tap-highlight-color:transparent;transition:color .15s;min-width:56px}
 .mob-tab.on{color:#fff}.mob-tab.on svg{filter:drop-shadow(0 0 6px rgba(108,99,255,0.8))}
 .mob-tab svg{width:20px;height:20px;flex-shrink:0;transition:filter .15s}
 .mob-tab span{font-size:9px;font-weight:500;letter-spacing:.03em;transition:color .15s}
@@ -451,306 +450,303 @@ tbody td{padding:12px 10px}
   </div>
   <div class="main">
 
-```
-<div id="tab-home" style="display:block">
-  <!-- Panel nav dots -->
-  <div id="home-nav" style="display:flex;align-items:center;gap:6px;padding:10px 16px;background:rgba(12,12,14,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,0.06);">
-    <button class="home-tab-btn on" onclick="homeGoTo(0,this)" data-panel="0">Wishlist</button>
-    <button class="home-tab-btn" onclick="homeGoTo(1,this)" data-panel="1">Expenses</button>
-    <button class="home-tab-btn" onclick="homeGoTo(2,this)" data-panel="2">Subscriptions</button>
-    <button class="home-tab-btn" onclick="homeGoTo(3,this)" data-panel="3">Income</button>
-  </div>
-  <!-- Swipe container -->
-  <div id="home-slider-wrap" style="overflow:hidden;width:100%;height:calc(100dvh - 108px - 64px);">
-    <div id="home-slider" style="display:flex;height:100%;transition:transform .3s cubic-bezier(.4,0,.2,1);will-change:transform;">
-      <!-- PANEL 0: Wishlist -->
-      <div class="home-panel" id="home-panel-0">
-        <div class="home-panel-hdr">
-          <span>Wishlist</span>
-          <button class="btn btn-a" style="font-size:11px;padding:4px 10px;" onclick="openModal('wish')">+ Add Wishlist</button>
-        </div>
-        <div class="home-stats-bar" id="hstats-wish"></div>
-        <div class="home-panel-body" id="hp-wish"></div>
-        <button class="home-show-more" id="hpm-wish" onclick="homeShowMore('wish')" style="display:none">Show 30 more</button>
+    <div id="tab-home" style="display:block">
+      <!-- Panel nav dots -->
+      <div id="home-nav" style="display:flex;align-items:center;gap:6px;padding:10px 16px;background:rgba(12,12,14,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,0.06);">
+        <button class="home-tab-btn on" onclick="homeGoTo(0,this)" data-panel="0">Wishlist</button>
+        <button class="home-tab-btn" onclick="homeGoTo(1,this)" data-panel="1">Expenses</button>
+        <button class="home-tab-btn" onclick="homeGoTo(2,this)" data-panel="2">Subscriptions</button>
+        <button class="home-tab-btn" onclick="homeGoTo(3,this)" data-panel="3">Income</button>
       </div>
-      <!-- PANEL 1: Expenses -->
-      <div class="home-panel" id="home-panel-1">
-        <div class="home-panel-hdr">
-          <span>Expenses</span>
-          <button class="btn btn-a" style="font-size:11px;padding:4px 10px;" onclick="openFoodMo()">+ Add Expense</button>
+      <!-- Swipe container -->
+      <div id="home-slider-wrap" style="overflow:hidden;width:100%;height:calc(100dvh - 108px - 64px);">
+        <div id="home-slider" style="display:flex;height:100%;transition:transform .3s cubic-bezier(.4,0,.2,1);will-change:transform;">
+          <!-- PANEL 0: Wishlist -->
+          <div class="home-panel" id="home-panel-0">
+            <div class="home-panel-hdr">
+              <span>Wishlist</span>
+              <button class="btn btn-a" style="font-size:11px;padding:4px 10px;" onclick="openModal('wish')">+ Add Wishlist</button>
+            </div>
+            <div class="home-stats-bar" id="hstats-wish"></div>
+            <div class="home-panel-body" id="hp-wish"></div>
+            <button class="home-show-more" id="hpm-wish" onclick="homeShowMore('wish')" style="display:none">Show 30 more</button>
+          </div>
+          <!-- PANEL 1: Expenses -->
+          <div class="home-panel" id="home-panel-1">
+            <div class="home-panel-hdr">
+              <span>Expenses</span>
+              <button class="btn btn-a" style="font-size:11px;padding:4px 10px;" onclick="openFoodMo()">+ Add Expense</button>
+            </div>
+            <div class="home-stats-bar" id="hstats-exp"></div>
+            <div class="home-panel-body" id="hp-exp">
+              <div class="home-section-hdr" id="hp-exp-ord-hdr">ORDERED <span id="hp-exp-ord-count" class="pc">0</span></div>
+              <div id="hp-exp-ord" style="display:flex;flex-direction:column;gap:10px;margin-bottom:4px;"></div>
+              <div class="home-section-hdr" style="margin-top:12px">PROCURED <span id="hp-exp-pro-count" class="pc">0</span></div>
+              <div id="hp-exp-pro" style="display:flex;flex-direction:column;gap:10px;"></div>
+              <button class="home-show-more" id="hpm-exp" onclick="homeShowMore('exp')" style="display:none">Show 30 more</button>
+            </div>
+          </div>
+          <!-- PANEL 2: Subscriptions -->
+          <div class="home-panel" id="home-panel-2">
+            <div class="home-panel-hdr">
+              <span>Subscriptions</span>
+              <button class="btn btn-a" style="font-size:11px;padding:4px 10px;" onclick="openModal('sub')">+ Add Sub</button>
+            </div>
+            <div class="home-stats-bar" id="hstats-sub"></div>
+            <div class="home-panel-body" id="hp-sub"></div>
+          </div>
+          <!-- PANEL 3: Income -->
+          <div class="home-panel" id="home-panel-3">
+            <div class="home-panel-hdr">
+              <span>Income</span>
+              <button class="btn btn-a" style="font-size:11px;padding:4px 10px;" onclick="openIncomeMo()">+ Add Income</button>
+            </div>
+            <div class="home-stats-bar" id="hstats-income"></div>
+            <div class="home-panel-body" id="hp-income"></div>
+          </div>
         </div>
-        <div class="home-stats-bar" id="hstats-exp"></div>
-        <div class="home-panel-body" id="hp-exp">
-          <div class="home-section-hdr" id="hp-exp-ord-hdr">ORDERED <span id="hp-exp-ord-count" class="pc">0</span></div>
-          <div id="hp-exp-ord" style="display:flex;flex-direction:column;gap:10px;margin-bottom:4px;"></div>
-          <div class="home-section-hdr" style="margin-top:12px">PROCURED <span id="hp-exp-pro-count" class="pc">0</span></div>
-          <div id="hp-exp-pro" style="display:flex;flex-direction:column;gap:10px;"></div>
-          <button class="home-show-more" id="hpm-exp" onclick="homeShowMore('exp')" style="display:none">Show 30 more</button>
-        </div>
-      </div>
-      <!-- PANEL 2: Subscriptions -->
-      <div class="home-panel" id="home-panel-2">
-        <div class="home-panel-hdr">
-          <span>Subscriptions</span>
-          <button class="btn btn-a" style="font-size:11px;padding:4px 10px;" onclick="openModal('sub')">+ Add Sub</button>
-        </div>
-        <div class="home-stats-bar" id="hstats-sub"></div>
-        <div class="home-panel-body" id="hp-sub"></div>
-      </div>
-      <!-- PANEL 3: Income -->
-      <div class="home-panel" id="home-panel-3">
-        <div class="home-panel-hdr">
-          <span>Income</span>
-          <button class="btn btn-a" style="font-size:11px;padding:4px 10px;" onclick="openIncomeMo()">+ Add Income</button>
-        </div>
-        <div class="home-stats-bar" id="hstats-income"></div>
-        <div class="home-panel-body" id="hp-income"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div id="tab-stats" style="display:none">
-  <!-- Swipe container -->
-  <div class="dash-slider-wrap">
-    <div class="dash-slider" id="dash-slider">
-
-      <!-- PAGE 1: Current Year -->
-      <div class="dash-page">
-        <div class="dash-page-indicator">
-          <span class="dpi active"></span><span class="dpi"></span><span class="dpi"></span>
-        </div>
-        <div class="sg" style="margin-bottom:20px;grid-template-columns:repeat(4,minmax(0,1fr));">
-          <div class="sc"><div class="sl">Expenses this year</div><div class="sv danger" id="s-yr">—</div><div class="ss" id="s-yr2">—</div></div>
-          <div class="sc"><div class="sl">Savings this year</div><div class="sv good" id="s-svyr">—</div><div class="ss">vs original price</div></div>
-          <div class="sc"><div class="sl">Sub costs this year</div><div class="sv warn" id="s-subyr">—</div><div class="ss">Projected annual</div></div>
-          <div class="sc"><div class="sl">Biggest expense this year</div><div class="sv danger" id="s-yr-big">—</div><div class="ss" id="s-yr-big2">—</div></div>
-          <div class="sc"><div class="sl">Expenses this month</div><div class="sv danger" id="s-mo">—</div><div class="ss" id="s-mo2">—</div></div>
-          <div class="sc"><div class="sl">Savings this month</div><div class="sv good" id="s-svmo">—</div><div class="ss">vs original price</div></div>
-          <div class="sc"><div class="sl">Sub costs this month</div><div class="sv warn" id="s-sbmo">—</div><div class="ss" id="s-sbmo2">—</div></div>
-          <div class="sc"><div class="sl">Most spent this month</div><div class="sv" id="s-yr-topcat">—</div><div class="ss" id="s-yr-topcat2">—</div></div>
-        </div>
-        <!-- Row 3: Extra insights -->
-        <div class="sg" style="margin-bottom:20px;grid-template-columns:repeat(4,minmax(0,1fr));">
-          <div class="sc"><div class="sl">Daily avg this month</div><div class="sv" id="s-daily-avg">—</div><div class="ss" id="s-daily-avg2">—</div></div>
-          <div class="sc"><div class="sl">Spending streak</div><div class="sv" id="s-streak" style="font-size:20px;">—</div><div class="ss" id="s-streak2">—</div></div>
-          <div class="sc"><div class="sl">On pace for</div><div class="sv danger" id="s-pace">—</div><div class="ss" id="s-pace2">this month</div></div>
-          <div class="sc"><div class="sl">Biggest expense this year</div><div class="sv danger" id="s-yr-big-extra">—</div><div class="ss" id="s-yr-big-extra2">—</div></div>
-        </div>
-        <div class="dash-page-label">Current Year</div>
-        <div class="cg4">
-          <div class="cc"><div class="ct">Expenses by category</div><div class="cw"><canvas id="c-yr-cat"></canvas></div></div>
-          <div class="cc"><div class="ct">Expenses by month</div><div class="cw"><canvas id="c-yr-trend"></canvas></div></div>
-          <div class="cc"><div class="ct">Savings by month</div><div class="cw"><canvas id="c-yr-savings"></canvas></div></div>
-          <div class="cc"><div class="ct">Sub payments by month</div><div class="cw"><canvas id="c-yr-submo"></canvas></div></div>
-        </div>
-        <div class="swipe-hint">Swipe for year vs year →</div>
-      </div>
-
-      <!-- PAGE 2: This Year vs Last Year -->
-      <div class="dash-page">
-        <div class="dash-page-indicator">
-          <span class="dpi"></span><span class="dpi active"></span><span class="dpi"></span>
-        </div>
-        <div class="sg" style="margin-bottom:20px;grid-template-columns:repeat(4,minmax(0,1fr));">
-          <div class="sc"><div class="sl">Expenses this year</div><div class="sv danger" id="s-cmp-yr">—</div><div class="ss" id="s-cmp-yr2">—</div></div>
-          <div class="sc"><div class="sl">Savings this year</div><div class="sv good" id="s-cmp-sav-yr">—</div><div class="ss">vs original price</div></div>
-          <div class="sc"><div class="sl">Sub costs this year</div><div class="sv warn" id="s-cmp-sub-yr">—</div><div class="ss">Projected annual</div></div>
-          <div class="sc"><div class="sl">Year over year</div><div class="sv" id="s-cmp-diff">—</div><div class="ss" id="s-cmp-diff2">—</div></div>
-          <div class="sc"><div class="sl">Expenses last year</div><div class="sv" id="s-cmp-ly">—</div><div class="ss" id="s-cmp-ly2">—</div></div>
-          <div class="sc"><div class="sl">Savings last year</div><div class="sv good" id="s-cmp-sav-ly">—</div><div class="ss">vs original price</div></div>
-          <div class="sc"><div class="sl">Sub costs last year</div><div class="sv warn" id="s-cmp-sub-ly">—</div><div class="ss">Actual paid</div></div>
-          <div class="sc"><div class="sl">Biggest expense last year</div><div class="sv danger" id="s-cmp-big-ly">—</div><div class="ss" id="s-cmp-big-ly2">—</div></div>
-        </div>
-        <div class="dash-page-label">This Year vs Last Year</div>
-        <div class="cg4">
-          <div class="cc"><div class="ct">Monthly spend: this vs last year</div><div class="cw"><canvas id="c-cmp-trend"></canvas></div></div>
-          <div class="cc"><div class="ct">Category spend: this vs last year</div><div class="cw"><canvas id="c-cmp-cat"></canvas></div></div>
-          <div class="cc"><div class="ct">Savings: this vs last year</div><div class="cw"><canvas id="c-cmp-savings"></canvas></div></div>
-          <div class="cc"><div class="ct">Sub payments: this vs last year</div><div class="cw"><canvas id="c-cmp-sub"></canvas></div></div>
-        </div>
-        <div class="swipe-hint">← Current year · All time →</div>
-      </div>
-
-      <!-- PAGE 3: All Time -->
-      <div class="dash-page">
-        <div class="dash-page-indicator">
-          <span class="dpi"></span><span class="dpi"></span><span class="dpi active"></span>
-        </div>
-        <div class="sg" style="margin-bottom:20px;grid-template-columns:repeat(4,minmax(0,1fr));">
-          <div class="sc"><div class="sl">Total expenses all time</div><div class="sv danger" id="s-all-total">—</div><div class="ss" id="s-all-total2">—</div></div>
-          <div class="sc"><div class="sl">Total savings all time</div><div class="sv good" id="s-all-savings">—</div><div class="ss">vs original prices</div></div>
-          <div class="sc"><div class="sl">Total sub costs all time</div><div class="sv warn" id="s-all-subpaid">—</div><div class="ss" id="s-all-subpaid2">—</div></div>
-          <div class="sc"><div class="sl">Avg monthly spend</div><div class="sv" id="s-all-avgmo">—</div><div class="ss">All time average</div></div>
-          <div class="sc"><div class="sl">Most spent category</div><div class="sv" id="s-all-topcat">—</div><div class="ss" id="s-all-topcat2">—</div></div>
-          <div class="sc"><div class="sl">Total expenses logged</div><div class="sv" id="s-all-count">—</div><div class="ss">All time</div></div>
-          <div class="sc"><div class="sl">Biggest expense this year</div><div class="sv danger" id="s-all-big-yr">—</div><div class="ss" id="s-all-big-yr2">—</div></div>
-          <div class="sc"><div class="sl">Biggest expense this month</div><div class="sv danger" id="s-all-big-mo">—</div><div class="ss" id="s-all-big-mo2">—</div></div>
-        </div>
-        <div class="dash-page-label">All Time</div>
-        <div class="cg4">
-          <div class="cc"><div class="ct">Expenses by category</div><div class="cw"><canvas id="c-all-cat"></canvas></div></div>
-          <div class="cc"><div class="ct">Expenses by month (all time)</div><div class="cw"><canvas id="c-all-trend"></canvas></div></div>
-          <div class="cc"><div class="ct">Savings by month (all time)</div><div class="cw"><canvas id="c-all-savings"></canvas></div></div>
-          <div class="cc"><div class="ct">Sub payments by month (all time)</div><div class="cw"><canvas id="c-all-submo"></canvas></div></div>
-        </div>
-        <div class="swipe-hint">← Swipe left for year vs year</div>
-      </div>
-
-    </div>
-  </div>
-</div>
-
-<div id="tab-data" style="display:none">
-  <!-- Sub-nav for data tabs -->
-  <div style="display:flex;gap:8px;padding:8px 16px;background:#141416;border-bottom:1px solid rgba(255,255,255,0.07);overflow-x:auto;scrollbar-width:none;">
-    <button class="sort-btn on" id="data-sub-btn-wishlist" onclick="showDataTab('wishlist',this)">Wishlist</button>
-    <button class="sort-btn" id="data-sub-btn-expenses" onclick="showDataTab('expenses',this)">Expenses</button>
-    <button class="sort-btn" id="data-sub-btn-subscriptions" onclick="showDataTab('subscriptions',this)">Subs</button>
-    <button class="sort-btn" id="data-sub-btn-master" onclick="showDataTab('master',this)">Master</button>
-    <button class="sort-btn" id="data-sub-btn-categories" onclick="showDataTab('categories',this)">Categories</button>
-    <button class="sort-btn" id="data-sub-btn-cards" onclick="showDataTab('cards',this)">Cards</button>
-    <button class="sort-btn" id="data-sub-btn-banks" onclick="showDataTab('banks',this)">Banks</button>
-  </div>
-<div id="tab-wishlist" style="display:none">
-  <div class="sort-bar" style="background:#141416;border:1px solid rgba(255,255,255,0.07);border-radius:14px;margin-bottom:16px;padding:8px 14px;">
-      <span class="sort-lbl">Sort</span>
-      <button class="sort-btn asc" id="ws-row" data-field="_row" onclick="setSort('wish','_row',this)">Date Added <span class="arr">↑</span></button>
-      <button class="sort-btn" id="ws-name" data-field="Name" onclick="setSort('wish','Name',this)">Name <span class="arr">↕</span></button>
-      <button class="sort-btn" id="ws-cat" data-field="Category" onclick="setSort('wish','Category',this)">Category <span class="arr">↕</span></button>
-      <button class="sort-btn" id="ws-ocost" data-field="OCost" onclick="setSort('wish','OCost',this)">Original <span class="arr">↕</span></button>
-      <button class="sort-btn" id="ws-savings" data-field="_savings" onclick="setSort('wish','_savings',this)">Savings <span class="arr">↕</span></button>
-      <button class="sort-btn" id="ws-status" data-field="Status" onclick="setSort('wish','Status',this)">Status <span class="arr">↕</span></button>
-      <div class="sort-divider"></div>
-      <button class="sort-btn" onclick="clearSort('wish')" style="color:#555563;font-size:10px;"> Clear</button>
-    </div>
-  <div class="panel">
-    <div class="ph"><div class="pt"> Wishlist <span class="pc" id="wc">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('wish')">+ Add item</button></div></div>
-    <div class="tw"><table>
-      <thead><tr><th class="col-lg">Name</th><th>Description</th><th class="col-md">Category</th><th class="col-sm">Link</th><th class="col-num">Original</th><th class="col-num">Bought</th><th class="col-num">Savings</th><th class="col-act"></th><th class="col-act"></th><th class="col-act"></th></tr></thead>
-      <tbody id="wb"></tbody>
-    </table></div>
-    <div class="show-more" id="sm-wish" onclick="showMore('wish')" style="display:none">Show more</div>
-  </div>
-</div>
-
-<div id="tab-expenses" style="display:none">
-  <div class="sort-bar" style="background:#141416;border:1px solid rgba(255,255,255,0.07);border-radius:14px;margin-bottom:16px;padding:8px 14px;">
-    <span class="sort-lbl">Sort all</span>
-    <button class="sort-btn asc" id="es-row" data-field="_row" onclick="setSort('exp','_row',this)">Date Added <span class="arr">↑</span></button>
-    <button class="sort-btn" id="es-date" data-field="Date" onclick="setSort('exp','Date',this)">Date <span class="arr">↕</span></button>
-    <button class="sort-btn" id="es-name" data-field="Name" onclick="setSort('exp','Name',this)">Name <span class="arr">↕</span></button>
-    <button class="sort-btn" id="es-cat" data-field="Category" onclick="setSort('exp','Category',this)">Category <span class="arr">↕</span></button>
-    <button class="sort-btn" id="es-cost" data-field="Cost" onclick="setSort('exp','Cost',this)">Cost <span class="arr">↕</span></button>
-    <button class="sort-btn" id="es-savings" data-field="_savings" onclick="setSort('exp','_savings',this)">Savings <span class="arr">↕</span></button>
-    <button class="sort-btn" id="es-card" data-field="Card" onclick="setSort('exp','Card',this)">Card <span class="arr">↕</span></button>
-    <div class="sort-divider"></div>
-    <button class="sort-btn" onclick="clearSort('exp')" style="color:#555563;font-size:10px;"> Clear</button>
-  </div>
-  <div class="panel" id="panel-ordered">
-    <div class="ph"><div class="pt"> Ordered <span class="pc" id="ec-ord">0</span></div><div class="pa"><button class="btn" onclick="resetExpColOrder()" style="font-size:10px;color:#555563">Reset cols</button><button class="btn btn-a" onclick="openModal('exp')">+ Add expense</button></div></div>
-    <div class="tw"><table>
-      <thead></thead>
-      <tbody id="eb-ord"></tbody>
-    </table></div>
-    <div class="show-more" id="sm-ord" onclick="showMore('ord')" style="display:none">Show more</div>
-  </div>
-  <div class="panel" id="panel-procured">
-    <div class="ph"><div class="pt"> Procured <span class="pc" id="ec-pro">0</span></div></div>
-    <div class="tw"><table>
-      <thead></thead>
-      <tbody id="eb-pro"></tbody>
-    </table></div>
-    <div class="show-more" id="sm-pro" onclick="showMore('pro')" style="display:none">Show more</div>
-  </div>
-  <div class="panel" id="panel-food">
-    <div class="ph"><div class="pt"> Food <span class="pc" id="ec-food">0</span></div></div>
-    <div class="tw"><table>
-      <thead></thead>
-      <tbody id="eb-food"></tbody>
-    </table></div>
-    <div class="show-more" id="sm-food" onclick="showMore('food')" style="display:none">Show more</div>
-  </div>
-</div>
-
-<div id="tab-subscriptions" style="display:none">
-  <div class="sort-bar" style="background:#141416;border:1px solid rgba(255,255,255,0.07);border-radius:14px;margin-bottom:16px;padding:8px 14px;">
-      <span class="sort-lbl">Sort</span>
-      <button class="sort-btn asc" id="ss-row" data-field="_row" onclick="setSort('sub','_row',this)">Date Added <span class="arr">↑</span></button>
-      <button class="sort-btn" id="ss-billing" data-field="Billing" onclick="setSort('sub','Billing',this)">Billing <span class="arr">↕</span></button>
-      <button class="sort-btn" id="ss-name" data-field="Name" onclick="setSort('sub','Name',this)">Name <span class="arr">↕</span></button>
-      <button class="sort-btn" id="ss-cost" data-field="Cost" onclick="setSort('sub','Cost',this)">Cost <span class="arr">↕</span></button>
-      <button class="sort-btn" id="ss-due" data-field="NextRenewal" onclick="setSort('sub','NextRenewal',this)">Due Date <span class="arr">↕</span></button>
-      <button class="sort-btn" id="ss-cat" data-field="Category" onclick="setSort('sub','Category',this)">Category <span class="arr">↕</span></button>
-      <button class="sort-btn" id="ss-payments" data-field="Payments" onclick="setSort('sub','Payments',this)">Payments <span class="arr">↕</span></button>
-      <div class="sort-divider"></div>
-      <button class="sort-btn" onclick="clearSort('sub')" style="color:#555563;font-size:10px;"> Clear</button>
-    </div>
-  <div class="panel">
-    <div class="ph">
-      <div class="pt">Subscriptions <span class="pc" id="sc2">0</span></div>
-      <div class="pa">
-        <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#8a8a9a;cursor:pointer;">
-          <input type="checkbox" id="show-cancelled" onchange="renderSub()" style="accent-color:#6c63ff"> Show cancelled
-        </label>
-        <button class="btn" onclick="resetSubColOrder()" style="font-size:10px;color:#555563">Reset cols</button>
-        <button class="btn btn-a" onclick="openModal('sub')">+ Add sub</button>
       </div>
     </div>
-    <div class="sub-sum" id="ss2">—</div>
-    <div class="tw"><table>
-      <thead></thead>
-      <tbody id="sb2"></tbody>
-    </table></div>
-    <div class="show-more" id="sm-sub" onclick="showMore('sub')" style="display:none">Show more</div>
-  </div>
-</div>
 
-<div id="tab-categories" style="display:none">
-  <div class="panel">
-    <div class="ph"><div class="pt"> Categories <span class="pc" id="cc2">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('cat')">+ Add category</button></div></div>
-    <div class="tw"><table>
-      <thead><tr><th>Name</th><th class="col-md">Color</th><th class="col-act"></th></tr></thead>
-      <tbody id="cb"><tr><td colspan="3"><div class="empty"><div class="eic"></div>Loading...</div></td></tr></tbody>
-    </table></div>
-  </div>
-</div>
+    <div id="tab-stats" style="display:none">
+      <!-- Swipe container -->
+      <div class="dash-slider-wrap">
+        <div class="dash-slider" id="dash-slider">
 
-<div id="tab-cards" style="display:none">
-  <div class="panel">
-    <div class="ph"><div class="pt"> Cards <span class="pc" id="card-count">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('card')">+ Add card</button></div></div>
-    <div class="tw"><table>
-      <thead><tr><th>Card Name</th><th>Alias</th><th>Bank</th><th class="col-md">Type</th><th class="col-sm">Last 4</th><th class="col-md">Default</th><th class="col-act"></th></tr></thead>
-      <tbody id="card-body"><tr><td colspan="5"><div class="empty"><div class="eic"></div>Loading...</div></td></tr></tbody>
-    </table></div>
-  </div>
-</div>
+          <!-- PAGE 1: Current Year -->
+          <div class="dash-page">
+            <div class="dash-page-indicator">
+              <span class="dpi active"></span><span class="dpi"></span><span class="dpi"></span>
+            </div>
+            <div class="sg" style="margin-bottom:20px;grid-template-columns:repeat(4,minmax(0,1fr));">
+              <div class="sc"><div class="sl">Expenses this year</div><div class="sv danger" id="s-yr">—</div><div class="ss" id="s-yr2">—</div></div>
+              <div class="sc"><div class="sl">Savings this year</div><div class="sv good" id="s-svyr">—</div><div class="ss">vs original price</div></div>
+              <div class="sc"><div class="sl">Sub costs this year</div><div class="sv warn" id="s-subyr">—</div><div class="ss">Projected annual</div></div>
+              <div class="sc"><div class="sl">Biggest expense this year</div><div class="sv danger" id="s-yr-big">—</div><div class="ss" id="s-yr-big2">—</div></div>
+              <div class="sc"><div class="sl">Expenses this month</div><div class="sv danger" id="s-mo">—</div><div class="ss" id="s-mo2">—</div></div>
+              <div class="sc"><div class="sl">Savings this month</div><div class="sv good" id="s-svmo">—</div><div class="ss">vs original price</div></div>
+              <div class="sc"><div class="sl">Sub costs this month</div><div class="sv warn" id="s-sbmo">—</div><div class="ss" id="s-sbmo2">—</div></div>
+              <div class="sc"><div class="sl">Most spent this month</div><div class="sv" id="s-yr-topcat">—</div><div class="ss" id="s-yr-topcat2">—</div></div>
+            </div>
+            <!-- Row 3: Extra insights -->
+            <div class="sg" style="margin-bottom:20px;grid-template-columns:repeat(4,minmax(0,1fr));">
+              <div class="sc"><div class="sl">Daily avg this month</div><div class="sv" id="s-daily-avg">—</div><div class="ss" id="s-daily-avg2">—</div></div>
+              <div class="sc"><div class="sl">Spending streak</div><div class="sv" id="s-streak" style="font-size:20px;">—</div><div class="ss" id="s-streak2">—</div></div>
+              <div class="sc"><div class="sl">On pace for</div><div class="sv danger" id="s-pace">—</div><div class="ss" id="s-pace2">this month</div></div>
+              <div class="sc"><div class="sl">Biggest expense this year</div><div class="sv danger" id="s-yr-big-extra">—</div><div class="ss" id="s-yr-big-extra2">—</div></div>
+            </div>
+            <div class="dash-page-label">Current Year</div>
+            <div class="cg4">
+              <div class="cc"><div class="ct">Expenses by category</div><div class="cw"><canvas id="c-yr-cat"></canvas></div></div>
+              <div class="cc"><div class="ct">Expenses by month</div><div class="cw"><canvas id="c-yr-trend"></canvas></div></div>
+              <div class="cc"><div class="ct">Savings by month</div><div class="cw"><canvas id="c-yr-savings"></canvas></div></div>
+              <div class="cc"><div class="ct">Sub payments by month</div><div class="cw"><canvas id="c-yr-submo"></canvas></div></div>
+            </div>
+            <div class="swipe-hint">Swipe for year vs year →</div>
+          </div>
 
-<div id="tab-banks" style="display:none">
-  <div class="panel">
-    <div class="ph"><div class="pt"> Banks <span class="pc" id="bank-count">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('bank')">+ Add bank</button></div></div>
-    <div class="tw"><table>
-      <thead><tr><th>Bank Name</th><th class="col-md">Type</th><th class="col-sm">Account #</th><th>Cards</th><th class="col-act"></th></tr></thead>
-      <tbody id="bank-body"><tr><td colspan="5"><div class="empty"><div class="eic"></div>Loading...</div></td></tr></tbody>
-    </table></div>
-  </div>
-</div>
+          <!-- PAGE 2: This Year vs Last Year -->
+          <div class="dash-page">
+            <div class="dash-page-indicator">
+              <span class="dpi"></span><span class="dpi active"></span><span class="dpi"></span>
+            </div>
+            <div class="sg" style="margin-bottom:20px;grid-template-columns:repeat(4,minmax(0,1fr));">
+              <div class="sc"><div class="sl">Expenses this year</div><div class="sv danger" id="s-cmp-yr">—</div><div class="ss" id="s-cmp-yr2">—</div></div>
+              <div class="sc"><div class="sl">Savings this year</div><div class="sv good" id="s-cmp-sav-yr">—</div><div class="ss">vs original price</div></div>
+              <div class="sc"><div class="sl">Sub costs this year</div><div class="sv warn" id="s-cmp-sub-yr">—</div><div class="ss">Projected annual</div></div>
+              <div class="sc"><div class="sl">Year over year</div><div class="sv" id="s-cmp-diff">—</div><div class="ss" id="s-cmp-diff2">—</div></div>
+              <div class="sc"><div class="sl">Expenses last year</div><div class="sv" id="s-cmp-ly">—</div><div class="ss" id="s-cmp-ly2">—</div></div>
+              <div class="sc"><div class="sl">Savings last year</div><div class="sv good" id="s-cmp-sav-ly">—</div><div class="ss">vs original price</div></div>
+              <div class="sc"><div class="sl">Sub costs last year</div><div class="sv warn" id="s-cmp-sub-ly">—</div><div class="ss">Actual paid</div></div>
+              <div class="sc"><div class="sl">Biggest expense last year</div><div class="sv danger" id="s-cmp-big-ly">—</div><div class="ss" id="s-cmp-big-ly2">—</div></div>
+            </div>
+            <div class="dash-page-label">This Year vs Last Year</div>
+            <div class="cg4">
+              <div class="cc"><div class="ct">Monthly spend: this vs last year</div><div class="cw"><canvas id="c-cmp-trend"></canvas></div></div>
+              <div class="cc"><div class="ct">Category spend: this vs last year</div><div class="cw"><canvas id="c-cmp-cat"></canvas></div></div>
+              <div class="cc"><div class="ct">Savings: this vs last year</div><div class="cw"><canvas id="c-cmp-savings"></canvas></div></div>
+              <div class="cc"><div class="ct">Sub payments: this vs last year</div><div class="cw"><canvas id="c-cmp-sub"></canvas></div></div>
+            </div>
+            <div class="swipe-hint">← Current year · All time →</div>
+          </div>
 
-<div id="tab-master" style="display:none;">
-  <div style="background:#141416;border-bottom:1px solid rgba(255,255,255,0.07);padding:12px 24px;display:flex;align-items:center;gap:12px;">
-    <span style="font-size:15px;font-weight:600;">Master Ledger</span>
-    <span class="pc" id="master-count">0</span>
-    <select id="master-filter" onchange="renderMaster()" class="fs" style="font-size:11px;padding:5px 8px;width:auto;">
-      <option value="">All types</option>
-      <option value="Expense">Expenses</option>
-      <option value="Subscription">Subscriptions</option>
-      <option value="Income">Income</option>
-    </select>
-    
-  </div>
-  <div style="overflow-x:auto;width:100%;"><table id="master-table" style="width:auto;min-width:100%;table-layout:fixed;">
-```
+          <!-- PAGE 3: All Time -->
+          <div class="dash-page">
+            <div class="dash-page-indicator">
+              <span class="dpi"></span><span class="dpi"></span><span class="dpi active"></span>
+            </div>
+            <div class="sg" style="margin-bottom:20px;grid-template-columns:repeat(4,minmax(0,1fr));">
+              <div class="sc"><div class="sl">Total expenses all time</div><div class="sv danger" id="s-all-total">—</div><div class="ss" id="s-all-total2">—</div></div>
+              <div class="sc"><div class="sl">Total savings all time</div><div class="sv good" id="s-all-savings">—</div><div class="ss">vs original prices</div></div>
+              <div class="sc"><div class="sl">Total sub costs all time</div><div class="sv warn" id="s-all-subpaid">—</div><div class="ss" id="s-all-subpaid2">—</div></div>
+              <div class="sc"><div class="sl">Avg monthly spend</div><div class="sv" id="s-all-avgmo">—</div><div class="ss">All time average</div></div>
+              <div class="sc"><div class="sl">Most spent category</div><div class="sv" id="s-all-topcat">—</div><div class="ss" id="s-all-topcat2">—</div></div>
+              <div class="sc"><div class="sl">Total expenses logged</div><div class="sv" id="s-all-count">—</div><div class="ss">All time</div></div>
+              <div class="sc"><div class="sl">Biggest expense this year</div><div class="sv danger" id="s-all-big-yr">—</div><div class="ss" id="s-all-big-yr2">—</div></div>
+              <div class="sc"><div class="sl">Biggest expense this month</div><div class="sv danger" id="s-all-big-mo">—</div><div class="ss" id="s-all-big-mo2">—</div></div>
+            </div>
+            <div class="dash-page-label">All Time</div>
+            <div class="cg4">
+              <div class="cc"><div class="ct">Expenses by category</div><div class="cw"><canvas id="c-all-cat"></canvas></div></div>
+              <div class="cc"><div class="ct">Expenses by month (all time)</div><div class="cw"><canvas id="c-all-trend"></canvas></div></div>
+              <div class="cc"><div class="ct">Savings by month (all time)</div><div class="cw"><canvas id="c-all-savings"></canvas></div></div>
+              <div class="cc"><div class="ct">Sub payments by month (all time)</div><div class="cw"><canvas id="c-all-submo"></canvas></div></div>
+            </div>
+            <div class="swipe-hint">← Swipe left for year vs year</div>
+          </div>
 
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-data" style="display:none">
+      <!-- Sub-nav for data tabs -->
+      <div style="display:flex;gap:8px;padding:8px 16px;background:#141416;border-bottom:1px solid rgba(255,255,255,0.07);overflow-x:auto;scrollbar-width:none;">
+        <button class="sort-btn on" id="data-sub-btn-wishlist" onclick="showDataTab('wishlist',this)">Wishlist</button>
+        <button class="sort-btn" id="data-sub-btn-expenses" onclick="showDataTab('expenses',this)">Expenses</button>
+        <button class="sort-btn" id="data-sub-btn-subscriptions" onclick="showDataTab('subscriptions',this)">Subs</button>
+        <button class="sort-btn" id="data-sub-btn-master" onclick="showDataTab('master',this)">Master</button>
+        <button class="sort-btn" id="data-sub-btn-categories" onclick="showDataTab('categories',this)">Categories</button>
+        <button class="sort-btn" id="data-sub-btn-cards" onclick="showDataTab('cards',this)">Cards</button>
+        <button class="sort-btn" id="data-sub-btn-banks" onclick="showDataTab('banks',this)">Banks</button>
+      </div>
+    <div id="tab-wishlist" style="display:none">
+      <div class="sort-bar" style="background:#141416;border:1px solid rgba(255,255,255,0.07);border-radius:14px;margin-bottom:16px;padding:8px 14px;">
+          <span class="sort-lbl">Sort</span>
+          <button class="sort-btn asc" id="ws-row" data-field="_row" onclick="setSort('wish','_row',this)">Date Added <span class="arr">↑</span></button>
+          <button class="sort-btn" id="ws-name" data-field="Name" onclick="setSort('wish','Name',this)">Name <span class="arr">↕</span></button>
+          <button class="sort-btn" id="ws-cat" data-field="Category" onclick="setSort('wish','Category',this)">Category <span class="arr">↕</span></button>
+          <button class="sort-btn" id="ws-ocost" data-field="OCost" onclick="setSort('wish','OCost',this)">Original <span class="arr">↕</span></button>
+          <button class="sort-btn" id="ws-savings" data-field="_savings" onclick="setSort('wish','_savings',this)">Savings <span class="arr">↕</span></button>
+          <button class="sort-btn" id="ws-status" data-field="Status" onclick="setSort('wish','Status',this)">Status <span class="arr">↕</span></button>
+          <div class="sort-divider"></div>
+          <button class="sort-btn" onclick="clearSort('wish')" style="color:#555563;font-size:10px;"> Clear</button>
+        </div>
+      <div class="panel">
+        <div class="ph"><div class="pt"> Wishlist <span class="pc" id="wc">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('wish')">+ Add item</button></div></div>
+        <div class="tw"><table>
+          <thead><tr><th class="col-lg">Name</th><th>Description</th><th class="col-md">Category</th><th class="col-sm">Link</th><th class="col-num">Original</th><th class="col-num">Bought</th><th class="col-num">Savings</th><th class="col-act"></th><th class="col-act"></th><th class="col-act"></th></tr></thead>
+          <tbody id="wb"></tbody>
+        </table></div>
+        <div class="show-more" id="sm-wish" onclick="showMore('wish')" style="display:none">Show more</div>
+      </div>
+    </div>
+
+    <div id="tab-expenses" style="display:none">
+      <div class="sort-bar" style="background:#141416;border:1px solid rgba(255,255,255,0.07);border-radius:14px;margin-bottom:16px;padding:8px 14px;">
+        <span class="sort-lbl">Sort all</span>
+        <button class="sort-btn asc" id="es-row" data-field="_row" onclick="setSort('exp','_row',this)">Date Added <span class="arr">↑</span></button>
+        <button class="sort-btn" id="es-date" data-field="Date" onclick="setSort('exp','Date',this)">Date <span class="arr">↕</span></button>
+        <button class="sort-btn" id="es-name" data-field="Name" onclick="setSort('exp','Name',this)">Name <span class="arr">↕</span></button>
+        <button class="sort-btn" id="es-cat" data-field="Category" onclick="setSort('exp','Category',this)">Category <span class="arr">↕</span></button>
+        <button class="sort-btn" id="es-cost" data-field="Cost" onclick="setSort('exp','Cost',this)">Cost <span class="arr">↕</span></button>
+        <button class="sort-btn" id="es-savings" data-field="_savings" onclick="setSort('exp','_savings',this)">Savings <span class="arr">↕</span></button>
+        <button class="sort-btn" id="es-card" data-field="Card" onclick="setSort('exp','Card',this)">Card <span class="arr">↕</span></button>
+        <div class="sort-divider"></div>
+        <button class="sort-btn" onclick="clearSort('exp')" style="color:#555563;font-size:10px;"> Clear</button>
+      </div>
+      <div class="panel" id="panel-ordered">
+        <div class="ph"><div class="pt"> Ordered <span class="pc" id="ec-ord">0</span></div><div class="pa"><button class="btn" onclick="resetExpColOrder()" style="font-size:10px;color:#555563">Reset cols</button><button class="btn btn-a" onclick="openModal('exp')">+ Add expense</button></div></div>
+        <div class="tw"><table>
+          <thead></thead>
+          <tbody id="eb-ord"></tbody>
+        </table></div>
+        <div class="show-more" id="sm-ord" onclick="showMore('ord')" style="display:none">Show more</div>
+      </div>
+      <div class="panel" id="panel-procured">
+        <div class="ph"><div class="pt"> Procured <span class="pc" id="ec-pro">0</span></div></div>
+        <div class="tw"><table>
+          <thead></thead>
+          <tbody id="eb-pro"></tbody>
+        </table></div>
+        <div class="show-more" id="sm-pro" onclick="showMore('pro')" style="display:none">Show more</div>
+      </div>
+      <div class="panel" id="panel-food">
+        <div class="ph"><div class="pt"> Food <span class="pc" id="ec-food">0</span></div></div>
+        <div class="tw"><table>
+          <thead></thead>
+          <tbody id="eb-food"></tbody>
+        </table></div>
+        <div class="show-more" id="sm-food" onclick="showMore('food')" style="display:none">Show more</div>
+      </div>
+    </div>
+
+    <div id="tab-subscriptions" style="display:none">
+      <div class="sort-bar" style="background:#141416;border:1px solid rgba(255,255,255,0.07);border-radius:14px;margin-bottom:16px;padding:8px 14px;">
+          <span class="sort-lbl">Sort</span>
+          <button class="sort-btn asc" id="ss-row" data-field="_row" onclick="setSort('sub','_row',this)">Date Added <span class="arr">↑</span></button>
+          <button class="sort-btn" id="ss-billing" data-field="Billing" onclick="setSort('sub','Billing',this)">Billing <span class="arr">↕</span></button>
+          <button class="sort-btn" id="ss-name" data-field="Name" onclick="setSort('sub','Name',this)">Name <span class="arr">↕</span></button>
+          <button class="sort-btn" id="ss-cost" data-field="Cost" onclick="setSort('sub','Cost',this)">Cost <span class="arr">↕</span></button>
+          <button class="sort-btn" id="ss-due" data-field="NextRenewal" onclick="setSort('sub','NextRenewal',this)">Due Date <span class="arr">↕</span></button>
+          <button class="sort-btn" id="ss-cat" data-field="Category" onclick="setSort('sub','Category',this)">Category <span class="arr">↕</span></button>
+          <button class="sort-btn" id="ss-payments" data-field="Payments" onclick="setSort('sub','Payments',this)">Payments <span class="arr">↕</span></button>
+          <div class="sort-divider"></div>
+          <button class="sort-btn" onclick="clearSort('sub')" style="color:#555563;font-size:10px;"> Clear</button>
+        </div>
+      <div class="panel">
+        <div class="ph">
+          <div class="pt">Subscriptions <span class="pc" id="sc2">0</span></div>
+          <div class="pa">
+            <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#8a8a9a;cursor:pointer;">
+              <input type="checkbox" id="show-cancelled" onchange="renderSub()" style="accent-color:#6c63ff"> Show cancelled
+            </label>
+            <button class="btn" onclick="resetSubColOrder()" style="font-size:10px;color:#555563">Reset cols</button>
+            <button class="btn btn-a" onclick="openModal('sub')">+ Add sub</button>
+          </div>
+        </div>
+        <div class="sub-sum" id="ss2">—</div>
+        <div class="tw"><table>
+          <thead></thead>
+          <tbody id="sb2"></tbody>
+        </table></div>
+        <div class="show-more" id="sm-sub" onclick="showMore('sub')" style="display:none">Show more</div>
+      </div>
+    </div>
+
+    <div id="tab-categories" style="display:none">
+      <div class="panel">
+        <div class="ph"><div class="pt"> Categories <span class="pc" id="cc2">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('cat')">+ Add category</button></div></div>
+        <div class="tw"><table>
+          <thead><tr><th>Name</th><th class="col-md">Color</th><th class="col-act"></th></tr></thead>
+          <tbody id="cb"><tr><td colspan="3"><div class="empty"><div class="eic"></div>Loading...</div></td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div id="tab-cards" style="display:none">
+      <div class="panel">
+        <div class="ph"><div class="pt"> Cards <span class="pc" id="card-count">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('card')">+ Add card</button></div></div>
+        <div class="tw"><table>
+          <thead><tr><th>Card Name</th><th>Alias</th><th>Bank</th><th class="col-md">Type</th><th class="col-sm">Last 4</th><th class="col-md">Default</th><th class="col-act"></th></tr></thead>
+          <tbody id="card-body"><tr><td colspan="5"><div class="empty"><div class="eic"></div>Loading...</div></td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div id="tab-banks" style="display:none">
+      <div class="panel">
+        <div class="ph"><div class="pt"> Banks <span class="pc" id="bank-count">0</span></div><div class="pa"><button class="btn btn-a" onclick="openModal('bank')">+ Add bank</button></div></div>
+        <div class="tw"><table>
+          <thead><tr><th>Bank Name</th><th class="col-md">Type</th><th class="col-sm">Account #</th><th>Cards</th><th class="col-act"></th></tr></thead>
+          <tbody id="bank-body"><tr><td colspan="5"><div class="empty"><div class="eic"></div>Loading...</div></td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div id="tab-master" style="display:none;">
+      <div style="background:#141416;border-bottom:1px solid rgba(255,255,255,0.07);padding:12px 24px;display:flex;align-items:center;gap:12px;">
+        <span style="font-size:15px;font-weight:600;">Master Ledger</span>
+        <span class="pc" id="master-count">0</span>
+        <select id="master-filter" onchange="renderMaster()" class="fs" style="font-size:11px;padding:5px 8px;width:auto;">
+          <option value="">All types</option>
+          <option value="Expense">Expenses</option>
+          <option value="Subscription">Subscriptions</option>
+          <option value="Income">Income</option>
+        </select>
+        
+      </div>
+      <div style="overflow-x:auto;width:100%;"><table id="master-table" style="width:auto;min-width:100%;table-layout:fixed;">
 <colgroup><col style="width:85px"><col style="width:80px"><col style="width:130px"><col style="width:130px"><col style="width:75px"><col style="width:60px"><col style="width:65px"><col style="width:65px"><col style="width:75px"><col style="width:110px"><col style="width:55px"><col style="width:70px"><col style="width:55px"><col style="width:32px"></colgroup>
 <thead><tr><th class="col-date">Date</th><th class="col-sm">Type</th><th class="col-lg">Name</th><th style="min-width:120px">Description</th><th class="col-md">Category</th><th class="col-num">Cost</th><th class="col-num">Original</th><th class="col-num">Savings</th><th class="col-sm">Card</th><th class="col-md">Bank</th><th class="col-sm">Billing</th><th class="col-sm">Status</th><th class="col-sm">Source</th><th class="col-act"></th></tr></thead>
         <tbody id="master-body"><tr><td colspan="14"><div style="padding:20px;display:flex;flex-direction:column;gap:10px"><div class="skeleton" style="height:18px;width:80%;border-radius:6px"></div><div class="skeleton" style="height:18px;width:65%;border-radius:6px"></div><div class="skeleton" style="height:18px;width:72%;border-radius:6px"></div><div class="skeleton" style="height:18px;width:58%;border-radius:6px"></div><div class="skeleton" style="height:18px;width:70%;border-radius:6px"></div></div></td></tr></tbody>
@@ -758,136 +754,134 @@ tbody td{padding:12px 10px}
       <div class="show-more" id="sm-master" onclick="showMore('master')" style="display:none;margin:0;border-radius:0;">Show more</div>
     </div>
 
-```
-</div>
-<div id="tab-calendar" style="display:none">
-  <div class="cal-layout">
-    <!-- Sidebar -->
-    <div class="cal-sidebar">
-      <div>
-        <div style="padding:0 0 10px;border-bottom:1px solid rgba(255,255,255,0.07);margin-bottom:10px;">
-          <div class="cal-sidebar-title">App Events</div>
-          <div class="cal-cal-item" onclick="toggleAppEvents('sub')">
-            <div class="cal-cal-dot" id="sub-dot" style="background:#f59e0b;cursor:pointer" ondblclick="event.stopPropagation();openAppColorPicker(event,'sub')" title="Double-click to change color"></div>
-            <span style="flex:1;font-size:12px;cursor:pointer">Subscriptions</span>
-            <span id="sub-check" class="cal-cal-check">✓</span>
+    </div>
+    <div id="tab-calendar" style="display:none">
+      <div class="cal-layout">
+        <!-- Sidebar -->
+        <div class="cal-sidebar">
+          <div>
+            <div style="padding:0 0 10px;border-bottom:1px solid rgba(255,255,255,0.07);margin-bottom:10px;">
+              <div class="cal-sidebar-title">App Events</div>
+              <div class="cal-cal-item" onclick="toggleAppEvents('sub')">
+                <div class="cal-cal-dot" id="sub-dot" style="background:#f59e0b;cursor:pointer" ondblclick="event.stopPropagation();openAppColorPicker(event,'sub')" title="Double-click to change color"></div>
+                <span style="flex:1;font-size:12px;cursor:pointer">Subscriptions</span>
+                <span id="sub-check" class="cal-cal-check">✓</span>
+              </div>
+              <div class="cal-cal-item" onclick="toggleAppEvents('income')">
+                <div class="cal-cal-dot" id="income-dot" style="background:#22c55e;cursor:pointer" ondblclick="event.stopPropagation();openAppColorPicker(event,'income')" title="Double-click to change color"></div>
+                <span style="flex:1;font-size:12px;cursor:pointer">Income</span>
+                <span id="income-check" class="cal-cal-check">✓</span>
+              </div>
+            </div>
+            <div class="cal-sidebar-title">My Calendars</div>
+            <div id="cal-sidebar-list"></div>
           </div>
-          <div class="cal-cal-item" onclick="toggleAppEvents('income')">
-            <div class="cal-cal-dot" id="income-dot" style="background:#22c55e;cursor:pointer" ondblclick="event.stopPropagation();openAppColorPicker(event,'income')" title="Double-click to change color"></div>
-            <span style="flex:1;font-size:12px;cursor:pointer">Income</span>
-            <span id="income-check" class="cal-cal-check">✓</span>
+          <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.07)">
+            <div class="cal-sidebar-title" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+              Hidden <span style="font-size:10px"></span>
+            </div>
+            <div id="cal-hidden-list" style="display:none;margin-top:6px"></div>
+          </div>
+          <div style="padding-top:8px;border-top:1px solid rgba(255,255,255,0.07)">
+            <button class="btn" onclick="calSync()" style="font-size:11px;padding:7px 12px;width:100%">↻ Sync</button>
           </div>
         </div>
-        <div class="cal-sidebar-title">My Calendars</div>
-        <div id="cal-sidebar-list"></div>
-      </div>
-      <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.07)">
-        <div class="cal-sidebar-title" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
-          Hidden <span style="font-size:10px"></span>
+        <!-- Main -->
+        <div class="cal-main">
+          <!-- Toolbar -->
+          <div class="cal-toolbar" style="padding:6px 16px;gap:10px;">
+            <span id="cal-month-label" class="cal-month-title" onclick="openMonthPicker(event)" style="cursor:pointer;user-select:none;padding:4px 10px;border-radius:8px;transition:background .15s;font-size:16px;font-weight:600;" onmouseover="this.style.background='var(--s3)'" onmouseout="this.style.background=''" title="Click to jump to a month"></span>
+            <button class="cal-nav-btn" onclick="calGoToday()" style="font-size:11px;padding:5px 12px;">Today</button>
+            <input id="cal-search" placeholder="Search…" oninput="renderCalendar()" style="background:#1c1c1f;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:5px 12px;font-size:11px;color:#ebebeb;outline:none;width:180px;">
+            <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+              <button class="cal-nav-btn" onclick="toggleCalSidebar()" title="Toggle sidebar" style="font-size:13px;padding:5px 10px;">☰</button>
+              <button id="cal-fs-btn" class="cal-nav-btn" onclick="toggleCalFS()" title="Fullscreen" style="font-size:13px;padding:5px 10px;">⛶</button>
+              <div class="cal-view-btns">
+                <button class="cal-view-btn active" id="vbtn-month" onclick="setCalView('month')">Month</button>
+                <button class="cal-view-btn" id="vbtn-week" onclick="setCalView('week')">Week</button>
+              </div>
+            </div>
+          </div>
+          <!-- Grid -->
+          <div class="cal-grid-wrap" id="cal-grid-wrap">
+            <div id="cal-grid"></div>
+          </div>
         </div>
-        <div id="cal-hidden-list" style="display:none;margin-top:6px"></div>
-      </div>
-      <div style="padding-top:8px;border-top:1px solid rgba(255,255,255,0.07)">
-        <button class="btn" onclick="calSync()" style="font-size:11px;padding:7px 12px;width:100%">↻ Sync</button>
       </div>
     </div>
-    <!-- Main -->
-    <div class="cal-main">
-      <!-- Toolbar -->
-      <div class="cal-toolbar" style="padding:6px 16px;gap:10px;">
-        <span id="cal-month-label" class="cal-month-title" onclick="openMonthPicker(event)" style="cursor:pointer;user-select:none;padding:4px 10px;border-radius:8px;transition:background .15s;font-size:16px;font-weight:600;" onmouseover="this.style.background='var(--s3)'" onmouseout="this.style.background=''" title="Click to jump to a month"></span>
-        <button class="cal-nav-btn" onclick="calGoToday()" style="font-size:11px;padding:5px 12px;">Today</button>
-        <input id="cal-search" placeholder="Search…" oninput="renderCalendar()" style="background:#1c1c1f;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:5px 12px;font-size:11px;color:#ebebeb;outline:none;width:180px;">
-        <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
-          <button class="cal-nav-btn" onclick="toggleCalSidebar()" title="Toggle sidebar" style="font-size:13px;padding:5px 10px;">☰</button>
-          <button id="cal-fs-btn" class="cal-nav-btn" onclick="toggleCalFS()" title="Fullscreen" style="font-size:13px;padding:5px 10px;">⛶</button>
-          <div class="cal-view-btns">
-            <button class="cal-view-btn active" id="vbtn-month" onclick="setCalView('month')">Month</button>
-            <button class="cal-view-btn" id="vbtn-week" onclick="setCalView('week')">Week</button>
-          </div>
-        </div>
-      </div>
-      <!-- Grid -->
-      <div class="cal-grid-wrap" id="cal-grid-wrap">
-        <div id="cal-grid"></div>
-      </div>
-    </div>
-  </div>
-</div>
 
-<!-- CALENDAR EVENT MODAL -->
-<div class="mo" id="cal-mo" onclick="closeCalMo(event)">
-  <div class="md">
-    <div class="mtit" id="cal-mo-title">New Event</div>
-    <input type="hidden" id="cal-ev-id">
-    <div style="display:flex;flex-direction:column;gap:11px;">
-      <div class="fgr"><label class="fl">Calendar</label><select class="fs" id="cal-ev-calid"></select></div>
-      <div class="fgr"><label class="fl">Title</label><input class="fi" id="cal-ev-title" placeholder="Event title…"></div>
-      <div class="fg">
-        <div class="fgr"><label class="fl">Date</label>
-          <input class="fi" id="cal-ev-date" type="date" style="color-scheme:dark;">
+    <!-- CALENDAR EVENT MODAL -->
+    <div class="mo" id="cal-mo" onclick="closeCalMo(event)">
+      <div class="md">
+        <div class="mtit" id="cal-mo-title">New Event</div>
+        <input type="hidden" id="cal-ev-id">
+        <div style="display:flex;flex-direction:column;gap:11px;">
+          <div class="fgr"><label class="fl">Calendar</label><select class="fs" id="cal-ev-calid"></select></div>
+          <div class="fgr"><label class="fl">Title</label><input class="fi" id="cal-ev-title" placeholder="Event title…"></div>
+          <div class="fg">
+            <div class="fgr"><label class="fl">Date</label>
+              <input class="fi" id="cal-ev-date" type="date" style="color-scheme:dark;">
+            </div>
+            <div class="fgr"><label class="fl">All day?</label>
+              <select class="fs" id="cal-ev-allday" onchange="toggleCalTime()">
+                <option value="no">Specific time</option>
+                <option value="yes">All day</option>
+              </select>
+            </div>
+          </div>
+          <div id="cal-time-row" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;" class="fg">
+            <div class="fgr"><label class="fl">Start time</label>
+              <select class="fs" id="cal-ev-start" onchange="autoSetEndTime()"></select>
+            </div>
+            <div class="fgr"><label class="fl">End time</label>
+              <select class="fs" id="cal-ev-end"></select>
+            </div>
+          </div>
+          <div class="fg">
+            <div class="fgr"><label class="fl">Category & Color</label>
+              <select class="fs" id="cal-ev-category" onchange="onCalCatChange(this)">
+                <option value="">— None —</option>
+                <option value="Tentative"   data-color="11" data-hex="#6b7280">Tentative</option>
+                <option value="Confirmed"   data-color="5"  data-hex="#22c55e">Confirmed</option>
+                <option value="Personal"    data-color="7"  data-hex="#3b82f6">Personal</option>
+                <option value="Work"        data-color="8"  data-hex="#6c63ff">Work</option>
+                <option value="Finance"     data-color="4"  data-hex="#f59e0b">Finance</option>
+                <option value="Subscription"data-color="4"  data-hex="#f59e0b">Subscription</option>
+                <option value="Income"      data-color="5"  data-hex="#22c55e">Income</option>
+                <option value="Expense"     data-color="1"  data-hex="#ef4444">Expense</option>
+                <option value="Repeat"      data-color="9"  data-hex="#a855f7">Repeat</option>
+                <option value="Reminder"    data-color="3"  data-hex="#f97316">Reminder</option>
+                <option value="Holiday"     data-color="2"  data-hex="#ec4899">Holiday</option>
+                <option value="Other"       data-color="10" data-hex="#6b7280">Other</option>
+              </select>
+              <div id="cal-cat-bar" style="height:3px;border-radius:2px;margin-top:6px;background:rgba(255,255,255,0.07);transition:background .2s;"></div>
+            </div>
+            <div class="fgr"><label class="fl">Recurrence</label>
+              <select class="fs" id="cal-ev-recur">
+                <option value="">Does not repeat</option>
+                <option value="RRULE:FREQ=DAILY">Daily</option>
+                <option value="RRULE:FREQ=WEEKLY">Weekly</option>
+                <option value="RRULE:FREQ=MONTHLY">Monthly</option>
+                <option value="RRULE:FREQ=YEARLY">Yearly</option>
+              </select>
+            </div>
+          </div>
+          <input type="hidden" id="cal-ev-color" value="9">
+          <div class="fgr"><label class="fl">Location / Address</label>
+            <input class="fi" id="cal-ev-location" placeholder="Search a place…" oninput="calLocationSearch()" autocomplete="off">
+            <div id="cal-location-results" style="background:#1c1c1f;border:1px solid rgba(255,255,255,0.12);border-radius:8px;margin-top:4px;display:none;max-height:160px;overflow-y:auto;z-index:200;position:relative;"></div>
+          </div>
+          <div class="fgr"><label class="fl">Notes</label>
+            <textarea class="fi" id="cal-ev-notes" rows="3" placeholder="Add notes…" style="resize:vertical;min-height:70px;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;"></textarea>
+          </div>
         </div>
-        <div class="fgr"><label class="fl">All day?</label>
-          <select class="fs" id="cal-ev-allday" onchange="toggleCalTime()">
-            <option value="no">Specific time</option>
-            <option value="yes">All day</option>
-          </select>
+        <div class="mac">
+          <button class="btn btn-c" id="cal-delete-btn" style="display:none;margin-right:auto;" onclick="calDeleteCurrentEvent()">Delete</button>
+          <button class="btn" onclick="closeCalMo()">Cancel</button>
+          <button class="btn btn-a" onclick="saveCalEvent()">Save</button>
         </div>
-      </div>
-      <div id="cal-time-row" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;" class="fg">
-        <div class="fgr"><label class="fl">Start time</label>
-          <select class="fs" id="cal-ev-start" onchange="autoSetEndTime()"></select>
-        </div>
-        <div class="fgr"><label class="fl">End time</label>
-          <select class="fs" id="cal-ev-end"></select>
-        </div>
-      </div>
-      <div class="fg">
-        <div class="fgr"><label class="fl">Category & Color</label>
-          <select class="fs" id="cal-ev-category" onchange="onCalCatChange(this)">
-            <option value="">— None —</option>
-            <option value="Tentative"   data-color="11" data-hex="#6b7280">Tentative</option>
-            <option value="Confirmed"   data-color="5"  data-hex="#22c55e">Confirmed</option>
-            <option value="Personal"    data-color="7"  data-hex="#3b82f6">Personal</option>
-            <option value="Work"        data-color="8"  data-hex="#6c63ff">Work</option>
-            <option value="Finance"     data-color="4"  data-hex="#f59e0b">Finance</option>
-            <option value="Subscription"data-color="4"  data-hex="#f59e0b">Subscription</option>
-            <option value="Income"      data-color="5"  data-hex="#22c55e">Income</option>
-            <option value="Expense"     data-color="1"  data-hex="#ef4444">Expense</option>
-            <option value="Repeat"      data-color="9"  data-hex="#a855f7">Repeat</option>
-            <option value="Reminder"    data-color="3"  data-hex="#f97316">Reminder</option>
-            <option value="Holiday"     data-color="2"  data-hex="#ec4899">Holiday</option>
-            <option value="Other"       data-color="10" data-hex="#6b7280">Other</option>
-          </select>
-          <div id="cal-cat-bar" style="height:3px;border-radius:2px;margin-top:6px;background:rgba(255,255,255,0.07);transition:background .2s;"></div>
-        </div>
-        <div class="fgr"><label class="fl">Recurrence</label>
-          <select class="fs" id="cal-ev-recur">
-            <option value="">Does not repeat</option>
-            <option value="RRULE:FREQ=DAILY">Daily</option>
-            <option value="RRULE:FREQ=WEEKLY">Weekly</option>
-            <option value="RRULE:FREQ=MONTHLY">Monthly</option>
-            <option value="RRULE:FREQ=YEARLY">Yearly</option>
-          </select>
-        </div>
-      </div>
-      <input type="hidden" id="cal-ev-color" value="9">
-      <div class="fgr"><label class="fl">Location / Address</label>
-        <input class="fi" id="cal-ev-location" placeholder="Search a place…" oninput="calLocationSearch()" autocomplete="off">
-        <div id="cal-location-results" style="background:#1c1c1f;border:1px solid rgba(255,255,255,0.12);border-radius:8px;margin-top:4px;display:none;max-height:160px;overflow-y:auto;z-index:200;position:relative;"></div>
-      </div>
-      <div class="fgr"><label class="fl">Notes</label>
-        <textarea class="fi" id="cal-ev-notes" rows="3" placeholder="Add notes…" style="resize:vertical;min-height:70px;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;"></textarea>
       </div>
     </div>
-    <div class="mac">
-      <button class="btn" id="cal-delete-btn" style="display:none;color:#ef4444;border-color:rgba(239,68,68,.4);margin-right:auto;" onclick="calDeleteCurrentEvent()"> Delete</button>
-      <button class="btn" onclick="closeCalMo()">Cancel</button>
-      <button class="btn btn-a" onclick="saveCalEvent()">Save</button>
-    </div>
-  </div>
-</div>
-```
 
   </div>
 </div>
@@ -933,15 +927,14 @@ tbody td{padding:12px 10px}
       <div class="fgr"><label class="fl">Bought Cost</label><input class="fi" id="hcw-bcost" type="number" min="0" step="0.01"></div>
     </div>
     <div class="fgr" style="margin-top:11px"><label class="fl">Link</label><input class="fi" id="hcw-link" placeholder="https://..."></div>
-    <div style="display:flex;gap:8px;margin-top:18px">
-      <button class="btn btn-a" style="flex:1" onclick="saveHomeWishEdit()">Save</button>
+    <div class="mac">
       <button class="btn" onclick="document.getElementById('hc-wish-mo').classList.remove('open')">Cancel</button>
+      <button class="btn btn-a" onclick="saveHomeWishEdit()">Save</button>
     </div>
   </div>
 </div>
 
 <!-- Expense Edit -->
-
 <div class="mo" id="hc-exp-mo" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="md">
     <div class="mtit">Edit Expense</div>
@@ -956,15 +949,14 @@ tbody td{padding:12px 10px}
       <div class="fgr"><label class="fl">Card</label><select class="fs" id="hce-card"></select></div>
       <div class="fgr"><label class="fl">Date</label><input class="fi" id="hce-date" type="date" style="color-scheme:dark"></div>
     </div>
-    <div style="display:flex;gap:8px;margin-top:18px">
-      <button class="btn btn-a" style="flex:1" onclick="saveHomeExpEdit()">Save</button>
+    <div class="mac">
       <button class="btn" onclick="document.getElementById('hc-exp-mo').classList.remove('open')">Cancel</button>
+      <button class="btn btn-a" onclick="saveHomeExpEdit()">Save</button>
     </div>
   </div>
 </div>
 
 <!-- Subscription Edit -->
-
 <div class="mo" id="hc-sub-mo" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="md">
     <div class="mtit">Edit Subscription</div>
@@ -978,15 +970,14 @@ tbody td{padding:12px 10px}
       <div class="fgr"><label class="fl">Card</label><select class="fs" id="hcs-card"></select></div>
       <div class="fgr"><label class="fl">Next Renewal</label><input class="fi" id="hcs-renewal" type="date" style="color-scheme:dark"></div>
     </div>
-    <div style="display:flex;gap:8px;margin-top:18px">
-      <button class="btn btn-a" style="flex:1" onclick="saveHomeSubEdit()">Save</button>
+    <div class="mac">
       <button class="btn" onclick="document.getElementById('hc-sub-mo').classList.remove('open')">Cancel</button>
+      <button class="btn btn-a" onclick="saveHomeSubEdit()">Save</button>
     </div>
   </div>
 </div>
 
 <!-- Income Edit -->
-
 <div class="mo" id="hc-income-mo" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="md">
     <div class="mtit">Edit Income</div>
@@ -998,9 +989,9 @@ tbody td{padding:12px 10px}
       <div class="fgr"><label class="fl">Date</label><input class="fi" id="hci-date" type="date" style="color-scheme:dark"></div>
     </div>
     <div class="fgr" style="margin-top:11px"><label class="fl">Bank</label><select class="fs" id="hci-bank"></select></div>
-    <div style="display:flex;gap:8px;margin-top:18px">
-      <button class="btn btn-a" style="flex:1" onclick="saveHomeIncomeEdit()">Save</button>
+    <div class="mac">
       <button class="btn" onclick="document.getElementById('hc-income-mo').classList.remove('open')">Cancel</button>
+      <button class="btn btn-a" onclick="saveHomeIncomeEdit()">Save</button>
     </div>
   </div>
 </div>
@@ -1043,7 +1034,7 @@ tbody td{padding:12px 10px}
     </div>
     <div class="mac">
       <button class="btn" onclick="closeIncomeMo()">Cancel</button>
-      <button class="btn" style="border-color:rgba(34,197,94,.4);color:#22c55e;" onclick="saveIncomeMo()">+ Log Income</button>
+      <button class="btn btn-a" onclick="saveIncomeMo()">+ Log Income</button>
     </div>
   </div>
 </div>
@@ -4780,13 +4771,10 @@ if(loadCfg()){bootApp();}
 else if(window._earlyToken){bootApp();}
 else{showAuthScreen();}
 </script>
-
   <!-- Pull to refresh indicator -->
-
   <div id="ptr-indicator">↓ Release to refresh</div>
 
   <!-- Bottom nav -->
-
   <nav id="mobile-nav">
     <button class="mob-tab on" onclick="showTab('home',this)" data-tab="home">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
