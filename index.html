@@ -411,6 +411,34 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .home-stat-val.muted{color:rgba(255,255,255,0.5)}padding:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:12px;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;transition:background .15s;text-align:center;width:100%;box-sizing:border-box}
 .home-show-more:active{background:rgba(255,255,255,0.08)}
 #ptr-indicator{position:fixed;top:48px;left:50%;transform:translateX(-50%);background:var(--s1);border:1px solid var(--border2);border-radius:20px;padding:6px 16px;font-size:12px;color:var(--text3);z-index:500;display:none;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+
+/* ── UNIX-STYLE HOME PANELS ── */
+.hp-hero{padding:24px 20px 16px;}
+.hp-hero-label{font-size:10px;font-weight:500;color:rgba(255,255,255,0.28);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;}
+.hp-hero-amount{font-size:42px;font-weight:700;font-family:'DM Mono','SF Mono',monospace;letter-spacing:-.04em;line-height:1;color:#f0f0f8;}
+.hp-hero-sub{font-size:12px;color:rgba(255,255,255,0.3);margin-top:6px;letter-spacing:.01em;}
+.hp-hero-stats{display:flex;gap:24px;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06);}
+.hp-hero-stat{display:flex;flex-direction:column;gap:3px;}
+.hp-hero-stat-label{font-size:9px;font-weight:500;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:.1em;}
+.hp-hero-stat-val{font-size:14px;font-weight:600;font-family:'DM Mono','SF Mono',monospace;letter-spacing:-.02em;}
+.hp-add-btn{display:flex;align-items:center;gap:6px;margin:0 20px 16px;padding:14px 18px;background:rgba(108,99,255,0.12);border:1px solid rgba(108,99,255,0.2);border-radius:14px;cursor:pointer;color:#9d97ff;font-size:13px;font-weight:500;font-family:'Inter',-apple-system,sans-serif;letter-spacing:-.01em;transition:background .2s,border-color .2s;width:calc(100% - 40px);box-sizing:border-box;justify-content:center;}
+.hp-add-btn:active{background:rgba(108,99,255,0.2);border-color:rgba(108,99,255,0.35);}
+.hp-add-btn svg{opacity:.7;}
+.hp-divider{height:1px;background:rgba(255,255,255,0.05);margin:0 20px 4px;}
+.hp-section-label{font-size:9px;font-weight:600;color:rgba(255,255,255,0.2);letter-spacing:.12em;text-transform:uppercase;padding:12px 20px 6px;}
+/* Row-style cards */
+.hrow{display:flex;align-items:center;padding:14px 20px;gap:14px;cursor:pointer;transition:background .15s;position:relative;}
+.hrow:active{background:rgba(255,255,255,0.03);}
+.hrow+.hrow{border-top:1px solid rgba(255,255,255,0.04);}
+.hrow-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;}
+.hrow-body{flex:1;min-width:0;}
+.hrow-name{font-size:14px;font-weight:500;color:#f0f0f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em;}
+.hrow-sub{font-size:11px;color:rgba(255,255,255,0.3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hrow-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;}
+.hrow-amount{font-size:15px;font-weight:600;font-family:'DM Mono','SF Mono',monospace;letter-spacing:-.02em;}
+.hrow-meta{font-size:10px;color:rgba(255,255,255,0.28);letter-spacing:.01em;}
+.hrow-stripe{position:absolute;left:0;top:20%;bottom:20%;width:2px;border-radius:2px;}
+
 /* ── SWIPE TO ACTION ── */
 .swipe-wrap{position:relative;border-radius:16px;}
 .swipe-action{position:absolute;top:0;right:0;bottom:0;display:flex;align-items:center;justify-content:flex-end;width:0;border-radius:16px;opacity:0;overflow:hidden;}
@@ -463,46 +491,32 @@ td.editing{background:rgba(108,99,255,0.05)!important}
         <div id="home-slider" style="display:flex;height:100%;transition:transform .3s cubic-bezier(.4,0,.2,1);will-change:transform;">
           <!-- PANEL 0: Wishlist -->
           <div class="home-panel" id="home-panel-0">
-            <div class="home-panel-hdr">
-              <span>Wishlist</span>
-              <button class="btn btn-a" style="font-size:11px;padding:4px 10px;" onclick="openModal('wish')">+ Add Wishlist</button>
-            </div>
-            <div class="home-stats-bar" id="hstats-wish"></div>
-            <div class="home-panel-body" id="hp-wish"></div>
+            <div class="home-panel-hdr" style="display:none"></div>
+            <div class="home-stats-bar" id="hstats-wish" style="display:none"></div>
+            <div class="home-panel-body" id="hp-wish" style="padding:0 0 140px;gap:0;"></div>
             <button class="home-show-more" id="hpm-wish" onclick="homeShowMore('wish')" style="display:none">Show 30 more</button>
           </div>
           <!-- PANEL 1: Expenses -->
           <div class="home-panel" id="home-panel-1">
-            <div class="home-panel-hdr">
-              <span>Expenses</span>
-              <button class="btn btn-a" style="font-size:11px;padding:4px 10px;" onclick="openFoodMo()">+ Add Expense</button>
-            </div>
-            <div class="home-stats-bar" id="hstats-exp"></div>
-            <div class="home-panel-body" id="hp-exp">
-              <div class="home-section-hdr" id="hp-exp-ord-hdr">ORDERED <span id="hp-exp-ord-count" class="pc">0</span></div>
-              <div id="hp-exp-ord" style="display:flex;flex-direction:column;gap:10px;margin-bottom:4px;"></div>
-              <div class="home-section-hdr" style="margin-top:12px">PROCURED <span id="hp-exp-pro-count" class="pc">0</span></div>
-              <div id="hp-exp-pro" style="display:flex;flex-direction:column;gap:10px;"></div>
+            <div class="home-panel-hdr" style="display:none"></div>
+            <div class="home-stats-bar" id="hstats-exp" style="display:none"></div>
+            <div class="home-panel-body" id="hp-exp" style="padding:0 0 140px;gap:0;">
+              <div id="hp-exp-ord" style="display:flex;flex-direction:column;"></div>
+              <div id="hp-exp-pro" style="display:flex;flex-direction:column;"></div>
               <button class="home-show-more" id="hpm-exp" onclick="homeShowMore('exp')" style="display:none">Show 30 more</button>
             </div>
           </div>
           <!-- PANEL 2: Subscriptions -->
           <div class="home-panel" id="home-panel-2">
-            <div class="home-panel-hdr">
-              <span>Subscriptions</span>
-              <button class="btn btn-a" style="font-size:11px;padding:4px 10px;" onclick="openModal('sub')">+ Add Sub</button>
-            </div>
-            <div class="home-stats-bar" id="hstats-sub"></div>
-            <div class="home-panel-body" id="hp-sub"></div>
+            <div class="home-panel-hdr" style="display:none"></div>
+            <div class="home-stats-bar" id="hstats-sub" style="display:none"></div>
+            <div class="home-panel-body" id="hp-sub" style="padding:0 0 140px;gap:0;"></div>
           </div>
           <!-- PANEL 3: Income -->
           <div class="home-panel" id="home-panel-3">
-            <div class="home-panel-hdr">
-              <span>Income</span>
-              <button class="btn btn-a" style="font-size:11px;padding:4px 10px;" onclick="openIncomeMo()">+ Add Income</button>
-            </div>
-            <div class="home-stats-bar" id="hstats-income"></div>
-            <div class="home-panel-body" id="hp-income"></div>
+            <div class="home-panel-hdr" style="display:none"></div>
+            <div class="home-stats-bar" id="hstats-income" style="display:none"></div>
+            <div class="home-panel-body" id="hp-income" style="padding:0 0 140px;gap:0;"></div>
           </div>
         </div>
       </div>
@@ -3741,51 +3755,52 @@ function renderHome(){
 function renderHomeWish(){
   const el=document.getElementById('hp-wish');
   const more=document.getElementById('hpm-wish');
-  const stats=document.getElementById('hstats-wish');
   if(!el)return;
   const items=D.wishlist.filter(w=>w.Status!=='No Longer Needed'&&w.Status!=='Bought');
   const lim=_homeLimits.wish;
+  const totalOrig=items.reduce((s,w)=>s+(parseFloat(w.OCost||0)),0);
+  const totalSaved=items.reduce((s,w)=>{const o=parseFloat(w.OCost||0),b=parseFloat(w.BCost||0);return s+(o&&b&&o>b?o-b:0);},0);
+  const fmt=v=>v?'$'+v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}):'—';
 
-  // Stats
-  if(stats){
-    const totalOrig=items.reduce((s,w)=>s+(parseFloat(w.OCost||0)),0);
-    const totalBought=items.reduce((s,w)=>s+(parseFloat(w.BCost||0)),0);
-    const totalSaved=items.reduce((s,w)=>{
-      const o=parseFloat(w.OCost||0),b=parseFloat(w.BCost||0);
-      return s+(o&&b&&o>b?o-b:0);
-    },0);
-    const fmt=v=>v?'$'+v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}):'—';
-    stats.innerHTML=`
-      <div class="home-stat"><div class="home-stat-label">Original</div><div class="home-stat-val red">${fmt(totalOrig)}</div></div>
-      <div class="home-stat"><div class="home-stat-label">Buy Cost</div><div class="home-stat-val amber">${fmt(totalBought)||'—'}</div></div>
-      <div class="home-stat"><div class="home-stat-label">Savings</div><div class="home-stat-val green">${fmt(totalSaved)||'—'}</div></div>`;
-  }
-  el.innerHTML=items.slice(0,lim).map(w=>{
+  const hero=`<div class="hp-hero">
+    <div class="hp-hero-label">Wishlist · ${items.length} items</div>
+    <div class="hp-hero-amount">${fmt(totalOrig)}</div>
+    <div class="hp-hero-sub">total original value</div>
+    ${totalSaved?`<div class="hp-hero-stats">
+      <div class="hp-hero-stat"><div class="hp-hero-stat-label">Potential Savings</div><div class="hp-hero-stat-val" style="color:#22c55e">${fmt(totalSaved)}</div></div>
+    </div>`:''}</div>
+  <button class="hp-add-btn" onclick="openModal('wish')">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Add to Wishlist
+  </button>
+  <div class="hp-divider"></div>`;
+
+  const rows=items.slice(0,lim).map(w=>{
     const orig=parseFloat(w.OCost||0);
     const bought=parseFloat(w.BCost||0);
-    const sav=orig&&bought&&orig>bought?orig-bought:0;
     const price=orig||bought;
-    const stripe=catStripe(w.Category);
+    const sav=orig&&bought&&orig>bought?orig-bought:0;
+    const color=getCatColor(w.Category)||'rgba(255,255,255,0.15)';
     return`<div class="swipe-wrap" data-swipe-action="deleteWish" data-row="${w._row}">
       <div class="swipe-action delete"></div>
-      <div class="swipe-card home-card ${stripe.cls}" onclick="openHomeWishEdit(${w._row})" style="cursor:pointer;${stripe.style}">
-      <div class="home-card-top">
-        <div class="home-card-info">
-          <div class="home-card-name">${esc(w.Name||'—')}</div>
-          ${w.Description?`<div class="home-card-desc">${esc(w.Description)}</div>`:''}
+      <div class="swipe-card hrow" onclick="openHomeWishEdit(${w._row})">
+        <div class="hrow-stripe" style="background:${color}"></div>
+        <div class="hrow-icon" style="background:${color}22;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
         </div>
-        ${price?`<div class="home-card-amount" style="color:#ef4444">$${price.toLocaleString()}</div>`:''}
-      </div>
-      <div class="home-card-bottom">
-        <div class="home-card-meta">
-          ${w.Category?`<span class="home-card-pill tag ${CC[w.Category]||'tdf'}">${esc(w.Category)}</span>`:''}
-          ${sav?`<span class="home-card-savings">Save $${sav.toLocaleString()}</span>`:''}
-          ${w.Link?`<a href="${esc(w.Link)}" target="_blank" style="font-size:10px;color:#6c63ff;text-decoration:none;">Link</a>`:''}
+        <div class="hrow-body">
+          <div class="hrow-name">${esc(w.Name||'—')}</div>
+          <div class="hrow-sub">${w.Category||''}${w.Description?' · '+w.Description:''}</div>
         </div>
-        <div class="home-card-action"><button class="btn btn-a" style="font-size:11px;padding:5px 10px;" onclick="markBought(${w._row})">→ Expense</button></div>
+        <div class="hrow-right">
+          ${price?`<div class="hrow-amount" style="color:#ef4444">$${price.toLocaleString()}</div>`:'<div class="hrow-amount" style="color:rgba(255,255,255,0.2)">—</div>'}
+          ${sav?`<div class="hrow-meta" style="color:#22c55e">save $${sav.toLocaleString()}</div>`:''}
+        </div>
       </div>
-    </div></div>`;
-  }).join('')||'<div style="color:rgba(255,255,255,0.3);font-size:13px;text-align:center;padding:40px 20px">Nothing on your wishlist</div>';
+    </div>`;
+  }).join('')||'<div style="color:rgba(255,255,255,0.2);font-size:13px;text-align:center;padding:48px 20px;letter-spacing:.01em;">Nothing on your wishlist</div>';
+
+  el.innerHTML=hero+rows;
   if(more)more.style.display=items.length>lim?'block':'none';
   initSwipeCards(document.getElementById('hp-wish'));
 }
@@ -3794,165 +3809,172 @@ function renderHomeExp(){
   const ordered=D.expenses.filter(e=>e.Status==='Ordered').slice(0,30);
   const procured=D.expenses.filter(e=>e.Status!=='Ordered').sort((a,b)=>toSortableDate(b.Date||'').localeCompare(toSortableDate(a.Date||'')));
   const lim=_homeLimits.exp;
-  const ordHdr=document.getElementById('hp-exp-ord-hdr');
   const ordEl=document.getElementById('hp-exp-ord');
   const proEl=document.getElementById('hp-exp-pro');
   const more=document.getElementById('hpm-exp');
-  const ordCount=document.getElementById('hp-exp-ord-count');
-  const proCount=document.getElementById('hp-exp-pro-count');
-  const stats=document.getElementById('hstats-exp');
+  const el=document.getElementById('hp-exp');
+  if(!el)return;
 
-  // Stats
-  if(stats){
-    const now=new Date();
-    const mo=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-    const yr=`${now.getFullYear()}`;
-    const fmt=v=>v?'$'+v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}):'$0';
-    const allPro=D.expenses.filter(e=>e.Status!=='Ordered');
-    const moExp=allPro.filter(e=>toSortableDate(e.Date||'').startsWith(mo));
-    const yrExp=allPro.filter(e=>toSortableDate(e.Date||'').startsWith(yr));
-    const spentMo=moExp.reduce((s,e)=>s+(parseFloat(e.Cost)||0),0);
-    const spentYr=yrExp.reduce((s,e)=>s+(parseFloat(e.Cost)||0),0);
-    const savedMo=moExp.reduce((s,e)=>s+(parseFloat(e.Savings)||0),0);
-    const savedYr=yrExp.reduce((s,e)=>s+(parseFloat(e.Savings)||0),0);
-    stats.innerHTML=`
-      <div class="home-stat"><div class="home-stat-label">Spent Month</div><div class="home-stat-val red">${fmt(spentMo)}</div></div>
-      <div class="home-stat"><div class="home-stat-label">Spent Year</div><div class="home-stat-val red">${fmt(spentYr)}</div></div>
-      <div class="home-stat"><div class="home-stat-label">Saved Month</div><div class="home-stat-val green">${fmt(savedMo)}</div></div>
-      <div class="home-stat"><div class="home-stat-label">Saved Year</div><div class="home-stat-val green">${fmt(savedYr)}</div></div>`;
-  }
-  if(ordHdr)ordHdr.style.display=ordered.length?'block':'none';
-  if(ordCount)ordCount.textContent=ordered.length;
-  if(proCount)proCount.textContent=procured.length;
-  const expCard=(e,showProcure)=>{
+  const now=new Date();
+  const mo=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const yr=`${now.getFullYear()}`;
+  const allPro=D.expenses.filter(e=>e.Status!=='Ordered');
+  const spentMo=allPro.filter(e=>toSortableDate(e.Date||'').startsWith(mo)).reduce((s,e)=>s+(parseFloat(e.Cost)||0),0);
+  const spentYr=allPro.filter(e=>toSortableDate(e.Date||'').startsWith(yr)).reduce((s,e)=>s+(parseFloat(e.Cost)||0),0);
+  const savedMo=allPro.filter(e=>toSortableDate(e.Date||'').startsWith(mo)).reduce((s,e)=>s+(parseFloat(e.Savings)||0),0);
+  const fmt=v=>'$'+v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+
+  const hero=`<div class="hp-hero">
+    <div class="hp-hero-label">Expenses · ${now.toLocaleString('default',{month:'long'})}</div>
+    <div class="hp-hero-amount">${fmt(spentMo)}</div>
+    <div class="hp-hero-sub">spent this month</div>
+    <div class="hp-hero-stats">
+      <div class="hp-hero-stat"><div class="hp-hero-stat-label">This Year</div><div class="hp-hero-stat-val" style="color:#ef4444">${fmt(spentYr)}</div></div>
+      ${savedMo?`<div class="hp-hero-stat"><div class="hp-hero-stat-label">Saved</div><div class="hp-hero-stat-val" style="color:#22c55e">${fmt(savedMo)}</div></div>`:''}
+      ${ordered.length?`<div class="hp-hero-stat"><div class="hp-hero-stat-label">On Order</div><div class="hp-hero-stat-val" style="color:#f59e0b">${ordered.length}</div></div>`:''}
+    </div>
+  </div>
+  <button class="hp-add-btn" onclick="openFoodMo()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Add Expense
+  </button>
+  <div class="hp-divider"></div>`;
+
+  const expRow=(e,isOrdered)=>{
     const cost=parseFloat(e.Cost||0);
-    const orig=parseFloat(e.Original||e.OCost||0);
-    const sav=parseFloat(e.Savings||0);
-    const stripe=catStripe(e.Category);
-    return`<div class="home-card ${stripe.cls}" onclick="openHomeExpEdit(${e._row})" style="cursor:pointer;${stripe.style}">
-      <div class="home-card-top">
-        <div class="home-card-info">
-          <div class="home-card-name">${esc(e.Name||'—')}</div>
-          ${e.Description&&e.Description!==e.Name?`<div class="home-card-desc">${esc(e.Description)}</div>`:''}
-        </div>
-        <div class="home-card-amount" style="color:#ef4444">-$${cost.toLocaleString()}</div>
+    const color=getCatColor(e.Category)||'rgba(255,255,255,0.15)';
+    return`<div class="hrow" onclick="openHomeExpEdit(${e._row})">
+      <div class="hrow-stripe" style="background:${color}"></div>
+      <div class="hrow-icon" style="background:${color}22;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2">${isOrdered?'<path d="M5 12h14M12 5l7 7-7 7"/>':'<path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/>'}</svg>
       </div>
-      <div class="home-card-bottom">
-        <div class="home-card-meta">
-          ${e.Category?`<span class="home-card-pill tag ${CC[e.Category]||'tdf'}">${esc(e.Category)}</span>`:''}
-          ${orig&&orig!==cost?`<span style="font-size:10px;color:rgba(255,255,255,0.35);text-decoration:line-through;">$${orig.toLocaleString()}</span>`:''}
-          ${sav>0?`<span class="home-card-savings">-$${sav.toLocaleString()}</span>`:''}
-          ${e.Card?`<span style="font-size:10px;color:rgba(255,255,255,0.35)">${esc(e.Card)}</span>`:''}
-          ${e.Date?`<span style="font-size:10px;color:rgba(255,255,255,0.3)">${relDate(e.Date)}</span>`:''}
-        </div>
-        ${showProcure?`<div class="home-card-action"><button class="btn" style="font-size:11px;padding:5px 10px;" onclick="markPro(${e._row})">✓ Done</button></div>`:''}
+      <div class="hrow-body">
+        <div class="hrow-name">${esc(e.Name||'—')}</div>
+        <div class="hrow-sub">${e.Category||''}${e.Date?' · '+relDate(e.Date):''}</div>
+      </div>
+      <div class="hrow-right">
+        <div class="hrow-amount" style="color:${isOrdered?'#f59e0b':'#ef4444'}">-$${cost.toLocaleString()}</div>
+        ${isOrdered?`<div class="hrow-meta" style="color:#f59e0b">ordered</div>`:`<div class="hrow-meta">${e.Card||''}</div>`}
       </div>
     </div>`;
   };
-  if(ordEl)ordEl.innerHTML=ordered.map(e=>expCard(e,true)).join('')||'';
-  if(proEl)proEl.innerHTML=procured.slice(0,lim).map(e=>expCard(e,false)).join('')||'<div style="color:rgba(255,255,255,0.3);font-size:13px;text-align:center;padding:40px 20px">No expenses yet</div>';
+
+  const ordHtml=ordered.length?`<div class="hp-section-label">On Order · ${ordered.length}</div>`+ordered.map(e=>expRow(e,true)).join(''):'';
+  const proHtml=procured.length?`<div class="hp-section-label">Recent</div>`+procured.slice(0,lim).map(e=>expRow(e,false)).join(''):'';
+
+  el.innerHTML=hero+(ordHtml||'')+(proHtml||(!ordered.length?'<div style="color:rgba(255,255,255,0.2);font-size:13px;text-align:center;padding:48px 20px;">No expenses yet</div>':''));
   if(more)more.style.display=procured.length>lim?'block':'none';
 }
 
 function renderHomeSub(){
   const el=document.getElementById('hp-sub');
-  const stats=document.getElementById('hstats-sub');
   if(!el)return;
   const subs=D.subscriptions.filter(s=>s.Status!=='Cancelled').sort((a,b)=>toSortableDate(a.NextRenewal||'9999').localeCompare(toSortableDate(b.NextRenewal||'9999')));
 
-  // Stats
-  if(stats){
-    const now=new Date();
-    const mo=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-    const yr=`${now.getFullYear()}`;
-    const fmt=v=>v?'$'+v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}):'$0';
-    // Use master ledger for actual paid subs, fallback to MonthlyCost/AnnualCost
-    const subMaster=D.master.filter(m=>(m.Source==='Sub'||m.Type==='Subscription'));
-    const spentMo=subMaster.filter(m=>toSortableDate(m.Date||'').startsWith(mo)).reduce((s,m)=>s+(parseFloat(m.Cost)||0),0);
-    const spentYr=subMaster.filter(m=>toSortableDate(m.Date||'').startsWith(yr)).reduce((s,m)=>s+(parseFloat(m.Cost)||0),0);
-    // Fallback: use MonthlyCost sum if no master records
-    const moFallback=subs.reduce((s,sub)=>s+(parseFloat(sub.MonthlyCost||sub.Cost||0)),0);
-    const yrFallback=subs.reduce((s,sub)=>s+(parseFloat(sub.AnnualCost||0)),0);
-    stats.innerHTML=`
-      <div class="home-stat"><div class="home-stat-label">Spent Month</div><div class="home-stat-val amber">${fmt(spentMo||moFallback)}</div></div>
-      <div class="home-stat"><div class="home-stat-label">Spent Year</div><div class="home-stat-val amber">${fmt(spentYr||yrFallback)}</div></div>`;
-  }
-  el.innerHTML=subs.map(s=>{
+  const now=new Date();
+  const mo=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const yr=`${now.getFullYear()}`;
+  const subMaster=D.master.filter(m=>(m.Source==='Sub'||m.Type==='Subscription'));
+  const spentMo=subMaster.filter(m=>toSortableDate(m.Date||'').startsWith(mo)).reduce((s,m)=>s+(parseFloat(m.Cost)||0),0);
+  const spentYr=subMaster.filter(m=>toSortableDate(m.Date||'').startsWith(yr)).reduce((s,m)=>s+(parseFloat(m.Cost)||0),0);
+  const moFallback=subs.reduce((s,sub)=>s+(parseFloat(sub.MonthlyCost||sub.Cost||0)),0);
+  const yrFallback=subs.reduce((s,sub)=>s+(parseFloat(sub.AnnualCost||0)),0);
+  const totalMo=spentMo||moFallback;
+  const fmt=v=>'$'+v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+  const dueToday=subs.filter(s=>dueCls(s.NextRenewal)==='due-today').length;
+
+  const hero=`<div class="hp-hero">
+    <div class="hp-hero-label">Subscriptions · ${subs.length} active</div>
+    <div class="hp-hero-amount">${fmt(totalMo)}</div>
+    <div class="hp-hero-sub">per month</div>
+    <div class="hp-hero-stats">
+      <div class="hp-hero-stat"><div class="hp-hero-stat-label">This Year</div><div class="hp-hero-stat-val" style="color:#f59e0b">${fmt(spentYr||yrFallback)}</div></div>
+      ${dueToday?`<div class="hp-hero-stat"><div class="hp-hero-stat-label">Due Today</div><div class="hp-hero-stat-val" style="color:#ef4444">${dueToday}</div></div>`:''}
+    </div>
+  </div>
+  <button class="hp-add-btn" onclick="openModal('sub')">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Add Subscription
+  </button>
+  <div class="hp-divider"></div>`;
+
+  const rows=subs.map(s=>{
     const due=dueCls(s.NextRenewal);
-    const dueColor=due==='due-today'?'#ef4444':due==='due-soon'?'#f59e0b':'rgba(255,255,255,0.35)';
-    const dueLabel=due==='due-today'?'Due TODAY':due==='due-soon'?`Due ${relDate(s.NextRenewal)}`:relDate(s.NextRenewal)||s.NextRenewal||'—';
+    const isDueToday=due==='due-today';
     const cost=parseFloat(s.Cost||0);
-    const monthly=parseFloat(s.MonthlyCost||s.Cost||0);
-    const annual=parseFloat(s.AnnualCost||0);
-    const payments=parseInt(s.Payments||0);
-    const stripe=catStripe(s.Category);
-    const dueCls2=due==='due-today'?'due-today-card':'';
+    const color=getCatColor(s.Category)||'rgba(255,255,255,0.15)';
+    const accentColor=isDueToday?'#ef4444':'#f59e0b';
     return`<div class="swipe-wrap" data-swipe-action="cancelSub" data-row="${s._row}">
       <div class="swipe-action cancel-sub"></div>
-      <div class="swipe-card home-card ${stripe.cls} ${dueCls2}" onclick="openHomeSubEdit(${s._row})" style="cursor:pointer;${stripe.style}${due==='due-soon'?'border-color:rgba(245,158,11,0.25);':''}">
-      <div class="home-card-top">
-        <div class="home-card-info">
-          <div class="home-card-name">${esc(s.Name||'—')}</div>
-          <div class="home-card-desc" style="color:${dueColor}">${dueLabel} · ${s.Billing||'Monthly'}</div>
+      <div class="swipe-card hrow ${isDueToday?'due-today-card':''}" onclick="openHomeSubEdit(${s._row})">
+        <div class="hrow-stripe" style="background:${isDueToday?'#ef4444':color}"></div>
+        <div class="hrow-icon" style="background:${isDueToday?'rgba(239,68,68,0.15)':color+'22'};">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${isDueToday?'#ef4444':color}" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
         </div>
-        <div class="home-card-amount" style="color:#f59e0b">$${cost.toLocaleString()}</div>
-      </div>
-      <div class="home-card-bottom">
-        <div class="home-card-meta">
-          ${s.Category?`<span class="home-card-pill tag ${CC[s.Category]||'tdf'}">${esc(s.Category)}</span>`:''}
-          ${s.Card?`<span style="font-size:10px;color:rgba(255,255,255,0.35)">${esc(s.Card)}</span>`:''}
-          ${annual?`<span style="font-size:10px;color:rgba(255,255,255,0.35)">$${annual.toLocaleString()}/yr</span>`:''}
-          ${payments?`<span style="font-size:10px;color:rgba(255,255,255,0.3)">${payments} payments</span>`:''}
+        <div class="hrow-body">
+          <div class="hrow-name">${esc(s.Name||'—')}</div>
+          <div class="hrow-sub">${s.Billing||'Monthly'}${s.Card?' · '+s.Card:''}</div>
         </div>
-        <div class="home-card-action"><button class="btn btn-a" style="font-size:11px;padding:5px 10px;" onclick="paySubNow(${s._row})">Pay</button></div>
+        <div class="hrow-right">
+          <div class="hrow-amount" style="color:${accentColor}">$${cost.toLocaleString()}</div>
+          <div class="hrow-meta" style="color:${isDueToday?'#ef4444':'rgba(255,255,255,0.28)'}">${isDueToday?'DUE TODAY':relDate(s.NextRenewal)||s.NextRenewal||''}</div>
+        </div>
       </div>
-    </div></div>`;
-  }).join('')||'<div style="color:rgba(255,255,255,0.3);font-size:13px;text-align:center;padding:40px 20px">No active subscriptions</div>';
+    </div>`;
+  }).join('')||'<div style="color:rgba(255,255,255,0.2);font-size:13px;text-align:center;padding:48px 20px;">No active subscriptions</div>';
+
+  el.innerHTML=hero+rows;
   initSwipeCards(document.getElementById('hp-sub'));
 }
 
 function renderHomeIncome(){
   const el=document.getElementById('hp-income');
-  const more=null; // show-more now rendered inline
-  const stats=document.getElementById('hstats-income');
   if(!el)return;
   const income=D.master.filter(m=>m.Type==='Income').sort((a,b)=>toSortableDate(b.Date||'').localeCompare(toSortableDate(a.Date||'')));
   const lim=_homeLimits.income;
 
-  // Stats
-  if(stats){
-    const now=new Date();
-    const mo=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-    const yr=`${now.getFullYear()}`;
-    const fmt=v=>v?'$'+v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}):'$0';
-    const gainedMo=income.filter(m=>toSortableDate(m.Date||'').startsWith(mo)).reduce((s,m)=>s+(parseFloat(m.Cost)||0),0);
-    const gainedYr=income.filter(m=>toSortableDate(m.Date||'').startsWith(yr)).reduce((s,m)=>s+(parseFloat(m.Cost)||0),0);
-    stats.innerHTML=`
-      <div class="home-stat"><div class="home-stat-label">Gained Month</div><div class="home-stat-val green">${fmt(gainedMo)}</div></div>
-      <div class="home-stat"><div class="home-stat-label">Gained Year</div><div class="home-stat-val green">${fmt(gainedYr)}</div></div>`;
-  }
+  const now=new Date();
+  const mo=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const yr=`${now.getFullYear()}`;
+  const gainedMo=income.filter(m=>toSortableDate(m.Date||'').startsWith(mo)).reduce((s,m)=>s+(parseFloat(m.Cost)||0),0);
+  const gainedYr=income.filter(m=>toSortableDate(m.Date||'').startsWith(yr)).reduce((s,m)=>s+(parseFloat(m.Cost)||0),0);
+  const fmt=v=>'$'+v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+
+  const hero=`<div class="hp-hero">
+    <div class="hp-hero-label">Income · ${now.toLocaleString('default',{month:'long'})}</div>
+    <div class="hp-hero-amount" style="color:#22c55e">${fmt(gainedMo)}</div>
+    <div class="hp-hero-sub">received this month</div>
+    <div class="hp-hero-stats">
+      <div class="hp-hero-stat"><div class="hp-hero-stat-label">This Year</div><div class="hp-hero-stat-val" style="color:#22c55e">${fmt(gainedYr)}</div></div>
+    </div>
+  </div>
+  <button class="hp-add-btn" onclick="openIncomeMo()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Log Income
+  </button>
+  <div class="hp-divider"></div>`;
+
   const cards=income.slice(0,lim).map(m=>{
     const amt=parseFloat(m.Cost||0);
-    const stripe=catStripe(m.Category);
-    return`<div class="home-card ${stripe.cls}" onclick="openHomeIncomeEdit(${m._row})" style="cursor:pointer;${stripe.style}">
-      <div class="home-card-top">
-        <div class="home-card-info">
-          <div class="home-card-name">${esc(m.Name||'—')}</div>
-          ${m.Description?`<div class="home-card-desc">${esc(m.Description)}</div>`:''}
-        </div>
-        <div class="home-card-amount" style="color:#22c55e">+$${amt.toLocaleString()}</div>
+    const color=getCatColor(m.Category)||'#22c55e';
+    return`<div class="hrow" onclick="openHomeIncomeEdit(${m._row})">
+      <div class="hrow-stripe" style="background:${color}"></div>
+      <div class="hrow-icon" style="background:${color}22;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
       </div>
-      <div class="home-card-bottom">
-        <div class="home-card-meta">
-          ${m.Category?`<span class="home-card-pill tag ${CC[m.Category]||'tdf'}">${esc(m.Category)}</span>`:''}
-          ${m.Bank?`<span style="font-size:10px;color:rgba(255,255,255,0.35)">${esc(m.Bank)}</span>`:''}
-          ${m.Date?`<span style="font-size:10px;color:rgba(255,255,255,0.3)">${relDate(m.Date)}</span>`:''}
-        </div>
+      <div class="hrow-body">
+        <div class="hrow-name">${esc(m.Name||'—')}</div>
+        <div class="hrow-sub">${m.Bank||m.Source||''}${m.Date?' · '+relDate(m.Date):''}</div>
+      </div>
+      <div class="hrow-right">
+        <div class="hrow-amount" style="color:#22c55e">+$${amt.toLocaleString()}</div>
+        <div class="hrow-meta">${m.Source||''}</div>
       </div>
     </div>`;
-  }).join('')||'<div style="color:rgba(255,255,255,0.3);font-size:13px;text-align:center;padding:40px 20px">No income recorded</div>';
+  }).join('')||'<div style="color:rgba(255,255,255,0.2);font-size:13px;text-align:center;padding:48px 20px;">No income recorded</div>';
+
   const showMoreBtn=income.length>lim?`<button class="home-show-more" onclick="homeShowMore('income')">Show ${Math.min(30,income.length-lim)} more</button>`:'';
-  el.innerHTML=cards+showMoreBtn;
+  el.innerHTML=hero+cards+showMoreBtn;
 }
 
 function homeShowMore(key){
