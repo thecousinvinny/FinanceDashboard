@@ -2438,9 +2438,9 @@ async function paySub(row){
   const bank=D.cards.find(cd=>cd.Name===s.Card)?.Bank||'';
   await appendRow('Master',[today,'Subscription',s.Name,'',s.Category,s.Cost,'','',s.Card,bank,s.Billing,'Paid','Subscription']);
   // Remove old calendar event and create new one for next renewal
-  const oldTitle=` ${s.Name} — ${$f(s.Cost)}`;
-  const oldEvent=_calEvents.find(e=>e.summary===oldTitle);
-  if(oldEvent)await calDeleteEvent(oldEvent.id);
+  const oldTitle=`${s.Name} — ${$f(s.Cost)}`;
+  const oldEvent=_calEvents.find(e=>e.summary===oldTitle||e.summary===` ${oldTitle}`);
+  if(oldEvent)await calDeleteEvent(CAL_ID,oldEvent.id);
   // Create next renewal event
   if(newNext){
     try{
@@ -4677,9 +4677,35 @@ function showSubPopover(e,row){
     <div class="cal-popover-row"><span class="cal-popover-label">Payments</span><span class="cal-popover-val">${s.Payments||'0'}</span></div>
     <div class="cal-popover-actions">
       <button class="btn btn-p" onclick="paySub(${s._row});closeCalPopover()">✓ Mark Paid</button>
+      <button class="btn" onclick="fixSubCalEvent(${s._row});closeCalPopover()">↻ Fix Date</button>
       <button class="btn" onclick="showTab('subscriptions',document.querySelector('[onclick*=subscriptions]'));closeCalPopover()">→ Subs</button>
     </div>`);
 }
+async function fixSubCalEvent(row){
+  const s=D.subscriptions.find(x=>x._row===row);if(!s||!s.NextRenewal)return;
+  const title=`${s.Name} — ${$f(s.Cost)}`;
+  const nextDate=toSortableDate(s.NextRenewal);
+  // Delete ALL existing calendar events matching this sub's title
+  const toDelete=_calEvents.filter(e=>e.summary===title||e.summary===` ${title}`);
+  for(const ev of toDelete){
+    try{await calDeleteEvent(CAL_ID,ev.id);}catch(e){}
+  }
+  // Create correct event at NextRenewal
+  try{
+    await gapi.client.calendar.events.insert({
+      calendarId:CAL_ID,
+      resource:{
+        summary:title,
+        start:{date:nextDate},end:{date:nextDate},
+        description:`Subscription: ${s.Name}\nBilling: ${s.Billing}\nCard: ${s.Card||'—'}`,
+        colorId:'5',
+      }
+    });
+    toast(`Calendar fixed → ${fmtDate(nextDate)}`,'ok');
+    await initCalendar();
+  }catch(e){toast('Calendar update failed','err');console.warn(e);}
+}
+
 function showIncomePopover(e,masterRow){
   const m=D.master.find(x=>x._row===masterRow);if(!m)return;
   showCalPopover(e,`<div style="margin-bottom:12px"><div class="cal-popover-title">${esc(m.Name)}</div><div class="cal-popover-sub">Income · ${m.Source||'—'}</div></div>
