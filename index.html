@@ -640,14 +640,14 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 
     <div id="tab-data" style="display:none">
       <!-- Sub-nav for data tabs -->
-      <div style="display:flex;gap:4px;padding:8px 16px;background:transparent;border-bottom:1px solid rgba(255,255,255,0.05);overflow-x:auto;scrollbar-width:none;">
-        <button class="sort-btn on" id="data-sub-btn-wishlist" onclick="showDataTab('wishlist',this)">Wishlist</button>
-        <button class="sort-btn" id="data-sub-btn-expenses" onclick="showDataTab('expenses',this)">Expenses</button>
-        <button class="sort-btn" id="data-sub-btn-subscriptions" onclick="showDataTab('subscriptions',this)">Subs</button>
-        <button class="sort-btn" id="data-sub-btn-master" onclick="showDataTab('master',this)">Master</button>
-        <button class="sort-btn" id="data-sub-btn-categories" onclick="showDataTab('categories',this)">Categories</button>
-        <button class="sort-btn" id="data-sub-btn-cards" onclick="showDataTab('cards',this)">Cards</button>
-        <button class="sort-btn" id="data-sub-btn-banks" onclick="showDataTab('banks',this)">Banks</button>
+      <div style="display:flex;align-items:center;gap:4px;padding:8px 16px;background:transparent;border-bottom:1px solid rgba(255,255,255,0.05);">
+        <button class="home-tab-btn data-tab-btn on" id="data-sub-btn-wishlist" onclick="showDataTab('wishlist',this)">Wishlist</button>
+        <button class="home-tab-btn data-tab-btn" id="data-sub-btn-expenses" onclick="showDataTab('expenses',this)">Expenses</button>
+        <button class="home-tab-btn data-tab-btn" id="data-sub-btn-subscriptions" onclick="showDataTab('subscriptions',this)">Subs</button>
+        <button class="home-tab-btn data-tab-btn" id="data-sub-btn-master" onclick="showDataTab('master',this)">Master</button>
+        <button class="home-tab-btn data-tab-btn" id="data-sub-btn-categories" onclick="showDataTab('categories',this)">Categories</button>
+        <button class="home-tab-btn data-tab-btn" id="data-sub-btn-cards" onclick="showDataTab('cards',this)">Cards</button>
+        <button class="home-tab-btn data-tab-btn" id="data-sub-btn-banks" onclick="showDataTab('banks',this)">Banks</button>
       </div>
     <div id="tab-wishlist" style="display:none">
       <div class="sort-bar" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;margin-bottom:12px;padding:8px 14px;">
@@ -2775,6 +2775,24 @@ async function saveIncomeMo(){
 }
 
 // ── UI ──
+function showDataTab(name,el){
+  _activeDataTab=name;
+  document.querySelectorAll('#tab-data [id^="tab-"]').forEach(t=>t.style.display='none');
+  const tab=document.getElementById('tab-'+name);
+  if(tab)tab.style.display='block';
+  document.querySelectorAll('.data-tab-btn').forEach(b=>b.classList.remove('on'));
+  if(el)el.classList.add('on');
+  // Trigger render for that subtab
+  if(name==='wishlist')renderWishlist();
+  else if(name==='expenses')renderExpenses();
+  else if(name==='subscriptions')renderSubs();
+  else if(name==='master')renderMaster();
+  else if(name==='categories')renderCategories();
+  else if(name==='cards')renderCards();
+  else if(name==='banks')renderBanks();
+}
+let _activeDataTab='wishlist';
+
 function showTab(name,el){
   document.querySelectorAll('[id^="tab-"]').forEach(t=>t.style.display='none');
   const tab=document.getElementById('tab-'+name);
@@ -2786,7 +2804,6 @@ function showTab(name,el){
   if(el)el.classList.add('on');
   if(name==='calendar'){initCalendar();setTimeout(()=>calGoToday(),200);}
   if(name==='data'){
-    // Show first active data sub-tab
     const firstBtn=document.getElementById('data-sub-btn-'+_activeDataTab)||document.getElementById('data-sub-btn-wishlist');
     showDataTab(_activeDataTab,firstBtn);
   }
