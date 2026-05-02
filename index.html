@@ -3854,7 +3854,7 @@ function renderHomeExp(){
       </div>
       <div class="hrow-right">
         <div class="hrow-amount" style="color:${isOrdered?'#f59e0b':'#ef4444'}">-$${cost.toLocaleString()}</div>
-        ${isOrdered?`<div class="hrow-meta" style="color:#f59e0b">ordered</div>`:`<div class="hrow-meta">${e.Card||''}</div>`}
+        ${isOrdered?`<div class="hrow-meta" style="color:#f59e0b">ordered</div>`:`<div class="hrow-meta">${cardDisplay(e.Card)||''}</div>`}
       </div>
     </div>`;
   };
@@ -3913,7 +3913,7 @@ function renderHomeSub(){
         </div>
         <div class="hrow-body">
           <div class="hrow-name">${esc(s.Name||'—')}</div>
-          <div class="hrow-sub">${s.Billing||'Monthly'}${s.Card?' · '+s.Card:''}</div>
+          <div class="hrow-sub">${s.Billing||'Monthly'}${s.Card?' · '+cardDisplay(s.Card):''}</div>
         </div>
         <div class="hrow-right">
           <div class="hrow-amount" style="color:${accentColor}">$${cost.toLocaleString()}</div>
