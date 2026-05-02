@@ -2439,7 +2439,8 @@ async function paySub(row){
   await appendRow('Master',[today,'Subscription',s.Name,'',s.Category,s.Cost,'','',s.Card,bank,s.Billing,'Paid','Subscription']);
   // Remove old calendar event and create new one for next renewal
   const oldTitle=`${s.Name} — ${$f(s.Cost)}`;
-  const oldEvent=_calEvents.find(e=>e.summary===oldTitle||e.summary===` ${oldTitle}`);
+  const allEvs2=Object.values(_allEvents).flat();
+  const oldEvent=allEvs2.find(e=>e.summary===oldTitle||e.summary===` ${oldTitle}`);
   if(oldEvent)await calDeleteEvent(CAL_ID,oldEvent.id);
   // Create next renewal event
   if(newNext){
@@ -2782,11 +2783,11 @@ function showDataTab(name,el){
   document.querySelectorAll('.data-tab-btn').forEach(b=>b.classList.remove('on'));
   if(el)el.classList.add('on');
   // Trigger render for that subtab
-  if(name==='wishlist')renderWishlist();
-  else if(name==='expenses')renderExpenses();
-  else if(name==='subscriptions')renderSubs();
+  if(name==='wishlist')renderWish();
+  else if(name==='expenses')renderExp();
+  else if(name==='subscriptions')renderSub();
   else if(name==='master')renderMaster();
-  else if(name==='categories')renderCategories();
+  else if(name==='categories')renderCat();
   else if(name==='cards')renderCards();
   else if(name==='banks')renderBanks();
 }
@@ -4686,7 +4687,8 @@ async function fixSubCalEvent(row){
   const title=`${s.Name} — ${$f(s.Cost)}`;
   const nextDate=toSortableDate(s.NextRenewal);
   // Delete ALL existing calendar events matching this sub's title
-  const toDelete=_calEvents.filter(e=>e.summary===title||e.summary===` ${title}`);
+  const allEvs=Object.values(_allEvents).flat();
+  const toDelete=allEvs.filter(e=>e.summary===title||e.summary===` ${title}`);
   for(const ev of toDelete){
     try{await calDeleteEvent(CAL_ID,ev.id);}catch(e){}
   }
@@ -4710,21 +4712,25 @@ async function rebuildSubCalEvents(){
   if(!confirm('Delete all subscription calendar events and rebuild from sheet data?'))return;
   toast('Rebuilding sub events…');
 
-  // 1. Find all sub-style events in calendar (title contains " — $")
-  const subEvents=_calEvents.filter(e=>{
-    if(!e.summary)return false;
-    // Match our format "Name — $XX" (with or without leading space)
-    return /— \$[\d,]+$/.test(e.summary.trim());
-  });
+  // Get all events across all calendars
+  const allEvs=Object.values(_allEvents).flat();
+
+  // 1. Find all sub-style events (title matches "Name — $XX")
+  const subEvs=allEvs.filter(e=>e.summary&&/— \$[\d,]+$/.test(e.summary.trim()));
 
   // 2. Delete them all
   let deleted=0;
-  for(const ev of subEvents){
-    try{await calDeleteEvent(CAL_ID,ev.id);deleted++;}
+  for(const ev of subEvs){
+    // Find which calendar this event belongs to
+    let calId=CAL_ID;
+    for(const [cid,evs] of Object.entries(_allEvents)){
+      if(evs.find(e=>e.id===ev.id)){calId=cid;break;}
+    }
+    try{await calDeleteEvent(calId,ev.id);deleted++;}
     catch(e){console.warn('Delete failed:',ev.summary,e);}
   }
 
-  // 3. Recreate one event per active sub at NextRenewal date
+  // 3. Recreate one event per active sub at NextRenewal date in FinanceDash calendar
   const activeSubs=D.subscriptions.filter(s=>s.Status!=='Cancelled'&&s.NextRenewal);
   let created=0;
   for(const s of activeSubs){
