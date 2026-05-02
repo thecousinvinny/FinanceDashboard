@@ -3846,17 +3846,29 @@ function renderHomeWish(){
   const items=D.wishlist.filter(w=>w.Status!=='No Longer Needed'&&w.Status!=='Bought');
   const lim=_homeLimits.wish;
   const totalOrig=items.reduce((s,w)=>s+(parseFloat(w.OCost||0)),0);
+  const totalBought=items.reduce((s,w)=>s+(parseFloat(w.BCost||0)),0);
   const totalSaved=items.reduce((s,w)=>{const o=parseFloat(w.OCost||0),b=parseFloat(w.BCost||0);return s+(o&&b&&o>b?o-b:0);},0);
+  const totalCost=totalBought||totalOrig;
+  const savPct=totalOrig>0&&totalSaved>0?Math.min(100,Math.round((totalSaved/totalOrig)*100)):0;
   const fmt=v=>v?'$'+v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}):'—';
 
   const hero=`<div class="hp-hero">
     <div class="hp-hero-label">Wishlist · ${items.length} items</div>
-    <div class="hp-hero-amount">${fmt(totalOrig)}</div>
-    <div class="hp-hero-sub">total original value</div>
-    ${totalSaved||items.length?`<div class="hp-hero-stats">
-      <div class="hp-hero-stat"><div class="hp-hero-stat-label">Items</div><div class="hp-hero-stat-val">${items.length}</div></div>
-      ${totalSaved?`<div class="hp-hero-stat"><div class="hp-hero-stat-label">Savings</div><div class="hp-hero-stat-val" style="color:#22c55e">${fmt(totalSaved)}</div></div>`:''}
-    </div>`:''}</div>
+    <div class="hp-hero-amount">${fmt(totalCost)}</div>
+    <div class="hp-hero-sub">total cost</div>
+  </div>
+  <div style="padding:4px 24px 24px;">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+      <span style="font-size:12px;font-family:'DM Mono',monospace;font-weight:600;color:#f0f0f8;">${fmt(totalOrig)} original</span>
+      ${totalSaved?`<span style="font-size:12px;font-family:'DM Mono',monospace;color:rgba(255,255,255,0.35);">save ${fmt(totalSaved)}</span>`:''}
+    </div>
+    <div style="height:3px;border-radius:2px;overflow:hidden;background:linear-gradient(to right,rgba(255,255,255,0.55) ${100-savPct}%,rgba(255,255,255,0.12) ${100-savPct}%);">
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:6px;">
+      <span style="font-size:9px;color:rgba(255,255,255,0.2);letter-spacing:.06em;">${items.length} items tracked</span>
+      ${savPct?`<span style="font-size:9px;color:rgba(255,255,255,0.3);letter-spacing:.06em;">${savPct}% savings available</span>`:''}
+    </div>
+  </div>
   <button class="hp-add-btn" onclick="openModal('wish')">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     Add to Wishlist
@@ -3921,7 +3933,7 @@ function renderHomeExp(){
 
   const hero=`<div class="hp-hero">
     <div class="hp-hero-label">Expenses · ${now.toLocaleString('default',{month:'long'})}</div>
-    <div class="hp-hero-amount">${fmt(spentMo)}</div>
+    <div class="hp-hero-amount" style="color:#ef4444">${fmt(spentMo)}</div>
     <div class="hp-hero-sub">spent this month</div>
     <div class="hp-hero-stats">
       <div class="hp-hero-stat"><div class="hp-hero-stat-label">This Year</div><div class="hp-hero-stat-val" style="color:#ef4444">${fmt(spentYr)}</div></div>
