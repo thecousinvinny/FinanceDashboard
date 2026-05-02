@@ -640,7 +640,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 
     <div id="tab-data" style="display:none">
       <!-- Sub-nav for data tabs -->
-      <div style="display:flex;gap:8px;padding:8px 16px;background:#141416;border-bottom:1px solid rgba(255,255,255,0.07);overflow-x:auto;scrollbar-width:none;">
+      <div style="display:flex;gap:4px;padding:8px 16px;background:transparent;border-bottom:1px solid rgba(255,255,255,0.05);overflow-x:auto;scrollbar-width:none;">
         <button class="sort-btn on" id="data-sub-btn-wishlist" onclick="showDataTab('wishlist',this)">Wishlist</button>
         <button class="sort-btn" id="data-sub-btn-expenses" onclick="showDataTab('expenses',this)">Expenses</button>
         <button class="sort-btn" id="data-sub-btn-subscriptions" onclick="showDataTab('subscriptions',this)">Subs</button>
@@ -650,7 +650,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
         <button class="sort-btn" id="data-sub-btn-banks" onclick="showDataTab('banks',this)">Banks</button>
       </div>
     <div id="tab-wishlist" style="display:none">
-      <div class="sort-bar" style="background:#141416;border:1px solid rgba(255,255,255,0.07);border-radius:14px;margin-bottom:16px;padding:8px 14px;">
+      <div class="sort-bar" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;margin-bottom:12px;padding:8px 14px;">
           <span class="sort-lbl">Sort</span>
           <button class="sort-btn asc" id="ws-row" data-field="_row" onclick="setSort('wish','_row',this)">Date Added <span class="arr">↑</span></button>
           <button class="sort-btn" id="ws-name" data-field="Name" onclick="setSort('wish','Name',this)">Name <span class="arr">↕</span></button>
@@ -672,7 +672,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
     </div>
 
     <div id="tab-expenses" style="display:none">
-      <div class="sort-bar" style="background:#141416;border:1px solid rgba(255,255,255,0.07);border-radius:14px;margin-bottom:16px;padding:8px 14px;">
+      <div class="sort-bar" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;margin-bottom:12px;padding:8px 14px;">
         <span class="sort-lbl">Sort all</span>
         <button class="sort-btn asc" id="es-row" data-field="_row" onclick="setSort('exp','_row',this)">Date Added <span class="arr">↑</span></button>
         <button class="sort-btn" id="es-date" data-field="Date" onclick="setSort('exp','Date',this)">Date <span class="arr">↕</span></button>
@@ -711,7 +711,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
     </div>
 
     <div id="tab-subscriptions" style="display:none">
-      <div class="sort-bar" style="background:#141416;border:1px solid rgba(255,255,255,0.07);border-radius:14px;margin-bottom:16px;padding:8px 14px;">
+      <div class="sort-bar" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;margin-bottom:12px;padding:8px 14px;">
           <span class="sort-lbl">Sort</span>
           <button class="sort-btn asc" id="ss-row" data-field="_row" onclick="setSort('sub','_row',this)">Date Added <span class="arr">↑</span></button>
           <button class="sort-btn" id="ss-billing" data-field="Billing" onclick="setSort('sub','Billing',this)">Billing <span class="arr">↕</span></button>
@@ -4049,7 +4049,7 @@ function renderHomeSub(){
         </div>
         <div class="hrow-right">
           <div class="hrow-amount" style="color:${accentColor}">$${cost.toLocaleString()}</div>
-          <div class="hrow-meta" style="color:${isDueToday?'#ef4444':'rgba(255,255,255,0.28)'}">${isDueToday?'DUE TODAY':relDate(s.NextRenewal)||s.NextRenewal||''}</div>
+          <div class="hrow-meta" style="color:${isDueToday?'#ef4444':dueCls(s.NextRenewal)==='due-soon'?'#f59e0b':'rgba(255,255,255,0.28)'}">${isDueToday?'DUE TODAY':s.NextRenewal?fmtDate(s.NextRenewal):''}</div>
         </div>
       </div>
     </div>`;
