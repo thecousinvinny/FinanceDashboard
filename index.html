@@ -3798,21 +3798,21 @@ function renderHomeWish(){
     const bought=parseFloat(w.BCost||0);
     const price=orig||bought;
     const sav=orig&&bought&&orig>bought?orig-bought:0;
-    const color=getCatColor(w.Category)||'rgba(108,99,255,0.8)';
+    const color=getCatColor(w.Category)||'#6c63ff';
     const pct=price>0?Math.min(100,Math.round((price/maxPrice)*100)):0;
     return`<div class="swipe-wrap" data-swipe-action="deleteWish" data-row="${w._row}">
       <div class="swipe-action delete"></div>
-      <div class="swipe-card hrow-progress" onclick="openHomeWishEdit(${w._row})">
-        <div class="hrow-progress-top">
-          <span class="hrow-progress-name">${esc(w.Name||'—')}</span>
-          <span class="hrow-progress-price">${price?fmt(price):'—'}</span>
+      <div class="swipe-card" onclick="openHomeWishEdit(${w._row})" style="padding:14px 20px 10px;cursor:pointer;border-top:1px solid rgba(255,255,255,0.04);">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
+          <span style="font-size:14px;font-weight:500;color:#f0f0f8;letter-spacing:-.01em;">${esc(w.Name||'—')}</span>
+          <span style="font-size:14px;font-weight:600;font-family:'DM Mono',monospace;color:rgba(255,255,255,0.45);">${price?fmt(price):'—'}</span>
         </div>
-        <div class="hrow-progress-bar">
-          <div class="hrow-progress-fill" style="width:${pct}%;background:${color};"></div>
+        <div style="height:2px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden;margin-bottom:${w.Description||sav?'6px':'0'};">
+          <div style="height:100%;width:${pct}%;background:${color};border-radius:2px;transition:width .6s cubic-bezier(.4,0,.2,1);"></div>
         </div>
-        ${w.Description||sav?`<div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-size:10px;color:rgba(255,255,255,0.25);">${esc(w.Description||'')}</span>
-          ${sav?`<span style="font-size:10px;color:#22c55e;">save ${fmt(sav)}</span>`:''}
+        ${w.Description||sav?`<div style="display:flex;justify-content:space-between;">
+          <span style="font-size:11px;color:rgba(255,255,255,0.25);">${esc(w.Description||'')}</span>
+          ${sav?`<span style="font-size:11px;color:#22c55e;">save ${fmt(sav)}</span>`:''}
         </div>`:''}
       </div>
     </div>`;
@@ -3849,12 +3849,12 @@ function renderHomeExp(){
   const maxDay=Math.max(...dayTotals,1);
   const W=300,H=50,pad=4;
   const pts=dayTotals.map((v,i)=>{const x=pad+(i/(days14.length-1))*(W-pad*2);const y=H-pad-(v/maxDay)*(H-pad*2);return`${x},${y}`;}).join(' ');
-  const sparkline=dayTotals.some(v=>v>0)?`<div class="hp-graph" style="padding:4px 20px 16px;">
-    <svg width="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:50px;">
-      <defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ef4444" stop-opacity=".25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0"/></linearGradient></defs>
+  const sparkline=dayTotals.some(v=>v>0)?`<div style="padding:0 20px 16px;">
+    <svg width="100%" height="60" viewBox="0 0 ${W} ${H}">
+      <defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ef4444" stop-opacity=".2"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0"/></linearGradient></defs>
       <polygon points="${pts} ${W-pad},${H} ${pad},${H}" fill="url(#sg)"/>
       <polyline points="${pts}" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
-      ${dayTotals.map((v,i)=>v>0?`<circle cx="${pad+(i/(days14.length-1))*(W-pad*2)}" cy="${H-pad-(v/maxDay)*(H-pad*2)}" r="2.5" fill="#ef4444"/>`:'' ).join('')}
+      ${dayTotals.map((v,i)=>v>0?`<circle cx="${pad+(i/(days14.length-1))*(W-pad*2)}" cy="${H-pad-(v/maxDay)*(H-pad*2)}" r="2" fill="#ef4444"/>`:'' ).join('')}
     </svg>
   </div>`:'';
 
@@ -3917,35 +3917,27 @@ function renderHomeSub(){
   const totalMo=spentMo||moFallback;
   const fmt=v=>'$'+v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
   const dueToday=subs.filter(s=>dueCls(s.NextRenewal)==='due-today').length;
-
   const paidYr=spentYr||yrFallback;
   const annualEst=subs.reduce((s,sub)=>s+(parseFloat(sub.AnnualCost||0)||(parseFloat(sub.Cost||0)*12)),0);
   const arcPct=annualEst>0?Math.min(1,paidYr/annualEst):0;
-  const r=52,cx=70,cy=70,sw=5;
+  const r=68,cx=90,cy=90,sw=6;
   const circ=2*Math.PI*r;
-  const arcGraph=`<div class="hp-graph">
-    <svg width="140" height="140" viewBox="0 0 140 140">
-      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="${sw}"/>
-      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#f59e0b" stroke-width="${sw}"
-        stroke-dasharray="${circ*arcPct} ${circ}" stroke-linecap="round"
-        transform="rotate(-90 ${cx} ${cy})"/>
-      <text x="${cx}" y="${cy-8}" text-anchor="middle" fill="#f0f0f8" font-size="13" font-weight="700" font-family="DM Mono,monospace">${fmt(paidYr)}</text>
-      <text x="${cx}" y="${cy+8}" text-anchor="middle" fill="rgba(255,255,255,0.28)" font-size="9" font-family="Inter,sans-serif" letter-spacing="1">PAID THIS YEAR</text>
-      <text x="${cx}" y="${cy+22}" text-anchor="middle" fill="rgba(255,255,255,0.16)" font-size="9" font-family="Inter,sans-serif">of ${fmt(annualEst)} est.</text>
-    </svg>
-  </div>`;
 
-  const hero=`<div class="hp-hero">
+  const hero=`<div style="padding:28px 20px 0;text-align:center;">
     <div class="hp-hero-label">Subscriptions · ${subs.length} active</div>
-    <div class="hp-hero-amount">${fmt(totalMo)}</div>
-    <div class="hp-hero-sub">per month</div>
-    <div class="hp-hero-stats">
-      <div class="hp-hero-stat"><div class="hp-hero-stat-label">Annual Est.</div><div class="hp-hero-stat-val" style="color:#f59e0b">${fmt(annualEst)}</div></div>
-      ${dueToday?`<div class="hp-hero-stat"><div class="hp-hero-stat-label">Due Today</div><div class="hp-hero-stat-val" style="color:#ef4444">${dueToday}</div></div>`:''}
-      <div class="hp-hero-stat"><div class="hp-hero-stat-label">Paid YTD</div><div class="hp-hero-stat-val">${Math.round(arcPct*100)}%</div></div>
+    <div style="display:flex;justify-content:center;margin:16px 0 0;">
+      <svg width="180" height="180" viewBox="0 0 180 180">
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="${sw}"/>
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#f59e0b" stroke-width="${sw}"
+          stroke-dasharray="${circ*arcPct} ${circ}" stroke-linecap="round"
+          transform="rotate(-90 ${cx} ${cy})"/>
+        <text x="${cx}" y="${cy-18}" text-anchor="middle" fill="#f0f0f8" font-size="22" font-weight="700" font-family="DM Mono,monospace">${fmt(totalMo)}</text>
+        <text x="${cx}" y="${cy+2}" text-anchor="middle" fill="rgba(255,255,255,0.28)" font-size="10" font-family="Inter,sans-serif" letter-spacing="1">PER MONTH</text>
+        <text x="${cx}" y="${cy+20}" text-anchor="middle" fill="rgba(255,255,255,0.18)" font-size="9" font-family="Inter,sans-serif">${fmt(paidYr)} of ${fmt(annualEst)} paid</text>
+        <text x="${cx}" y="${cy+36}" text-anchor="middle" fill="${dueToday?'#ef4444':'rgba(255,255,255,0.12)'}" font-size="9" font-family="Inter,sans-serif">${dueToday?dueToday+' due today':Math.round(arcPct*100)+'% of year paid'}</text>
+      </svg>
     </div>
   </div>
-  ${arcGraph}
   <button class="hp-add-btn" onclick="openModal('sub')">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     Add Subscription
@@ -4001,12 +3993,12 @@ function renderHomeIncome(){
   const maxMo=Math.max(...moTotals,1);
   const IW=300,IH=50,IP=4;
   const iPts=moTotals.map((v,i)=>{const x=IP+(i/(months8.length-1))*(IW-IP*2);const y=IH-IP-(v/maxMo)*(IH-IP*2);return`${x},${y}`;}).join(' ');
-  const incomeSparkline=moTotals.some(v=>v>0)?`<div class="hp-graph" style="padding:4px 20px 16px;">
-    <svg width="100%" viewBox="0 0 ${IW} ${IH}" preserveAspectRatio="none" style="height:50px;">
-      <defs><linearGradient id="ig" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#22c55e" stop-opacity=".25"/><stop offset="100%" stop-color="#22c55e" stop-opacity="0"/></linearGradient></defs>
+  const incomeSparkline=moTotals.some(v=>v>0)?`<div style="padding:0 20px 16px;">
+    <svg width="100%" height="60" viewBox="0 0 ${IW} ${IH}">
+      <defs><linearGradient id="ig" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#22c55e" stop-opacity=".2"/><stop offset="100%" stop-color="#22c55e" stop-opacity="0"/></linearGradient></defs>
       <polygon points="${iPts} ${IW-IP},${IH} ${IP},${IH}" fill="url(#ig)"/>
       <polyline points="${iPts}" fill="none" stroke="#22c55e" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
-      ${moTotals.map((v,i)=>v>0?`<circle cx="${IP+(i/(months8.length-1))*(IW-IP*2)}" cy="${IH-IP-(v/maxMo)*(IH-IP*2)}" r="2.5" fill="#22c55e"/>`:'' ).join('')}
+      ${moTotals.map((v,i)=>v>0?`<circle cx="${IP+(i/(months8.length-1))*(IW-IP*2)}" cy="${IH-IP-(v/maxMo)*(IH-IP*2)}" r="2" fill="#22c55e"/>`:'' ).join('')}
     </svg>
   </div>`:'';
 
