@@ -2067,7 +2067,7 @@ async function syncEditToMaster(sheet,item,field,newVal){
 
   if(!match)return;
 
-  match[masterField]=newVal;
+  match[masterField]=(field==='Card'?cardDisplay(newVal):newVal);
   if(field==='Cost'||field==='Original'){
     const o=parseFloat(match.Original)||0,cost=parseFloat(match.Cost)||0;
     match.Savings=o>0&&cost>0?(o-cost).toFixed(2):'0';
@@ -2149,7 +2149,7 @@ async function confirmBuy(){
   document.getElementById('buy-mo').classList.remove('open');
   await appendRow('Expenses',[w.Name,w.Description,w.Category,card,date,'Ordered',w.OCost,cost,'']);
   await updateRow('Wishlist',row,[w.Name,w.Description,w.Category,w.Link,w.OCost,cost,'Bought']);
-  await appendRow('Master',[date,'Expense',w.Name,w.Description,w.Category,cost,w.OCost,savings,card,bank,'','Ordered','Wishlist']);
+  await appendRow('Master',[date,'Expense',w.Name,w.Description,w.Category,cost,w.OCost,savings,cardDisplay(card),bank,'','Ordered','Wishlist']);
   await syncAll();toast(w.Name+' → Expenses ✓','ok');
 }
 
@@ -2322,7 +2322,7 @@ async function markPro(row){
   const savings=e.OCost&&e.Cost?(parseFloat(e.OCost)-parseFloat(e.Cost)).toFixed(2):'0';
   const bank=D.cards.find(cd=>cd.Name===e.Card)?.Bank||'';
   const today=localToday();
-  await appendRow('Master',[e.Date||today,'Expense',e.Name,e.Description,e.Category,e.Cost,e.OCost,savings,e.Card,bank,'','Procured','Expense']);
+  await appendRow('Master',[e.Date||today,'Expense',e.Name,e.Description,e.Category,e.Cost,e.OCost,savings,cardDisplay(e.Card),bank,'','Procured','Expense']);
   await syncAll();toast('Marked Procured ✓','ok');
 }
 
@@ -2441,7 +2441,7 @@ async function paySub(row){
   s.LastRenewal=today;s.NextRenewal=newNext||s.NextRenewal;s.Payments=String(payments);
   await updateRow('Subscriptions',row,HD.subscriptions.map(h=>s[h]||''));
   const bank=D.cards.find(cd=>cd.Name===s.Card)?.Bank||'';
-  await appendRow('Master',[today,'Subscription',s.Name,'',s.Category,s.Cost,'','',s.Card,bank,s.Billing,'Paid','Subscription']);
+  await appendRow('Master',[today,'Subscription',s.Name,'',s.Category,s.Cost,'','',cardDisplay(s.Card),bank,s.Billing,'Paid','Subscription']);
   // Remove old calendar event and create new one for next renewal
   const oldTitle=`${s.Name} — ${$f(s.Cost)}`;
   const allEvs2=Object.values(_allEvents).flat();
@@ -2695,7 +2695,7 @@ async function saveMo(){
         const status=vals[HD.expenses.indexOf('Status')]||'';
         const savings=ocost&&cost?(parseFloat(ocost)-parseFloat(cost)).toFixed(2):'0';
         const bank=D.cards.find(cd=>cd.Name===card)?.Bank||'';
-        await appendRow('Master',[date,'Expense',name,desc,cat,cost,ocost,savings,card,bank,'','',status,'Manual']);
+        await appendRow('Master',[date,'Expense',name,desc,cat,cost,ocost,savings,cardDisplay(card),bank,'','',status,'Manual']);
       }
       toast('Saved ✓','ok');
     }
@@ -2737,7 +2737,7 @@ async function saveFoodMo(){
   const bank=D.cards.find(cd=>cd.Name===card)?.Bank||'';
   try{
     await appendRow('Expenses',[name,'',cat,card,today,'Procured',cost,cost,'0']);
-    await appendRow('Master',[today,'Expense',name,'',cat,cost,cost,'0',card,bank,'','Procured',cat]);
+    await appendRow('Master',[today,'Expense',name,'',cat,cost,cost,'0',cardDisplay(card),bank,'','Procured',cat]);
     closeFoodMo();
     await syncAll();
     toast('Expense added ✓','ok');
