@@ -3855,16 +3855,16 @@ function animateHero(id,toVal){
   const el=document.getElementById(id);
   if(!el)return;
   const fromVal=_heroVals[id]??-1;
-  if(fromVal<0){_heroVals[id]=toVal;return;} // first render, no animation
-  if(fromVal===toVal){_heroVals[id]=toVal;return;}
+  if(fromVal===toVal&&fromVal>=0){return;} // no change, skip
+  const startVal=fromVal<0?0:fromVal; // always roll from 0 on tab switch
   _heroVals[id]=toVal;
   const dur=480;
   const start=performance.now();
-  const diff=toVal-fromVal;
+  const diff=toVal-startVal;
   function tick(now){
     const t=Math.min(1,(now-start)/dur);
     const ease=1-Math.pow(1-t,3);
-    const cur=fromVal+diff*ease;
+    const cur=startVal+diff*ease;
     el.textContent='$'+Math.round(cur).toLocaleString();
     if(t<1)requestAnimationFrame(tick);
     else el.textContent='$'+Math.round(toVal).toLocaleString();
@@ -3873,6 +3873,8 @@ function animateHero(id,toVal){
 }
 
 function renderHome(){
+  // Reset so hero numbers always roll in on tab switch
+  Object.keys(_heroVals).forEach(k=>_heroVals[k]=-1);
   updateOrderedBadge();
   renderHomeWish();
   renderHomeExp();
