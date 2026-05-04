@@ -505,15 +505,20 @@ td.editing{background:rgba(108,99,255,0.05)!important}
     <div id="tab-home" style="display:block">
       <!-- Panel nav dots -->
       <div id="home-nav" style="display:flex;align-items:center;gap:4px;padding:8px 16px;background:transparent;border-bottom:1px solid rgba(255,255,255,0.04);">
-        <button class="home-tab-btn on" onclick="homeGoTo(0,this)" data-panel="0">Wishlist</button>
-        <button class="home-tab-btn" onclick="homeGoTo(1,this)" data-panel="1">Expenses</button>
-        <button class="home-tab-btn" onclick="homeGoTo(2,this)" data-panel="2">Subscriptions</button>
-        <button class="home-tab-btn" onclick="homeGoTo(3,this)" data-panel="3">Income</button>
+        <button class="home-tab-btn on" onclick="homeGoTo(0,this)" data-panel="0">Dash</button>
+        <button class="home-tab-btn" onclick="homeGoTo(1,this)" data-panel="1">Wishlist</button>
+        <button class="home-tab-btn" onclick="homeGoTo(2,this)" data-panel="2">Expenses</button>
+        <button class="home-tab-btn" onclick="homeGoTo(3,this)" data-panel="3">Subscriptions</button>
+        <button class="home-tab-btn" onclick="homeGoTo(4,this)" data-panel="4">Income</button>
       </div>
       <!-- Swipe container -->
       <div id="home-slider-wrap" style="overflow:hidden;width:100%;height:calc(100dvh - 108px);">
         <div id="home-slider" style="display:flex;height:100%;transition:transform .3s cubic-bezier(.4,0,.2,1);will-change:transform;">
-          <!-- PANEL 0: Wishlist -->
+          <!-- PANEL 0: Dash -->
+          <div class="home-panel" id="home-panel-dash">
+            <div class="home-panel-body" id="hp-dash" style="padding:0 0 180px;gap:0;overflow-y:auto;"></div>
+          </div>
+          <!-- PANEL 1: Wishlist -->
           <div class="home-panel" id="home-panel-0">
             <div class="home-panel-hdr" style="display:none"></div>
             <div class="home-stats-bar" id="hstats-wish" style="display:none"></div>
@@ -3816,7 +3821,7 @@ function addPanelPTR(el){
 function updateOrderedBadge(){
   const ordered=D.expenses.filter(e=>e.Status==='Ordered').length;
   let badge=document.getElementById('home-ordered-badge');
-  const btn=document.querySelector('.home-tab-btn[data-panel="1"]');
+  const btn=document.querySelector('.home-tab-btn[data-panel="2"]');
   if(!btn)return;
   if(!badge){
     badge=document.createElement('span');
@@ -3996,7 +4001,8 @@ function homeGoTo(idx,el){
   if(el)el.classList.add('on');
   updateHomeFAB(idx);
   // Trigger slot animation for the panel just revealed
-  const map=['hero-wish-amt','hero-exp-amt','hero-sub-amt','hero-income-amt'];
+  // idx: 0=Dash(no hero), 1=Wish, 2=Exp, 3=Sub, 4=Income
+  const map=[null,'hero-wish-amt','hero-exp-amt','hero-sub-amt','hero-income-amt'];
   const id=map[idx];
   if(id&&_heroData[id]!==undefined)_triggerSlot(id,_heroData[id]);
 }
@@ -4123,6 +4129,7 @@ function _startSlot(el){
 
 function renderHome(){
   updateOrderedBadge();
+  renderHomeDash();
   renderHomeWish();
   renderHomeExp();
   renderHomeSub();
@@ -4132,6 +4139,113 @@ function renderHome(){
   // Panel pull-to-refresh
   ['hp-wish','hp-exp','hp-sub','hp-income'].forEach(id=>addPanelPTR(document.getElementById(id)));
   setTimeout(initPendingCharts,50);
+}
+
+function _greeting(){
+  const h=new Date().toLocaleString('en-US',{timeZone:'America/Los_Angeles',hour:'numeric',hour12:false});
+  const hr=parseInt(h,10);
+  if(hr<12)return'Good morning';
+  if(hr<17)return'Good afternoon';
+  return'Good evening';
+}
+
+function renderHomeDash(){
+  const el=document.getElementById('hp-dash');
+  if(!el)return;
+
+  const now=new Date();
+  const mo=localToday().slice(0,7);
+  const yr=localToday().slice(0,4);
+
+  // Compute stats
+  const allPro=D.expenses.filter(e=>e.Status!=='Ordered');
+  const spentMo=allPro.filter(e=>toSortableDate(e.Date||'').startsWith(mo)).reduce((s,e)=>s+(parseFloat(e.Cost)||0),0);
+  const income=D.master.filter(m=>m.Type==='Income');
+  const gainedMo=income.filter(m=>toSortableDate(m.Date||'').startsWith(mo)).reduce((s,m)=>s+(parseFloat(m.Cost)||0),0);
+  const subs=D.subscriptions.filter(s=>s.Status!=='Cancelled');
+  const subsToday=subs.filter(s=>dueCls(s.NextRenewal)==='due-today');
+  const ordered=D.expenses.filter(e=>e.Status==='Ordered');
+  const attnCount=subsToday.length+ordered.length;
+  const fmt=v=>'$'+Math.round(v).toLocaleString('en-US');
+
+  // Month label
+  const monthName=now.toLocaleString('en-US',{month:'long',timeZone:'America/Los_Angeles'});
+
+  // Recent expenses (last 5, any type)
+  const recent=[...D.expenses].filter(e=>e.Status!=='Ordered').sort((a,b)=>toSortableDate(b.Date||'').localeCompare(toSortableDate(a.Date||''))).slice(0,5);
+
+  // Build attention items
+  const attnItems=[
+    ...subsToday.map(s=>({name:s.Name,sub:'due today',amt:fmt(parseFloat(s.Cost||0)),color:'#ef4444'})),
+    ...ordered.map(e=>({name:e.Name,sub:'ordered · in transit',amt:'',color:'#f59e0b'})),
+  ];
+
+  const attnHtml=attnItems.length?`
+    <div style="padding:16px 20px 0;">
+      <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:10px;">Needs attention</div>
+      ${attnItems.map(a=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:5px;height:5px;border-radius:50%;background:${a.color};flex-shrink:0;"></div>
+            <div>
+              <div style="font-size:13px;color:rgba(255,255,255,0.78);">${esc(a.name)}</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.28);margin-top:1px;">${a.sub}</div>
+            </div>
+          </div>
+          ${a.amt?`<div style="font-size:12px;font-family:'DM Mono',monospace;color:${a.color};">${a.amt}</div>`:''}
+        </div>`).join('')}
+    </div>
+    <div style="height:1px;background:rgba(255,255,255,0.06);margin:16px 0 0;"></div>`:'';
+
+  // Quick add grid
+  const qaddHtml=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:rgba(255,255,255,0.06);border-top:1px solid rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.06);margin-top:${attnItems.length?'0':'16px'};">
+      <div onclick="openFoodMo()" style="background:#080810;padding:16px 20px;display:flex;align-items:center;gap:10px;cursor:pointer;active:opacity:.7;">
+        <span style="font-size:16px;font-weight:300;color:#ef4444;width:16px;text-align:center;line-height:1;">+</span>
+        <span style="font-size:12px;color:#ef4444;letter-spacing:.01em;">Expense</span>
+      </div>
+      <div onclick="openModal('wish')" style="background:#080810;padding:16px 20px;display:flex;align-items:center;gap:10px;cursor:pointer;">
+        <span style="font-size:16px;font-weight:300;color:rgba(255,255,255,0.35);width:16px;text-align:center;line-height:1;">+</span>
+        <span style="font-size:12px;color:rgba(255,255,255,0.45);letter-spacing:.01em;">Wishlist</span>
+      </div>
+      <div onclick="openIncomeMo()" style="background:#080810;padding:16px 20px;display:flex;align-items:center;gap:10px;cursor:pointer;">
+        <span style="font-size:16px;font-weight:300;color:#22c55e;width:16px;text-align:center;line-height:1;">+</span>
+        <span style="font-size:12px;color:#22c55e;letter-spacing:.01em;">Income</span>
+      </div>
+      <div onclick="openModal('sub')" style="background:#080810;padding:16px 20px;display:flex;align-items:center;gap:10px;cursor:pointer;">
+        <span style="font-size:16px;font-weight:300;color:#f59e0b;width:16px;text-align:center;line-height:1;">+</span>
+        <span style="font-size:12px;color:#f59e0b;letter-spacing:.01em;">Subscription</span>
+      </div>
+    </div>`;
+
+  // Recent rows
+  const recentHtml=recent.length?`
+    <div style="padding:12px 20px 4px;">
+      <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:4px;">Recent</div>
+    </div>
+    ${recent.map(e=>{
+      const cost=parseFloat(e.Cost||0);
+      const color=getCatColor(e.Category)||'rgba(255,255,255,0.15)';
+      return`<div class="hrow" onclick="openHomeExpEdit(${e._row})">
+        <div class="hrow-stripe" style="background:${color}"></div>
+        <div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(e.Category)}</svg></div>
+        <div class="hrow-body"><div class="hrow-name">${esc(e.Name||'—')}</div><div class="hrow-sub">${e.Category||''}${e.Date?' · '+relDate(e.Date):''}</div></div>
+        <div class="hrow-right"><div class="hrow-amount" style="color:#ef4444">-$${cost.toLocaleString()}</div><div class="hrow-meta">${cardDisplay(e.Card)||''}</div></div>
+      </div>`;
+    }).join('')}`:'';
+
+  el.innerHTML=`
+    <div style="padding:20px 20px 14px;">
+      <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.22);margin-bottom:8px;">Finance</div>
+      <div style="font-size:26px;font-weight:300;color:rgba(255,255,255,0.9);letter-spacing:-.02em;line-height:1.2;">${_greeting()}<span style="color:rgba(255,255,255,0.25);">.</span></div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.28);margin-top:8px;line-height:1.6;">
+        ${monthName}: ${fmt(spentMo)} expenses · ${fmt(gainedMo)} income${attnCount?` · <span style="color:#ef4444;">${attnCount} need${attnCount===1?'s':''} attention</span>`:''}
+      </div>
+    </div>
+    <div style="height:1px;background:rgba(255,255,255,0.06);"></div>
+    ${attnHtml}
+    ${qaddHtml}
+    ${recentHtml}`;
 }
 
 function renderHomeWish(){
