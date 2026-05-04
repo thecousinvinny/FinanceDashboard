@@ -2364,11 +2364,8 @@ async function markPro(row){
   const e=D.expenses.find(x=>x._row===row);if(!e)return;
   e.Status='Procured';
   await updateRow('Expenses',row,HD.expenses.map(h=>e[h]||''));
+  // Only update the existing Master row — don't append a duplicate
   await syncEditToMaster('Expenses',e,'Status','Procured');
-  const savings=e.OCost&&e.Cost?(parseFloat(e.OCost)-parseFloat(e.Cost)).toFixed(2):'0';
-  const bank=D.cards.find(cd=>cd.Name===e.Card)?.Bank||'';
-  const today=localToday();
-  await appendRow('Master',[e.Date||today,'Expense',e.Name,e.Description,e.Category,e.Cost,e.OCost,savings,cardDisplay(e.Card),bank,'','Procured','Expense']);
   await syncAll();toast('Marked Procured ✓','ok');
 }
 
@@ -4658,6 +4655,7 @@ function openHomeSubEdit(row){
 }
 async function saveHomeSubEdit(){
   const s=D.subscriptions.find(x=>x._row===_hcEditRow);if(!s)return;
+  const prevName=s.Name,prevCost=s.Cost,prevCard=s.Card;
   s.Name=document.getElementById('hcs-name').value;
   s.Cost=document.getElementById('hcs-cost').value;
   s.Billing=document.getElementById('hcs-billing').value;
@@ -4666,6 +4664,10 @@ async function saveHomeSubEdit(){
   s.NextRenewal=document.getElementById('hcs-renewal').value;
   const vals=[s.Name,s.Billing,s.Card,s.Cost,s.LastRenewal,s.NextRenewal,s.Category,s.Status,s.Payments,s.MonthlyCost,s.AnnualCost];
   await updateRow('Subscriptions',_hcEditRow,vals);
+  // Sync changed fields to Master past payment rows
+  if(s.Name!==prevName)await syncEditToMaster('Subscriptions',{...s,Name:prevName,Cost:prevCost},'Name',s.Name);
+  if(s.Cost!==prevCost)await syncEditToMaster('Subscriptions',s,'Cost',s.Cost);
+  if(s.Card!==prevCard)await syncEditToMaster('Subscriptions',s,'Card',s.Card);
   document.getElementById('hc-sub-mo').classList.remove('open');
   await syncAll();
 }
