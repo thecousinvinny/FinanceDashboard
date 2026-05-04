@@ -3848,6 +3848,7 @@ function setPullSheet(){}
 let _homePanel=0;
 let _homeLimits={wish:30,exp:30,income:30};
 
+const _heroData={};
 function homeGoTo(idx,el){
   _homePanel=idx;
   const slider=document.getElementById('home-slider');
@@ -3855,6 +3856,21 @@ function homeGoTo(idx,el){
   document.querySelectorAll('.home-tab-btn').forEach(b=>b.classList.remove('on'));
   if(el)el.classList.add('on');
   updateHomeFAB(idx);
+  // Trigger slot animation for the panel just revealed
+  const map=['hero-wish-amt','hero-exp-amt','hero-sub-amt','hero-income-amt'];
+  const id=map[idx];
+  if(id&&_heroData[id]!==undefined)_triggerSlot(id,_heroData[id]);
+}
+
+function _triggerSlot(id,toVal){
+  const el=document.getElementById(id);
+  if(!el)return;
+  const color=el.style.color||'';
+  _buildSlot(el,toVal,color);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    const live=document.getElementById(id);
+    if(live)_startSlot(live);
+  }));
 }
 
 function updateHomeFAB(idx){
@@ -3869,8 +3885,7 @@ const _SLOT_W=32; // fixed px width per digit column
 
 const _slotQueue=[];
 function animateHero(id,toVal){
-  // Don't touch the DOM yet — panel innerHTML may still be rebuilding.
-  // Read the color from whatever is currently in the DOM.
+  _heroData[id]=toVal; // always remember latest value for homeGoTo
   const el=document.getElementById(id);
   const color=el?el.style.color||'':'';
   _slotQueue.push({id,toVal,color});
