@@ -456,10 +456,11 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 
 /* ── SWIPE TO ACTION ── */
 .swipe-wrap{position:relative;border-radius:16px;overflow:hidden;}
-.swipe-action{position:absolute;top:0;right:0;bottom:0;display:flex;align-items:center;justify-content:flex-end;width:0;border-radius:16px;opacity:0;overflow:hidden;}
+.swipe-action{position:absolute;top:0;right:0;bottom:0;z-index:1;display:flex;align-items:center;justify-content:flex-end;width:0;opacity:0;overflow:hidden;}
 .swipe-action.delete{background:#ef4444;}
 .swipe-action.cancel-sub{background:#f59e0b;}
-.swipe-card{will-change:transform;border-radius:16px;transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .35s cubic-bezier(.4,0,.2,1);}
+.swipe-action-left{position:absolute;top:0;left:0;bottom:0;z-index:1;display:flex;align-items:center;justify-content:flex-start;width:0;opacity:0;overflow:hidden;background:#22c55e;}
+.swipe-card{position:relative;z-index:2;will-change:transform;border-radius:16px;transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .35s cubic-bezier(.4,0,.2,1);}
 #ptr-indicator.visible{display:flex}
 
 /* ── PULL-UP SHEET ── */
@@ -4721,6 +4722,14 @@ async function cancelSub(row){
   await syncAll();
 }
 
+let _activeSwipeWrap=null; // track currently open/dragging wrap globally
+function _resetAllSwipes(except){
+  document.querySelectorAll('.swipe-wrap').forEach(w=>{
+    if(w===except||!w._resetCard)return;
+    w._resetCard();
+  });
+}
+
 function initSwipeCards(container){
   if(!container)return;
   container.querySelectorAll('.swipe-wrap').forEach(wrap=>{
@@ -4752,7 +4761,9 @@ function initSwipeCards(container){
       if(actionLeft){actionLeft.style.transition='opacity .3s,width .3s';actionLeft.style.opacity='0';actionLeft.style.width='0';}
       card.style.transform='';open=false;
       if(wrap._dismiss){document.removeEventListener('touchstart',wrap._dismiss,true);wrap._dismiss=null;}
+      if(_activeSwipeWrap===wrap)_activeSwipeWrap=null;
     };
+    wrap._resetCard=resetCard;
 
     const addDismiss=()=>{
       setTimeout(()=>{
@@ -4773,10 +4784,8 @@ function initSwipeCards(container){
       actionRight.style.opacity='1';actionRight.style.width=MAX+'px';
       actionRight.innerHTML=`
         <button onclick="swipeConfirm(this)" data-action="${actionType}" data-row="${wrap.dataset.row}"
-          style="background:${isDelete?'#ef4444':'#f59e0b'};color:#fff;border:none;border-radius:8px;
-                 padding:10px 14px;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;
-                 cursor:pointer;white-space:nowrap;margin:0 10px;letter-spacing:.02em;">
-          ${isDelete?'Delete':'Cancel'}
+          style="background:transparent;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:0 18px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
         </button>`;
       open=true;addDismiss();
     };
@@ -4791,16 +4800,15 @@ function initSwipeCards(container){
       actionLeft.style.opacity='1';actionLeft.style.width=MAX+'px';
       actionLeft.innerHTML=`
         <button onclick="swipeConfirmRight(this)" data-action="${actionType}" data-row="${wrap.dataset.row}"
-          style="background:#22c55e;color:#fff;border:none;border-radius:8px;
-                 padding:10px 14px;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;
-                 cursor:pointer;white-space:nowrap;margin:0 10px;letter-spacing:.02em;">
-          ${label}
+          style="background:transparent;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:0 18px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
         </button>`;
       open=true;addDismiss();
     };
 
     wrap.addEventListener('touchstart',e=>{
       if(open){resetCard();if(wrap._dismiss){document.removeEventListener('touchstart',wrap._dismiss,true);wrap._dismiss=null;}return;}
+      _resetAllSwipes(wrap);
       sx=e.touches[0].clientX;sy=e.touches[0].clientY;
       dx=0;isHoriz=null;
       card.style.transition='none';
@@ -4814,8 +4822,9 @@ function initSwipeCards(container){
     wrap.addEventListener('mousedown',e=>{
       if(e.button!==0)return;
       if(open){resetCard();return;}
+      _resetAllSwipes(wrap); // close any other open card
       sx=e.clientX;sy=e.clientY;
-      dx=0;isHoriz=null;mouseDown=true;
+      dx=0;isHoriz=null;mouseDown=true;_activeSwipeWrap=wrap;
       card.style.transition='none';
       actionRight.style.transition='none';
       if(actionLeft)actionLeft.style.transition='none';
@@ -4855,7 +4864,7 @@ function initSwipeCards(container){
       if(!mouseDown)return;
       mouseDown=false;
       pressUp();
-      if(open||isHoriz===null||!isHoriz){return;}
+      if(open||isHoriz===null||!isHoriz){dx=0;isHoriz=null;return;}
       if(Math.abs(dx)>=TRIGGER){
         if(dx<0)snapOpenLeft();
         else snapOpenRight();
