@@ -4004,7 +4004,6 @@ function _appendHomeSub(){
   });
   if(lim<subs.length)_makeSentinel('hp-sub','sub');
   initSwipeCards(el);
-  initHoverActions(el);
 }
 
 function _appendHomeIncome(){
@@ -4399,7 +4398,6 @@ function renderHomeWish(){
   moreWish.style.display=items.length>lim?'block':'none';
   if(items.length>lim)moreWish.textContent=`Show ${Math.min(30,items.length-lim)} more`;
   initSwipeCards(document.getElementById('hp-wish'));
-  initHoverActions(document.getElementById('hp-wish'));
 }
 
 function renderHomeExp(){
@@ -4529,7 +4527,6 @@ function renderHomeSub(){
   animateHero('hero-sub-amt',totalMo);
   if(subs.length>30)_makeSentinel('hp-sub','sub');
   initSwipeCards(document.getElementById('hp-sub'));
-  initHoverActions(document.getElementById('hp-sub'));
 }
 
 function renderHomeIncome(){
@@ -4724,34 +4721,6 @@ async function cancelSub(row){
   await syncAll();
 }
 
-function initHoverActions(container){
-  if(!container)return;
-  container.querySelectorAll('.swipe-wrap').forEach(wrap=>{
-    if(wrap._hoverInit)return;
-    wrap._hoverInit=true;
-    const actionType=wrap.dataset.swipeAction;
-    const row=wrap.dataset.row;
-    const isDelete=actionType==='deleteWish';
-    const div=document.createElement('div');
-    div.className='hover-actions has-left';
-    const leftBtn=document.createElement('button');
-    leftBtn.className='hover-btn green';
-    leftBtn.textContent=actionType==='cancelSub'?'✓ Pay':'Buy →';
-    leftBtn.dataset.action=actionType;
-    leftBtn.dataset.row=row;
-    leftBtn.onclick=e=>{e.stopPropagation();swipeConfirmRight(leftBtn);};
-    const rightBtn=document.createElement('button');
-    rightBtn.className=isDelete?'hover-btn red':'hover-btn amber';
-    rightBtn.textContent=isDelete?'Delete':'Cancel';
-    rightBtn.dataset.action=actionType;
-    rightBtn.dataset.row=row;
-    rightBtn.onclick=e=>{e.stopPropagation();swipeConfirm(rightBtn);};
-    div.appendChild(leftBtn);
-    div.appendChild(rightBtn);
-    wrap.appendChild(div);
-  });
-}
-
 function initSwipeCards(container){
   if(!container)return;
   container.querySelectorAll('.swipe-wrap').forEach(wrap=>{
@@ -4843,6 +4812,62 @@ function initSwipeCards(container){
       if(actionLeft)actionLeft.style.transition='none';
       pressDown();
     },{passive:true});
+
+    // ── Mouse equivalents for desktop ──
+    let mouseDown=false;
+    wrap.addEventListener('mousedown',e=>{
+      if(e.button!==0)return;
+      if(open){resetCard();return;}
+      sx=e.clientX;sy=e.clientY;
+      dx=0;isHoriz=null;mouseDown=true;
+      card.style.transition='none';
+      actionRight.style.transition='none';
+      if(actionLeft)actionLeft.style.transition='none';
+      pressDown();
+      e.preventDefault();
+    });
+    window.addEventListener('mousemove',e=>{
+      if(!mouseDown||open)return;
+      const cx=e.clientX,cy=e.clientY;
+      const adx=Math.abs(cx-sx),ady=Math.abs(cy-sy);
+      if(isHoriz===null){if(adx<4&&ady<4)return;isHoriz=adx>ady*1.2;}
+      if(!isHoriz){pressUp();return;}
+      pressing=false;card.style.opacity='';
+      dx=cx-sx;
+      const goingLeft=dx<0;
+      const visual=Math.min(Math.abs(dx),MAX);
+      const progress=Math.min(1,visual/TRIGGER);
+      card.style.transform=`translateX(${goingLeft?-visual:visual}px)`;
+      if(goingLeft){
+        actionRight.style.opacity=String(progress*0.9);actionRight.style.width=visual+'px';
+        const actionType=wrap.dataset.swipeAction;
+        const label=actionType==='deleteWish'?'Delete':'Cancel';
+        const color=actionType==='deleteWish'?'#ef4444':'#f59e0b';
+        actionRight.innerHTML=`<span style="color:#fff;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;letter-spacing:.02em;padding-right:14px;">${label}</span>`;
+        actionRight.style.background=`linear-gradient(to left,${color},${color}cc)`;
+        if(actionLeft){actionLeft.style.opacity='0';actionLeft.style.width='0';}
+      } else if(actionLeft){
+        actionLeft.style.opacity=String(progress*0.9);actionLeft.style.width=visual+'px';
+        const actionType=wrap.dataset.swipeAction;
+        const label=actionType==='cancelSub'?'✓ Pay':'Buy →';
+        actionLeft.innerHTML=`<span style="color:#fff;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;letter-spacing:.02em;padding-left:14px;">${label}</span>`;
+        actionLeft.style.background='linear-gradient(to right,#22c55e,#22c55ecc)';
+        actionRight.style.opacity='0';actionRight.style.width='0';
+      }
+    });
+    window.addEventListener('mouseup',e=>{
+      if(!mouseDown)return;
+      mouseDown=false;
+      pressUp();
+      if(open||isHoriz===null||!isHoriz){return;}
+      if(Math.abs(dx)>=TRIGGER){
+        if(dx<0)snapOpenLeft();
+        else snapOpenRight();
+      } else {
+        resetCard();
+      }
+      dx=0;isHoriz=null;
+    });
 
     wrap.addEventListener('touchmove',e=>{
       if(open)return;
