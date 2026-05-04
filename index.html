@@ -4219,64 +4219,63 @@ function renderHomeDash(){
   // Recent expenses
   const recent=[...D.expenses].filter(e=>e.Status!=='Ordered').sort((a,b)=>toSortableDate(b.Date||'').localeCompare(toSortableDate(a.Date||''))).slice(0,5);
 
-  // ── Greeting + month label ──
-  const greetHtml=`
-    <div style="padding:20px 20px 16px;">
-      <div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:8px;">Finance</div>
-      <div style="font-size:26px;font-weight:300;color:rgba(255,255,255,0.88);letter-spacing:-.02em;line-height:1.2;">${_greeting()}<span style="color:rgba(255,255,255,0.22);">.</span></div>
-    </div>`;
+  // ── Month label only (no greeting) ──
+  const greetHtml='';
 
-  // ── IN / OUT dual hero ──
+  // ── Centered inline IN · OUT hero ──
   const isElev=document.body.classList.contains('elevated');
-  const heroWrap=isElev?'e-card':'';
-  const heroStyle=isElev?'margin:0 12px 10px;display:grid;grid-template-columns:1fr 1fr;':'display:grid;grid-template-columns:1fr 1fr;border-top:1px solid rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.06);';
   const heroHtml=`
-    <div class="${heroWrap}" style="${heroStyle}">
-      <div style="background:${isElev?'var(--card-bg)':'transparent'};padding:18px 20px;">
-        <div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:8px;">In · ${monthName}</div>
-        <div class="hp-hero-amount" id="hero-dash-in" style="color:#22c55e;font-size:32px;">${fmt(gainedMo)}</div>
+    <div style="padding:24px 0 18px;text-align:center;${isElev?'margin:0 12px;background:var(--card-bg);border-radius:16px;border:1px solid var(--card-border);margin-bottom:10px;':'border-top:1px solid rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.06);'}">
+      <div style="font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:12px;">${monthName} ${now.getFullYear()}</div>
+      <div style="display:flex;align-items:center;justify-content:center;">
+        <div style="flex:1;display:flex;align-items:center;justify-content:flex-end;padding-right:14px;gap:6px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+          <div class="hp-hero-amount" id="hero-dash-in" style="color:#22c55e;font-size:40px;">${fmt(gainedMo)}</div>
+        </div>
+        <div style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.2);flex-shrink:0;"></div>
+        <div style="flex:1;display:flex;align-items:center;justify-content:flex-start;padding-left:14px;gap:6px;">
+          <div class="hp-hero-amount" id="hero-dash-out" style="color:#ef4444;font-size:40px;">${fmt(spentMo)}</div>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+        </div>
       </div>
-      <div style="background:${isElev?'var(--card-bg)':'transparent'};padding:18px 20px;border-left:1px solid rgba(255,255,255,0.06);">
-        <div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:8px;">Out · ${monthName}</div>
-        <div class="hp-hero-amount" id="hero-dash-out" style="color:#ef4444;font-size:32px;">${fmt(spentMo)}</div>
-      </div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.2);margin-top:10px;letter-spacing:.02em;">income · expenses</div>
     </div>`;
 
   // ── Quick add ──
-  const qaddFlat=`<div style="display:flex;flex-direction:column;gap:8px;padding:12px 20px;">
-      <button class="hp-add-btn" onclick="openFoodMo()" style="border-color:rgba(239,68,68,0.25);color:#ef4444;background:rgba(239,68,68,0.06);">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Add Expense
-      </button>
-      <button class="hp-add-btn" onclick="openModal('wish')" style="border-color:rgba(255,255,255,0.1);color:rgba(255,255,255,0.5);">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Add to Wishlist
-      </button>
-      <button class="hp-add-btn" onclick="openIncomeMo()" style="border-color:rgba(34,197,94,0.25);color:#22c55e;background:rgba(34,197,94,0.06);">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Log Income
-      </button>
-      <button class="hp-add-btn" onclick="openModal('sub')" style="border-color:rgba(245,158,11,0.25);color:#f59e0b;background:rgba(245,158,11,0.06);">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Add Subscription
-      </button>
-    </div>`;
-  const qaddElev=`<div style="display:flex;flex-direction:column;gap:8px;padding:12px;">
+  const qaddFlat=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 20px;">
       <button class="hp-add-btn" onclick="openFoodMo()" style="border-color:rgba(239,68,68,0.25);color:#ef4444;background:rgba(239,68,68,0.06);margin:0;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Add Expense
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Expense
       </button>
       <button class="hp-add-btn" onclick="openModal('wish')" style="border-color:rgba(255,255,255,0.1);color:rgba(255,255,255,0.5);margin:0;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Add to Wishlist
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Wishlist
       </button>
       <button class="hp-add-btn" onclick="openIncomeMo()" style="border-color:rgba(34,197,94,0.25);color:#22c55e;background:rgba(34,197,94,0.06);margin:0;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Log Income
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Income
       </button>
       <button class="hp-add-btn" onclick="openModal('sub')" style="border-color:rgba(245,158,11,0.25);color:#f59e0b;background:rgba(245,158,11,0.06);margin:0;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Add Subscription
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Sub
+      </button>
+    </div>`;
+  const qaddElev=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px;">
+      <button class="hp-add-btn" onclick="openFoodMo()" style="border-color:rgba(239,68,68,0.25);color:#ef4444;background:rgba(239,68,68,0.06);margin:0;">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Expense
+      </button>
+      <button class="hp-add-btn" onclick="openModal('wish')" style="border-color:rgba(255,255,255,0.1);color:rgba(255,255,255,0.5);margin:0;">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Wishlist
+      </button>
+      <button class="hp-add-btn" onclick="openIncomeMo()" style="border-color:rgba(34,197,94,0.25);color:#22c55e;background:rgba(34,197,94,0.06);margin:0;">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Income
+      </button>
+      <button class="hp-add-btn" onclick="openModal('sub')" style="border-color:rgba(245,158,11,0.25);color:#f59e0b;background:rgba(245,158,11,0.06);margin:0;">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Sub
       </button>
     </div>`;
   const qaddHtml=isElev?qaddElev:qaddFlat;
@@ -4373,7 +4372,7 @@ function renderHomeWish(){
     const sav=orig&&bought&&orig>bought?orig-bought:0;
     const color=getCatColor(w.Category)||'#6c63ff';
     return`<div class="swipe-wrap" data-swipe-action="deleteWish" data-row="${w._row}">
-      <div class="swipe-action delete"></div>
+      <div class="swipe-action-left"></div><div class="swipe-action delete"></div>
       <div class="swipe-card hrow" onclick="openHomeWishEdit(${w._row})">
         <div class="hrow-stripe" style="background:${color}"></div>
         <div class="hrow-icon" style="background:${color}22;">
@@ -4523,7 +4522,7 @@ function renderHomeSub(){
     const cost=parseFloat(s.Cost||0);
     const color=getCatColor(s.Category)||'rgba(255,255,255,0.15)';
     const accentColor=isDueToday?'#ef4444':'#f59e0b';
-    return`<div class="swipe-wrap" data-swipe-action="cancelSub" data-row="${s._row}"><div class="swipe-action cancel-sub"></div><div class="swipe-card hrow ${isDueToday?'due-today-card':''}" onclick="openHomeSubEdit(${s._row})"><div class="hrow-stripe" style="background:${isDueToday?'#ef4444':color}"></div><div class="hrow-icon" style="background:${isDueToday?'rgba(239,68,68,0.15)':color+'22'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${isDueToday?'#ef4444':color}" stroke-width="2" style="overflow:visible">${getCatIcon(s.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(s.Name||'—')}</div><div class="hrow-sub">${s.Billing||'Monthly'}${s.Card?' · '+cardDisplay(s.Card):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:${accentColor}">$${cost.toLocaleString()}</div><div class="hrow-meta" style="color:${isDueToday?'#ef4444':due==='due-soon'?'#f59e0b':'rgba(255,255,255,0.28)'}">${isDueToday?'DUE TODAY':s.NextRenewal?fmtDate(s.NextRenewal):''}</div></div></div></div>`;
+    return`<div class="swipe-wrap" data-swipe-action="cancelSub" data-row="${s._row}"><div class="swipe-action-left"></div><div class="swipe-action cancel-sub"></div><div class="swipe-card hrow ${isDueToday?'due-today-card':''}" onclick="openHomeSubEdit(${s._row})"><div class="hrow-stripe" style="background:${isDueToday?'#ef4444':color}"></div><div class="hrow-icon" style="background:${isDueToday?'rgba(239,68,68,0.15)':color+'22'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${isDueToday?'#ef4444':color}" stroke-width="2" style="overflow:visible">${getCatIcon(s.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(s.Name||'—')}</div><div class="hrow-sub">${s.Billing||'Monthly'}${s.Card?' · '+cardDisplay(s.Card):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:${accentColor}">$${cost.toLocaleString()}</div><div class="hrow-meta" style="color:${isDueToday?'#ef4444':due==='due-soon'?'#f59e0b':'rgba(255,255,255,0.28)'}">${isDueToday?'DUE TODAY':s.NextRenewal?fmtDate(s.NextRenewal):''}</div></div></div></div>`;
   }).join('')||'<div style="color:rgba(255,255,255,0.2);font-size:13px;text-align:center;padding:48px 20px;">No active subscriptions</div>';
   animateHero('hero-sub-amt',totalMo);
   if(subs.length>30)_makeSentinel('hp-sub','sub');
@@ -4728,57 +4727,34 @@ function initSwipeCards(container){
     if(wrap._swipeInit)return;
     wrap._swipeInit=true;
     const card=wrap.querySelector('.swipe-card');
-    const action=wrap.querySelector('.swipe-action');
-    if(!card||!action)return;
+    const actionRight=wrap.querySelector('.swipe-action');
+    const actionLeft=wrap.querySelector('.swipe-action-left');
+    if(!card||!actionRight)return;
 
-    const TRIGGER=90;   // px to enter confirm state
-    const MAX=130;      // max visual drag
+    const TRIGGER=90,MAX=130;
     let sx=0,sy=0,dx=0,isHoriz=null,open=false,pressing=false;
 
     const pressDown=()=>{
-      if(open)return;
-      pressing=true;
+      if(open)return;pressing=true;
       card.style.transition='transform .12s cubic-bezier(.4,0,.2,1),opacity .12s cubic-bezier(.4,0,.2,1)';
-      card.style.transform='scale(.972)';
-      card.style.opacity='.82';
+      card.style.transform='scale(.972)';card.style.opacity='.82';
     };
     const pressUp=()=>{
-      if(!pressing)return;
-      pressing=false;
+      if(!pressing)return;pressing=false;
       card.style.transition='transform .35s cubic-bezier(.4,0,.2,1),opacity .35s cubic-bezier(.4,0,.2,1)';
-      card.style.transform='';
-      card.style.opacity='';
+      card.style.transform='';card.style.opacity='';
     };
 
     const resetCard=()=>{
       card.style.transition='transform .3s cubic-bezier(.4,0,.2,1)';
-      action.style.transition='opacity .3s,width .3s';
-      card.style.transform='';
-      action.style.opacity='0';
-      action.style.width='0';
-      open=false;
+      actionRight.style.transition='opacity .3s,width .3s';
+      actionRight.style.opacity='0';actionRight.style.width='0';
+      if(actionLeft){actionLeft.style.transition='opacity .3s,width .3s';actionLeft.style.opacity='0';actionLeft.style.width='0';}
+      card.style.transform='';open=false;
       if(wrap._dismiss){document.removeEventListener('touchstart',wrap._dismiss,true);wrap._dismiss=null;}
     };
 
-    const snapOpen=()=>{
-      const actionType=wrap.dataset.swipeAction;
-      const isDelete=actionType==='deleteWish';
-      card.style.transition='transform .3s cubic-bezier(.4,0,.2,1)';
-      action.style.transition='opacity .2s,width .3s cubic-bezier(.4,0,.2,1)';
-      card.style.transform=`translateX(-${MAX}px)`;
-      action.style.opacity='1';
-      action.style.width=MAX+'px';
-      action.innerHTML=`
-        <div style="display:flex;width:100%;padding:0 10px;box-sizing:border-box;">
-          <button onclick="swipeConfirm(this)" data-action="${actionType}" data-row="${wrap.dataset.row}"
-            style="background:${isDelete?'#ef4444':'#f59e0b'};color:#fff;border:none;border-radius:8px;
-                   padding:10px 0;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;
-                   cursor:pointer;width:100%;letter-spacing:.02em;">
-            ${isDelete?'Delete':'Cancel'}
-          </button>
-        </div>`;
-      open=true;
-      // Tap anywhere outside to dismiss
+    const addDismiss=()=>{
       setTimeout(()=>{
         const dismiss=e=>{
           if(!wrap.contains(e.target)){resetCard();document.removeEventListener('touchstart',dismiss,true);}
@@ -4788,12 +4764,52 @@ function initSwipeCards(container){
       },50);
     };
 
+    const snapOpenLeft=()=>{
+      const actionType=wrap.dataset.swipeAction;
+      const isDelete=actionType==='deleteWish';
+      card.style.transition='transform .3s cubic-bezier(.4,0,.2,1)';
+      actionRight.style.transition='opacity .2s,width .3s cubic-bezier(.4,0,.2,1)';
+      card.style.transform=`translateX(-${MAX}px)`;
+      actionRight.style.opacity='1';actionRight.style.width=MAX+'px';
+      actionRight.innerHTML=`
+        <div style="display:flex;width:100%;padding:0 10px;box-sizing:border-box;">
+          <button onclick="swipeConfirm(this)" data-action="${actionType}" data-row="${wrap.dataset.row}"
+            style="background:${isDelete?'#ef4444':'#f59e0b'};color:#fff;border:none;border-radius:8px;
+                   padding:10px 0;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;
+                   cursor:pointer;width:100%;letter-spacing:.02em;">
+            ${isDelete?'Delete':'Cancel Sub'}
+          </button>
+        </div>`;
+      open=true;addDismiss();
+    };
+
+    const snapOpenRight=()=>{
+      if(!actionLeft)return;
+      const actionType=wrap.dataset.swipeAction;
+      const label=actionType==='cancelSub'?'✓ Pay':'Buy →';
+      card.style.transition='transform .3s cubic-bezier(.4,0,.2,1)';
+      actionLeft.style.transition='opacity .2s,width .3s cubic-bezier(.4,0,.2,1)';
+      card.style.transform=`translateX(${MAX}px)`;
+      actionLeft.style.opacity='1';actionLeft.style.width=MAX+'px';
+      actionLeft.innerHTML=`
+        <div style="display:flex;width:100%;padding:0 10px;box-sizing:border-box;">
+          <button onclick="swipeConfirmRight(this)" data-action="${actionType}" data-row="${wrap.dataset.row}"
+            style="background:#22c55e;color:#fff;border:none;border-radius:8px;
+                   padding:10px 0;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;
+                   cursor:pointer;width:100%;letter-spacing:.02em;">
+            ${label}
+          </button>
+        </div>`;
+      open=true;addDismiss();
+    };
+
     wrap.addEventListener('touchstart',e=>{
       if(open){resetCard();if(wrap._dismiss){document.removeEventListener('touchstart',wrap._dismiss,true);wrap._dismiss=null;}return;}
       sx=e.touches[0].clientX;sy=e.touches[0].clientY;
       dx=0;isHoriz=null;
       card.style.transition='none';
-      action.style.transition='none';
+      actionRight.style.transition='none';
+      if(actionLeft)actionLeft.style.transition='none';
       pressDown();
     },{passive:true});
 
@@ -4801,33 +4817,40 @@ function initSwipeCards(container){
       if(open)return;
       const cx=e.touches[0].clientX,cy=e.touches[0].clientY;
       const adx=Math.abs(cx-sx),ady=Math.abs(cy-sy);
-      if(isHoriz===null){
-        if(adx<4&&ady<4)return;
-        isHoriz=adx>ady*1.2;
-      }
+      if(isHoriz===null){if(adx<4&&ady<4)return;isHoriz=adx>ady*1.2;}
       if(!isHoriz){pressUp();return;}
-      // Cancel press state once swiping
       pressing=false;card.style.opacity='';
-      dx=Math.min(0,cx-sx);
-      const progress=Math.min(1,Math.abs(dx)/TRIGGER);
+      dx=cx-sx;
+      const goingLeft=dx<0;
       const visual=Math.min(Math.abs(dx),MAX);
-      card.style.transform=`translateX(-${visual}px)`;
-      action.style.opacity=String(progress*0.9);
-      action.style.width=visual+'px';
-      // Show the label text while dragging (clean, no buttons yet)
-      const actionType=wrap.dataset.swipeAction;
-      const label=actionType==='deleteWish'?'Delete':'Cancel';
-      const color=actionType==='deleteWish'?'#ef4444':'#f59e0b';
-      action.innerHTML=`<span style="color:#fff;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;letter-spacing:.02em;padding-right:14px;">${label}</span>`;
-      action.style.background=`linear-gradient(to left,${color},${color}cc)`;
+      const progress=Math.min(1,visual/TRIGGER);
+      card.style.transform=`translateX(${goingLeft?-visual:visual}px)`;
+      if(goingLeft){
+        actionRight.style.opacity=String(progress*0.9);
+        actionRight.style.width=visual+'px';
+        const actionType=wrap.dataset.swipeAction;
+        const label=actionType==='deleteWish'?'Delete':'Cancel';
+        const color=actionType==='deleteWish'?'#ef4444':'#f59e0b';
+        actionRight.innerHTML=`<span style="color:#fff;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;letter-spacing:.02em;padding-right:14px;">${label}</span>`;
+        actionRight.style.background=`linear-gradient(to left,${color},${color}cc)`;
+        if(actionLeft){actionLeft.style.opacity='0';actionLeft.style.width='0';}
+      } else if(actionLeft){
+        actionLeft.style.opacity=String(progress*0.9);
+        actionLeft.style.width=visual+'px';
+        const actionType=wrap.dataset.swipeAction;
+        const label=actionType==='cancelSub'?'✓ Pay':'Buy →';
+        actionLeft.innerHTML=`<span style="color:#fff;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;letter-spacing:.02em;padding-left:14px;">${label}</span>`;
+        actionLeft.style.background='linear-gradient(to right,#22c55e,#22c55ecc)';
+        actionRight.style.opacity='0';actionRight.style.width='0';
+      }
     },{passive:true});
 
     wrap.addEventListener('touchend',()=>{
       pressUp();
-      if(open||isHoriz===null){return;}
-      if(!isHoriz){return;}
+      if(open||isHoriz===null||!isHoriz){return;}
       if(Math.abs(dx)>=TRIGGER){
-        snapOpen();
+        if(dx<0)snapOpenLeft();
+        else snapOpenRight();
       } else {
         resetCard();
       }
@@ -4863,6 +4886,26 @@ async function swipeConfirm(btn){
     if(actionType==='deleteWish') await deleteWish(row);
     else if(actionType==='cancelSub') await cancelSub(row);
   },200);
+}
+
+async function swipeConfirmRight(btn){
+  const wrap=btn.closest('.swipe-wrap');
+  const card=wrap?.querySelector('.swipe-card');
+  const actionType=wrap?.dataset.swipeAction;
+  const row=parseInt(wrap?.dataset.row);
+  if(!card)return;
+  btn.textContent='…';btn.disabled=true;
+  card.style.transition='transform .22s ease,opacity .22s';
+  card.style.transform='translateX(105%)';
+  card.style.opacity='0';
+  setTimeout(async()=>{
+    if(actionType==='cancelSub'){
+      await paySub(row);
+    } else if(actionType==='deleteWish'){
+      const w=D.wishlist.find(x=>x._row===row);
+      if(w)openBuyModal(w);
+    }
+  },220);
 }
 
 // ── MONTH PICKER ──
