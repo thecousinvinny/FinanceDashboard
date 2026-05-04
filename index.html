@@ -4232,11 +4232,11 @@ function renderHomeDash(){
   const heroStyle=isElev?'margin:0 12px 10px;display:grid;grid-template-columns:1fr 1fr;':'display:grid;grid-template-columns:1fr 1fr;border-top:1px solid rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.06);';
   const heroHtml=`
     <div class="${heroWrap}" style="${heroStyle}">
-      <div style="background:${isElev?'var(--card-bg)':' var(--bg)'};padding:18px 20px;">
+      <div style="background:${isElev?'var(--card-bg)':'var(--bg)'};padding:18px 20px;">
         <div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:8px;">In · ${monthName}</div>
         <div class="hp-hero-amount" id="hero-dash-in" style="color:#22c55e;font-size:32px;">${fmt(gainedMo)}</div>
       </div>
-      <div style="background:${isElev?'var(--card-bg)':' var(--bg)'};padding:18px 20px;border-left:1px solid rgba(255,255,255,0.06);">
+      <div style="background:${isElev?'var(--card-bg)':'var(--bg)'};padding:18px 20px;border-left:1px solid rgba(255,255,255,0.06);">
         <div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:8px;">Out · ${monthName}</div>
         <div class="hp-hero-amount" id="hero-dash-out" style="color:#ef4444;font-size:32px;">${fmt(spentMo)}</div>
       </div>
