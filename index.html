@@ -1425,8 +1425,13 @@ function renderAll(){
 }
 function $f(n){return'$'+(parseFloat(n)||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});}
 function localToday(){
-  const d=new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  // Always return today's date in PST/PDT regardless of system timezone
+  return new Date().toLocaleDateString('en-CA',{timeZone:'America/Los_Angeles'});
+}
+function ptNow(){
+  // Current date parts in PST/PDT
+  const s=new Date().toLocaleDateString('en-CA',{timeZone:'America/Los_Angeles'});
+  return s; // YYYY-MM-DD
 }
 function toSortableDate(d){
   if(!d)return'';
@@ -2341,8 +2346,14 @@ function dueCls(nextRenewal){
   if(!nextRenewal) return '';
   const iso=toSortableDate(nextRenewal);
   if(!iso) return '';
-  const diff=(new Date(iso+'T12:00:00')-new Date())/(1000*60*60*24);
-  if(diff<=1) return 'due-today';
+  const today=ptNow();
+  // Compare date strings — no timestamp arithmetic, no timezone drift
+  if(iso<=today) return 'due-today';
+  // Also flag tomorrow as due-soon (within 1 day)
+  const tomorrow=new Date(today+'T12:00:00');
+  tomorrow.setDate(tomorrow.getDate()+1);
+  const tomorrowStr=tomorrow.toLocaleDateString('en-CA',{timeZone:'America/Los_Angeles'});
+  if(iso===tomorrowStr) return 'due-soon';
   return '';
 }
 
@@ -3711,14 +3722,17 @@ function toggleAppMenu(){
 // Relative date: "Today", "Yesterday", "3 days ago", then absolute
 function relDate(dateStr){
   if(!dateStr)return'';
-  const d=new Date(toSortableDate(dateStr)+'T12:00:00');
-  if(isNaN(d))return dateStr;
-  const today=new Date();today.setHours(0,0,0,0);
-  const diff=Math.round((d-today)/86400000);
+  const iso=toSortableDate(dateStr);
+  if(!iso)return dateStr;
+  const today=ptNow();
+  // Parse both as noon PST to get clean day diff
+  const dMs=new Date(iso+'T12:00:00').getTime();
+  const tMs=new Date(today+'T12:00:00').getTime();
+  const diff=Math.round((dMs-tMs)/86400000);
   if(diff===0)return'Today';
   if(diff===-1)return'Yesterday';
   if(diff>=-6)return Math.abs(diff)+' days ago';
-  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  return new Date(iso+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
 }
 
 // Category → left stripe hex color
