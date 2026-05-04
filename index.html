@@ -957,9 +957,9 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 <div class="mo" id="hc-wish-mo" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="md">
     <div class="mtit">Edit Wishlist Item</div>
-    <div class="fg"><div class="fgr"><label class="fl">Name</label><input class="fi" id="hcw-name"></div>
-    <div class="fgr"><label class="fl">Category</label><select class="fs" id="hcw-cat"></select></div></div>
-    <div class="fgr" style="margin-top:11px"><label class="fl">Description</label><input class="fi" id="hcw-desc"></div>
+    <div class="fgr"><label class="fl">Name</label><input class="fi" id="hcw-name" style="font-size:17px;font-weight:500;"></div>
+    <div class="fgr" style="margin-top:11px"><label class="fl">Category</label><select class="fs" id="hcw-cat"></select></div>
+    <div class="fgr" style="margin-top:11px"><label class="fl">Description</label><textarea class="fi" id="hcw-desc" rows="3" style="width:100%;box-sizing:border-box;background:var(--input-bg,rgba(255,255,255,0.06));border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:16px;font-family:inherit;padding:11px 13px;resize:none;min-height:72px;line-height:1.45;outline:none;" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea></div>
     <div class="fg" style="margin-top:11px">
       <div class="fgr"><label class="fl">Original Cost</label><input class="fi" id="hcw-ocost" type="number" min="0" step="0.01"></div>
       <div class="fgr"><label class="fl">Bought Cost</label><input class="fi" id="hcw-bcost" type="number" min="0" step="0.01"></div>
@@ -985,9 +985,9 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 <div class="mo" id="hc-exp-mo" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="md">
     <div class="mtit">Edit Expense</div>
-    <div class="fg"><div class="fgr"><label class="fl">Name</label><input class="fi" id="hce-name"></div>
-    <div class="fgr"><label class="fl">Category</label><select class="fs" id="hce-cat"></select></div></div>
-    <div class="fgr" style="margin-top:11px"><label class="fl">Description</label><input class="fi" id="hce-desc"></div>
+    <div class="fgr"><label class="fl">Name</label><input class="fi" id="hce-name" style="font-size:17px;font-weight:500;"></div>
+    <div class="fgr" style="margin-top:11px"><label class="fl">Category</label><select class="fs" id="hce-cat"></select></div>
+    <div class="fgr" style="margin-top:11px"><label class="fl">Description</label><textarea class="fi" id="hce-desc" rows="3" style="width:100%;box-sizing:border-box;background:var(--input-bg,rgba(255,255,255,0.06));border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:16px;font-family:inherit;padding:11px 13px;resize:none;min-height:72px;line-height:1.45;outline:none;" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea></div>
     <div class="fg" style="margin-top:11px">
       <div class="fgr"><label class="fl">Cost Paid</label><input class="fi" id="hce-cost" type="number" min="0" step="0.01"></div>
       <div class="fgr"><label class="fl">Original Cost</label><input class="fi" id="hce-orig" type="number" min="0" step="0.01"></div>
@@ -1010,8 +1010,8 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 <div class="mo" id="hc-sub-mo" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="md">
     <div class="mtit">Edit Subscription</div>
-    <div class="fg"><div class="fgr"><label class="fl">Name</label><input class="fi" id="hcs-name"></div>
-    <div class="fgr"><label class="fl">Category</label><select class="fs" id="hcs-cat"></select></div></div>
+    <div class="fgr"><label class="fl">Name</label><input class="fi" id="hcs-name" style="font-size:17px;font-weight:500;"></div>
+    <div class="fgr" style="margin-top:11px"><label class="fl">Category</label><select class="fs" id="hcs-cat"></select></div>
     <div class="fg" style="margin-top:11px">
       <div class="fgr"><label class="fl">Cost</label><input class="fi" id="hcs-cost" type="number" min="0" step="0.01"></div>
       <div class="fgr"><label class="fl">Billing</label><select class="fs" id="hcs-billing"><option>Monthly</option><option>Annual</option><option>Weekly</option><option>Quarterly</option></select></div>
@@ -1031,9 +1031,9 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 <div class="mo" id="hc-income-mo" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="md">
     <div class="mtit">Edit Income</div>
-    <div class="fg"><div class="fgr"><label class="fl">Name</label><input class="fi" id="hci-name"></div>
-    <div class="fgr"><label class="fl">Category</label><select class="fs" id="hci-cat"></select></div></div>
-    <div class="fgr" style="margin-top:11px"><label class="fl">Description</label><input class="fi" id="hci-desc"></div>
+    <div class="fgr"><label class="fl">Name</label><input class="fi" id="hci-name" style="font-size:17px;font-weight:500;"></div>
+    <div class="fgr" style="margin-top:11px"><label class="fl">Category</label><select class="fs" id="hci-cat"></select></div>
+    <div class="fgr" style="margin-top:11px"><label class="fl">Description</label><textarea class="fi" id="hci-desc" rows="3" style="width:100%;box-sizing:border-box;background:var(--input-bg,rgba(255,255,255,0.06));border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:16px;font-family:inherit;padding:11px 13px;resize:none;min-height:72px;line-height:1.45;outline:none;" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea></div>
     <div class="fg" style="margin-top:11px">
       <div class="fgr"><label class="fl">Amount</label><input class="fi" id="hci-cost" type="number" min="0" step="0.01"></div>
       <div class="fgr"><label class="fl">Date</label><input class="fi" id="hci-date" type="date" style="color-scheme:dark"></div>
@@ -4355,6 +4355,7 @@ function openHomeWishEdit(row){
   const catSel=document.getElementById('hcw-cat');
   catSel.innerHTML=D.categories.map(c=>`<option${c.Name===w.Category?' selected':''}>${esc(c.Name)}</option>`).join('');
   document.getElementById('hc-wish-mo').classList.add('open');
+  const _ta_hcw_desc=document.getElementById('hcw-desc');if(_ta_hcw_desc){_ta_hcw_desc.style.height='auto';_ta_hcw_desc.style.height=_ta_hcw_desc.scrollHeight+'px';}
 }
 async function saveHomeWishEdit(purchase){
   const w=D.wishlist.find(x=>x._row===_hcEditRow);if(!w)return;
@@ -4386,6 +4387,7 @@ function openHomeExpEdit(row){
   const procureRow=document.getElementById('hce-procure-row');
   if(procureRow)procureRow.style.display=e.Status==='Ordered'?'block':'none';
   document.getElementById('hc-exp-mo').classList.add('open');
+  const _ta_hce_desc=document.getElementById('hce-desc');if(_ta_hce_desc){_ta_hce_desc.style.height='auto';_ta_hce_desc.style.height=_ta_hce_desc.scrollHeight+'px';}
 }
 async function markProFromModal(){
   const row=_hcEditRow;
@@ -4447,6 +4449,7 @@ function openHomeIncomeEdit(row){
   const bankSel=document.getElementById('hci-bank');
   bankSel.innerHTML=D.banks.map(b=>`<option${b.Name===m.Bank?' selected':''}>${esc(b.Name)}</option>`).join('');
   document.getElementById('hc-income-mo').classList.add('open');
+  const _ta_hci_desc=document.getElementById('hci-desc');if(_ta_hci_desc){_ta_hci_desc.style.height='auto';_ta_hci_desc.style.height=_ta_hci_desc.scrollHeight+'px';}
 }
 async function saveHomeIncomeEdit(){
   const m=D.master.find(x=>x._row===_hcEditRow);if(!m)return;
