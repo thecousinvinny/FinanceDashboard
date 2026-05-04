@@ -412,7 +412,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 /* ── UNIX-STYLE HOME PANELS ── */
 .hp-hero{padding:32px 20px 20px;text-align:center;}
 .hp-hero-label{font-size:9px;font-weight:400;color:rgba(255,255,255,0.22);letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px;}
-.hp-hero-amount{font-size:52px;font-weight:300;font-family:'DM Mono','SF Mono',monospace;letter-spacing:-.04em;line-height:1;color:#f0f0f8;}
+.hp-hero-amount{font-size:52px;font-weight:300;font-family:'DM Mono','SF Mono',monospace;letter-spacing:-.04em;line-height:1;color:#f0f0f8;display:inline-flex;align-items:center;height:56px;overflow:hidden;}
 .hp-hero-sub{font-size:11px;color:rgba(255,255,255,0.22);margin-top:8px;letter-spacing:.02em;}
 .hp-hero-stats{display:flex;gap:0;margin-top:20px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.06);justify-content:center;}
 .hp-hero-stat{display:flex;flex-direction:column;gap:4px;flex:1;align-items:center;padding:0 8px;}
@@ -3849,27 +3849,89 @@ function updateHomeFAB(idx){
 }
 
 
-// ── HERO ROLL ANIMATION ──
+// ── HERO SLOT MACHINE ANIMATION ──
 const _heroVals={};
+
 function animateHero(id,toVal){
   const el=document.getElementById(id);
   if(!el)return;
-  const fromVal=_heroVals[id]??-1;
-  if(fromVal===toVal&&fromVal>=0){return;} // no change, skip
-  const startVal=fromVal<0?0:fromVal; // always roll from 0 on tab switch
   _heroVals[id]=toVal;
-  const dur=480;
-  const start=performance.now();
-  const diff=toVal-startVal;
-  function tick(now){
-    const t=Math.min(1,(now-start)/dur);
-    const ease=1-Math.pow(1-t,3);
-    const cur=startVal+diff*ease;
-    el.textContent='$'+Math.round(cur).toLocaleString();
-    if(t<1)requestAnimationFrame(tick);
-    else el.textContent='$'+Math.round(toVal).toLocaleString();
+
+  // Format number into character array: '$', digits, commas
+  function formatChars(n){
+    const s='$'+Math.round(Math.abs(n)).toLocaleString('en-US');
+    return s.split('');
   }
-  requestAnimationFrame(tick);
+
+  const chars=formatChars(toVal);
+  const digitH=56; // must match font line-height in px
+  const dur=700;
+  const stagger=38; // ms between columns
+
+  // Build slot columns
+  el.style.cssText+='display:inline-flex;align-items:center;overflow:visible;line-height:1;';
+  el.innerHTML='';
+
+  chars.forEach((ch,i)=>{
+    const isDigit=/[0-9]/.test(ch);
+    const col=document.createElement('div');
+    col.style.cssText=`position:relative;overflow:hidden;height:${digitH}px;display:inline-block;`;
+
+    if(!isDigit){
+      // Static character: $, comma
+      const s=document.createElement('div');
+      s.textContent=ch;
+      s.style.cssText=`height:${digitH}px;display:flex;align-items:center;`;
+      col.style.overflow='visible';
+      col.appendChild(s);
+    } else {
+      const digit=parseInt(ch,10);
+      // Stack: digits 0-9 repeated, position so target digit is visible
+      // We'll scroll from digit+offset down to digit (rolling in from top = numbers going up)
+      const strip=document.createElement('div');
+      strip.style.cssText=`display:flex;flex-direction:column;will-change:transform;`;
+
+      // Build strip: 0..9 twice for seamless feel, land on target
+      const items=[];
+      for(let d=0;d<=9;d++) items.push(d);
+      for(let d=0;d<=9;d++) items.push(d);
+
+      items.forEach(d=>{
+        const cell=document.createElement('div');
+        cell.textContent=d;
+        cell.style.cssText=`height:${digitH}px;display:flex;align-items:center;justify-content:center;min-width:0.6em;`;
+        strip.appendChild(cell);
+      });
+
+      // Start position: digit in first set (index = digit), offset upward so it rolls down into place
+      const targetIdx=10+digit; // land on second set for clean animation
+      const startIdx=digit;     // begin from first set
+
+      const startY=-(startIdx*digitH);
+      const endY=-(targetIdx*digitH);
+
+      strip.style.transform=`translateY(${startY}px)`;
+      col.appendChild(strip);
+
+      // Animate with staggered delay per column
+      const delay=i*stagger;
+      setTimeout(()=>{
+        const start=performance.now();
+        const diff=endY-startY;
+        function tick(now){
+          const t=Math.min(1,(now-start)/dur);
+          // Ease out expo for snappy slot feel
+          const ease=t===1?1:1-Math.pow(2,-10*t);
+          strip.style.transform=`translateY(${startY+diff*ease}px)`;
+          if(t<1) requestAnimationFrame(tick);
+          else strip.style.transform=`translateY(${endY}px)`;
+        }
+        requestAnimationFrame(tick);
+      },delay);
+    }
+
+    el.appendChild(col);
+  });
 }
 
 function renderHome(){
