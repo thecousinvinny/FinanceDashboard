@@ -833,6 +833,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
             <button class="cal-nav-btn" onclick="calGoToday()" style="font-size:11px;padding:5px 12px;">Today</button>
             <input id="cal-search" placeholder="Search…" oninput="renderCalendar()" style="background:#1c1c1f;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:5px 12px;font-size:11px;color:#ebebeb;outline:none;width:180px;">
             <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+              <button id="cal-sidebar-btn" class="cal-nav-btn" onclick="toggleCalSidebar()" title="Toggle sidebar" style="font-size:13px;padding:5px 10px;">☰</button>
               <button id="cal-fs-btn" class="cal-nav-btn" onclick="toggleCalFS()" title="Fullscreen" style="font-size:13px;padding:5px 10px;">⛶</button>
               <div class="cal-view-btns">
                 <button class="cal-view-btn active" id="vbtn-month" onclick="setCalView('month')">Month</button>
@@ -3045,6 +3046,8 @@ async function calSync(){
       accessRole:cal.accessRole, // owner/writer/reader
     }));
     renderSidebar();
+  // Apply default sidebar state
+  const _sb=document.querySelector('.cal-sidebar');if(_sb)_sb.classList.toggle('collapsed',_sidebarCollapsed);
 
     // Get date range
     let start,end;
@@ -3146,7 +3149,7 @@ function applyAppColor(type,color){
 
 // ── FULLSCREEN & SIDEBAR ──
 let _calFS=false;
-let _sidebarCollapsed=false;
+let _sidebarCollapsed=true;
 
 function toggleCalFS(){
   _calFS=!_calFS;
@@ -3168,6 +3171,23 @@ function toggleCalSidebar(){
   const sb=document.querySelector('.cal-sidebar');
   if(sb)sb.classList.toggle('collapsed',_sidebarCollapsed);
 }
+
+// ── Double-tap to create event on mobile ──
+(function(){
+  let _lastTap=0,_lastEl=null;
+  document.addEventListener('touchend',e=>{
+    const cell=e.target.closest('[data-ds]');
+    if(!cell)return;
+    const now=Date.now();
+    if(cell===_lastEl&&now-_lastTap<320){
+      e.preventDefault();
+      openCalEventModal(cell.dataset.ds,null);
+      _lastTap=0;_lastEl=null;
+    } else {
+      _lastTap=now;_lastEl=cell;
+    }
+  },{passive:false});
+})();
 
 // ── CALENDAR SIDEBAR ──
 let _hiddenCalIds=new Set(JSON.parse(localStorage.getItem('cal_hidden')||'[]'));
@@ -3375,6 +3395,7 @@ function appendMonthCells(year,month){
     const cell=document.createElement('div');
     cell.className=`cal-cell${isToday?' today':''}`;
     cell.setAttribute('ondblclick',`openCalEventModal('${ds}',null)`);
+    cell.dataset.ds=ds;
     // Day 1: set grid column and use as scroll anchor
     if(day===1){
       if(firstDay>0)cell.style.gridColumnStart=firstDay+1;
@@ -3593,7 +3614,7 @@ function renderWeek(){
       const timed=(byDate[ds]||[]).filter(ev=>ev.start?.dateTime);
       // Show events starting in this hour
       const hourEvs=timed.filter(ev=>new Date(ev.start.dateTime).getHours()===h);
-      html+=`<div class="cal-week-cell" ondblclick="openCalEventModal('${ds}',null)">`;
+      html+=`<div class="cal-week-cell" ondblclick="openCalEventModal('${ds}',null)" data-ds="${ds}">`;
       hourEvs.forEach(ev=>{
         const color=ev._calColor||'#6c63ff';
         const time=new Date(ev.start.dateTime).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
@@ -3748,7 +3769,7 @@ function getCatIcon(cat){
     Food:      '<path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>',
     Apparel:   '<path d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.57a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.15a1 1 0 00.99-.84l.58-3.57a2 2 0 00-1.34-2.23z"/>',
     Health:    '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
-    Travel:    '<path d="M21 15 L13 9 L14 3 Q14 1 12 1 Q10 1 10 3 L11 9 L3 15 L5 16 L10 13 L9 18 L7 19 L8 21 L12 19 L16 21 L17 19 L15 18 L14 13 L19 16 Z"/>',
+    Travel:    '<path d="M0 -13 Q2 -8 2 0 Q2 8 0 13 Q-2 8 -2 0 Q-2 -8 0 -13Z"/><path d="M-2 -1 L-13 5 L-11 7 L-1 3"/><path d="M2 -1 L13 5 L11 7 L1 3"/><path d="M-2 9 L-6 13 L-5 14 L0 12 L5 14 L6 13 L2 9"/>',
     Life:      '<circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>',
     Fun:       '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="7" cy="15" r="1"/><circle cx="12" cy="15" r="1"/>',
     Gift:      '<polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/>',
