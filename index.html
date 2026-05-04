@@ -3739,6 +3739,22 @@ function relDate(dateStr){
 }
 
 // Category → left stripe hex color
+function getCatIcon(cat){
+  const icons={
+    Tesla:     '<path d="M12 2L4 7v4c0 5 3.5 9.74 8 11 4.5-1.26 8-6 8-11V7z"/><path d="M9 12l2 2 4-4"/>',
+    Tech:      '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
+    PC:        '<rect x="2" y="3" width="20" height="14" rx="2"/><polyline points="8 21 12 17 16 21"/>',
+    Home:      '<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+    Food:      '<path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>',
+    Apparel:   '<path d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.57a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.15a1 1 0 00.99-.84l.58-3.57a2 2 0 00-1.34-2.23z"/>',
+    Health:    '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+    Travel:    '<path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 10.8a19.79 19.79 0 01-3.07-8.67A2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14v2.92z"/>',
+    Life:      '<circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>',
+    Fun:       '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="7" cy="15" r="1"/><circle cx="12" cy="15" r="1"/>',
+    Gift:      '<polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/>',
+  };
+  return icons[cat]||'<circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>';
+}
 function getCatColor(category){
   if(!category)return null;
   const cat=D.categories.find(c=>c.Name&&c.Name.toLowerCase()===category.toLowerCase());
@@ -3897,7 +3913,7 @@ function _appendHomeExp(){
     const div=document.createElement('div');
     div.className='hrow';
     div.onclick=()=>openHomeExpEdit(e._row);
-    div.innerHTML=`<div class="hrow-stripe" style="background:${color}"></div><div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg></div><div class="hrow-body"><div class="hrow-name">${esc(e.Name||'—')}</div><div class="hrow-sub">${e.Category||''}${e.Date?' · '+relDate(e.Date):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:#ef4444">-$${cost.toLocaleString()}</div><div class="hrow-meta">${cardDisplay(e.Card)||''}</div></div>`;
+    div.innerHTML=`<div class="hrow-stripe" style="background:${color}"></div><div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(e.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(e.Name||'—')}</div><div class="hrow-sub">${e.Category||''}${e.Date?' · '+relDate(e.Date):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:#ef4444">-$${cost.toLocaleString()}</div><div class="hrow-meta">${cardDisplay(e.Card)||''}</div></div>`;
     el.appendChild(div);
   });
   if(lim<procured.length)_makeSentinel('hp-exp','exp');
@@ -3923,7 +3939,7 @@ function _appendHomeSub(){
     wrap.className='swipe-wrap';
     wrap.dataset.swipeAction='cancelSub';
     wrap.dataset.row=s._row;
-    wrap.innerHTML=`<div class="swipe-action cancel-sub"></div><div class="swipe-card hrow ${isDueToday?'due-today-card':''}" onclick="openHomeSubEdit(${s._row})"><div class="hrow-stripe" style="background:${isDueToday?'#ef4444':color}"></div><div class="hrow-icon" style="background:${isDueToday?'rgba(239,68,68,0.15)':color+'22'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${isDueToday?'#ef4444':color}" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></div><div class="hrow-body"><div class="hrow-name">${esc(s.Name||'—')}</div><div class="hrow-sub">${s.Billing||'Monthly'}${s.Card?' · '+cardDisplay(s.Card):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:${accentColor}">$${cost.toLocaleString()}</div><div class="hrow-meta" style="color:${isDueToday?'#ef4444':due==='due-soon'?'#f59e0b':'rgba(255,255,255,0.28)'}">${isDueToday?'DUE TODAY':s.NextRenewal?fmtDate(s.NextRenewal):''}</div></div></div>`;
+    wrap.innerHTML=`<div class="swipe-action cancel-sub"></div><div class="swipe-card hrow ${isDueToday?'due-today-card':''}" onclick="openHomeSubEdit(${s._row})"><div class="hrow-stripe" style="background:${isDueToday?'#ef4444':color}"></div><div class="hrow-icon" style="background:${isDueToday?'rgba(239,68,68,0.15)':color+'22'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${isDueToday?'#ef4444':color}" stroke-width="2" style="overflow:visible">${getCatIcon(s.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(s.Name||'—')}</div><div class="hrow-sub">${s.Billing||'Monthly'}${s.Card?' · '+cardDisplay(s.Card):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:${accentColor}">$${cost.toLocaleString()}</div><div class="hrow-meta" style="color:${isDueToday?'#ef4444':due==='due-soon'?'#f59e0b':'rgba(255,255,255,0.28)'}">${isDueToday?'DUE TODAY':s.NextRenewal?fmtDate(s.NextRenewal):''}</div></div></div>`;
     el.appendChild(wrap);
   });
   if(lim<subs.length)_makeSentinel('hp-sub','sub');
@@ -3946,7 +3962,7 @@ function _appendHomeIncome(){
     const div=document.createElement('div');
     div.className='hrow';
     div.onclick=()=>openHomeIncomeEdit(m._row);
-    div.innerHTML=`<div class="hrow-stripe" style="background:${color}"></div><div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div class="hrow-body"><div class="hrow-name">${esc(m.Name||'—')}</div><div class="hrow-sub">${m.Bank||m.Source||''}${m.Date?' · '+relDate(m.Date):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:#22c55e">+$${amt.toLocaleString()}</div><div class="hrow-meta">${m.Source||''}</div></div>`;
+    div.innerHTML=`<div class="hrow-stripe" style="background:${color}"></div><div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(m.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(m.Name||'—')}</div><div class="hrow-sub">${m.Bank||m.Source||''}${m.Date?' · '+relDate(m.Date):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:#22c55e">+$${amt.toLocaleString()}</div><div class="hrow-meta">${m.Source||''}</div></div>`;
     el.appendChild(div);
   });
   if(lim<income.length)_makeSentinel('hp-income','income');
@@ -4144,7 +4160,7 @@ function renderHomeWish(){
       <div class="swipe-card hrow" onclick="openHomeWishEdit(${w._row})">
         <div class="hrow-stripe" style="background:${color}"></div>
         <div class="hrow-icon" style="background:${color}22;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(w.Category)}</svg>
         </div>
         <div class="hrow-body">
           <div class="hrow-name">${esc(w.Name||'—')}</div>
@@ -4212,7 +4228,7 @@ function renderHomeExp(){
     return`<div class="hrow" onclick="openHomeExpEdit(${e._row})">
       <div class="hrow-stripe" style="background:${color}"></div>
       <div class="hrow-icon" style="background:${color}22;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2">${isOrdered?'<path d="M5 12h14M12 5l7 7-7 7"/>':'<path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/>'}</svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${isOrdered?'<path d="M5 12h14M12 5l7 7-7 7"/>':getCatIcon(e.Category)}</svg>
       </div>
       <div class="hrow-body">
         <div class="hrow-name">${esc(e.Name||'—')}</div>
@@ -4290,7 +4306,7 @@ function renderHomeSub(){
     const cost=parseFloat(s.Cost||0);
     const color=getCatColor(s.Category)||'rgba(255,255,255,0.15)';
     const accentColor=isDueToday?'#ef4444':'#f59e0b';
-    return`<div class="swipe-wrap" data-swipe-action="cancelSub" data-row="${s._row}"><div class="swipe-action cancel-sub"></div><div class="swipe-card hrow ${isDueToday?'due-today-card':''}" onclick="openHomeSubEdit(${s._row})"><div class="hrow-stripe" style="background:${isDueToday?'#ef4444':color}"></div><div class="hrow-icon" style="background:${isDueToday?'rgba(239,68,68,0.15)':color+'22'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${isDueToday?'#ef4444':color}" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></div><div class="hrow-body"><div class="hrow-name">${esc(s.Name||'—')}</div><div class="hrow-sub">${s.Billing||'Monthly'}${s.Card?' · '+cardDisplay(s.Card):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:${accentColor}">$${cost.toLocaleString()}</div><div class="hrow-meta" style="color:${isDueToday?'#ef4444':due==='due-soon'?'#f59e0b':'rgba(255,255,255,0.28)'}">${isDueToday?'DUE TODAY':s.NextRenewal?fmtDate(s.NextRenewal):''}</div></div></div></div>`;
+    return`<div class="swipe-wrap" data-swipe-action="cancelSub" data-row="${s._row}"><div class="swipe-action cancel-sub"></div><div class="swipe-card hrow ${isDueToday?'due-today-card':''}" onclick="openHomeSubEdit(${s._row})"><div class="hrow-stripe" style="background:${isDueToday?'#ef4444':color}"></div><div class="hrow-icon" style="background:${isDueToday?'rgba(239,68,68,0.15)':color+'22'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${isDueToday?'#ef4444':color}" stroke-width="2" style="overflow:visible">${getCatIcon(s.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(s.Name||'—')}</div><div class="hrow-sub">${s.Billing||'Monthly'}${s.Card?' · '+cardDisplay(s.Card):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:${accentColor}">$${cost.toLocaleString()}</div><div class="hrow-meta" style="color:${isDueToday?'#ef4444':due==='due-soon'?'#f59e0b':'rgba(255,255,255,0.28)'}">${isDueToday?'DUE TODAY':s.NextRenewal?fmtDate(s.NextRenewal):''}</div></div></div></div>`;
   }).join('')||'<div style="color:rgba(255,255,255,0.2);font-size:13px;text-align:center;padding:48px 20px;">No active subscriptions</div>';
   animateHero('hero-sub-amt',totalMo);
   if(subs.length>30)_makeSentinel('hp-sub','sub');
@@ -4334,7 +4350,7 @@ function renderHomeIncome(){
   const firstCards=income.slice(0,30).map(m=>{
     const amt=parseFloat(m.Cost||0);
     const color=getCatColor(m.Category)||'#22c55e';
-    return`<div class="hrow" onclick="openHomeIncomeEdit(${m._row})"><div class="hrow-stripe" style="background:${color}"></div><div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div class="hrow-body"><div class="hrow-name">${esc(m.Name||'—')}</div><div class="hrow-sub">${m.Bank||m.Source||''}${m.Date?' · '+relDate(m.Date):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:#22c55e">+$${amt.toLocaleString()}</div><div class="hrow-meta">${m.Source||''}</div></div></div>`;
+    return`<div class="hrow" onclick="openHomeIncomeEdit(${m._row})"><div class="hrow-stripe" style="background:${color}"></div><div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(m.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(m.Name||'—')}</div><div class="hrow-sub">${m.Bank||m.Source||''}${m.Date?' · '+relDate(m.Date):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:#22c55e">+$${amt.toLocaleString()}</div><div class="hrow-meta">${m.Source||''}</div></div></div>`;
   }).join('')||'<div style="color:rgba(255,255,255,0.2);font-size:13px;text-align:center;padding:48px 20px;">No income recorded</div>';
   el.innerHTML=hero+'<div class="hp-divider"></div>'+firstCards;
   animateHero('hero-income-amt',gainedMo);
