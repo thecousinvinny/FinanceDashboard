@@ -434,7 +434,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .hp-divider{height:1px;background:rgba(255,255,255,0.05);margin:0 20px 4px;}
 .hp-section-label{font-size:9px;font-weight:400;color:rgba(255,255,255,0.18);letter-spacing:.14em;text-transform:uppercase;padding:14px 20px 6px;}
 /* Row-style cards */
-.hrow{display:flex;align-items:center;padding:14px 20px;gap:14px;cursor:pointer;transition:background .15s;position:relative;}
+.hrow{display:flex;align-items:center;padding:14px 20px;gap:14px;cursor:pointer;transition:background .15s;position:relative;background:var(--bg);}
 .hrow:active{background:rgba(255,255,255,0.03);}
 .hrow+.hrow,.swipe-wrap+.swipe-wrap .hrow{border-top:1px solid rgba(255,255,255,0.04);}
 .hrow-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;}
@@ -463,7 +463,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .swipe-action.delete{background:#ef4444;}
 .swipe-action.cancel-sub{background:#f59e0b;}
 .swipe-action-left{position:absolute;top:0;left:0;bottom:0;z-index:1;display:flex;align-items:center;justify-content:flex-start;width:0;opacity:0;overflow:hidden;background:#22c55e;}
-.swipe-card{position:relative;z-index:2;will-change:transform;border-radius:16px;transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .35s cubic-bezier(.4,0,.2,1);}
+.swipe-card{position:relative;z-index:2;will-change:transform;border-radius:16px;transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .35s cubic-bezier(.4,0,.2,1);background:var(--bg);}
 #ptr-indicator.visible{display:flex}
 
 /* ── PULL-UP SHEET ── */
