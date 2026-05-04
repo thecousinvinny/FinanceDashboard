@@ -4521,6 +4521,7 @@ function initSwipeCards(container){
       action.style.opacity='0';
       action.style.width='0';
       open=false;
+      if(wrap._dismiss){document.removeEventListener('touchstart',wrap._dismiss,true);wrap._dismiss=null;}
     };
 
     const snapOpen=()=>{
@@ -4532,25 +4533,27 @@ function initSwipeCards(container){
       action.style.opacity='1';
       action.style.width=MAX+'px';
       action.innerHTML=`
-        <div style="display:flex;flex-direction:column;gap:5px;width:100%;padding:0 10px;box-sizing:border-box;">
+        <div style="display:flex;width:100%;padding:0 10px;box-sizing:border-box;">
           <button onclick="swipeConfirm(this)" data-action="${actionType}" data-row="${wrap.dataset.row}"
             style="background:${isDelete?'#ef4444':'#f59e0b'};color:#fff;border:none;border-radius:8px;
-                   padding:8px 0;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;
-                   cursor:pointer;width:100%;letter-spacing:.01em;">
+                   padding:10px 0;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;
+                   cursor:pointer;width:100%;letter-spacing:.02em;">
             ${isDelete?'Delete':'Cancel'}
-          </button>
-          <button onclick="swipeCancel(this)"
-            style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);border:none;border-radius:8px;
-                   padding:8px 0;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif;
-                   cursor:pointer;width:100%;">
-            Keep
           </button>
         </div>`;
       open=true;
+      // Tap anywhere outside to dismiss
+      setTimeout(()=>{
+        const dismiss=e=>{
+          if(!wrap.contains(e.target)){resetCard();document.removeEventListener('touchstart',dismiss,true);}
+        };
+        document.addEventListener('touchstart',dismiss,true);
+        wrap._dismiss=dismiss;
+      },50);
     };
 
     wrap.addEventListener('touchstart',e=>{
-      if(open){resetCard();return;}
+      if(open){resetCard();if(wrap._dismiss){document.removeEventListener('touchstart',wrap._dismiss,true);wrap._dismiss=null;}return;}
       sx=e.touches[0].clientX;sy=e.touches[0].clientY;
       dx=0;isHoriz=null;
       card.style.transition='none';
