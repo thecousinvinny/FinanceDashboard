@@ -4004,6 +4004,7 @@ function _appendHomeSub(){
   });
   if(lim<subs.length)_makeSentinel('hp-sub','sub');
   initSwipeCards(el);
+  initHoverActions(el);
 }
 
 function _appendHomeIncome(){
@@ -4398,6 +4399,7 @@ function renderHomeWish(){
   moreWish.style.display=items.length>lim?'block':'none';
   if(items.length>lim)moreWish.textContent=`Show ${Math.min(30,items.length-lim)} more`;
   initSwipeCards(document.getElementById('hp-wish'));
+  initHoverActions(document.getElementById('hp-wish'));
 }
 
 function renderHomeExp(){
@@ -4527,6 +4529,7 @@ function renderHomeSub(){
   animateHero('hero-sub-amt',totalMo);
   if(subs.length>30)_makeSentinel('hp-sub','sub');
   initSwipeCards(document.getElementById('hp-sub'));
+  initHoverActions(document.getElementById('hp-sub'));
 }
 
 function renderHomeIncome(){
@@ -4719,6 +4722,34 @@ async function cancelSub(row){
   await updateRow('Subscriptions',row,vals);
   toast(`Cancelled "${s.Name}"`,'ok');
   await syncAll();
+}
+
+function initHoverActions(container){
+  if(!container)return;
+  container.querySelectorAll('.swipe-wrap').forEach(wrap=>{
+    if(wrap._hoverInit)return;
+    wrap._hoverInit=true;
+    const actionType=wrap.dataset.swipeAction;
+    const row=wrap.dataset.row;
+    const isDelete=actionType==='deleteWish';
+    const div=document.createElement('div');
+    div.className='hover-actions has-left';
+    const leftBtn=document.createElement('button');
+    leftBtn.className='hover-btn green';
+    leftBtn.textContent=actionType==='cancelSub'?'✓ Pay':'Buy →';
+    leftBtn.dataset.action=actionType;
+    leftBtn.dataset.row=row;
+    leftBtn.onclick=e=>{e.stopPropagation();swipeConfirmRight(leftBtn);};
+    const rightBtn=document.createElement('button');
+    rightBtn.className=isDelete?'hover-btn red':'hover-btn amber';
+    rightBtn.textContent=isDelete?'Delete':'Cancel';
+    rightBtn.dataset.action=actionType;
+    rightBtn.dataset.row=row;
+    rightBtn.onclick=e=>{e.stopPropagation();swipeConfirm(rightBtn);};
+    div.appendChild(leftBtn);
+    div.appendChild(rightBtn);
+    wrap.appendChild(div);
+  });
 }
 
 function initSwipeCards(container){
