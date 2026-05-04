@@ -405,7 +405,9 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .home-stat-val.red{color:#ef4444}
 .home-stat-val.green{color:#22c55e}
 .home-stat-val.amber{color:#f59e0b}
-.home-stat-val.muted{color:rgba(255,255,255,0.5)}padding:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:12px;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;transition:background .15s;text-align:center;width:100%;box-sizing:border-box}
+.home-stat-val.muted{color:rgba(255,255,255,0.5)}
+.home-show-more{display:block;width:calc(100% - 40px);margin:8px 20px 4px;padding:11px;background:transparent;border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:rgba(255,255,255,0.32);font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-family:'Inter',-apple-system,sans-serif;transition:background .15s,color .15s;text-align:center;box-sizing:border-box}
+.home-show-more:hover{background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.55)}
 .home-show-more:active{background:rgba(255,255,255,0.08)}
 #ptr-indicator{position:fixed;top:48px;left:50%;transform:translateX(-50%);background:var(--s1);border:1px solid var(--border2);border-radius:20px;padding:6px 16px;font-size:12px;color:var(--text3);z-index:500;display:none;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(0,0,0,.3)}
 
@@ -533,12 +535,14 @@ td.editing{background:rgba(108,99,255,0.05)!important}
             <div class="home-panel-hdr" style="display:none"></div>
             <div class="home-stats-bar" id="hstats-sub" style="display:none"></div>
             <div class="home-panel-body" id="hp-sub" style="padding:0 0 180px;gap:0;"></div>
+            <button class="home-show-more" id="hpm-sub" onclick="homeShowMore('sub')" style="display:none">Show more</button>
           </div>
           <!-- PANEL 3: Income -->
           <div class="home-panel" id="home-panel-3">
             <div class="home-panel-hdr" style="display:none"></div>
             <div class="home-stats-bar" id="hstats-income" style="display:none"></div>
             <div class="home-panel-body" id="hp-income" style="padding:0 0 180px;gap:0;"></div>
+            <button class="home-show-more" id="hpm-income" onclick="homeShowMore('income')" style="display:none">Show more</button>
           </div>
         </div>
       </div>
@@ -3846,7 +3850,14 @@ function setPullSheet(){}
 
 // ── HOME PANELS ──
 let _homePanel=0;
-let _homeLimits={wish:30,exp:30,income:30};
+let _homeLimits={wish:30,exp:30,sub:30,income:30};
+function homeShowMore(panel){
+  _homeLimits[panel]=(_homeLimits[panel]||30)+30;
+  if(panel==='wish')renderHomeWish();
+  else if(panel==='exp')renderHomeExp();
+  else if(panel==='sub')renderHomeSub();
+  else if(panel==='income')renderHomeIncome();
+}
 
 const _heroData={};
 function homeGoTo(idx,el){
@@ -4083,7 +4094,7 @@ function renderHomeExp(){
 
   // Build 14-day bar chart
   const days14=[];
-  for(let i=13;i>=0;i--){const d=new Date(now);d.setDate(d.getDate()-i);days14.push(d.toISOString().slice(0,10));}
+  for(let i=13;i>=0;i--){const d=new Date(now);d.setDate(d.getDate()-i);days14.push(d.toLocaleDateString('en-CA',{timeZone:'America/Los_Angeles'}));}
   const dayTotals=days14.map(d=>allPro.filter(e=>toSortableDate(e.Date||'')===d).reduce((s,e)=>s+(parseFloat(e.Cost)||0),0));
   const dayLabels=days14.map(d=>{const dt=new Date(d+'T12:00:00');return dt.getDate();});
   const barChart=buildAreaChart('exp-chart',dayTotals,dayLabels,'#ef4444');
@@ -4138,12 +4149,14 @@ function renderHomeExp(){
   const proHtml=procured.length?`<div class="hp-section-label">Recent</div>`+procured.slice(0,lim).map(e=>expRow(e,false)).join(''):'';
   el.innerHTML=hero+'<div class="hp-divider"></div>'+(ordHtml||'')+(proHtml||(!ordered.length?'<div style="color:rgba(255,255,255,0.2);font-size:13px;text-align:center;padding:48px 20px;">No expenses yet</div>':''));
   if(more)more.style.display=procured.length>lim?'block':'none';
+  if(more&&procured.length>lim)more.textContent=`Show ${Math.min(30,procured.length-lim)} more`;
   animateHero('hero-exp-amt',spentMo);
   setTimeout(initPendingCharts,50);
 }
 
 function renderHomeSub(){
   const el=document.getElementById('hp-sub');
+  const more=document.getElementById('hpm-sub');
   if(!el)return;
   const subs=D.subscriptions.filter(s=>s.Status!=='Cancelled').sort((a,b)=>toSortableDate(a.NextRenewal||'9999').localeCompare(toSortableDate(b.NextRenewal||'9999')));
 
@@ -4214,6 +4227,8 @@ function renderHomeSub(){
 
   el.innerHTML=hero+rows;
   animateHero('hero-sub-amt',totalMo);
+  if(more)more.style.display=subs.length>lim?'block':'none';
+  if(more&&subs.length>lim)more.textContent=`Show ${Math.min(30,subs.length-lim)} more`;
   initSwipeCards(document.getElementById('hp-sub'));
 }
 
@@ -4260,9 +4275,11 @@ function renderHomeIncome(){
       <div class="hrow-right"><div class="hrow-amount" style="color:#22c55e">+$${amt.toLocaleString()}</div><div class="hrow-meta">${m.Source||''}</div></div>
     </div>`;
   }).join('')||'<div style="color:rgba(255,255,255,0.2);font-size:13px;text-align:center;padding:48px 20px;">No income recorded</div>';
-  const showMoreBtn=income.length>lim?`<button class="home-show-more" onclick="homeShowMore('income')">Show ${Math.min(30,income.length-lim)} more</button>`:'';
-  el.innerHTML=hero+'<div class="hp-divider"></div>'+cards+showMoreBtn;
+  el.innerHTML=hero+'<div class="hp-divider"></div>'+cards;
   animateHero('hero-income-amt',gainedMo);
+  const moreInc=document.getElementById('hpm-income');
+  if(moreInc)moreInc.style.display=income.length>lim?'block':'none';
+  if(moreInc&&income.length>lim)moreInc.textContent=`Show ${Math.min(30,income.length-lim)} more`;
   setTimeout(initPendingCharts,50);
 }
 
