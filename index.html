@@ -4759,7 +4759,6 @@ function initSwipeCards(container){
       card.style.transition='transform .35s cubic-bezier(.4,0,.2,1),opacity .35s cubic-bezier(.4,0,.2,1)';
       card.style.transform='';card.style.opacity='';
     };
-
     const resetCard=()=>{
       card.style.transition='transform .3s cubic-bezier(.4,0,.2,1)';
       actionRight.style.transition='opacity .3s,width .3s';
@@ -4786,32 +4785,34 @@ function initSwipeCards(container){
       const isDelete=actionType==='deleteWish';
       card.style.transition='transform .3s cubic-bezier(.4,0,.2,1)';
       actionRight.style.transition='opacity .2s,width .3s cubic-bezier(.4,0,.2,1)';
-      card.style.transform=`translateX(-${MAX}px)`;
       actionRight.style.background=isDelete?'linear-gradient(to left,#ef4444,#dc262680)':'linear-gradient(to left,#f59e0b,#d9770080)';
+      card.style.transform=`translateX(-${MAX}px)`;
       actionRight.style.opacity='1';actionRight.style.width=MAX+'px';
-      actionRight.innerHTML=`
-        <button onclick="swipeConfirm(this)" data-action="${actionType}" data-row="${wrap.dataset.row}"
-          style="background:transparent;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:0 18px;">
-          ${isDelete?'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>':'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'}
-        </button>`;
+      actionRight.innerHTML=`<button onclick="swipeConfirm(this)" data-action="${actionType}" data-row="${wrap.dataset.row}" style="background:transparent;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:0 18px;">${isDelete?'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>':'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'}</button>`;
       open=true;addDismiss();
     };
 
     const snapOpenRight=()=>{
       if(!actionLeft)return;
       const actionType=wrap.dataset.swipeAction;
-      const label=actionType==='cancelSub'?'Pay':'Buy';
       card.style.transition='transform .3s cubic-bezier(.4,0,.2,1)';
       actionLeft.style.transition='opacity .2s,width .3s cubic-bezier(.4,0,.2,1)';
       card.style.transform=`translateX(${MAX}px)`;
       actionLeft.style.background='linear-gradient(to right,#22c55e,#16a34a80)';
       actionLeft.style.opacity='1';actionLeft.style.width=MAX+'px';
-      actionLeft.innerHTML=`
-        <button onclick="swipeConfirmRight(this)" data-action="${actionType}" data-row="${wrap.dataset.row}"
-          style="background:transparent;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:0 18px;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-        </button>`;
+      actionLeft.innerHTML=`<button onclick="swipeConfirmRight(this)" data-action="${actionType}" data-row="${wrap.dataset.row}" style="background:transparent;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:0 18px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></button>`;
       open=true;addDismiss();
+    };
+
+    // Store refs on wrap so shared window listeners can access them
+    wrap._swipeRefs={card,actionRight,actionLeft,pressUp,resetCard,snapOpenLeft,snapOpenRight,
+      get sx(){return sx;},set sx(v){sx=v;},
+      get sy(){return sy;},set sy(v){sy=v;},
+      get dx(){return dx;},set dx(v){dx=v;},
+      get isHoriz(){return isHoriz;},set isHoriz(v){isHoriz=v;},
+      get open(){return open;},
+      get pressing(){return pressing;},set pressing(v){pressing=v;},
+      TRIGGER,MAX
     };
 
     wrap.addEventListener('touchstart',e=>{
@@ -4824,61 +4825,6 @@ function initSwipeCards(container){
       if(actionLeft)actionLeft.style.transition='none';
       pressDown();
     },{passive:true});
-
-    // ── Mouse equivalents for desktop ──
-    let mouseDown=false;
-    wrap.addEventListener('mousedown',e=>{
-      if(e.button!==0)return;
-      if(open){resetCard();return;}
-      _resetAllSwipes(wrap); // close any other open card
-      sx=e.clientX;sy=e.clientY;
-      dx=0;isHoriz=null;mouseDown=true;_activeSwipeWrap=wrap;wrap._didDrag=false;
-      card.style.transition='none';
-      actionRight.style.transition='none';
-      if(actionLeft)actionLeft.style.transition='none';
-      pressDown();
-      e.preventDefault();
-    });
-    window.addEventListener('mousemove',e=>{
-      if(!mouseDown||open)return;
-      const cx=e.clientX,cy=e.clientY;
-      const adx=Math.abs(cx-sx),ady=Math.abs(cy-sy);
-      if(isHoriz===null){if(adx<4&&ady<4)return;isHoriz=adx>ady*1.2;}
-      if(!isHoriz){pressUp();return;}
-      pressing=false;card.style.opacity='';
-      dx=cx-sx;
-      const goingLeft=dx<0;
-      const visual=Math.min(Math.abs(dx),MAX);
-      const progress=Math.min(1,visual/TRIGGER);
-      card.style.transform=`translateX(${goingLeft?-visual:visual}px)`;
-      if(goingLeft){
-        actionRight.style.opacity=String(progress*0.9);actionRight.style.width=visual+'px';
-        const actionType=wrap.dataset.swipeAction;
-        const label=actionType==='deleteWish'?'Delete':'Cancel';
-        const color=actionType==='deleteWish'?'#ef4444':'#f59e0b';
-        actionRight.innerHTML='';
-        actionRight.style.background=`linear-gradient(to left,${color},${color}60)`;
-        if(actionLeft){actionLeft.style.opacity='0';actionLeft.style.width='0';}
-      } else if(actionLeft){
-        actionLeft.style.opacity=String(progress*0.9);actionLeft.style.width=visual+'px';
-        actionLeft.innerHTML='';
-        actionLeft.style.background='linear-gradient(to right,#22c55e,#22c55e60)';
-        actionRight.style.opacity='0';actionRight.style.width='0';
-      }
-    });
-    window.addEventListener('mouseup',e=>{
-      if(!mouseDown)return;
-      mouseDown=false;
-      pressUp();
-      if(open||isHoriz===null||!isHoriz){dx=0;isHoriz=null;return;}
-      if(Math.abs(dx)>=TRIGGER){
-        if(dx<0)snapOpenLeft();
-        else snapOpenRight();
-      } else {
-        resetCard();
-      }
-      dx=0;isHoriz=null;
-    });
 
     wrap.addEventListener('touchmove',e=>{
       if(open)return;
@@ -4893,19 +4839,15 @@ function initSwipeCards(container){
       const progress=Math.min(1,visual/TRIGGER);
       card.style.transform=`translateX(${goingLeft?-visual:visual}px)`;
       if(goingLeft){
-        actionRight.style.opacity=String(progress*0.9);
-        actionRight.style.width=visual+'px';
+        actionRight.style.opacity=String(progress*0.9);actionRight.style.width=visual+'px';
         const actionType=wrap.dataset.swipeAction;
-        const label=actionType==='deleteWish'?'Delete':'Cancel';
         const color=actionType==='deleteWish'?'#ef4444':'#f59e0b';
         actionRight.innerHTML='';
         actionRight.style.background=`linear-gradient(to left,${color},${color}60)`;
         if(actionLeft){actionLeft.style.opacity='0';actionLeft.style.width='0';}
       } else if(actionLeft){
-        actionLeft.style.opacity=String(progress*0.9);
-        actionLeft.style.width=visual+'px';
-        const actionType=wrap.dataset.swipeAction;
-        actionLeft.style.background='linear-gradient(to right,#22c55e,#22c55ecc)';
+        actionLeft.style.opacity=String(progress*0.9);actionLeft.style.width=visual+'px';
+        actionLeft.innerHTML='';
         actionLeft.style.background='linear-gradient(to right,#22c55e,#22c55e60)';
         actionRight.style.opacity='0';actionRight.style.width='0';
       }
@@ -4922,8 +4864,74 @@ function initSwipeCards(container){
       }
       dx=0;isHoriz=null;
     },{passive:true});
+
+    wrap.addEventListener('mousedown',e=>{
+      if(e.button!==0)return;
+      if(open){resetCard();return;}
+      _resetAllSwipes(wrap);
+      sx=e.clientX;sy=e.clientY;
+      dx=0;isHoriz=null;_activeSwipeWrap=wrap;wrap._didDrag=false;
+      card.style.transition='none';
+      actionRight.style.transition='none';
+      if(actionLeft)actionLeft.style.transition='none';
+      pressDown();
+      e.preventDefault();
+    });
   });
 }
+
+
+// Single shared mouse listeners for desktop swipe — not per-card
+(function(){
+  let _activeWrap=null;
+  document.addEventListener('mousedown',e=>{
+    const wrap=e.target.closest('.swipe-wrap');
+    if(wrap)_activeWrap=wrap;
+  },true);
+  window.addEventListener('mousemove',e=>{
+    const wrap=_activeSwipeWrap;
+    if(!wrap||!wrap._swipeRefs)return;
+    const r=wrap._swipeRefs;
+    if(r.open)return;
+    const cx=e.clientX,cy=e.clientY;
+    const adx=Math.abs(cx-r.sx),ady=Math.abs(cy-r.sy);
+    if(r.isHoriz===null){if(adx<4&&ady<4)return;r.isHoriz=adx>ady*1.2;}
+    if(!r.isHoriz){r.pressUp();return;}
+    r.pressing=false;r.card.style.opacity='';
+    r.dx=cx-r.sx;
+    wrap._didDrag=Math.abs(r.dx)>6;
+    const goingLeft=r.dx<0;
+    const visual=Math.min(Math.abs(r.dx),r.MAX);
+    const progress=Math.min(1,visual/r.TRIGGER);
+    r.card.style.transform=`translateX(${goingLeft?-visual:visual}px)`;
+    if(goingLeft){
+      r.actionRight.style.opacity=String(progress*0.9);r.actionRight.style.width=visual+'px';
+      const at=wrap.dataset.swipeAction;
+      const color=at==='deleteWish'?'#ef4444':'#f59e0b';
+      r.actionRight.innerHTML='';r.actionRight.style.background=`linear-gradient(to left,${color},${color}60)`;
+      if(r.actionLeft){r.actionLeft.style.opacity='0';r.actionLeft.style.width='0';}
+    } else if(r.actionLeft){
+      r.actionLeft.style.opacity=String(progress*0.9);r.actionLeft.style.width=visual+'px';
+      r.actionLeft.innerHTML='';r.actionLeft.style.background='linear-gradient(to right,#22c55e,#22c55e60)';
+      r.actionRight.style.opacity='0';r.actionRight.style.width='0';
+    }
+  });
+  window.addEventListener('mouseup',e=>{
+    const wrap=_activeSwipeWrap;
+    if(!wrap||!wrap._swipeRefs)return;
+    _activeSwipeWrap=null;
+    const r=wrap._swipeRefs;
+    r.pressUp();
+    if(r.open||r.isHoriz===null||!r.isHoriz){r.dx=0;r.isHoriz=null;return;}
+    if(Math.abs(r.dx)>=r.TRIGGER){
+      if(r.dx<0)r.snapOpenLeft();
+      else r.snapOpenRight();
+    } else {
+      r.resetCard();
+    }
+    r.dx=0;r.isHoriz=null;
+  });
+})();
 
 function swipeCancel(btn){
   const wrap=btn.closest('.swipe-wrap');
