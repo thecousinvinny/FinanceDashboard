@@ -3853,15 +3853,30 @@ function updateHomeFAB(idx){
 const _SLOT_H=52; // matches .hp-hero-amount font-size px
 const _SLOT_W=32; // fixed px width per digit column
 
+const _slotQueue=[];
 function animateHero(id,toVal){
+  // Don't touch the DOM yet — panel innerHTML may still be rebuilding.
+  // Read the color from whatever is currently in the DOM.
   const el=document.getElementById(id);
-  if(!el)return;
-  // Read color before we touch anything
-  const color=el.style.color||'';
-  // Build slot DOM immediately (synchronous, no layout reads)
-  _buildSlot(el,toVal,color);
-  // Kick off animations after two paint frames so transforms are active
-  requestAnimationFrame(()=>requestAnimationFrame(()=>_startSlot(el)));
+  const color=el?el.style.color||'':'';
+  _slotQueue.push({id,toVal,color});
+}
+
+function _flushSlots(){
+  const jobs=_slotQueue.splice(0);
+  if(!jobs.length)return;
+  // Build all slot DOMs now that all panels have finished their innerHTML
+  jobs.forEach(({id,toVal,color})=>{
+    const el=document.getElementById(id);
+    if(el)_buildSlot(el,toVal,color);
+  });
+  // Start animations after one more paint
+  requestAnimationFrame(()=>{
+    jobs.forEach(({id})=>{
+      const el=document.getElementById(id);
+      if(el)_startSlot(el);
+    });
+  });
 }
 
 function _buildSlot(el,toVal,color){
@@ -3944,6 +3959,8 @@ function renderHome(){
   renderHomeExp();
   renderHomeSub();
   renderHomeIncome();
+  // All panels done — now flush slot animations
+  requestAnimationFrame(()=>requestAnimationFrame(_flushSlots));
   // Panel pull-to-refresh
   ['hp-wish','hp-exp','hp-sub','hp-income'].forEach(id=>addPanelPTR(document.getElementById(id)));
   setTimeout(initPendingCharts,50);
