@@ -379,7 +379,8 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .nav{display:none!important}
 /* ── HOME PANELS ── */
 .home-tab-btn{flex:1;padding:9px 4px;font-size:10px;font-weight:500;color:rgba(255,255,255,0.28);background:transparent;border:none;border-radius:0;cursor:pointer;font-family:'Inter',-apple-system,sans-serif;transition:color .2s;white-space:nowrap;letter-spacing:.08em;text-transform:uppercase;-webkit-tap-highlight-color:transparent;border-bottom:1.5px solid transparent;}
-.home-tab-btn.on{color:#fff;background:transparent;font-weight:600;border-bottom-color:#fff;}
+.home-tab-btn.on{color:#f0f0f8;border-bottom:none;position:relative;}
+.home-tab-btn.on::after{content:'';position:absolute;bottom:0;left:15%;right:15%;height:2px;background:linear-gradient(to right,transparent,#fff 30%,#fff 70%,transparent);border-radius:2px;}
 .home-panel{min-width:100%;width:100%;height:100%;display:flex;flex-direction:column;flex-shrink:0;box-sizing:border-box;}
 .home-panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:20px 20px 12px;font-size:22px;font-weight:700;flex-shrink:0;letter-spacing:-.04em;color:#f0f0f8}
 .home-panel-body{flex:1;overflow-y:auto;padding:12px 20px 180px;display:flex;flex-direction:column;gap:12px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
@@ -442,7 +443,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .hrow-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;}
 .hrow-amount{font-size:15px;font-weight:600;font-family:'DM Mono','SF Mono',monospace;letter-spacing:-.02em;}
 .hrow-meta{font-size:10px;color:rgba(255,255,255,0.28);letter-spacing:.01em;}
-.hrow-stripe{position:absolute;left:0;top:50%;transform:translateY(-50%);height:60%;width:2px;border-radius:2px;}
+.hrow-stripe{position:absolute;left:0;top:0;bottom:0;width:2px;border-radius:2px;background:linear-gradient(to bottom,var(--stripe-color,rgba(255,255,255,0.3)),transparent) !important;}
 /* Progress bar rows (wishlist) */
 .hrow-progress{display:flex;flex-direction:column;gap:6px;padding:14px 20px 10px;border-top:1px solid rgba(255,255,255,0.04);}
 .hrow-progress-top{display:flex;justify-content:space-between;align-items:center;}
@@ -476,7 +477,8 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .cbar-val-row{display:flex;justify-content:center;align-items:baseline;gap:6px;padding:12px 20px 8px;}
 .cbar-val{font-size:14px;font-weight:600;font-family:'DM Mono',monospace;transition:opacity .2s;}
 /* Mobile bottom nav */
-#mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;height:72px;background:rgba(8,8,16,0.75);backdrop-filter:blur(32px) saturate(200%);-webkit-backdrop-filter:blur(32px) saturate(200%);border-top:1px solid rgba(255,255,255,0.06);box-shadow:0 -1px 40px rgba(0,0,0,.5);z-index:300;align-items:stretch;justify-content:space-around;padding:0 8px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
+#mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;height:72px;background:rgba(8,8,16,0.8);backdrop-filter:blur(32px) saturate(200%);-webkit-backdrop-filter:blur(32px) saturate(200%);border-top:none;box-shadow:0 -1px 40px rgba(0,0,0,.5);z-index:300;align-items:stretch;justify-content:space-around;padding:0 8px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
+#mobile-nav::before{content:'';position:absolute;top:0;left:8%;right:8%;height:1px;background:linear-gradient(to right,transparent,rgba(255,255,255,0.18) 30%,rgba(255,255,255,0.18) 70%,transparent);pointer-events:none;}
 #mobile-nav::-webkit-scrollbar{display:none}
 .mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:rgba(255,255,255,0.28);border:none;background:transparent;font-family:'Inter',-apple-system,sans-serif;padding:0;min-height:72px;-webkit-tap-highlight-color:transparent;transition:color .2s;min-width:56px}
 .mob-tab.on{color:#fff}.mob-tab.on svg{filter:drop-shadow(0 0 8px rgba(108,99,255,0.9))}
@@ -3969,7 +3971,7 @@ function _appendHomeExp(){
     const div=document.createElement('div');
     div.className='hrow';
     div.onclick=()=>openHomeExpEdit(e._row);
-    div.innerHTML=`<div class="hrow-stripe" style="background:${color}"></div><div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(e.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(e.Name||'—')}</div><div class="hrow-sub">${e.Category||''}${e.Date?' · '+relDate(e.Date):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:#ef4444">-$${cost.toLocaleString()}</div><div class="hrow-meta">${cardDisplay(e.Card)||''}</div></div>`;
+    div.innerHTML=`<div class="hrow-stripe" style="background:linear-gradient(to bottom,${color},transparent)"></div><div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(e.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(e.Name||'—')}</div><div class="hrow-sub">${e.Category||''}${e.Date?' · '+relDate(e.Date):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:#ef4444">-$${cost.toLocaleString()}</div><div class="hrow-meta">${cardDisplay(e.Card)||''}</div></div>`;
     el.appendChild(div);
   });
   if(lim<procured.length)_makeSentinel('hp-exp','exp');
@@ -3995,7 +3997,7 @@ function _appendHomeSub(){
     wrap.className='swipe-wrap';
     wrap.dataset.swipeAction='cancelSub';
     wrap.dataset.row=s._row;
-    wrap.innerHTML=`<div class="swipe-action cancel-sub"></div><div class="swipe-card hrow ${isDueToday?'due-today-card':''}" onclick="openHomeSubEdit(${s._row})"><div class="hrow-stripe" style="background:${isDueToday?'#ef4444':color}"></div><div class="hrow-icon" style="background:${isDueToday?'rgba(239,68,68,0.15)':color+'22'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${isDueToday?'#ef4444':color}" stroke-width="2" style="overflow:visible">${getCatIcon(s.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(s.Name||'—')}</div><div class="hrow-sub">${s.Billing||'Monthly'}${s.Card?' · '+cardDisplay(s.Card):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:${accentColor}">$${cost.toLocaleString()}</div><div class="hrow-meta" style="color:${isDueToday?'#ef4444':due==='due-soon'?'#f59e0b':'rgba(255,255,255,0.28)'}">${isDueToday?'DUE TODAY':s.NextRenewal?fmtDate(s.NextRenewal):''}</div></div></div>`;
+    wrap.innerHTML=`<div class="swipe-action cancel-sub"></div><div class="swipe-card hrow ${isDueToday?'due-today-card':''}" onclick="openHomeSubEdit(${s._row})"><div class="hrow-stripe" style="background:linear-gradient(to bottom,${isDueToday?'#ef4444':color},transparent)"></div><div class="hrow-icon" style="background:${isDueToday?'rgba(239,68,68,0.15)':color+'22'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${isDueToday?'#ef4444':color}" stroke-width="2" style="overflow:visible">${getCatIcon(s.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(s.Name||'—')}</div><div class="hrow-sub">${s.Billing||'Monthly'}${s.Card?' · '+cardDisplay(s.Card):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:${accentColor}">$${cost.toLocaleString()}</div><div class="hrow-meta" style="color:${isDueToday?'#ef4444':due==='due-soon'?'#f59e0b':'rgba(255,255,255,0.28)'}">${isDueToday?'DUE TODAY':s.NextRenewal?fmtDate(s.NextRenewal):''}</div></div></div>`;
     el.appendChild(wrap);
   });
   if(lim<subs.length)_makeSentinel('hp-sub','sub');
@@ -4018,7 +4020,7 @@ function _appendHomeIncome(){
     const div=document.createElement('div');
     div.className='hrow';
     div.onclick=()=>openHomeIncomeEdit(m._row);
-    div.innerHTML=`<div class="hrow-stripe" style="background:${color}"></div><div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(m.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(m.Name||'—')}</div><div class="hrow-sub">${m.Bank||m.Source||''}${m.Date?' · '+relDate(m.Date):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:#22c55e">+$${amt.toLocaleString()}</div><div class="hrow-meta">${m.Source||''}</div></div>`;
+    div.innerHTML=`<div class="hrow-stripe" style="background:linear-gradient(to bottom,${color},transparent)"></div><div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(m.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(m.Name||'—')}</div><div class="hrow-sub">${m.Bank||m.Source||''}${m.Date?' · '+relDate(m.Date):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:#22c55e">+$${amt.toLocaleString()}</div><div class="hrow-meta">${m.Source||''}</div></div>`;
     el.appendChild(div);
   });
   if(lim<income.length)_makeSentinel('hp-income','income');
@@ -4130,7 +4132,8 @@ function _buildSlot(el,toVal,color){
 
       rows.forEach(d=>{
         const cell=document.createElement('div');
-        cell.style.cssText=`width:${W}px;height:${H}px;display:flex;align-items:center;justify-content:center;flex-shrink:0;`;
+        const _glow=el.classList.contains('hero-glow-green')?'0 0 20px rgba(34,197,94,0.55),0 0 60px rgba(34,197,94,0.2)':el.classList.contains('hero-glow-red')?'0 0 20px rgba(239,68,68,0.55),0 0 60px rgba(239,68,68,0.2)':el.classList.contains('hero-glow-amber')?'0 0 20px rgba(245,158,11,0.5),0 0 60px rgba(245,158,11,0.18)':el.classList.contains('hero-glow-white')?'0 0 20px rgba(255,255,255,0.25),0 0 60px rgba(255,255,255,0.1)':'';
+        cell.style.cssText=`width:${W}px;height:${H}px;display:flex;align-items:center;justify-content:center;flex-shrink:0;text-shadow:${_glow};`;
         cell.textContent=d;
         strip.appendChild(cell);
       });
@@ -4303,7 +4306,7 @@ function renderHomeDash(){
       const cost=parseFloat(e.Cost||0);
       const color=getCatColor(e.Category)||'rgba(255,255,255,0.15)';
       return`<div class="hrow" onclick="openHomeExpEdit(${e._row})">
-        <div class="hrow-stripe" style="background:${color}"></div>
+        <div class="hrow-stripe" style="background:linear-gradient(to bottom,${color},transparent)"></div>
         <div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(e.Category)}</svg></div>
         <div class="hrow-body"><div class="hrow-name">${esc(e.Name||'—')}</div><div class="hrow-sub">${e.Category||''}${e.Date?' · '+relDate(e.Date):''}</div></div>
         <div class="hrow-right"><div class="hrow-amount" style="color:#ef4444">-$${cost.toLocaleString()}</div><div class="hrow-meta">${cardDisplay(e.Card)||''}</div></div>
@@ -4370,7 +4373,7 @@ function renderHomeWish(){
     return`<div class="swipe-wrap" data-swipe-action="deleteWish" data-row="${w._row}">
       <div class="swipe-action-left"></div><div class="swipe-action delete"></div>
       <div class="swipe-card hrow" onclick="openHomeWishEdit(${w._row})">
-        <div class="hrow-stripe" style="background:${color}"></div>
+        <div class="hrow-stripe" style="background:linear-gradient(to bottom,${color},transparent)"></div>
         <div class="hrow-icon" style="background:${color}22;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(w.Category)}</svg>
         </div>
@@ -4439,7 +4442,7 @@ function renderHomeExp(){
     const cost=parseFloat(e.Cost||0);
     const color=getCatColor(e.Category)||'rgba(255,255,255,0.15)';
     return`<div class="hrow" onclick="openHomeExpEdit(${e._row})">
-      <div class="hrow-stripe" style="background:${color}"></div>
+      <div class="hrow-stripe" style="background:linear-gradient(to bottom,${color},transparent)"></div>
       <div class="hrow-icon" style="background:${color}22;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${isOrdered?'<path d="M5 12h14M12 5l7 7-7 7"/>':getCatIcon(e.Category)}</svg>
       </div>
@@ -4520,7 +4523,7 @@ function renderHomeSub(){
     const cost=parseFloat(s.Cost||0);
     const color=getCatColor(s.Category)||'rgba(255,255,255,0.15)';
     const accentColor=isDueToday?'#ef4444':'#f59e0b';
-    return`<div class="swipe-wrap" data-swipe-action="cancelSub" data-row="${s._row}"><div class="swipe-action-left"></div><div class="swipe-action cancel-sub"></div><div class="swipe-card hrow ${isDueToday?'due-today-card':''}" onclick="openHomeSubEdit(${s._row})"><div class="hrow-stripe" style="background:${isDueToday?'#ef4444':color}"></div><div class="hrow-icon" style="background:${isDueToday?'rgba(239,68,68,0.15)':color+'22'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${isDueToday?'#ef4444':color}" stroke-width="2" style="overflow:visible">${getCatIcon(s.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(s.Name||'—')}</div><div class="hrow-sub">${s.Billing||'Monthly'}${s.Card?' · '+cardDisplay(s.Card):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:${accentColor}">$${cost.toLocaleString()}</div><div class="hrow-meta" style="color:${isDueToday?'#ef4444':due==='due-soon'?'#f59e0b':'rgba(255,255,255,0.28)'}">${isDueToday?'DUE TODAY':s.NextRenewal?fmtDate(s.NextRenewal):''}</div></div></div></div>`;
+    return`<div class="swipe-wrap" data-swipe-action="cancelSub" data-row="${s._row}"><div class="swipe-action-left"></div><div class="swipe-action cancel-sub"></div><div class="swipe-card hrow ${isDueToday?'due-today-card':''}" onclick="openHomeSubEdit(${s._row})"><div class="hrow-stripe" style="background:linear-gradient(to bottom,${isDueToday?'#ef4444':color},transparent)"></div><div class="hrow-icon" style="background:${isDueToday?'rgba(239,68,68,0.15)':color+'22'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${isDueToday?'#ef4444':color}" stroke-width="2" style="overflow:visible">${getCatIcon(s.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(s.Name||'—')}</div><div class="hrow-sub">${s.Billing||'Monthly'}${s.Card?' · '+cardDisplay(s.Card):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:${accentColor}">$${cost.toLocaleString()}</div><div class="hrow-meta" style="color:${isDueToday?'#ef4444':due==='due-soon'?'#f59e0b':'rgba(255,255,255,0.28)'}">${isDueToday?'DUE TODAY':s.NextRenewal?fmtDate(s.NextRenewal):''}</div></div></div></div>`;
   }).join('')||'<div style="color:rgba(255,255,255,0.2);font-size:13px;text-align:center;padding:48px 20px;">No active subscriptions</div>';
   animateHero('hero-sub-amt',totalMo);
   if(subs.length>30)_makeSentinel('hp-sub','sub');
@@ -4564,7 +4567,7 @@ function renderHomeIncome(){
   const firstCards=income.slice(0,30).map(m=>{
     const amt=parseFloat(m.Cost||0);
     const color=getCatColor(m.Category)||'#22c55e';
-    return`<div class="hrow" onclick="openHomeIncomeEdit(${m._row})"><div class="hrow-stripe" style="background:${color}"></div><div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(m.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(m.Name||'—')}</div><div class="hrow-sub">${m.Bank||m.Source||''}${m.Date?' · '+relDate(m.Date):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:#22c55e">+$${amt.toLocaleString()}</div><div class="hrow-meta">${m.Source||''}</div></div></div>`;
+    return`<div class="hrow" onclick="openHomeIncomeEdit(${m._row})"><div class="hrow-stripe" style="background:linear-gradient(to bottom,${color},transparent)"></div><div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(m.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(m.Name||'—')}</div><div class="hrow-sub">${m.Bank||m.Source||''}${m.Date?' · '+relDate(m.Date):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:#22c55e">+$${amt.toLocaleString()}</div><div class="hrow-meta">${m.Source||''}</div></div></div>`;
   }).join('')||'<div style="color:rgba(255,255,255,0.2);font-size:13px;text-align:center;padding:48px 20px;">No income recorded</div>';
   el.innerHTML=hero+'<div class="hp-divider"></div>'+firstCards;
   animateHero('hero-income-amt',gainedMo);
@@ -4784,7 +4787,7 @@ function initSwipeCards(container){
       card.style.transition='transform .3s cubic-bezier(.4,0,.2,1)';
       actionRight.style.transition='opacity .2s,width .3s cubic-bezier(.4,0,.2,1)';
       card.style.transform=`translateX(-${MAX}px)`;
-      actionRight.style.background=isDelete?'#ef4444':'#f59e0b';
+      actionRight.style.background=isDelete?'linear-gradient(to left,#ef4444,#dc262680)':'linear-gradient(to left,#f59e0b,#d9770080)';
       actionRight.style.opacity='1';actionRight.style.width=MAX+'px';
       actionRight.innerHTML=`
         <button onclick="swipeConfirm(this)" data-action="${actionType}" data-row="${wrap.dataset.row}"
@@ -4801,6 +4804,7 @@ function initSwipeCards(container){
       card.style.transition='transform .3s cubic-bezier(.4,0,.2,1)';
       actionLeft.style.transition='opacity .2s,width .3s cubic-bezier(.4,0,.2,1)';
       card.style.transform=`translateX(${MAX}px)`;
+      actionLeft.style.background='linear-gradient(to right,#22c55e,#16a34a80)';
       actionLeft.style.opacity='1';actionLeft.style.width=MAX+'px';
       actionLeft.innerHTML=`
         <button onclick="swipeConfirmRight(this)" data-action="${actionType}" data-row="${wrap.dataset.row}"
@@ -4853,12 +4857,12 @@ function initSwipeCards(container){
         const label=actionType==='deleteWish'?'Delete':'Cancel';
         const color=actionType==='deleteWish'?'#ef4444':'#f59e0b';
         actionRight.innerHTML='';
-        actionRight.style.background=color;
+        actionRight.style.background=`linear-gradient(to left,${color},${color}60)`;
         if(actionLeft){actionLeft.style.opacity='0';actionLeft.style.width='0';}
       } else if(actionLeft){
         actionLeft.style.opacity=String(progress*0.9);actionLeft.style.width=visual+'px';
         actionLeft.innerHTML='';
-        actionLeft.style.background='#22c55e';
+        actionLeft.style.background='linear-gradient(to right,#22c55e,#22c55e60)';
         actionRight.style.opacity='0';actionRight.style.width='0';
       }
     });
@@ -4895,14 +4899,14 @@ function initSwipeCards(container){
         const label=actionType==='deleteWish'?'Delete':'Cancel';
         const color=actionType==='deleteWish'?'#ef4444':'#f59e0b';
         actionRight.innerHTML='';
-        actionRight.style.background=color;
+        actionRight.style.background=`linear-gradient(to left,${color},${color}60)`;
         if(actionLeft){actionLeft.style.opacity='0';actionLeft.style.width='0';}
       } else if(actionLeft){
         actionLeft.style.opacity=String(progress*0.9);
         actionLeft.style.width=visual+'px';
         const actionType=wrap.dataset.swipeAction;
         actionLeft.style.background='linear-gradient(to right,#22c55e,#22c55ecc)';
-        actionLeft.style.background='#22c55e';
+        actionLeft.style.background='linear-gradient(to right,#22c55e,#22c55e60)';
         actionRight.style.opacity='0';actionRight.style.width='0';
       }
     },{passive:true});
