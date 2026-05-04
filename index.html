@@ -412,7 +412,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 /* ── UNIX-STYLE HOME PANELS ── */
 .hp-hero{padding:32px 20px 20px;text-align:center;}
 .hp-hero-label{font-size:9px;font-weight:400;color:rgba(255,255,255,0.22);letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px;}
-.hp-hero-amount{font-size:52px;font-weight:300;font-family:'DM Mono','SF Mono',monospace;letter-spacing:-.04em;line-height:1;color:#f0f0f8;display:inline-flex;align-items:center;height:56px;overflow:hidden;}
+.hp-hero-amount{font-size:52px;font-weight:300;font-family:'DM Mono','SF Mono',monospace;letter-spacing:-.04em;line-height:1;color:#f0f0f8;}
 .hp-hero-sub{font-size:11px;color:rgba(255,255,255,0.22);margin-top:8px;letter-spacing:.02em;}
 .hp-hero-stats{display:flex;gap:0;margin-top:20px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.06);justify-content:center;}
 .hp-hero-stat{display:flex;flex-direction:column;gap:4px;flex:1;align-items:center;padding:0 8px;}
@@ -3850,93 +3850,95 @@ function updateHomeFAB(idx){
 
 
 // ── HERO SLOT MACHINE ANIMATION ──
-const _heroVals={};
+const _SLOT_H=52; // matches .hp-hero-amount font-size px
+const _SLOT_W=32; // fixed px width per digit column
 
 function animateHero(id,toVal){
   const el=document.getElementById(id);
   if(!el)return;
-  _heroVals[id]=toVal;
+  // Read color before we touch anything
+  const color=el.style.color||'';
+  // Build slot DOM immediately (synchronous, no layout reads)
+  _buildSlot(el,toVal,color);
+  // Kick off animations after two paint frames so transforms are active
+  requestAnimationFrame(()=>requestAnimationFrame(()=>_startSlot(el)));
+}
 
-  // Format number into character array: '$', digits, commas
-  function formatChars(n){
-    const s='$'+Math.round(Math.abs(n)).toLocaleString('en-US');
-    return s.split('');
-  }
+function _buildSlot(el,toVal,color){
+  const H=_SLOT_H,W=_SLOT_W;
+  const chars=('$'+Math.round(Math.abs(toVal)).toLocaleString('en-US')).split('');
 
-  const chars=formatChars(toVal);
-  const digitH=56; // must match font line-height in px
-  const dur=700;
-  const stagger=38; // ms between columns
-
-  // Build slot columns
-  el.style.cssText+='display:inline-flex;align-items:center;overflow:visible;line-height:1;';
+  // Wipe and restyle container — keep color, fix geometry
   el.innerHTML='';
+  el.style.cssText=[
+    'display:inline-flex',
+    'align-items:center',
+    `height:${H}px`,
+    'overflow:hidden',
+    `font-size:${H}px`,
+    'font-weight:300',
+    "font-family:'DM Mono','SF Mono',monospace",
+    'letter-spacing:-.04em',
+    'line-height:1',
+    color?`color:${color}`:'',
+  ].filter(Boolean).join(';')+';';
 
   chars.forEach((ch,i)=>{
     const isDigit=/[0-9]/.test(ch);
     const col=document.createElement('div');
-    col.style.cssText=`position:relative;overflow:hidden;height:${digitH}px;display:inline-block;`;
 
     if(!isDigit){
-      // Static character: $, comma
-      const s=document.createElement('div');
-      s.textContent=ch;
-      s.style.cssText=`height:${digitH}px;display:flex;align-items:center;`;
-      col.style.overflow='visible';
-      col.appendChild(s);
+      // Static glyph: $ or comma — not clipped
+      col.style.cssText=`display:inline-flex;align-items:center;height:${H}px;`;
+      col.textContent=ch;
     } else {
-      const digit=parseInt(ch,10);
-      // Stack: digits 0-9 repeated, position so target digit is visible
-      // We'll scroll from digit+offset down to digit (rolling in from top = numbers going up)
+      const target=parseInt(ch,10);
+      col.style.cssText=`display:inline-block;width:${W}px;height:${H}px;overflow:hidden;position:relative;flex-shrink:0;`;
+
       const strip=document.createElement('div');
-      strip.style.cssText=`display:flex;flex-direction:column;will-change:transform;`;
+      // 0-9 then 0-target: always scrolls upward from 0 landing on target
+      const rows=[0,1,2,3,4,5,6,7,8,9,...Array.from({length:target+1},(_,k)=>k)];
+      strip.style.cssText=`display:flex;flex-direction:column;will-change:transform;transform:translateY(0px);`;
+      strip.dataset.target=target;
+      strip.dataset.col=i;
 
-      // Build strip: 0..9 twice for seamless feel, land on target
-      const items=[];
-      for(let d=0;d<=9;d++) items.push(d);
-      for(let d=0;d<=9;d++) items.push(d);
-
-      items.forEach(d=>{
+      rows.forEach(d=>{
         const cell=document.createElement('div');
+        cell.style.cssText=`width:${W}px;height:${H}px;display:flex;align-items:center;justify-content:center;flex-shrink:0;`;
         cell.textContent=d;
-        cell.style.cssText=`height:${digitH}px;display:flex;align-items:center;justify-content:center;min-width:0.6em;`;
         strip.appendChild(cell);
       });
 
-      // Start position: digit in first set (index = digit), offset upward so it rolls down into place
-      const targetIdx=10+digit; // land on second set for clean animation
-      const startIdx=digit;     // begin from first set
-
-      const startY=-(startIdx*digitH);
-      const endY=-(targetIdx*digitH);
-
-      strip.style.transform=`translateY(${startY}px)`;
       col.appendChild(strip);
-
-      // Animate with staggered delay per column
-      const delay=i*stagger;
-      setTimeout(()=>{
-        const start=performance.now();
-        const diff=endY-startY;
-        function tick(now){
-          const t=Math.min(1,(now-start)/dur);
-          // Ease out expo for snappy slot feel
-          const ease=t===1?1:1-Math.pow(2,-10*t);
-          strip.style.transform=`translateY(${startY+diff*ease}px)`;
-          if(t<1) requestAnimationFrame(tick);
-          else strip.style.transform=`translateY(${endY}px)`;
-        }
-        requestAnimationFrame(tick);
-      },delay);
     }
-
     el.appendChild(col);
   });
 }
 
+function _startSlot(el){
+  const H=_SLOT_H;
+  const dur=680;
+  const stagger=55;
+  el.querySelectorAll('[data-target]').forEach(strip=>{
+    const target=parseInt(strip.dataset.target,10);
+    const col=parseInt(strip.dataset.col,10);
+    const endY=-((10+target)*H);
+    const delay=col*stagger;
+    setTimeout(()=>{
+      const t0=performance.now();
+      function tick(now){
+        const t=Math.min(1,(now-t0)/dur);
+        const ease=t===1?1:1-Math.pow(2,-10*t);
+        strip.style.transform=`translateY(${endY*ease}px)`;
+        if(t<1)requestAnimationFrame(tick);
+        else strip.style.transform=`translateY(${endY}px)`;
+      }
+      requestAnimationFrame(tick);
+    },delay);
+  });
+}
+
 function renderHome(){
-  // Reset so hero numbers always roll in on tab switch
-  Object.keys(_heroVals).forEach(k=>_heroVals[k]=-1);
   updateOrderedBadge();
   renderHomeWish();
   renderHomeExp();
