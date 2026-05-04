@@ -4003,19 +4003,12 @@ function homeGoTo(idx,el){
   // Trigger slot animation for the panel just revealed
   // idx: 0=Dash, 1=Wish, 2=Exp, 3=Sub, 4=Income
   if(idx===0){
-    // Re-animate dash IN/OUT heroes
     const inEl=document.getElementById('hero-dash-in');
     const outEl=document.getElementById('hero-dash-out');
-    if(inEl&&outEl){
-      const inColor=inEl.style.color||'#22c55e';
-      const outColor=outEl.style.color||'#ef4444';
-      const inVal=parseFloat(inEl.textContent.replace(/[^0-9.]/g,''))||0;
-      const outVal=parseFloat(outEl.textContent.replace(/[^0-9.]/g,''))||0;
-      _buildSlot(inEl,inVal,inColor);_buildSlot(outEl,outVal,outColor);
-      requestAnimationFrame(()=>{_startSlot(document.getElementById('hero-dash-in'));_startSlot(document.getElementById('hero-dash-out'));});
-    }
+    if(inEl&&_heroData['hero-dash-in']!==undefined)_triggerSlot('hero-dash-in',_heroData['hero-dash-in']);
+    if(outEl&&_heroData['hero-dash-out']!==undefined)_triggerSlot('hero-dash-out',_heroData['hero-dash-out']);
   } else {
-    const map=[null,null,'hero-wish-amt','hero-exp-amt','hero-sub-amt','hero-income-amt'];
+    const map=[null,'hero-wish-amt','hero-exp-amt','hero-sub-amt','hero-income-amt'];
     const id=map[idx];
     if(id&&_heroData[id]!==undefined)_triggerSlot(id,_heroData[id]);
   }
@@ -4268,6 +4261,10 @@ function renderHomeDash(){
     }).join('')}`:'';
 
   el.innerHTML=greetHtml+heroHtml+qaddHtml+attnHtml+recentHtml;
+
+  // Store values for homeGoTo re-trigger
+  _heroData['hero-dash-in']=gainedMo;
+  _heroData['hero-dash-out']=spentMo;
 
   // Slot animate both hero numbers
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
