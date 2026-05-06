@@ -28,7 +28,6 @@
 @keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
 .skeleton{border-radius:6px;background:linear-gradient(90deg,var(--s2) 25%,var(--s3) 50%,var(--s2) 75%);background-size:800px 100%;animation:shimmer 1.4s infinite}
 body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:#f0f0f8;min-height:100vh;font-size:14px;}
-
 body.elevated{--bg:#0c0c12;--s1:#13131e;--s2:#1a1a26;--s3:#1f1f2e;--card-bg:#13131e;--card-border:rgba(255,255,255,0.07);}
 .e-card{background:var(--card-bg);border-radius:16px;border:1px solid var(--card-border);overflow:hidden;margin:0 0 10px;}
 .e-card-sm{background:var(--card-bg);border-radius:12px;border:1px solid var(--card-border);}
@@ -380,11 +379,10 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .nav{display:none!important}
 /* ── HOME PANELS ── */
 .home-tab-btn{flex:1;padding:9px 4px;font-size:10px;font-weight:500;color:rgba(255,255,255,0.28);background:transparent;border:none;border-radius:0;cursor:pointer;font-family:'Inter',-apple-system,sans-serif;transition:color .2s;white-space:nowrap;letter-spacing:.08em;text-transform:uppercase;-webkit-tap-highlight-color:transparent;border-bottom:1.5px solid transparent;}
-.home-tab-btn.on{color:#f0f0f8;border-bottom:none;position:relative;}
-.home-tab-btn.on::after{content:'';position:absolute;bottom:0;left:15%;right:15%;height:2px;background:linear-gradient(to right,transparent,#fff 30%,#fff 70%,transparent);border-radius:2px;}
+.home-tab-btn.on{color:#fff;background:transparent;font-weight:600;border-bottom-color:#fff;}
 .home-panel{min-width:100%;width:100%;height:100%;display:flex;flex-direction:column;flex-shrink:0;box-sizing:border-box;}
 .home-panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:20px 20px 12px;font-size:22px;font-weight:700;flex-shrink:0;letter-spacing:-.04em;color:#f0f0f8}
-.home-panel-body{flex:1;overflow-y:auto;padding:12px 20px 180px;display:flex;flex-direction:column;gap:12px;scrollbar-width:none;-webkit-overflow-scrolling:touch;width:100%;}
+.home-panel-body{flex:1;overflow-y:auto;padding:12px 20px 180px;display:flex;flex-direction:column;gap:12px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .home-panel-body::-webkit-scrollbar{display:none}
 .home-section-hdr{font-size:9px;font-weight:600;color:rgba(255,255,255,0.25);letter-spacing:.12em;text-transform:uppercase;padding:10px 0 6px}
 .home-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-left-width:3px;border-left-color:rgba(255,255,255,0.07);border-radius:20px;padding:18px 20px;display:flex;flex-direction:column;gap:10px;transition:border-left-color .2s,transform .35s cubic-bezier(.4,0,.2,1),opacity .35s cubic-bezier(.4,0,.2,1);box-shadow:0 1px 24px rgba(0,0,0,.4);}
@@ -444,7 +442,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .hrow-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;}
 .hrow-amount{font-size:15px;font-weight:600;font-family:'DM Mono','SF Mono',monospace;letter-spacing:-.02em;}
 .hrow-meta{font-size:10px;color:rgba(255,255,255,0.28);letter-spacing:.01em;}
-.hrow-stripe{position:absolute;left:0;top:50%;transform:translateY(-50%);height:56%;width:2px;border-radius:0;}
+.hrow-stripe{position:absolute;left:0;top:20%;bottom:20%;width:2px;border-radius:2px;}
 /* Progress bar rows (wishlist) */
 .hrow-progress{display:flex;flex-direction:column;gap:6px;padding:14px 20px 10px;border-top:1px solid rgba(255,255,255,0.04);}
 .hrow-progress-top{display:flex;justify-content:space-between;align-items:center;}
@@ -457,13 +455,11 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .dgraph-dot{transition:opacity .2s,r .2s;}
 
 /* ── SWIPE TO ACTION ── */
-.swipe-wrap{position:relative;overflow:hidden;width:100%;display:block;}
-.swipe-wrap+.swipe-wrap{border-top:1px solid rgba(255,255,255,0.04);}
-.swipe-action{position:absolute;top:0;right:0;height:100%;z-index:1;display:flex;align-items:center;justify-content:flex-end;width:0;opacity:0;overflow:hidden;}
+.swipe-wrap{position:relative;border-radius:16px;}
+.swipe-action{position:absolute;top:0;right:0;bottom:0;display:flex;align-items:center;justify-content:flex-end;width:0;border-radius:16px;opacity:0;overflow:hidden;}
 .swipe-action.delete{background:#ef4444;}
 .swipe-action.cancel-sub{background:#f59e0b;}
-.swipe-action-left{position:absolute;top:0;left:0;height:100%;z-index:1;display:flex;align-items:center;justify-content:flex-start;width:0;opacity:0;overflow:hidden;background:#22c55e;}
-.swipe-card{position:relative;z-index:2;border-radius:16px;transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .35s cubic-bezier(.4,0,.2,1);width:100%;}
+.swipe-card{will-change:transform;border-radius:16px;transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .35s cubic-bezier(.4,0,.2,1);}
 #ptr-indicator.visible{display:flex}
 
 /* ── PULL-UP SHEET ── */
@@ -478,8 +474,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .cbar-val-row{display:flex;justify-content:center;align-items:baseline;gap:6px;padding:12px 20px 8px;}
 .cbar-val{font-size:14px;font-weight:600;font-family:'DM Mono',monospace;transition:opacity .2s;}
 /* Mobile bottom nav */
-#mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;height:72px;background:rgba(8,8,16,0.8);backdrop-filter:blur(32px) saturate(200%);-webkit-backdrop-filter:blur(32px) saturate(200%);border-top:none;box-shadow:0 -1px 40px rgba(0,0,0,.5);z-index:300;align-items:stretch;justify-content:space-around;padding:0 8px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
-#mobile-nav::before{content:'';position:absolute;top:0;left:8%;right:8%;height:1px;background:linear-gradient(to right,transparent,rgba(255,255,255,0.18) 30%,rgba(255,255,255,0.18) 70%,transparent);pointer-events:none;}
+#mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;height:72px;background:rgba(8,8,16,0.75);backdrop-filter:blur(32px) saturate(200%);-webkit-backdrop-filter:blur(32px) saturate(200%);border-top:1px solid rgba(255,255,255,0.06);box-shadow:0 -1px 40px rgba(0,0,0,.5);z-index:300;align-items:stretch;justify-content:space-around;padding:0 8px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
 #mobile-nav::-webkit-scrollbar{display:none}
 .mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:rgba(255,255,255,0.28);border:none;background:transparent;font-family:'Inter',-apple-system,sans-serif;padding:0;min-height:72px;-webkit-tap-highlight-color:transparent;transition:color .2s;min-width:56px}
 .mob-tab.on{color:#fff}.mob-tab.on svg{filter:drop-shadow(0 0 8px rgba(108,99,255,0.9))}
@@ -533,7 +528,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
       </div>
       <!-- Swipe container -->
       <div id="home-slider-wrap" style="overflow:hidden;width:100%;height:calc(100dvh - 108px);">
-        <div id="home-slider" style="display:flex;height:100%;width:100%;transition:transform .3s cubic-bezier(.4,0,.2,1);will-change:transform;">
+        <div id="home-slider" style="display:flex;height:100%;transition:transform .3s cubic-bezier(.4,0,.2,1);will-change:transform;">
           <!-- PANEL 0: Dash -->
           <div class="home-panel" id="home-panel-dash">
             <div class="home-panel-body" id="hp-dash" style="padding:0 0 180px;gap:0;overflow-y:auto;"></div>
@@ -996,6 +991,9 @@ td.editing{background:rgba(108,99,255,0.05)!important}
         <a id="hcw-link-open" href="#" target="_blank" style="font-size:10px;color:#9d97ff;text-decoration:none;display:none;letter-spacing:.01em;">Open ↗</a>
       </div>
       <input class="fi" id="hcw-link" placeholder="https://..." oninput="const a=document.getElementById('hcw-link-open');a.href=this.value;a.style.display=this.value?'block':'none';">
+    </div>
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+      <button class="btn" style="width:100%;padding:11px;background:rgba(34,197,94,0.1);border-color:rgba(34,197,94,0.3);color:#22c55e;font-size:12px;font-weight:500;letter-spacing:.01em;" onclick="saveHomeWishEdit(true)">✓ Mark as Purchased → Move to Expenses</button>
     </div>
     <div class="mac">
       <button class="btn" onclick="document.getElementById('hc-wish-mo').classList.remove('open')">Cancel</button>
@@ -2367,8 +2365,11 @@ async function markPro(row){
   const e=D.expenses.find(x=>x._row===row);if(!e)return;
   e.Status='Procured';
   await updateRow('Expenses',row,HD.expenses.map(h=>e[h]||''));
-  // Only update the existing Master row — don't append a duplicate
   await syncEditToMaster('Expenses',e,'Status','Procured');
+  const savings=e.OCost&&e.Cost?(parseFloat(e.OCost)-parseFloat(e.Cost)).toFixed(2):'0';
+  const bank=D.cards.find(cd=>cd.Name===e.Card)?.Bank||'';
+  const today=localToday();
+  await appendRow('Master',[e.Date||today,'Expense',e.Name,e.Description,e.Category,e.Cost,e.OCost,savings,cardDisplay(e.Card),bank,'','Procured','Expense']);
   await syncAll();toast('Marked Procured ✓','ok');
 }
 
@@ -3972,7 +3973,7 @@ function _appendHomeExp(){
     const div=document.createElement('div');
     div.className='hrow';
     div.onclick=()=>openHomeExpEdit(e._row);
-    div.innerHTML=`<div class="hrow-stripe" style="background:linear-gradient(to bottom,${color},transparent)"></div><div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(e.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(e.Name||'—')}</div><div class="hrow-sub">${e.Category||''}${e.Date?' · '+relDate(e.Date):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:#ef4444">-$${cost.toLocaleString()}</div><div class="hrow-meta">${cardDisplay(e.Card)||''}</div></div>`;
+    div.innerHTML=`<div class="hrow-stripe" style="background:${color}"></div><div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(e.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(e.Name||'—')}</div><div class="hrow-sub">${e.Category||''}${e.Date?' · '+relDate(e.Date):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:#ef4444">-$${cost.toLocaleString()}</div><div class="hrow-meta">${cardDisplay(e.Card)||''}</div></div>`;
     el.appendChild(div);
   });
   if(lim<procured.length)_makeSentinel('hp-exp','exp');
@@ -3998,7 +3999,7 @@ function _appendHomeSub(){
     wrap.className='swipe-wrap';
     wrap.dataset.swipeAction='cancelSub';
     wrap.dataset.row=s._row;
-    wrap.innerHTML=`<div class="swipe-action cancel-sub"></div><div class="swipe-card hrow ${isDueToday?'due-today-card':''}" onclick="openHomeSubEdit(${s._row})"><div class="hrow-stripe" style="background:linear-gradient(to bottom,${isDueToday?'#ef4444':color},transparent)"></div><div class="hrow-icon" style="background:${isDueToday?'rgba(239,68,68,0.15)':color+'22'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${isDueToday?'#ef4444':color}" stroke-width="2" style="overflow:visible">${getCatIcon(s.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(s.Name||'—')}</div><div class="hrow-sub">${s.Billing||'Monthly'}${s.Card?' · '+cardDisplay(s.Card):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:${accentColor}">$${cost.toLocaleString()}</div><div class="hrow-meta" style="color:${isDueToday?'#ef4444':due==='due-soon'?'#f59e0b':'rgba(255,255,255,0.28)'}">${isDueToday?'DUE TODAY':s.NextRenewal?fmtDate(s.NextRenewal):''}</div></div></div>`;
+    wrap.innerHTML=`<div class="swipe-action cancel-sub"></div><div class="swipe-card hrow ${isDueToday?'due-today-card':''}" onclick="openHomeSubEdit(${s._row})"><div class="hrow-stripe" style="background:${isDueToday?'#ef4444':color}"></div><div class="hrow-icon" style="background:${isDueToday?'rgba(239,68,68,0.15)':color+'22'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${isDueToday?'#ef4444':color}" stroke-width="2" style="overflow:visible">${getCatIcon(s.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(s.Name||'—')}</div><div class="hrow-sub">${s.Billing||'Monthly'}${s.Card?' · '+cardDisplay(s.Card):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:${accentColor}">$${cost.toLocaleString()}</div><div class="hrow-meta" style="color:${isDueToday?'#ef4444':due==='due-soon'?'#f59e0b':'rgba(255,255,255,0.28)'}">${isDueToday?'DUE TODAY':s.NextRenewal?fmtDate(s.NextRenewal):''}</div></div></div>`;
     el.appendChild(wrap);
   });
   if(lim<subs.length)_makeSentinel('hp-sub','sub');
@@ -4021,7 +4022,7 @@ function _appendHomeIncome(){
     const div=document.createElement('div');
     div.className='hrow';
     div.onclick=()=>openHomeIncomeEdit(m._row);
-    div.innerHTML=`<div class="hrow-stripe" style="background:linear-gradient(to bottom,${color},transparent)"></div><div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(m.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(m.Name||'—')}</div><div class="hrow-sub">${m.Bank||m.Source||''}${m.Date?' · '+relDate(m.Date):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:#22c55e">+$${amt.toLocaleString()}</div><div class="hrow-meta">${m.Source||''}</div></div>`;
+    div.innerHTML=`<div class="hrow-stripe" style="background:${color}"></div><div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(m.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(m.Name||'—')}</div><div class="hrow-sub">${m.Bank||m.Source||''}${m.Date?' · '+relDate(m.Date):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:#22c55e">+$${amt.toLocaleString()}</div><div class="hrow-meta">${m.Source||''}</div></div>`;
     el.appendChild(div);
   });
   if(lim<income.length)_makeSentinel('hp-income','income');
@@ -4062,6 +4063,7 @@ function updateHomeFAB(idx){
   // FAB buttons already exist - just reorder/highlight based on panel
   // Panel 0=Wishlist, 1=Expenses/Food, 2=Subs, 3=Income
 }
+
 
 // ── HERO SLOT MACHINE ANIMATION ──
 const _SLOT_H=52; // matches .hp-hero-amount font-size px
@@ -4132,8 +4134,7 @@ function _buildSlot(el,toVal,color){
 
       rows.forEach(d=>{
         const cell=document.createElement('div');
-        const _glow=el.classList.contains('hero-glow-green')?'0 0 20px rgba(34,197,94,0.55),0 0 60px rgba(34,197,94,0.2)':el.classList.contains('hero-glow-red')?'0 0 20px rgba(239,68,68,0.55),0 0 60px rgba(239,68,68,0.2)':el.classList.contains('hero-glow-amber')?'0 0 20px rgba(245,158,11,0.5),0 0 60px rgba(245,158,11,0.18)':el.classList.contains('hero-glow-white')?'0 0 20px rgba(255,255,255,0.25),0 0 60px rgba(255,255,255,0.1)':'';
-        cell.style.cssText=`width:${W}px;height:${H}px;display:flex;align-items:center;justify-content:center;flex-shrink:0;text-shadow:${_glow};`;
+        cell.style.cssText=`width:${W}px;height:${H}px;display:flex;align-items:center;justify-content:center;flex-shrink:0;`;
         cell.textContent=d;
         strip.appendChild(cell);
       });
@@ -4218,63 +4219,64 @@ function renderHomeDash(){
   // Recent expenses
   const recent=[...D.expenses].filter(e=>e.Status!=='Ordered').sort((a,b)=>toSortableDate(b.Date||'').localeCompare(toSortableDate(a.Date||''))).slice(0,5);
 
-  // ── Month label only (no greeting) ──
-  const greetHtml='';
+  // ── Greeting + month label ──
+  const greetHtml=`
+    <div style="padding:20px 20px 16px;">
+      <div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:8px;">Finance</div>
+      <div style="font-size:26px;font-weight:300;color:rgba(255,255,255,0.88);letter-spacing:-.02em;line-height:1.2;">${_greeting()}<span style="color:rgba(255,255,255,0.22);">.</span></div>
+    </div>`;
 
-  // ── Centered inline IN · OUT hero ──
+  // ── IN / OUT dual hero ──
   const isElev=document.body.classList.contains('elevated');
+  const heroWrap=isElev?'e-card':'';
+  const heroStyle=isElev?'margin:0 12px 10px;display:grid;grid-template-columns:1fr 1fr;':'display:grid;grid-template-columns:1fr 1fr;border-top:1px solid rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.06);';
   const heroHtml=`
-    <div style="padding:24px 0 18px;text-align:center;${isElev?'margin:0 12px;background:var(--card-bg);border-radius:16px;border:1px solid var(--card-border);margin-bottom:10px;':'border-top:1px solid rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.06);'}">
-      <div style="font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:12px;">${monthName} ${now.getFullYear()}</div>
-      <div style="display:flex;align-items:center;justify-content:center;">
-        <div style="flex:1;display:flex;align-items:center;justify-content:flex-end;padding-right:14px;gap:6px;">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
-          <div class="hp-hero-amount" id="hero-dash-in" style="color:#22c55e;font-size:40px;">${fmt(gainedMo)}</div>
-        </div>
-        <div style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.2);flex-shrink:0;"></div>
-        <div style="flex:1;display:flex;align-items:center;justify-content:flex-start;padding-left:14px;gap:6px;">
-          <div class="hp-hero-amount" id="hero-dash-out" style="color:#ef4444;font-size:40px;">${fmt(spentMo)}</div>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
-        </div>
+    <div class="${heroWrap}" style="${heroStyle}">
+      <div style="background:${isElev?'var(--card-bg)':'transparent'};padding:18px 20px;">
+        <div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:8px;">In · ${monthName}</div>
+        <div class="hp-hero-amount" id="hero-dash-in" style="color:#22c55e;font-size:32px;">${fmt(gainedMo)}</div>
       </div>
-      <div style="font-size:9px;color:rgba(255,255,255,0.2);margin-top:10px;letter-spacing:.02em;">income · expenses</div>
+      <div style="background:${isElev?'var(--card-bg)':'transparent'};padding:18px 20px;border-left:1px solid rgba(255,255,255,0.06);">
+        <div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:8px;">Out · ${monthName}</div>
+        <div class="hp-hero-amount" id="hero-dash-out" style="color:#ef4444;font-size:32px;">${fmt(spentMo)}</div>
+      </div>
     </div>`;
 
   // ── Quick add ──
-  const qaddFlat=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 20px;">
-      <button class="hp-add-btn" onclick="openFoodMo()" style="border-color:rgba(239,68,68,0.25);color:#ef4444;background:rgba(239,68,68,0.06);margin:0;">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Expense
+  const qaddFlat=`<div style="display:flex;flex-direction:column;gap:8px;padding:12px 20px;">
+      <button class="hp-add-btn" onclick="openFoodMo()" style="border-color:rgba(239,68,68,0.25);color:#ef4444;background:rgba(239,68,68,0.06);">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Expense
       </button>
-      <button class="hp-add-btn" onclick="openModal('wish')" style="border-color:rgba(255,255,255,0.1);color:rgba(255,255,255,0.5);margin:0;">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Wishlist
+      <button class="hp-add-btn" onclick="openModal('wish')" style="border-color:rgba(255,255,255,0.1);color:rgba(255,255,255,0.5);">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add to Wishlist
       </button>
-      <button class="hp-add-btn" onclick="openIncomeMo()" style="border-color:rgba(34,197,94,0.25);color:#22c55e;background:rgba(34,197,94,0.06);margin:0;">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Income
+      <button class="hp-add-btn" onclick="openIncomeMo()" style="border-color:rgba(34,197,94,0.25);color:#22c55e;background:rgba(34,197,94,0.06);">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Log Income
       </button>
-      <button class="hp-add-btn" onclick="openModal('sub')" style="border-color:rgba(245,158,11,0.25);color:#f59e0b;background:rgba(245,158,11,0.06);margin:0;">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Sub
+      <button class="hp-add-btn" onclick="openModal('sub')" style="border-color:rgba(245,158,11,0.25);color:#f59e0b;background:rgba(245,158,11,0.06);">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Subscription
       </button>
     </div>`;
-  const qaddElev=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px;">
+  const qaddElev=`<div style="display:flex;flex-direction:column;gap:8px;padding:12px;">
       <button class="hp-add-btn" onclick="openFoodMo()" style="border-color:rgba(239,68,68,0.25);color:#ef4444;background:rgba(239,68,68,0.06);margin:0;">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Expense
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Expense
       </button>
       <button class="hp-add-btn" onclick="openModal('wish')" style="border-color:rgba(255,255,255,0.1);color:rgba(255,255,255,0.5);margin:0;">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Wishlist
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add to Wishlist
       </button>
       <button class="hp-add-btn" onclick="openIncomeMo()" style="border-color:rgba(34,197,94,0.25);color:#22c55e;background:rgba(34,197,94,0.06);margin:0;">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Income
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Log Income
       </button>
       <button class="hp-add-btn" onclick="openModal('sub')" style="border-color:rgba(245,158,11,0.25);color:#f59e0b;background:rgba(245,158,11,0.06);margin:0;">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Sub
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Subscription
       </button>
     </div>`;
   const qaddHtml=isElev?qaddElev:qaddFlat;
@@ -4306,7 +4308,7 @@ function renderHomeDash(){
       const cost=parseFloat(e.Cost||0);
       const color=getCatColor(e.Category)||'rgba(255,255,255,0.15)';
       return`<div class="hrow" onclick="openHomeExpEdit(${e._row})">
-        <div class="hrow-stripe" style="background:linear-gradient(to bottom,${color},transparent)"></div>
+        <div class="hrow-stripe" style="background:${color}"></div>
         <div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(e.Category)}</svg></div>
         <div class="hrow-body"><div class="hrow-name">${esc(e.Name||'—')}</div><div class="hrow-sub">${e.Category||''}${e.Date?' · '+relDate(e.Date):''}</div></div>
         <div class="hrow-right"><div class="hrow-amount" style="color:#ef4444">-$${cost.toLocaleString()}</div><div class="hrow-meta">${cardDisplay(e.Card)||''}</div></div>
@@ -4371,9 +4373,9 @@ function renderHomeWish(){
     const sav=orig&&bought&&orig>bought?orig-bought:0;
     const color=getCatColor(w.Category)||'#6c63ff';
     return`<div class="swipe-wrap" data-swipe-action="deleteWish" data-row="${w._row}">
-      <div class="swipe-action-left"></div><div class="swipe-action delete"></div>
+      <div class="swipe-action delete"></div>
       <div class="swipe-card hrow" onclick="openHomeWishEdit(${w._row})">
-        <div class="hrow-stripe" style="background:linear-gradient(to bottom,${color},transparent)"></div>
+        <div class="hrow-stripe" style="background:${color}"></div>
         <div class="hrow-icon" style="background:${color}22;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(w.Category)}</svg>
         </div>
@@ -4389,7 +4391,6 @@ function renderHomeWish(){
     </div>`;
   }).join('')||'<div style="color:rgba(255,255,255,0.2);font-size:13px;text-align:center;padding:48px 20px;">Nothing on your wishlist</div>';
 
-  el.querySelectorAll('.swipe-wrap').forEach(w=>{w._swipeInit=false;});
   el.innerHTML=hero+rows;
   animateHero('hero-wish-amt',totalCost);
   // Re-append show-more button after innerHTML wipe
@@ -4442,7 +4443,7 @@ function renderHomeExp(){
     const cost=parseFloat(e.Cost||0);
     const color=getCatColor(e.Category)||'rgba(255,255,255,0.15)';
     return`<div class="hrow" onclick="openHomeExpEdit(${e._row})">
-      <div class="hrow-stripe" style="background:linear-gradient(to bottom,${color},transparent)"></div>
+      <div class="hrow-stripe" style="background:${color}"></div>
       <div class="hrow-icon" style="background:${color}22;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${isOrdered?'<path d="M5 12h14M12 5l7 7-7 7"/>':getCatIcon(e.Category)}</svg>
       </div>
@@ -4516,14 +4517,13 @@ function renderHomeSub(){
 
   _homeData.sub=subs;
   _homeLimits.sub=30;
-  el.querySelectorAll('.swipe-wrap').forEach(w=>{w._swipeInit=false;});
   el.innerHTML=hero+subs.slice(0,30).map(s=>{
     const due=dueCls(s.NextRenewal);
     const isDueToday=due==='due-today';
     const cost=parseFloat(s.Cost||0);
     const color=getCatColor(s.Category)||'rgba(255,255,255,0.15)';
     const accentColor=isDueToday?'#ef4444':'#f59e0b';
-    return`<div class="swipe-wrap" data-swipe-action="cancelSub" data-row="${s._row}"><div class="swipe-action-left"></div><div class="swipe-action cancel-sub"></div><div class="swipe-card hrow ${isDueToday?'due-today-card':''}" onclick="openHomeSubEdit(${s._row})"><div class="hrow-stripe" style="background:linear-gradient(to bottom,${isDueToday?'#ef4444':color},transparent)"></div><div class="hrow-icon" style="background:${isDueToday?'rgba(239,68,68,0.15)':color+'22'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${isDueToday?'#ef4444':color}" stroke-width="2" style="overflow:visible">${getCatIcon(s.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(s.Name||'—')}</div><div class="hrow-sub">${s.Billing||'Monthly'}${s.Card?' · '+cardDisplay(s.Card):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:${accentColor}">$${cost.toLocaleString()}</div><div class="hrow-meta" style="color:${isDueToday?'#ef4444':due==='due-soon'?'#f59e0b':'rgba(255,255,255,0.28)'}">${isDueToday?'DUE TODAY':s.NextRenewal?fmtDate(s.NextRenewal):''}</div></div></div></div>`;
+    return`<div class="swipe-wrap" data-swipe-action="cancelSub" data-row="${s._row}"><div class="swipe-action cancel-sub"></div><div class="swipe-card hrow ${isDueToday?'due-today-card':''}" onclick="openHomeSubEdit(${s._row})"><div class="hrow-stripe" style="background:${isDueToday?'#ef4444':color}"></div><div class="hrow-icon" style="background:${isDueToday?'rgba(239,68,68,0.15)':color+'22'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${isDueToday?'#ef4444':color}" stroke-width="2" style="overflow:visible">${getCatIcon(s.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(s.Name||'—')}</div><div class="hrow-sub">${s.Billing||'Monthly'}${s.Card?' · '+cardDisplay(s.Card):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:${accentColor}">$${cost.toLocaleString()}</div><div class="hrow-meta" style="color:${isDueToday?'#ef4444':due==='due-soon'?'#f59e0b':'rgba(255,255,255,0.28)'}">${isDueToday?'DUE TODAY':s.NextRenewal?fmtDate(s.NextRenewal):''}</div></div></div></div>`;
   }).join('')||'<div style="color:rgba(255,255,255,0.2);font-size:13px;text-align:center;padding:48px 20px;">No active subscriptions</div>';
   animateHero('hero-sub-amt',totalMo);
   if(subs.length>30)_makeSentinel('hp-sub','sub');
@@ -4567,7 +4567,7 @@ function renderHomeIncome(){
   const firstCards=income.slice(0,30).map(m=>{
     const amt=parseFloat(m.Cost||0);
     const color=getCatColor(m.Category)||'#22c55e';
-    return`<div class="hrow" onclick="openHomeIncomeEdit(${m._row})"><div class="hrow-stripe" style="background:linear-gradient(to bottom,${color},transparent)"></div><div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(m.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(m.Name||'—')}</div><div class="hrow-sub">${m.Bank||m.Source||''}${m.Date?' · '+relDate(m.Date):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:#22c55e">+$${amt.toLocaleString()}</div><div class="hrow-meta">${m.Source||''}</div></div></div>`;
+    return`<div class="hrow" onclick="openHomeIncomeEdit(${m._row})"><div class="hrow-stripe" style="background:${color}"></div><div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(m.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(m.Name||'—')}</div><div class="hrow-sub">${m.Bank||m.Source||''}${m.Date?' · '+relDate(m.Date):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:#22c55e">+$${amt.toLocaleString()}</div><div class="hrow-meta">${m.Source||''}</div></div></div>`;
   }).join('')||'<div style="color:rgba(255,255,255,0.2);font-size:13px;text-align:center;padding:48px 20px;">No income recorded</div>';
   el.innerHTML=hero+'<div class="hp-divider"></div>'+firstCards;
   animateHero('hero-income-amt',gainedMo);
@@ -4658,7 +4658,6 @@ function openHomeSubEdit(row){
 }
 async function saveHomeSubEdit(){
   const s=D.subscriptions.find(x=>x._row===_hcEditRow);if(!s)return;
-  const prevName=s.Name,prevCost=s.Cost,prevCard=s.Card;
   s.Name=document.getElementById('hcs-name').value;
   s.Cost=document.getElementById('hcs-cost').value;
   s.Billing=document.getElementById('hcs-billing').value;
@@ -4667,10 +4666,6 @@ async function saveHomeSubEdit(){
   s.NextRenewal=document.getElementById('hcs-renewal').value;
   const vals=[s.Name,s.Billing,s.Card,s.Cost,s.LastRenewal,s.NextRenewal,s.Category,s.Status,s.Payments,s.MonthlyCost,s.AnnualCost];
   await updateRow('Subscriptions',_hcEditRow,vals);
-  // Sync changed fields to Master past payment rows
-  if(s.Name!==prevName)await syncEditToMaster('Subscriptions',{...s,Name:prevName,Cost:prevCost},'Name',s.Name);
-  if(s.Cost!==prevCost)await syncEditToMaster('Subscriptions',s,'Cost',s.Cost);
-  if(s.Card!==prevCard)await syncEditToMaster('Subscriptions',s,'Card',s.Card);
   document.getElementById('hc-sub-mo').classList.remove('open');
   await syncAll();
 }
@@ -4727,50 +4722,68 @@ async function cancelSub(row){
   await syncAll();
 }
 
-let _activeSwipeWrap=null; // track currently open/dragging wrap globally
-function _resetAllSwipes(except){
-  document.querySelectorAll('.swipe-wrap').forEach(w=>{
-    if(w===except||!w._resetCard)return;
-    w._resetCard();
-  });
-}
-
 function initSwipeCards(container){
   if(!container)return;
   container.querySelectorAll('.swipe-wrap').forEach(wrap=>{
     if(wrap._swipeInit)return;
     wrap._swipeInit=true;
     const card=wrap.querySelector('.swipe-card');
-    const actionRight=wrap.querySelector('.swipe-action');
-    const actionLeft=wrap.querySelector('.swipe-action-left');
-    if(!card||!actionRight)return;
-    card.addEventListener('click',e=>{if(wrap._didDrag){e.stopPropagation();e.preventDefault();wrap._didDrag=false;}},{capture:true});
+    const action=wrap.querySelector('.swipe-action');
+    if(!card||!action)return;
+    // Lock wrap height so Safari flex collapse can't crush it
+    requestAnimationFrame(()=>{
+      const h=card.getBoundingClientRect().height;
+      if(h>0)wrap.style.minHeight=h+'px';
+    });
 
-    const TRIGGER=90,MAX=130;
+    const TRIGGER=90;   // px to enter confirm state
+    const MAX=130;      // max visual drag
     let sx=0,sy=0,dx=0,isHoriz=null,open=false,pressing=false;
 
     const pressDown=()=>{
-      if(open)return;pressing=true;
+      if(open)return;
+      pressing=true;
       card.style.transition='transform .12s cubic-bezier(.4,0,.2,1),opacity .12s cubic-bezier(.4,0,.2,1)';
-      card.style.transform='scale(.972)';card.style.opacity='.82';
+      card.style.transform='scale(.972)';
+      card.style.opacity='.82';
     };
     const pressUp=()=>{
-      if(!pressing)return;pressing=false;
+      if(!pressing)return;
+      pressing=false;
       card.style.transition='transform .35s cubic-bezier(.4,0,.2,1),opacity .35s cubic-bezier(.4,0,.2,1)';
-      card.style.transform='';card.style.opacity='';
+      card.style.transform='';
+      card.style.opacity='';
     };
+
     const resetCard=()=>{
       card.style.transition='transform .3s cubic-bezier(.4,0,.2,1)';
-      actionRight.style.transition='opacity .3s,width .3s';
-      actionRight.style.opacity='0';actionRight.style.width='0';
-      if(actionLeft){actionLeft.style.transition='opacity .3s,width .3s';actionLeft.style.opacity='0';actionLeft.style.width='0';}
-      card.style.transform='';open=false;
+      action.style.transition='opacity .3s,width .3s';
+      card.style.transform='';
+      action.style.opacity='0';
+      action.style.width='0';
+      open=false;
       if(wrap._dismiss){document.removeEventListener('touchstart',wrap._dismiss,true);wrap._dismiss=null;}
-      if(_activeSwipeWrap===wrap)_activeSwipeWrap=null;
     };
-    wrap._resetCard=resetCard;
 
-    const addDismiss=()=>{
+    const snapOpen=()=>{
+      const actionType=wrap.dataset.swipeAction;
+      const isDelete=actionType==='deleteWish';
+      card.style.transition='transform .3s cubic-bezier(.4,0,.2,1)';
+      action.style.transition='opacity .2s,width .3s cubic-bezier(.4,0,.2,1)';
+      card.style.transform=`translateX(-${MAX}px)`;
+      action.style.opacity='1';
+      action.style.width=MAX+'px';
+      action.innerHTML=`
+        <div style="display:flex;width:100%;padding:0 10px;box-sizing:border-box;">
+          <button onclick="swipeConfirm(this)" data-action="${actionType}" data-row="${wrap.dataset.row}"
+            style="background:${isDelete?'#ef4444':'#f59e0b'};color:#fff;border:none;border-radius:8px;
+                   padding:10px 0;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;
+                   cursor:pointer;width:100%;letter-spacing:.02em;">
+            ${isDelete?'Delete':'Cancel'}
+          </button>
+        </div>`;
+      open=true;
+      // Tap anywhere outside to dismiss
       setTimeout(()=>{
         const dismiss=e=>{
           if(!wrap.contains(e.target)){resetCard();document.removeEventListener('touchstart',dismiss,true);}
@@ -4780,49 +4793,12 @@ function initSwipeCards(container){
       },50);
     };
 
-    const snapOpenLeft=()=>{
-      const actionType=wrap.dataset.swipeAction;
-      const isDelete=actionType==='deleteWish';
-      card.style.transition='transform .3s cubic-bezier(.4,0,.2,1)';
-      actionRight.style.transition='opacity .2s,width .3s cubic-bezier(.4,0,.2,1)';
-      actionRight.style.background=isDelete?'linear-gradient(to left,#ef4444,#dc262680)':'linear-gradient(to left,#f59e0b,#d9770080)';
-      card.style.transform=`translateX(-${MAX}px)`;
-      actionRight.style.opacity='1';actionRight.style.width=MAX+'px';
-      actionRight.innerHTML=`<button onclick="swipeConfirm(this)" data-action="${actionType}" data-row="${wrap.dataset.row}" style="background:transparent;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:0 18px;">${isDelete?'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>':'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'}</button>`;
-      open=true;addDismiss();
-    };
-
-    const snapOpenRight=()=>{
-      if(!actionLeft)return;
-      const actionType=wrap.dataset.swipeAction;
-      card.style.transition='transform .3s cubic-bezier(.4,0,.2,1)';
-      actionLeft.style.transition='opacity .2s,width .3s cubic-bezier(.4,0,.2,1)';
-      card.style.transform=`translateX(${MAX}px)`;
-      actionLeft.style.background='linear-gradient(to right,#22c55e,#16a34a80)';
-      actionLeft.style.opacity='1';actionLeft.style.width=MAX+'px';
-      actionLeft.innerHTML=`<button onclick="swipeConfirmRight(this)" data-action="${actionType}" data-row="${wrap.dataset.row}" style="background:transparent;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:0 18px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></button>`;
-      open=true;addDismiss();
-    };
-
-    // Store refs on wrap so shared window listeners can access them
-    wrap._swipeRefs={card,actionRight,actionLeft,pressUp,resetCard,snapOpenLeft,snapOpenRight,
-      get sx(){return sx;},set sx(v){sx=v;},
-      get sy(){return sy;},set sy(v){sy=v;},
-      get dx(){return dx;},set dx(v){dx=v;},
-      get isHoriz(){return isHoriz;},set isHoriz(v){isHoriz=v;},
-      get open(){return open;},
-      get pressing(){return pressing;},set pressing(v){pressing=v;},
-      TRIGGER,MAX
-    };
-
     wrap.addEventListener('touchstart',e=>{
       if(open){resetCard();if(wrap._dismiss){document.removeEventListener('touchstart',wrap._dismiss,true);wrap._dismiss=null;}return;}
-      _resetAllSwipes(wrap);
       sx=e.touches[0].clientX;sy=e.touches[0].clientY;
       dx=0;isHoriz=null;
       card.style.transition='none';
-      actionRight.style.transition='none';
-      if(actionLeft)actionLeft.style.transition='none';
+      action.style.transition='none';
       pressDown();
     },{passive:true});
 
@@ -4830,108 +4806,40 @@ function initSwipeCards(container){
       if(open)return;
       const cx=e.touches[0].clientX,cy=e.touches[0].clientY;
       const adx=Math.abs(cx-sx),ady=Math.abs(cy-sy);
-      if(isHoriz===null){if(adx<4&&ady<4)return;isHoriz=adx>ady*1.2;}
-      if(!isHoriz){pressUp();return;}
-      pressing=false;card.style.opacity='';
-      dx=cx-sx;
-      const goingLeft=dx<0;
-      const visual=Math.min(Math.abs(dx),MAX);
-      const progress=Math.min(1,visual/TRIGGER);
-      card.style.transform=`translateX(${goingLeft?-visual:visual}px)`;
-      if(goingLeft){
-        actionRight.style.opacity=String(progress*0.9);actionRight.style.width=visual+'px';
-        const actionType=wrap.dataset.swipeAction;
-        const color=actionType==='deleteWish'?'#ef4444':'#f59e0b';
-        actionRight.innerHTML='';
-        actionRight.style.background=`linear-gradient(to left,${color},${color}60)`;
-        if(actionLeft){actionLeft.style.opacity='0';actionLeft.style.width='0';}
-      } else if(actionLeft){
-        actionLeft.style.opacity=String(progress*0.9);actionLeft.style.width=visual+'px';
-        actionLeft.innerHTML='';
-        actionLeft.style.background='linear-gradient(to right,#22c55e,#22c55e60)';
-        actionRight.style.opacity='0';actionRight.style.width='0';
+      if(isHoriz===null){
+        if(adx<4&&ady<4)return;
+        isHoriz=adx>ady*1.2;
       }
+      if(!isHoriz){pressUp();return;}
+      // Cancel press state once swiping
+      pressing=false;card.style.opacity='';
+      dx=Math.min(0,cx-sx);
+      const progress=Math.min(1,Math.abs(dx)/TRIGGER);
+      const visual=Math.min(Math.abs(dx),MAX);
+      card.style.transform=`translateX(-${visual}px)`;
+      action.style.opacity=String(progress*0.9);
+      action.style.width=visual+'px';
+      // Show the label text while dragging (clean, no buttons yet)
+      const actionType=wrap.dataset.swipeAction;
+      const label=actionType==='deleteWish'?'Delete':'Cancel';
+      const color=actionType==='deleteWish'?'#ef4444':'#f59e0b';
+      action.innerHTML=`<span style="color:#fff;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;letter-spacing:.02em;padding-right:14px;">${label}</span>`;
+      action.style.background=`linear-gradient(to left,${color},${color}cc)`;
     },{passive:true});
 
     wrap.addEventListener('touchend',()=>{
       pressUp();
-      if(open||isHoriz===null||!isHoriz){return;}
+      if(open||isHoriz===null){return;}
+      if(!isHoriz){return;}
       if(Math.abs(dx)>=TRIGGER){
-        if(dx<0)snapOpenLeft();
-        else snapOpenRight();
+        snapOpen();
       } else {
         resetCard();
       }
       dx=0;isHoriz=null;
     },{passive:true});
-
-    wrap.addEventListener('mousedown',e=>{
-      if(e.button!==0)return;
-      if(open){resetCard();return;}
-      _resetAllSwipes(wrap);
-      sx=e.clientX;sy=e.clientY;
-      dx=0;isHoriz=null;_activeSwipeWrap=wrap;wrap._didDrag=false;
-      card.style.transition='none';
-      actionRight.style.transition='none';
-      if(actionLeft)actionLeft.style.transition='none';
-      pressDown();
-      e.preventDefault();
-    });
   });
 }
-
-
-// Single shared mouse listeners for desktop swipe — not per-card
-(function(){
-  let _activeWrap=null;
-  document.addEventListener('mousedown',e=>{
-    const wrap=e.target.closest('.swipe-wrap');
-    if(wrap)_activeWrap=wrap;
-  },true);
-  window.addEventListener('mousemove',e=>{
-    const wrap=_activeSwipeWrap;
-    if(!wrap||!wrap._swipeRefs)return;
-    const r=wrap._swipeRefs;
-    if(r.open)return;
-    const cx=e.clientX,cy=e.clientY;
-    const adx=Math.abs(cx-r.sx),ady=Math.abs(cy-r.sy);
-    if(r.isHoriz===null){if(adx<4&&ady<4)return;r.isHoriz=adx>ady*1.2;}
-    if(!r.isHoriz){r.pressUp();return;}
-    r.pressing=false;r.card.style.opacity='';
-    r.dx=cx-r.sx;
-    wrap._didDrag=Math.abs(r.dx)>6;
-    const goingLeft=r.dx<0;
-    const visual=Math.min(Math.abs(r.dx),r.MAX);
-    const progress=Math.min(1,visual/r.TRIGGER);
-    r.card.style.transform=`translateX(${goingLeft?-visual:visual}px)`;
-    if(goingLeft){
-      r.actionRight.style.opacity=String(progress*0.9);r.actionRight.style.width=visual+'px';
-      const at=wrap.dataset.swipeAction;
-      const color=at==='deleteWish'?'#ef4444':'#f59e0b';
-      r.actionRight.innerHTML='';r.actionRight.style.background=`linear-gradient(to left,${color},${color}60)`;
-      if(r.actionLeft){r.actionLeft.style.opacity='0';r.actionLeft.style.width='0';}
-    } else if(r.actionLeft){
-      r.actionLeft.style.opacity=String(progress*0.9);r.actionLeft.style.width=visual+'px';
-      r.actionLeft.innerHTML='';r.actionLeft.style.background='linear-gradient(to right,#22c55e,#22c55e60)';
-      r.actionRight.style.opacity='0';r.actionRight.style.width='0';
-    }
-  });
-  window.addEventListener('mouseup',e=>{
-    const wrap=_activeSwipeWrap;
-    if(!wrap||!wrap._swipeRefs)return;
-    _activeSwipeWrap=null;
-    const r=wrap._swipeRefs;
-    r.pressUp();
-    if(r.open||r.isHoriz===null||!r.isHoriz){r.dx=0;r.isHoriz=null;return;}
-    if(Math.abs(r.dx)>=r.TRIGGER){
-      if(r.dx<0)r.snapOpenLeft();
-      else r.snapOpenRight();
-    } else {
-      r.resetCard();
-    }
-    r.dx=0;r.isHoriz=null;
-  });
-})();
 
 function swipeCancel(btn){
   const wrap=btn.closest('.swipe-wrap');
@@ -4939,7 +4847,9 @@ function swipeCancel(btn){
   const card=wrap.querySelector('.swipe-card');
   const action=wrap.querySelector('.swipe-action');
   const isDelete=wrap.dataset.swipeAction==='deleteWish';
-  if(action){action.innerHTML='';}
+  if(action){
+    action.innerHTML=`<span style="color:#fff;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;letter-spacing:.02em;padding-right:14px;">${isDelete?'Delete':'Cancel'}</span>`;
+  }
   if(card){card.style.transition='transform .3s cubic-bezier(.4,0,.2,1)';card.style.transform='';}
   if(action){action.style.transition='opacity .3s,width .3s';action.style.opacity='0';action.style.width='0';}
 }
@@ -4958,26 +4868,6 @@ async function swipeConfirm(btn){
     if(actionType==='deleteWish') await deleteWish(row);
     else if(actionType==='cancelSub') await cancelSub(row);
   },200);
-}
-
-async function swipeConfirmRight(btn){
-  const wrap=btn.closest('.swipe-wrap');
-  const card=wrap?.querySelector('.swipe-card');
-  const actionType=wrap?.dataset.swipeAction;
-  const row=parseInt(wrap?.dataset.row);
-  if(!card)return;
-  btn.textContent='…';btn.disabled=true;
-  card.style.transition='transform .22s ease,opacity .22s';
-  card.style.transform='translateX(105%)';
-  card.style.opacity='0';
-  setTimeout(async()=>{
-    if(actionType==='cancelSub'){
-      await paySub(row);
-    } else if(actionType==='deleteWish'){
-      const w=D.wishlist.find(x=>x._row===row);
-      if(w)openBuyModal(w);
-    }
-  },220);
 }
 
 // ── MONTH PICKER ──
