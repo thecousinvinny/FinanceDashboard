@@ -3878,6 +3878,7 @@ function updateOrderedBadge(){
 
 // ── GRADIENT AREA CHART ──
 let _pendingCharts=[];
+let _pendingDashChart=null;
 function buildAreaChart(id,values,labels,color){
   if(!values.some(v=>v>0))return'';
   _pendingCharts.push({id,values,labels,color});
@@ -4196,7 +4197,45 @@ function renderHome(){
   requestAnimationFrame(()=>requestAnimationFrame(_flushSlots));
   // Panel pull-to-refresh
   ['hp-wish','hp-exp','hp-sub','hp-income'].forEach(id=>addPanelPTR(document.getElementById(id)));
-  setTimeout(initPendingCharts,50);
+  setTimeout(()=>{
+    initPendingCharts();
+    const dc=document.getElementById('dash-dual-chart');
+    if(dc&&window.Chart&&_pendingDashChart){
+      const {labels,inc,exp}=_pendingDashChart;
+      const ctx=dc.getContext('2d');
+      if(dc._chart)dc._chart.destroy();
+      const gradInc=ctx.createLinearGradient(0,0,0,140);
+      gradInc.addColorStop(0,'#22c55e66');gradInc.addColorStop(1,'#22c55e00');
+      const gradExp=ctx.createLinearGradient(0,0,0,140);
+      gradExp.addColorStop(0,'#ef444444');gradExp.addColorStop(1,'#ef444400');
+      dc._chart=new Chart(ctx,{
+        type:'line',
+        data:{labels,datasets:[
+          {label:'Income',data:inc,borderColor:'#22c55e',borderWidth:2,backgroundColor:gradInc,fill:true,tension:0.4,pointRadius:3,pointBackgroundColor:'#22c55e',pointBorderColor:'#080810',pointBorderWidth:2},
+          {label:'Expenses',data:exp,borderColor:'#ef4444',borderWidth:2,backgroundColor:gradExp,fill:true,tension:0.4,pointRadius:3,pointBackgroundColor:'#ef4444',pointBorderColor:'#080810',pointBorderWidth:2},
+        ]},
+        options:{
+          responsive:true,maintainAspectRatio:false,
+          animation:{duration:700,easing:'easeInOutQuart'},
+          plugins:{
+            legend:{display:false},
+            datalabels:{display:false},
+            tooltip:{
+              backgroundColor:'rgba(8,8,16,0.95)',titleColor:'rgba(255,255,255,0.4)',
+              bodyColor:'#f0f0f8',bodyFont:{size:13,weight:'bold'},
+              padding:10,cornerRadius:10,displayColors:true,
+              callbacks:{label:c=>c.dataset.label+': $'+Math.round(c.raw).toLocaleString()}
+            }
+          },
+          scales:{
+            x:{grid:{display:false},border:{display:false},ticks:{color:'rgba(255,255,255,0.2)',font:{size:9},maxRotation:0}},
+            y:{display:false}
+          }
+        }
+      });
+      _pendingDashChart=null;
+    }
+  },50);
 }
 
 function _greeting(){
@@ -4258,7 +4297,7 @@ function renderHomeDash(){
       <div style="font-size:9px;color:rgba(255,255,255,0.2);margin-top:12px;letter-spacing:.02em;">income · expenses</div>
     </div>`;
 
-  // ── Dual area chart — 8 months, always render even with zeros ──
+  // ── Overlapping dual area chart — single canvas, two datasets ──
   const dashMonths8=[],dashLabels=[];
   for(let i=7;i>=0;i--){
     const d=new Date(now.getFullYear(),now.getMonth()-i,1);
@@ -4268,15 +4307,14 @@ function renderHomeDash(){
   }
   const dashInc=dashMonths8.map(k=>D.master.filter(m=>m.Type==='Income'&&toSortableDate(m.Date||'').startsWith(k)).reduce((s,m)=>s+(parseFloat(m.Cost)||0),0));
   const dashExp=dashMonths8.map(k=>D.expenses.filter(e=>e.Status!=='Ordered'&&toSortableDate(e.Date||'').startsWith(k)).reduce((s,e)=>s+(parseFloat(e.Cost)||0),0));
-  // Push both to pending charts directly (bypasses the hasData check)
-  _pendingCharts.push({id:'dash-inc-chart',values:dashInc,labels:dashLabels,color:'#22c55e'});
-  _pendingCharts.push({id:'dash-exp-chart',values:dashExp,labels:dashLabels,color:'#ef4444'});
+  _pendingDashChart={labels:dashLabels,inc:dashInc,exp:dashExp};
   const qaddHtml=`
-    <div style="padding:0 0 4px;">
-      <div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.2);padding:8px 20px 4px;">Income</div>
-      <div style="padding:0 20px 4px;"><div style="position:relative;height:110px;"><canvas id="dash-inc-chart"></canvas></div></div>
-      <div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.2);padding:8px 20px 4px;">Expenses</div>
-      <div style="padding:0 20px 12px;"><div style="position:relative;height:110px;"><canvas id="dash-exp-chart"></canvas></div></div>
+    <div style="padding:0 20px 12px;">
+      <div style="position:relative;height:140px;"><canvas id="dash-dual-chart"></canvas></div>
+      <div style="display:flex;gap:14px;justify-content:center;margin-top:6px;">
+        <div style="display:flex;align-items:center;gap:5px;"><div style="width:12px;height:2px;background:#22c55e;border-radius:1px;"></div><span style="font-size:9px;color:rgba(255,255,255,0.3);">Income</span></div>
+        <div style="display:flex;align-items:center;gap:5px;"><div style="width:12px;height:2px;background:#ef4444;border-radius:1px;"></div><span style="font-size:9px;color:rgba(255,255,255,0.3);">Expenses</span></div>
+      </div>
     </div>`;
 
   // ── Attention items ──
