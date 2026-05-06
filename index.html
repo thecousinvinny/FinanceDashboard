@@ -419,10 +419,10 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .hp-hero{padding:32px 20px 20px;text-align:center;}
 .hp-hero-label{font-size:9px;font-weight:400;color:rgba(255,255,255,0.22);letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px;}
 .hp-hero-amount{font-size:52px;font-weight:300;font-family:'DM Mono','SF Mono',monospace;letter-spacing:-.04em;line-height:1;color:#f0f0f8;}
-.hero-glow-green{text-shadow:0 0 20px rgba(34,197,94,0.55),0 0 60px rgba(34,197,94,0.2);}
-.hero-glow-red{text-shadow:0 0 20px rgba(239,68,68,0.55),0 0 60px rgba(239,68,68,0.2);}
-.hero-glow-amber{text-shadow:0 0 20px rgba(245,158,11,0.5),0 0 60px rgba(245,158,11,0.18);}
-.hero-glow-white{text-shadow:0 0 20px rgba(255,255,255,0.25),0 0 60px rgba(255,255,255,0.1);}
+.hero-glow-green{text-shadow:0 0 40px rgba(34,197,94,0.35),0 0 80px rgba(34,197,94,0.15),0 0 120px rgba(34,197,94,0.06);}
+.hero-glow-red{text-shadow:0 0 40px rgba(239,68,68,0.35),0 0 80px rgba(239,68,68,0.15),0 0 120px rgba(239,68,68,0.06);}
+.hero-glow-amber{text-shadow:0 0 40px rgba(245,158,11,0.32),0 0 80px rgba(245,158,11,0.14),0 0 120px rgba(245,158,11,0.05);}
+.hero-glow-white{text-shadow:0 0 40px rgba(255,255,255,0.18),0 0 80px rgba(255,255,255,0.08),0 0 120px rgba(255,255,255,0.03);}
 .hp-hero-sub{font-size:11px;color:rgba(255,255,255,0.22);margin-top:8px;letter-spacing:.02em;}
 .hp-hero-stats{display:flex;gap:0;margin-top:20px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.06);justify-content:center;}
 .hp-hero-stat{display:flex;flex-direction:column;gap:4px;flex:1;align-items:center;padding:0 8px;}
@@ -462,7 +462,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 /* ── SWIPE TO ACTION ── */
 .swipe-wrap{position:relative;border-radius:16px;}
 .swipe-action{position:absolute;top:0;right:0;height:100%;display:flex;align-items:center;justify-content:flex-end;width:0;border-radius:16px;opacity:0;overflow:hidden;}
-.swipe-action-left{position:absolute;top:0;left:0;height:100%;z-index:1;display:flex;align-items:center;justify-content:flex-start;width:0;opacity:0;overflow:hidden;background:#22c55e;}
+.swipe-action-left{position:absolute;top:0;left:0;height:100%;z-index:1;display:flex;align-items:center;justify-content:flex-start;width:0;opacity:0;overflow:hidden;border-radius:16px;}
 .swipe-action.delete{background:#ef4444;}
 .swipe-action.cancel-sub{background:#f59e0b;}
 .swipe-card{border-radius:16px;transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .35s cubic-bezier(.4,0,.2,1);}
@@ -4241,11 +4241,11 @@ function renderHomeDash(){
     <div class="${heroWrap}" style="${heroStyle}">
       <div style="background:${isElev?'var(--card-bg)':'transparent'};padding:18px 20px;">
         <div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:8px;">In · ${monthName}</div>
-        <div class="hp-hero-amount" id="hero-dash-in" style="color:#22c55e;font-size:32px;">${fmt(gainedMo)}</div>
+        <div class="hp-hero-amount hero-glow-green" id="hero-dash-in" style="color:#22c55e;font-size:40px;">${fmt(gainedMo)}</div>
       </div>
       <div style="background:${isElev?'var(--card-bg)':'transparent'};padding:18px 20px;border-left:1px solid rgba(255,255,255,0.06);">
         <div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:8px;">Out · ${monthName}</div>
-        <div class="hp-hero-amount" id="hero-dash-out" style="color:#ef4444;font-size:32px;">${fmt(spentMo)}</div>
+        <div class="hp-hero-amount hero-glow-red" id="hero-dash-out" style="color:#ef4444;font-size:40px;">${fmt(spentMo)}</div>
       </div>
     </div>`;
 
