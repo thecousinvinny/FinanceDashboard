@@ -4258,7 +4258,7 @@ function renderHomeDash(){
       <div style="font-size:9px;color:rgba(255,255,255,0.2);margin-top:12px;letter-spacing:.02em;">income · expenses</div>
     </div>`;
 
-  // ── Dual area chart — same buildAreaChart as income/expense tabs ──
+  // ── Dual area chart — 8 months, always render even with zeros ──
   const dashMonths8=[],dashLabels=[];
   for(let i=7;i>=0;i--){
     const d=new Date(now.getFullYear(),now.getMonth()-i,1);
@@ -4266,16 +4266,17 @@ function renderHomeDash(){
     dashMonths8.push(key);
     dashLabels.push(d.toLocaleString('default',{month:'short'}));
   }
-  const dashInc=dashMonths8.map(k=>D.master.filter(m=>m.Type==='Income'&&(m.Date||'').startsWith(k)).reduce((s,m)=>s+(parseFloat(m.Cost)||0),0));
-  const dashExp=dashMonths8.map(k=>D.expenses.filter(e=>e.Status!=='Ordered'&&(e.Date||'').startsWith(k)).reduce((s,e)=>s+(parseFloat(e.Cost)||0),0));
-  const incChart=buildAreaChart('dash-inc-chart',dashInc,dashLabels,'#22c55e');
-  const expChart=buildAreaChart('dash-exp-chart',dashExp,dashLabels,'#ef4444');
+  const dashInc=dashMonths8.map(k=>D.master.filter(m=>m.Type==='Income'&&toSortableDate(m.Date||'').startsWith(k)).reduce((s,m)=>s+(parseFloat(m.Cost)||0),0));
+  const dashExp=dashMonths8.map(k=>D.expenses.filter(e=>e.Status!=='Ordered'&&toSortableDate(e.Date||'').startsWith(k)).reduce((s,e)=>s+(parseFloat(e.Cost)||0),0));
+  // Push both to pending charts directly (bypasses the hasData check)
+  _pendingCharts.push({id:'dash-inc-chart',values:dashInc,labels:dashLabels,color:'#22c55e'});
+  _pendingCharts.push({id:'dash-exp-chart',values:dashExp,labels:dashLabels,color:'#ef4444'});
   const qaddHtml=`
     <div style="padding:0 0 4px;">
-      <div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.2);padding:0 20px 4px;">Income · 8 months</div>
-      ${incChart||'<div style="height:8px;"></div>'}
-      <div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.2);padding:0 20px 4px;">Expenses · 8 months</div>
-      ${expChart||'<div style="height:8px;"></div>'}
+      <div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.2);padding:8px 20px 4px;">Income</div>
+      <div style="padding:0 20px 4px;"><div style="position:relative;height:110px;"><canvas id="dash-inc-chart"></canvas></div></div>
+      <div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.2);padding:8px 20px 4px;">Expenses</div>
+      <div style="padding:0 20px 12px;"><div style="position:relative;height:110px;"><canvas id="dash-exp-chart"></canvas></div></div>
     </div>`;
 
   // ── Attention items ──
