@@ -4258,45 +4258,25 @@ function renderHomeDash(){
       <div style="font-size:9px;color:rgba(255,255,255,0.2);margin-top:12px;letter-spacing:.02em;">income · expenses</div>
     </div>`;
 
-  // ── Dual area chart: income (solid green) vs expenses (dashed red) ──
-  const chartMonths=[];
-  for(let i=5;i>=0;i--){
+  // ── Dual area chart — same buildAreaChart as income/expense tabs ──
+  const dashMonths8=[],dashLabels=[];
+  for(let i=7;i>=0;i--){
     const d=new Date(now.getFullYear(),now.getMonth()-i,1);
-    const key=d.toISOString().slice(0,7);
-    const mName=d.toLocaleString('en-US',{month:'short'});
-    const mInc=D.master.filter(m=>m.Type==='Income'&&(m.Date||'').startsWith(key)).reduce((s,m)=>s+(parseFloat(m.Cost)||0),0);
-    const mExp=D.expenses.filter(e=>e.Status!=='Ordered'&&(e.Date||'').startsWith(key)).reduce((s,e)=>s+(parseFloat(e.Cost)||0),0);
-    chartMonths.push({mName,mInc,mExp});
+    const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    dashMonths8.push(key);
+    dashLabels.push(d.toLocaleString('default',{month:'short'}));
   }
-  const maxVal=Math.max(...chartMonths.map(m=>Math.max(m.mInc,m.mExp)),1);
-  const H=64,W=100;
-  const pts=chartMonths.map((m,i)=>({
-    x:Math.round((i/(chartMonths.length-1))*W),
-    yi:Math.round(H-(m.mInc/maxVal)*(H-4)),
-    ye:Math.round(H-(m.mExp/maxVal)*(H-4))
-  }));
-  const incLine=pts.map((p,i)=>(i===0?'M':'L')+p.x+' '+p.yi).join(' ');
-  const expLine=pts.map((p,i)=>(i===0?'M':'L')+p.x+' '+p.ye).join(' ');
-  const incArea=incLine+' L'+pts[pts.length-1].x+' '+H+' L0 '+H+' Z';
-  const expArea=expLine+' L'+pts[pts.length-1].x+' '+H+' L0 '+H+' Z';
-  const pad=isElev?'0 12px 14px':'0 20px 14px';
-  const qaddHtml=`<div style="padding:${pad};">
-    <svg viewBox="0 0 100 ${H}" preserveAspectRatio="none" width="100%" height="68" style="display:block;overflow:visible;">
-      <defs>
-        <linearGradient id="dgi" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#22c55e" stop-opacity="0.25"/><stop offset="100%" stop-color="#22c55e" stop-opacity="0"/></linearGradient>
-        <linearGradient id="dge" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.15"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0"/></linearGradient>
-      </defs>
-      <path d="${incArea}" fill="url(#dgi)"/>
-      <path d="${incLine}" fill="none" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
-      <path d="${expArea}" fill="url(#dge)"/>
-      <path d="${expLine}" fill="none" stroke="#ef4444" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 2" vector-effect="non-scaling-stroke"/>
-      ${pts.map((p,i)=>`<text x="${p.x}" y="${H+8}" text-anchor="${i===0?'start':i===pts.length-1?'end':'middle'}" font-size="5" fill="rgba(255,255,255,${i===pts.length-1?'0.5':'0.2'})" font-family="Inter,sans-serif">${chartMonths[i].mName}</text>`).join('')}
-    </svg>
-    <div style="display:flex;gap:14px;margin-top:4px;justify-content:center;">
-      <div style="display:flex;align-items:center;gap:5px;"><div style="width:12px;height:1.5px;background:#22c55e;border-radius:1px;"></div><span style="font-size:9px;color:rgba(255,255,255,0.3);">Income</span></div>
-      <div style="display:flex;align-items:center;gap:5px;"><div style="width:12px;border-top:1.5px dashed #ef4444;"></div><span style="font-size:9px;color:rgba(255,255,255,0.3);">Expenses</span></div>
-    </div>
-  </div>`;
+  const dashInc=dashMonths8.map(k=>D.master.filter(m=>m.Type==='Income'&&(m.Date||'').startsWith(k)).reduce((s,m)=>s+(parseFloat(m.Cost)||0),0));
+  const dashExp=dashMonths8.map(k=>D.expenses.filter(e=>e.Status!=='Ordered'&&(e.Date||'').startsWith(k)).reduce((s,e)=>s+(parseFloat(e.Cost)||0),0));
+  const incChart=buildAreaChart('dash-inc-chart',dashInc,dashLabels,'#22c55e');
+  const expChart=buildAreaChart('dash-exp-chart',dashExp,dashLabels,'#ef4444');
+  const qaddHtml=`
+    <div style="padding:0 0 4px;">
+      <div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.2);padding:0 20px 4px;">Income · 8 months</div>
+      ${incChart||'<div style="height:8px;"></div>'}
+      <div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.2);padding:0 20px 4px;">Expenses · 8 months</div>
+      ${expChart||'<div style="height:8px;"></div>'}
+    </div>`;
 
   // ── Attention items ──
   const attnHtml=attnItems.length?`
@@ -4333,6 +4313,7 @@ function renderHomeDash(){
     }).join('')}`:'';
 
   el.innerHTML=greetHtml+heroHtml+qaddHtml+attnHtml+recentHtml;
+  setTimeout(initPendingCharts,50);
 
   // Store values for homeGoTo re-trigger
   _heroData['hero-dash-in']=gainedMo;
