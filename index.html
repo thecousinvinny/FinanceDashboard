@@ -4272,8 +4272,10 @@ function renderHomeDash(){
     ...ordered.map(e=>({name:e.Name,sub:'ordered · in transit',amt:'',color:'#f59e0b',onclick:`openHomeExpEdit(${e._row})`})),
   ];
 
-  // Recent expenses
-  const recent=[...D.expenses].filter(e=>e.Status!=='Ordered').sort((a,b)=>toSortableDate(b.Date||'').localeCompare(toSortableDate(a.Date||''))).slice(0,5);
+  // Recent: mix of expenses + income, sorted by date
+  const recentExp=[...D.expenses].filter(e=>e.Status!=='Ordered').map(e=>({...e,_type:'expense'}));
+  const recentInc=[...D.master].filter(m=>m.Type==='Income').map(m=>({...m,_type:'income'}));
+  const recent=[...recentExp,...recentInc].sort((a,b)=>toSortableDate(b.Date||'').localeCompare(toSortableDate(a.Date||''))).slice(0,8);
 
   // ── No greeting — go straight to hero ──
   const greetHtml='';
@@ -4342,12 +4344,14 @@ function renderHomeDash(){
     </div>
     ${recent.map(e=>{
       const cost=parseFloat(e.Cost||0);
-      const color=getCatColor(e.Category)||'rgba(255,255,255,0.15)';
-      return`<div class="hrow" onclick="openHomeExpEdit(${e._row})">
+      const isInc=e._type==='income';
+      const color=isInc?'#22c55e':(getCatColor(e.Category)||'rgba(255,255,255,0.15)');
+      const onclick=isInc?`openHomeIncomeEdit(${e._row})`:`openHomeExpEdit(${e._row})`;
+      return`<div class="hrow" onclick="${onclick}">
         <div class="hrow-stripe" style="background:linear-gradient(to bottom,${color},transparent)"></div>
         <div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(e.Category)}</svg></div>
         <div class="hrow-body"><div class="hrow-name">${esc(e.Name||'—')}</div><div class="hrow-sub">${e.Category||''}${e.Date?' · '+relDate(e.Date):''}</div></div>
-        <div class="hrow-right"><div class="hrow-amount" style="color:#ef4444">-$${cost.toLocaleString()}</div><div class="hrow-meta">${cardDisplay(e.Card)||''}</div></div>
+        <div class="hrow-right"><div class="hrow-amount" style="color:${isInc?'#22c55e':'#ef4444'}">${isInc?'+':'−'}$${cost.toLocaleString()}</div><div class="hrow-meta">${isInc?(e.Source||''):(cardDisplay(e.Card)||'')}</div></div>
       </div>`;
     }).join('')}`:'';
 
@@ -4397,10 +4401,6 @@ function renderHomeWish(){
       ${savPct?`<span style="font-size:9px;color:rgba(255,255,255,0.3);letter-spacing:.06em;">${savPct}% savings available</span>`:''}
     </div>
   </div>
-  <button class="hp-add-btn" onclick="openModal('wish')">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    Add to Wishlist
-  </button>
   <div class="hp-divider"></div>`;
 
   const rows=items.slice(0,lim).map(w=>{
@@ -4471,10 +4471,7 @@ function renderHomeExp(){
     </div>
   </div>
   ${barChart}
-  <button class="hp-add-btn" onclick="openFoodMo()">
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    Add Expense
-  </button>`;
+`;
 
   const expRow=(e,isOrdered)=>{
     const cost=parseFloat(e.Cost||0);
@@ -4545,10 +4542,6 @@ function renderHomeSub(){
       ${dueToday?`<span style="font-size:9px;color:#ef4444;letter-spacing:.06em;">${dueToday} due today</span>`:''}
     </div>
   </div>
-  <button class="hp-add-btn" onclick="openModal('sub')">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    Add Subscription
-  </button>
   <div class="hp-divider"></div>`;
 
 
@@ -4593,10 +4586,7 @@ function renderHomeIncome(){
     </div>
   </div>
   ${incomeChart}
-  <button class="hp-add-btn" onclick="openIncomeMo()">
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    Log Income
-  </button>`;
+`;
 
 
   _homeData.income=income;
