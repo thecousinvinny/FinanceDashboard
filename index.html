@@ -379,7 +379,8 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .nav{display:none!important}
 /* ── HOME PANELS ── */
 .home-tab-btn{flex:1;padding:9px 4px;font-size:10px;font-weight:500;color:rgba(255,255,255,0.28);background:transparent;border:none;border-radius:0;cursor:pointer;font-family:'Inter',-apple-system,sans-serif;transition:color .2s;white-space:nowrap;letter-spacing:.08em;text-transform:uppercase;-webkit-tap-highlight-color:transparent;border-bottom:1.5px solid transparent;}
-.home-tab-btn.on{color:#fff;background:transparent;font-weight:600;border-bottom-color:#fff;}
+.home-tab-btn.on{color:#fff;background:transparent;font-weight:600;border-bottom:none;position:relative;}
+.home-tab-btn.on::after{content:'';position:absolute;bottom:0;left:15%;right:15%;height:2px;background:linear-gradient(to right,transparent,#fff 30%,#fff 70%,transparent);border-radius:2px;}
 .home-panel{min-width:100%;width:100%;height:100%;display:flex;flex-direction:column;flex-shrink:0;box-sizing:border-box;}
 .home-panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:20px 20px 12px;font-size:22px;font-weight:700;flex-shrink:0;letter-spacing:-.04em;color:#f0f0f8}
 .home-panel-body{flex:1;overflow-y:auto;padding:12px 20px 180px;display:flex;flex-direction:column;gap:12px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
@@ -418,6 +419,10 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .hp-hero{padding:32px 20px 20px;text-align:center;}
 .hp-hero-label{font-size:9px;font-weight:400;color:rgba(255,255,255,0.22);letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px;}
 .hp-hero-amount{font-size:52px;font-weight:300;font-family:'DM Mono','SF Mono',monospace;letter-spacing:-.04em;line-height:1;color:#f0f0f8;}
+.hero-glow-green{text-shadow:0 0 20px rgba(34,197,94,0.55),0 0 60px rgba(34,197,94,0.2);}
+.hero-glow-red{text-shadow:0 0 20px rgba(239,68,68,0.55),0 0 60px rgba(239,68,68,0.2);}
+.hero-glow-amber{text-shadow:0 0 20px rgba(245,158,11,0.5),0 0 60px rgba(245,158,11,0.18);}
+.hero-glow-white{text-shadow:0 0 20px rgba(255,255,255,0.25),0 0 60px rgba(255,255,255,0.1);}
 .hp-hero-sub{font-size:11px;color:rgba(255,255,255,0.22);margin-top:8px;letter-spacing:.02em;}
 .hp-hero-stats{display:flex;gap:0;margin-top:20px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.06);justify-content:center;}
 .hp-hero-stat{display:flex;flex-direction:column;gap:4px;flex:1;align-items:center;padding:0 8px;}
@@ -442,7 +447,7 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .hrow-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;}
 .hrow-amount{font-size:15px;font-weight:600;font-family:'DM Mono','SF Mono',monospace;letter-spacing:-.02em;}
 .hrow-meta{font-size:10px;color:rgba(255,255,255,0.28);letter-spacing:.01em;}
-.hrow-stripe{position:absolute;left:0;top:20%;bottom:20%;width:2px;border-radius:2px;}
+.hrow-stripe{position:absolute;left:0;top:50%;transform:translateY(-50%);height:56%;width:2px;border-radius:0;}
 /* Progress bar rows (wishlist) */
 .hrow-progress{display:flex;flex-direction:column;gap:6px;padding:14px 20px 10px;border-top:1px solid rgba(255,255,255,0.04);}
 .hrow-progress-top{display:flex;justify-content:space-between;align-items:center;}
@@ -456,10 +461,11 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 
 /* ── SWIPE TO ACTION ── */
 .swipe-wrap{position:relative;border-radius:16px;}
-.swipe-action{position:absolute;top:0;right:0;bottom:0;display:flex;align-items:center;justify-content:flex-end;width:0;border-radius:16px;opacity:0;overflow:hidden;}
+.swipe-action{position:absolute;top:0;right:0;height:100%;display:flex;align-items:center;justify-content:flex-end;width:0;border-radius:16px;opacity:0;overflow:hidden;}
+.swipe-action-left{position:absolute;top:0;left:0;height:100%;z-index:1;display:flex;align-items:center;justify-content:flex-start;width:0;opacity:0;overflow:hidden;background:#22c55e;}
 .swipe-action.delete{background:#ef4444;}
 .swipe-action.cancel-sub{background:#f59e0b;}
-.swipe-card{will-change:transform;border-radius:16px;transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .35s cubic-bezier(.4,0,.2,1);}
+.swipe-card{border-radius:16px;transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .35s cubic-bezier(.4,0,.2,1);}
 #ptr-indicator.visible{display:flex}
 
 /* ── PULL-UP SHEET ── */
@@ -474,7 +480,8 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .cbar-val-row{display:flex;justify-content:center;align-items:baseline;gap:6px;padding:12px 20px 8px;}
 .cbar-val{font-size:14px;font-weight:600;font-family:'DM Mono',monospace;transition:opacity .2s;}
 /* Mobile bottom nav */
-#mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;height:72px;background:rgba(8,8,16,0.75);backdrop-filter:blur(32px) saturate(200%);-webkit-backdrop-filter:blur(32px) saturate(200%);border-top:1px solid rgba(255,255,255,0.06);box-shadow:0 -1px 40px rgba(0,0,0,.5);z-index:300;align-items:stretch;justify-content:space-around;padding:0 8px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
+#mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;height:72px;background:rgba(8,8,16,0.8);backdrop-filter:blur(32px) saturate(200%);-webkit-backdrop-filter:blur(32px) saturate(200%);border-top:none;box-shadow:0 -1px 40px rgba(0,0,0,.5);z-index:300;align-items:stretch;justify-content:space-around;padding:0 8px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
+#mobile-nav::before{content:'';position:absolute;top:0;left:8%;right:8%;height:1px;background:linear-gradient(to right,transparent,rgba(255,255,255,0.18) 30%,rgba(255,255,255,0.18) 70%,transparent);pointer-events:none;}
 #mobile-nav::-webkit-scrollbar{display:none}
 .mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:rgba(255,255,255,0.28);border:none;background:transparent;font-family:'Inter',-apple-system,sans-serif;padding:0;min-height:72px;-webkit-tap-highlight-color:transparent;transition:color .2s;min-width:56px}
 .mob-tab.on{color:#fff}.mob-tab.on svg{filter:drop-shadow(0 0 8px rgba(108,99,255,0.9))}
@@ -3973,7 +3980,7 @@ function _appendHomeExp(){
     const div=document.createElement('div');
     div.className='hrow';
     div.onclick=()=>openHomeExpEdit(e._row);
-    div.innerHTML=`<div class="hrow-stripe" style="background:${color}"></div><div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(e.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(e.Name||'—')}</div><div class="hrow-sub">${e.Category||''}${e.Date?' · '+relDate(e.Date):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:#ef4444">-$${cost.toLocaleString()}</div><div class="hrow-meta">${cardDisplay(e.Card)||''}</div></div>`;
+    div.innerHTML=`<div class="hrow-stripe" style="background:linear-gradient(to bottom,${color},transparent)"></div><div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(e.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(e.Name||'—')}</div><div class="hrow-sub">${e.Category||''}${e.Date?' · '+relDate(e.Date):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:#ef4444">-$${cost.toLocaleString()}</div><div class="hrow-meta">${cardDisplay(e.Card)||''}</div></div>`;
     el.appendChild(div);
   });
   if(lim<procured.length)_makeSentinel('hp-exp','exp');
@@ -3999,7 +4006,7 @@ function _appendHomeSub(){
     wrap.className='swipe-wrap';
     wrap.dataset.swipeAction='cancelSub';
     wrap.dataset.row=s._row;
-    wrap.innerHTML=`<div class="swipe-action cancel-sub"></div><div class="swipe-card hrow ${isDueToday?'due-today-card':''}" onclick="openHomeSubEdit(${s._row})"><div class="hrow-stripe" style="background:${isDueToday?'#ef4444':color}"></div><div class="hrow-icon" style="background:${isDueToday?'rgba(239,68,68,0.15)':color+'22'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${isDueToday?'#ef4444':color}" stroke-width="2" style="overflow:visible">${getCatIcon(s.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(s.Name||'—')}</div><div class="hrow-sub">${s.Billing||'Monthly'}${s.Card?' · '+cardDisplay(s.Card):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:${accentColor}">$${cost.toLocaleString()}</div><div class="hrow-meta" style="color:${isDueToday?'#ef4444':due==='due-soon'?'#f59e0b':'rgba(255,255,255,0.28)'}">${isDueToday?'DUE TODAY':s.NextRenewal?fmtDate(s.NextRenewal):''}</div></div></div>`;
+    wrap.innerHTML=`<div class="swipe-action cancel-sub"></div><div class="swipe-card hrow ${isDueToday?'due-today-card':''}" onclick="openHomeSubEdit(${s._row})"><div class="hrow-stripe" style="background:linear-gradient(to bottom,${isDueToday?'#ef4444':color},transparent)"></div><div class="hrow-icon" style="background:${isDueToday?'rgba(239,68,68,0.15)':color+'22'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${isDueToday?'#ef4444':color}" stroke-width="2" style="overflow:visible">${getCatIcon(s.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(s.Name||'—')}</div><div class="hrow-sub">${s.Billing||'Monthly'}${s.Card?' · '+cardDisplay(s.Card):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:${accentColor}">$${cost.toLocaleString()}</div><div class="hrow-meta" style="color:${isDueToday?'#ef4444':due==='due-soon'?'#f59e0b':'rgba(255,255,255,0.28)'}">${isDueToday?'DUE TODAY':s.NextRenewal?fmtDate(s.NextRenewal):''}</div></div></div>`;
     el.appendChild(wrap);
   });
   if(lim<subs.length)_makeSentinel('hp-sub','sub');
@@ -4022,7 +4029,7 @@ function _appendHomeIncome(){
     const div=document.createElement('div');
     div.className='hrow';
     div.onclick=()=>openHomeIncomeEdit(m._row);
-    div.innerHTML=`<div class="hrow-stripe" style="background:${color}"></div><div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(m.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(m.Name||'—')}</div><div class="hrow-sub">${m.Bank||m.Source||''}${m.Date?' · '+relDate(m.Date):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:#22c55e">+$${amt.toLocaleString()}</div><div class="hrow-meta">${m.Source||''}</div></div>`;
+    div.innerHTML=`<div class="hrow-stripe" style="background:linear-gradient(to bottom,${color},transparent)"></div><div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(m.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(m.Name||'—')}</div><div class="hrow-sub">${m.Bank||m.Source||''}${m.Date?' · '+relDate(m.Date):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:#22c55e">+$${amt.toLocaleString()}</div><div class="hrow-meta">${m.Source||''}</div></div>`;
     el.appendChild(div);
   });
   if(lim<income.length)_makeSentinel('hp-income','income');
@@ -4308,7 +4315,7 @@ function renderHomeDash(){
       const cost=parseFloat(e.Cost||0);
       const color=getCatColor(e.Category)||'rgba(255,255,255,0.15)';
       return`<div class="hrow" onclick="openHomeExpEdit(${e._row})">
-        <div class="hrow-stripe" style="background:${color}"></div>
+        <div class="hrow-stripe" style="background:linear-gradient(to bottom,${color},transparent)"></div>
         <div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(e.Category)}</svg></div>
         <div class="hrow-body"><div class="hrow-name">${esc(e.Name||'—')}</div><div class="hrow-sub">${e.Category||''}${e.Date?' · '+relDate(e.Date):''}</div></div>
         <div class="hrow-right"><div class="hrow-amount" style="color:#ef4444">-$${cost.toLocaleString()}</div><div class="hrow-meta">${cardDisplay(e.Card)||''}</div></div>
@@ -4345,7 +4352,7 @@ function renderHomeWish(){
 
   const hero=`<div class="hp-hero">
     <div class="hp-hero-label">Wishlist · ${items.length} items</div>
-    <div class="hp-hero-amount" id="hero-wish-amt">${fmt(totalCost)}</div>
+    <div class="hp-hero-amount hero-glow-white" id="hero-wish-amt">${fmt(totalCost)}</div>
     <div class="hp-hero-sub">total cost</div>
   </div>
   <div style="padding:4px 24px 24px;">
@@ -4373,9 +4380,9 @@ function renderHomeWish(){
     const sav=orig&&bought&&orig>bought?orig-bought:0;
     const color=getCatColor(w.Category)||'#6c63ff';
     return`<div class="swipe-wrap" data-swipe-action="deleteWish" data-row="${w._row}">
-      <div class="swipe-action delete"></div>
+      <div class="swipe-action-left"></div><div class="swipe-action delete"></div>
       <div class="swipe-card hrow" onclick="openHomeWishEdit(${w._row})">
-        <div class="hrow-stripe" style="background:${color}"></div>
+        <div class="hrow-stripe" style="background:linear-gradient(to bottom,${color},transparent)"></div>
         <div class="hrow-icon" style="background:${color}22;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(w.Category)}</svg>
         </div>
@@ -4425,7 +4432,7 @@ function renderHomeExp(){
 
   const hero=`<div class="hp-hero">
     <div class="hp-hero-label">Expenses · ${now.toLocaleString('default',{month:'long'})}</div>
-    <div class="hp-hero-amount" style="color:#ef4444" id="hero-exp-amt">${fmt(spentMo)}</div>
+    <div class="hp-hero-amount hero-glow-red" style="color:#ef4444" id="hero-exp-amt">${fmt(spentMo)}</div>
     <div class="hp-hero-sub">spent this month</div>
     <div class="hp-hero-stats">
       <div class="hp-hero-stat"><div class="hp-hero-stat-label">This Year</div><div class="hp-hero-stat-val" style="color:#ef4444">${fmt(spentYr)}</div></div>
@@ -4443,7 +4450,7 @@ function renderHomeExp(){
     const cost=parseFloat(e.Cost||0);
     const color=getCatColor(e.Category)||'rgba(255,255,255,0.15)';
     return`<div class="hrow" onclick="openHomeExpEdit(${e._row})">
-      <div class="hrow-stripe" style="background:${color}"></div>
+      <div class="hrow-stripe" style="background:linear-gradient(to bottom,${color},transparent)"></div>
       <div class="hrow-icon" style="background:${color}22;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${isOrdered?'<path d="M5 12h14M12 5l7 7-7 7"/>':getCatIcon(e.Category)}</svg>
       </div>
@@ -4492,7 +4499,7 @@ function renderHomeSub(){
 
   const hero=`<div class="hp-hero">
     <div class="hp-hero-label">Subscriptions · ${subs.length} active</div>
-    <div class="hp-hero-amount" style="color:#f59e0b" id="hero-sub-amt">${fmt(totalMo)}</div>
+    <div class="hp-hero-amount hero-glow-amber" style="color:#f59e0b" id="hero-sub-amt">${fmt(totalMo)}</div>
     <div class="hp-hero-sub">paid this month</div>
   </div>
   <div style="padding:4px 24px 24px;">
@@ -4523,7 +4530,7 @@ function renderHomeSub(){
     const cost=parseFloat(s.Cost||0);
     const color=getCatColor(s.Category)||'rgba(255,255,255,0.15)';
     const accentColor=isDueToday?'#ef4444':'#f59e0b';
-    return`<div class="swipe-wrap" data-swipe-action="cancelSub" data-row="${s._row}"><div class="swipe-action cancel-sub"></div><div class="swipe-card hrow ${isDueToday?'due-today-card':''}" onclick="openHomeSubEdit(${s._row})"><div class="hrow-stripe" style="background:${isDueToday?'#ef4444':color}"></div><div class="hrow-icon" style="background:${isDueToday?'rgba(239,68,68,0.15)':color+'22'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${isDueToday?'#ef4444':color}" stroke-width="2" style="overflow:visible">${getCatIcon(s.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(s.Name||'—')}</div><div class="hrow-sub">${s.Billing||'Monthly'}${s.Card?' · '+cardDisplay(s.Card):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:${accentColor}">$${cost.toLocaleString()}</div><div class="hrow-meta" style="color:${isDueToday?'#ef4444':due==='due-soon'?'#f59e0b':'rgba(255,255,255,0.28)'}">${isDueToday?'DUE TODAY':s.NextRenewal?fmtDate(s.NextRenewal):''}</div></div></div></div>`;
+    return`<div class="swipe-wrap" data-swipe-action="cancelSub" data-row="${s._row}"><div class="swipe-action-left"></div><div class="swipe-action cancel-sub"></div><div class="swipe-card hrow ${isDueToday?'due-today-card':''}" onclick="openHomeSubEdit(${s._row})"><div class="hrow-stripe" style="background:linear-gradient(to bottom,${isDueToday?'#ef4444':color},transparent)"></div><div class="hrow-icon" style="background:${isDueToday?'rgba(239,68,68,0.15)':color+'22'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${isDueToday?'#ef4444':color}" stroke-width="2" style="overflow:visible">${getCatIcon(s.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(s.Name||'—')}</div><div class="hrow-sub">${s.Billing||'Monthly'}${s.Card?' · '+cardDisplay(s.Card):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:${accentColor}">$${cost.toLocaleString()}</div><div class="hrow-meta" style="color:${isDueToday?'#ef4444':due==='due-soon'?'#f59e0b':'rgba(255,255,255,0.28)'}">${isDueToday?'DUE TODAY':s.NextRenewal?fmtDate(s.NextRenewal):''}</div></div></div></div>`;
   }).join('')||'<div style="color:rgba(255,255,255,0.2);font-size:13px;text-align:center;padding:48px 20px;">No active subscriptions</div>';
   animateHero('hero-sub-amt',totalMo);
   if(subs.length>30)_makeSentinel('hp-sub','sub');
@@ -4549,7 +4556,7 @@ function renderHomeIncome(){
 
   const hero=`<div class="hp-hero">
     <div class="hp-hero-label">Income · ${now.toLocaleString('default',{month:'long'})}</div>
-    <div class="hp-hero-amount" style="color:#22c55e" id="hero-income-amt">${fmt(gainedMo)}</div>
+    <div class="hp-hero-amount hero-glow-green" style="color:#22c55e" id="hero-income-amt">${fmt(gainedMo)}</div>
     <div class="hp-hero-sub">received this month</div>
     <div class="hp-hero-stats">
       <div class="hp-hero-stat"><div class="hp-hero-stat-label">This Year</div><div class="hp-hero-stat-val" style="color:#22c55e">${fmt(gainedYr)}</div></div>
@@ -4567,7 +4574,7 @@ function renderHomeIncome(){
   const firstCards=income.slice(0,30).map(m=>{
     const amt=parseFloat(m.Cost||0);
     const color=getCatColor(m.Category)||'#22c55e';
-    return`<div class="hrow" onclick="openHomeIncomeEdit(${m._row})"><div class="hrow-stripe" style="background:${color}"></div><div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(m.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(m.Name||'—')}</div><div class="hrow-sub">${m.Bank||m.Source||''}${m.Date?' · '+relDate(m.Date):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:#22c55e">+$${amt.toLocaleString()}</div><div class="hrow-meta">${m.Source||''}</div></div></div>`;
+    return`<div class="hrow" onclick="openHomeIncomeEdit(${m._row})"><div class="hrow-stripe" style="background:linear-gradient(to bottom,${color},transparent)"></div><div class="hrow-icon" style="background:${color}22;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="overflow:visible">${getCatIcon(m.Category)}</svg></div><div class="hrow-body"><div class="hrow-name">${esc(m.Name||'—')}</div><div class="hrow-sub">${m.Bank||m.Source||''}${m.Date?' · '+relDate(m.Date):''}</div></div><div class="hrow-right"><div class="hrow-amount" style="color:#22c55e">+$${amt.toLocaleString()}</div><div class="hrow-meta">${m.Source||''}</div></div></div>`;
   }).join('')||'<div style="color:rgba(255,255,255,0.2);font-size:13px;text-align:center;padding:48px 20px;">No income recorded</div>';
   el.innerHTML=hero+'<div class="hp-divider"></div>'+firstCards;
   animateHero('hero-income-amt',gainedMo);
@@ -4729,76 +4736,57 @@ function initSwipeCards(container){
     wrap._swipeInit=true;
     const card=wrap.querySelector('.swipe-card');
     const action=wrap.querySelector('.swipe-action');
+    const actionLeft=wrap.querySelector('.swipe-action-left');
     if(!card||!action)return;
-    // Lock wrap height so Safari flex collapse can't crush it
-    requestAnimationFrame(()=>{
-      const h=card.getBoundingClientRect().height;
-      if(h>0)wrap.style.minHeight=h+'px';
-    });
+    card.addEventListener('click',e=>{if(wrap._didDrag){e.stopPropagation();e.preventDefault();wrap._didDrag=false;}},{capture:true});
+    requestAnimationFrame(()=>{const h=card.getBoundingClientRect().height;if(h>0)wrap.style.minHeight=h+'px';});
 
-    const TRIGGER=90;   // px to enter confirm state
-    const MAX=130;      // max visual drag
+    const TRIGGER=90,MAX=130;
     let sx=0,sy=0,dx=0,isHoriz=null,open=false,pressing=false;
 
-    const pressDown=()=>{
-      if(open)return;
-      pressing=true;
-      card.style.transition='transform .12s cubic-bezier(.4,0,.2,1),opacity .12s cubic-bezier(.4,0,.2,1)';
-      card.style.transform='scale(.972)';
-      card.style.opacity='.82';
-    };
-    const pressUp=()=>{
-      if(!pressing)return;
-      pressing=false;
-      card.style.transition='transform .35s cubic-bezier(.4,0,.2,1),opacity .35s cubic-bezier(.4,0,.2,1)';
-      card.style.transform='';
-      card.style.opacity='';
-    };
-
+    const pressDown=()=>{if(open)return;pressing=true;card.style.transition='transform .12s cubic-bezier(.4,0,.2,1),opacity .12s';card.style.transform='scale(.972)';card.style.opacity='.82';};
+    const pressUp=()=>{if(!pressing)return;pressing=false;card.style.transition='transform .35s cubic-bezier(.4,0,.2,1),opacity .35s';card.style.transform='';card.style.opacity='';};
     const resetCard=()=>{
       card.style.transition='transform .3s cubic-bezier(.4,0,.2,1)';
-      action.style.transition='opacity .3s,width .3s';
-      card.style.transform='';
-      action.style.opacity='0';
-      action.style.width='0';
-      open=false;
+      action.style.transition='opacity .3s,width .3s';action.style.opacity='0';action.style.width='0';
+      if(actionLeft){actionLeft.style.transition='opacity .3s,width .3s';actionLeft.style.opacity='0';actionLeft.style.width='0';}
+      card.style.transform='';open=false;
       if(wrap._dismiss){document.removeEventListener('touchstart',wrap._dismiss,true);wrap._dismiss=null;}
+      if(_activeSwipeWrap===wrap)_activeSwipeWrap=null;
     };
+    wrap._resetCard=resetCard;
 
-    const snapOpen=()=>{
-      const actionType=wrap.dataset.swipeAction;
-      const isDelete=actionType==='deleteWish';
+    const addDismiss=()=>{setTimeout(()=>{const d=e=>{if(!wrap.contains(e.target)){resetCard();document.removeEventListener('touchstart',d,true);}};document.addEventListener('touchstart',d,true);wrap._dismiss=d;},50);};
+
+    const snapOpenLeft=()=>{
+      const at=wrap.dataset.swipeAction;const isDelete=at==='deleteWish';
       card.style.transition='transform .3s cubic-bezier(.4,0,.2,1)';
       action.style.transition='opacity .2s,width .3s cubic-bezier(.4,0,.2,1)';
-      card.style.transform=`translateX(-${MAX}px)`;
-      action.style.opacity='1';
-      action.style.width=MAX+'px';
-      action.innerHTML=`
-        <div style="display:flex;width:100%;padding:0 10px;box-sizing:border-box;">
-          <button onclick="swipeConfirm(this)" data-action="${actionType}" data-row="${wrap.dataset.row}"
-            style="background:${isDelete?'#ef4444':'#f59e0b'};color:#fff;border:none;border-radius:8px;
-                   padding:10px 0;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;
-                   cursor:pointer;width:100%;letter-spacing:.02em;">
-            ${isDelete?'Delete':'Cancel'}
-          </button>
-        </div>`;
-      open=true;
-      // Tap anywhere outside to dismiss
-      setTimeout(()=>{
-        const dismiss=e=>{
-          if(!wrap.contains(e.target)){resetCard();document.removeEventListener('touchstart',dismiss,true);}
-        };
-        document.addEventListener('touchstart',dismiss,true);
-        wrap._dismiss=dismiss;
-      },50);
+      action.style.background=isDelete?'linear-gradient(to left,#ef4444,#dc262680)':'linear-gradient(to left,#f59e0b,#d9770080)';
+      card.style.transform=`translateX(-${MAX}px)`;action.style.opacity='1';action.style.width=MAX+'px';
+      const trash='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>';
+      const xIcon='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+      action.innerHTML=`<button onclick="swipeConfirm(this)" data-action="${at}" data-row="${wrap.dataset.row}" style="background:transparent;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:0 18px;">${isDelete?trash:xIcon}</button>`;
+      open=true;addDismiss();
+    };
+
+    const snapOpenRight=()=>{
+      if(!actionLeft)return;
+      const at=wrap.dataset.swipeAction;
+      const cardIcon='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>';
+      card.style.transition='transform .3s cubic-bezier(.4,0,.2,1)';
+      actionLeft.style.transition='opacity .2s,width .3s cubic-bezier(.4,0,.2,1)';
+      actionLeft.style.background='linear-gradient(to right,#22c55e,#16a34a80)';
+      card.style.transform=`translateX(${MAX}px)`;actionLeft.style.opacity='1';actionLeft.style.width=MAX+'px';
+      actionLeft.innerHTML=`<button onclick="swipeConfirmRight(this)" data-action="${at}" data-row="${wrap.dataset.row}" style="background:transparent;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:0 18px;">${cardIcon}</button>`;
+      open=true;addDismiss();
     };
 
     wrap.addEventListener('touchstart',e=>{
       if(open){resetCard();if(wrap._dismiss){document.removeEventListener('touchstart',wrap._dismiss,true);wrap._dismiss=null;}return;}
-      sx=e.touches[0].clientX;sy=e.touches[0].clientY;
-      dx=0;isHoriz=null;
-      card.style.transition='none';
-      action.style.transition='none';
+      _resetAllSwipes(wrap);
+      sx=e.touches[0].clientX;sy=e.touches[0].clientY;dx=0;isHoriz=null;
+      card.style.transition='none';action.style.transition='none';if(actionLeft)actionLeft.style.transition='none';
       pressDown();
     },{passive:true});
 
@@ -4806,40 +4794,42 @@ function initSwipeCards(container){
       if(open)return;
       const cx=e.touches[0].clientX,cy=e.touches[0].clientY;
       const adx=Math.abs(cx-sx),ady=Math.abs(cy-sy);
-      if(isHoriz===null){
-        if(adx<4&&ady<4)return;
-        isHoriz=adx>ady*1.2;
-      }
+      if(isHoriz===null){if(adx<4&&ady<4)return;isHoriz=adx>ady*1.2;}
       if(!isHoriz){pressUp();return;}
-      // Cancel press state once swiping
       pressing=false;card.style.opacity='';
-      dx=Math.min(0,cx-sx);
-      const progress=Math.min(1,Math.abs(dx)/TRIGGER);
-      const visual=Math.min(Math.abs(dx),MAX);
-      card.style.transform=`translateX(-${visual}px)`;
-      action.style.opacity=String(progress*0.9);
-      action.style.width=visual+'px';
-      // Show the label text while dragging (clean, no buttons yet)
-      const actionType=wrap.dataset.swipeAction;
-      const label=actionType==='deleteWish'?'Delete':'Cancel';
-      const color=actionType==='deleteWish'?'#ef4444':'#f59e0b';
-      action.innerHTML=`<span style="color:#fff;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;letter-spacing:.02em;padding-right:14px;">${label}</span>`;
-      action.style.background=`linear-gradient(to left,${color},${color}cc)`;
+      dx=cx-sx;
+      const goingLeft=dx<0,visual=Math.min(Math.abs(dx),MAX),progress=Math.min(1,visual/TRIGGER);
+      card.style.transform=`translateX(${goingLeft?-visual:visual}px)`;
+      if(goingLeft){
+        action.style.opacity=String(progress*0.9);action.style.width=visual+'px';
+        const at=wrap.dataset.swipeAction;const color=at==='deleteWish'?'#ef4444':'#f59e0b';
+        action.innerHTML='';action.style.background=`linear-gradient(to left,${color},${color}60)`;
+        if(actionLeft){actionLeft.style.opacity='0';actionLeft.style.width='0';}
+      } else if(actionLeft){
+        actionLeft.style.opacity=String(progress*0.9);actionLeft.style.width=visual+'px';
+        actionLeft.innerHTML='';actionLeft.style.background='linear-gradient(to right,#22c55e,#22c55e60)';
+        action.style.opacity='0';action.style.width='0';
+      }
     },{passive:true});
 
     wrap.addEventListener('touchend',()=>{
-      pressUp();
-      if(open||isHoriz===null){return;}
-      if(!isHoriz){return;}
-      if(Math.abs(dx)>=TRIGGER){
-        snapOpen();
-      } else {
-        resetCard();
-      }
+      pressUp();if(open||isHoriz===null||!isHoriz)return;
+      if(Math.abs(dx)>=TRIGGER){if(dx<0)snapOpenLeft();else snapOpenRight();}else{resetCard();}
       dx=0;isHoriz=null;
     },{passive:true});
+
+    wrap._snapLeft=snapOpenLeft;wrap._snapRight=snapOpenRight;
+    wrap.addEventListener('mousedown',e=>{
+      if(e.button!==0)return;if(open){resetCard();return;}
+      _resetAllSwipes(wrap);
+      sx=e.clientX;sy=e.clientY;dx=0;isHoriz=null;_activeSwipeWrap=wrap;wrap._didDrag=false;
+      wrap._mouseRefs={sx,sy,dx:0,isHoriz:null,open:false};
+      card.style.transition='none';action.style.transition='none';if(actionLeft)actionLeft.style.transition='none';
+      pressDown();e.preventDefault();
+    });
   });
 }
+
 
 function swipeCancel(btn){
   const wrap=btn.closest('.swipe-wrap');
@@ -4854,7 +4844,55 @@ function swipeCancel(btn){
   if(action){action.style.transition='opacity .3s,width .3s';action.style.opacity='0';action.style.width='0';}
 }
 
-async function swipeConfirm(btn){
+let _activeSwipeWrap=null;
+function _resetAllSwipes(except){document.querySelectorAll('.swipe-wrap').forEach(w=>{if(w!==except&&w._resetCard)w._resetCard();});}
+
+// Single shared window mouse listeners
+(function(){
+  window.addEventListener('mousemove',e=>{
+    const wrap=_activeSwipeWrap;if(!wrap)return;
+    const card=wrap.querySelector('.swipe-card');
+    const action=wrap.querySelector('.swipe-action');
+    const actionLeft=wrap.querySelector('.swipe-action-left');
+    if(!card||!action)return;
+    const TRIGGER=90,MAX=130;
+    const refs=wrap._mouseRefs;if(!refs)return;
+    const cx=e.clientX,cy=e.clientY;
+    const adx=Math.abs(cx-refs.sx),ady=Math.abs(cy-refs.sy);
+    if(refs.isHoriz===null){if(adx<4&&ady<4)return;refs.isHoriz=adx>ady*1.2;}
+    if(!refs.isHoriz)return;
+    refs.dx=cx-refs.sx;
+    if(Math.abs(refs.dx)>6)wrap._didDrag=true;
+    const goingLeft=refs.dx<0,visual=Math.min(Math.abs(refs.dx),MAX),progress=Math.min(1,visual/TRIGGER);
+    card.style.transform=`translateX(${goingLeft?-visual:visual}px)`;
+    if(goingLeft){
+      action.style.opacity=String(progress*0.9);action.style.width=visual+'px';
+      const at=wrap.dataset.swipeAction;const color=at==='deleteWish'?'#ef4444':'#f59e0b';
+      action.innerHTML='';action.style.background=`linear-gradient(to left,${color},${color}60)`;
+      if(actionLeft){actionLeft.style.opacity='0';actionLeft.style.width='0';}
+    } else if(actionLeft){
+      actionLeft.style.opacity=String(progress*0.9);actionLeft.style.width=visual+'px';
+      actionLeft.innerHTML='';actionLeft.style.background='linear-gradient(to right,#22c55e,#22c55e60)';
+      action.style.opacity='0';action.style.width='0';
+    }
+  });
+  window.addEventListener('mouseup',e=>{
+    const wrap=_activeSwipeWrap;if(!wrap)return;
+    _activeSwipeWrap=null;
+    const refs=wrap._mouseRefs;if(!refs)return;
+    const TRIGGER=90;
+    if(!refs.isHoriz||refs.open){refs.dx=0;refs.isHoriz=null;return;}
+    if(Math.abs(refs.dx)>=TRIGGER){
+      if(refs.dx<0){const sl=wrap._snapLeft;if(sl)sl();}
+      else{const sr=wrap._snapRight;if(sr)sr();}
+    } else {
+      if(wrap._resetCard)wrap._resetCard();
+    }
+    refs.dx=0;refs.isHoriz=null;
+  });
+})();
+
+function swipeConfirm(btn){
   const wrap=btn.closest('.swipe-wrap');
   const card=wrap?.querySelector('.swipe-card');
   const actionType=wrap?.dataset.swipeAction;
@@ -4868,6 +4906,21 @@ async function swipeConfirm(btn){
     if(actionType==='deleteWish') await deleteWish(row);
     else if(actionType==='cancelSub') await cancelSub(row);
   },200);
+}
+
+async function swipeConfirmRight(btn){
+  const wrap=btn.closest('.swipe-wrap');
+  const card=wrap?.querySelector('.swipe-card');
+  const at=wrap?.dataset.swipeAction;
+  const row=parseInt(wrap?.dataset.row);
+  if(!card)return;
+  btn.textContent='…';btn.disabled=true;
+  card.style.transition='transform .22s ease,opacity .22s';
+  card.style.transform='translateX(105%)';card.style.opacity='0';
+  setTimeout(async()=>{
+    if(at==='cancelSub'){await paySub(row);}
+    else if(at==='deleteWish'){const w=D.wishlist.find(x=>x._row===row);if(w)openBuyModal(w);}
+  },220);
 }
 
 // ── MONTH PICKER ──
