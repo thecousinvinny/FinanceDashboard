@@ -4126,9 +4126,15 @@ function _buildSlot(el,toVal,color){
 
     if(!isDigit){
       // Static glyph: $ or comma — not clipped
-      const isDollar=ch==='$';
-      col.style.cssText=`display:inline-flex;align-items:center;height:${H}px;font-family:${isDollar?"'Inter',-apple-system,sans-serif":"'DM Mono','SF Mono',monospace"};font-weight:${isDollar?'300':'300'};font-size:${isDollar?H*0.92:H}px;`;
-      col.textContent=ch;
+      if(ch==='$'){
+        // Small superscript-style $ — rendered small at top so bar is invisible
+        const sz=Math.round(H*0.48);
+        col.style.cssText=`display:inline-flex;align-items:flex-start;padding-top:${Math.round(H*0.06)}px;height:${H}px;font-family:'Inter',-apple-system,sans-serif;font-weight:300;font-size:${sz}px;opacity:0.9;`;
+        col.textContent='$';
+      } else {
+        col.style.cssText=`display:inline-flex;align-items:center;height:${H}px;font-family:'DM Mono','SF Mono',monospace;font-weight:300;font-size:${H}px;`;
+        col.textContent=ch;
+      }
     } else {
       const target=parseInt(ch,10);
       col.style.cssText=`display:inline-block;width:${W}px;height:${H}px;overflow:hidden;position:relative;flex-shrink:0;`;
