@@ -419,10 +419,10 @@ td.editing{background:rgba(108,99,255,0.05)!important}
 .hp-hero{padding:32px 20px 20px;text-align:center;}
 .hp-hero-label{font-size:9px;font-weight:400;color:rgba(255,255,255,0.22);letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px;}
 .hp-hero-amount{font-size:52px;font-weight:300;font-family:'DM Mono','SF Mono',monospace;letter-spacing:-.04em;line-height:1;color:#f0f0f8;}
-.hero-glow-green{text-shadow:0 0 20px rgba(34,197,94,0.5),0 0 60px rgba(34,197,94,0.2);}
-.hero-glow-red{text-shadow:0 0 20px rgba(239,68,68,0.5),0 0 60px rgba(239,68,68,0.2);}
-.hero-glow-amber{text-shadow:0 0 20px rgba(245,158,11,0.5),0 0 60px rgba(245,158,11,0.2);}
-.hero-glow-white{text-shadow:0 0 20px rgba(255,255,255,0.3),0 0 60px rgba(255,255,255,0.12);}
+.hero-glow-green{text-shadow:0 0 25px rgba(34,197,94,0.3),0 0 50px rgba(34,197,94,0.1);}
+.hero-glow-red{text-shadow:0 0 25px rgba(239,68,68,0.3),0 0 50px rgba(239,68,68,0.1);}
+.hero-glow-amber{text-shadow:0 0 25px rgba(245,158,11,0.28),0 0 50px rgba(245,158,11,0.1);}
+.hero-glow-white{text-shadow:0 0 25px rgba(255,255,255,0.2),0 0 50px rgba(255,255,255,0.07);}
 .hp-hero-sub{font-size:11px;color:rgba(255,255,255,0.22);margin-top:8px;letter-spacing:.02em;}
 .hp-hero-stats{display:flex;gap:0;margin-top:20px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.06);justify-content:center;}
 .hp-hero-stat{display:flex;flex-direction:column;gap:4px;flex:1;align-items:center;padding:0 8px;}
@@ -4126,7 +4126,7 @@ function _buildSlot(el,toVal,color){
 
     if(!isDigit){
       // Static glyph: $ or comma — not clipped
-      col.style.cssText=`display:inline-flex;align-items:center;height:${H}px;`;
+      col.style.cssText=`display:inline-flex;align-items:center;height:${H}px;font-family:'DM Mono','SF Mono',monospace;font-weight:300;font-size:${H}px;`;
       col.textContent=ch;
     } else {
       const target=parseInt(ch,10);
@@ -4141,7 +4141,7 @@ function _buildSlot(el,toVal,color){
 
       rows.forEach(d=>{
         const cell=document.createElement('div');
-        const _glow=el.classList.contains('hero-glow-green')?'0 0 20px rgba(34,197,94,0.5),0 0 60px rgba(34,197,94,0.2)':el.classList.contains('hero-glow-red')?'0 0 20px rgba(239,68,68,0.5),0 0 60px rgba(239,68,68,0.2)':el.classList.contains('hero-glow-amber')?'0 0 20px rgba(245,158,11,0.5),0 0 60px rgba(245,158,11,0.2)':el.classList.contains('hero-glow-white')?'0 0 20px rgba(255,255,255,0.3),0 0 60px rgba(255,255,255,0.12)':'';
+        const _glow=el.classList.contains('hero-glow-green')?'0 0 25px rgba(34,197,94,0.3),0 0 50px rgba(34,197,94,0.1)':el.classList.contains('hero-glow-red')?'0 0 25px rgba(239,68,68,0.3),0 0 50px rgba(239,68,68,0.1)':el.classList.contains('hero-glow-amber')?'0 0 25px rgba(245,158,11,0.28),0 0 50px rgba(245,158,11,0.1)':el.classList.contains('hero-glow-white')?'0 0 25px rgba(255,255,255,0.2),0 0 50px rgba(255,255,255,0.07)':'';
         cell.style.cssText=`width:${W}px;height:${H}px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'DM Mono','SF Mono',monospace;font-weight:300;letter-spacing:-.04em;text-shadow:${_glow};`;
         cell.textContent=d;
         strip.appendChild(cell);
@@ -4238,11 +4238,11 @@ function renderHomeDash(){
       <div style="display:flex;align-items:center;justify-content:center;">
         <div style="flex:1;display:flex;align-items:center;justify-content:flex-end;padding-right:14px;gap:6px;">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
-          <div class="hp-hero-amount hero-glow-green" id="hero-dash-in" style="color:#22c55e;font-size:44px;">${fmt(gainedMo)}</div>
+          <div class="hp-hero-amount hero-glow-green" id="hero-dash-in" style="color:#22c55e;font-size:52px;">${fmt(gainedMo)}</div>
         </div>
         <div style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.2);flex-shrink:0;"></div>
         <div style="flex:1;display:flex;align-items:center;justify-content:flex-start;padding-left:14px;gap:6px;">
-          <div class="hp-hero-amount hero-glow-red" id="hero-dash-out" style="color:#ef4444;font-size:44px;">${fmt(spentMo)}</div>
+          <div class="hp-hero-amount hero-glow-red" id="hero-dash-out" style="color:#ef4444;font-size:52px;">${fmt(spentMo)}</div>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
         </div>
       </div>
