@@ -4840,7 +4840,7 @@ function initSwipeCards(container){
 
     wrap._snapLeft=snapOpenLeft;wrap._snapRight=snapOpenRight;
     wrap.addEventListener('mousedown',e=>{
-      if(e.button!==0)return;if(open){resetCard();return;}
+      if(e.button!==0)return;if(open){if(e.target.closest('.swipe-action')||e.target.closest('.swipe-action-left'))return;resetCard();return;}
       _resetAllSwipes(wrap);
       sx=e.clientX;sy=e.clientY;dx=0;isHoriz=null;_activeSwipeWrap=wrap;wrap._didDrag=false;
       wrap._mouseRefs={sx,sy,dx:0,isHoriz:null,open:false};
