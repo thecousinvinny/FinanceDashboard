@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { NEXT_STATUS, STATUS_LABEL, STATUS_COLORS, STATUS_PROGRESS } from '@/lib/data/studio'
 import { fmtDate, daysUntilLabel, $fc, cn } from '@/lib/utils'
 import type { CommissionStatus } from '@/types'
+import { AddCommissionSheet, type NewCommission } from '@/components/studio/AddCommissionSheet'
 
 type Filter = 'All' | 'Pending' | 'Approved' | 'In Progress'
 
@@ -28,6 +29,7 @@ export default function StudioPage() {
   const [filter,      setFilter]      = useState<Filter>('All')
   const [commissions, setCommissions] = useState<Commission[]>([])
   const [loading,     setLoading]     = useState(true)
+  const [sheetOpen,   setSheetOpen]   = useState(false)
 
   const supabase = useMemo(() => createClient(), [])
 
@@ -55,6 +57,33 @@ export default function StudioPage() {
   }, [supabase])
 
   useEffect(() => { loadData() }, [loadData])
+
+  async function handleAdd(newC: NewCommission) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const optimistic: Commission = {
+      id: `tmp-${Date.now()}`, client_name: newC.client_name,
+      project_name: newC.project_name, project_type: newC.project_type,
+      value: newC.value, deposit: newC.deposit, deadline: newC.deadline,
+      status: 'Pending', notes: newC.notes, paid_at: null, income_id: null,
+    }
+    setCommissions(prev => [optimistic, ...prev])
+
+    const { error } = await supabase.from('commissions').insert({
+      user_id:      user.id,
+      client_name:  newC.client_name,
+      project_name: newC.project_name,
+      project_type: newC.project_type,
+      value:        newC.value,
+      deposit:      newC.deposit,
+      deadline:     newC.deadline,
+      notes:        newC.notes,
+      status:       'Pending',
+    })
+    if (error) console.error('commission insert error:', JSON.stringify(error))
+    await loadData()
+  }
 
   async function advance(commission: Commission) {
     const next = NEXT_STATUS[commission.status]
@@ -116,6 +145,7 @@ export default function StudioPage() {
   }), [commissions])
 
   return (
+    <>
     <div className="min-h-screen bg-bg-base tab-enter">
 
       {/* ── Header ───────────────────────────────────────────────────────── */}
@@ -127,6 +157,7 @@ export default function StudioPage() {
           <h1 className="text-[28px] font-bold tracking-[-0.03em] text-ink">Commission Desk</h1>
         </div>
         <button
+          onClick={() => setSheetOpen(true)}
           className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-white text-[22px] font-light shadow-gold mt-10 select-none"
           aria-label="Add commission"
         >
@@ -292,5 +323,12 @@ export default function StudioPage() {
 
       <div className="h-10" />
     </div>
+
+    <AddCommissionSheet
+      open={sheetOpen}
+      onClose={() => setSheetOpen(false)}
+      onAdd={handleAdd}
+    />
+    </>
   )
 }
