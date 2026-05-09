@@ -10,37 +10,31 @@ export interface SeedTx {
 }
 
 export interface TxCategory {
-  name:  string
-  emoji: string
+  name: string
 }
 
 export const EXPENSE_CATEGORIES: TxCategory[] = [
-  { name: 'Food & Drink',  emoji: '🍽️' },
-  { name: 'Coffee',        emoji: '☕'  },
-  { name: 'Shopping',      emoji: '🛍️' },
-  { name: 'Transport',     emoji: '🚗'  },
-  { name: 'Entertainment', emoji: '🎬'  },
-  { name: 'Housing',       emoji: '🏠'  },
-  { name: 'Health',        emoji: '💊'  },
-  { name: 'Travel',        emoji: '✈️'  },
-  { name: 'Utilities',     emoji: '📱'  },
-  { name: 'Business',      emoji: '💼'  },
-  { name: 'Subscriptions', emoji: '♻️'  },
-  { name: 'Other',         emoji: '💰'  },
+  { name: 'Food & Drink'  },
+  { name: 'Coffee'        },
+  { name: 'Shopping'      },
+  { name: 'Transport'     },
+  { name: 'Entertainment' },
+  { name: 'Housing'       },
+  { name: 'Health'        },
+  { name: 'Travel'        },
+  { name: 'Utilities'     },
+  { name: 'Business'      },
+  { name: 'Subscriptions' },
+  { name: 'Other'         },
 ]
 
 export const INCOME_CATEGORIES: TxCategory[] = [
-  { name: 'Freelance',  emoji: '💵' },
-  { name: 'Projects',   emoji: '🎨' },
-  { name: 'Repayment',  emoji: '🔄' },
-  { name: 'Refund',     emoji: '↩️' },
-  { name: 'Other',      emoji: '💰' },
+  { name: 'Freelance' },
+  { name: 'Projects'  },
+  { name: 'Repayment' },
+  { name: 'Refund'    },
+  { name: 'Other'     },
 ]
-
-export function getCategoryEmoji(name: string, type: 'Expense' | 'Income'): string {
-  const list = type === 'Expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES
-  return list.find(c => c.name === name)?.emoji ?? '💰'
-}
 
 // Sorted newest-first so groupByMonth preserves that order within each month
 export const SEED_TRANSACTIONS: SeedTx[] = [

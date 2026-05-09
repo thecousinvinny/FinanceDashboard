@@ -8,6 +8,7 @@ import { AddWishlistSheet, type NewWishItem } from '@/components/plans/AddWishli
 import { EditSubscriptionSheet, type SubEdits } from '@/components/plans/EditSubscriptionSheet'
 import { EditWishlistSheet, type WishEdits } from '@/components/plans/EditWishlistSheet'
 import { daysUntilLabel, $fc, $fk, cn, calcSubCosts } from '@/lib/utils'
+import { RefreshCw } from 'lucide-react'
 import type { CardOption } from '@/components/money/AddTransactionSheet'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import type { BillingCycle } from '@/types'
@@ -331,8 +332,8 @@ export default function PlansPage() {
                   return (
                     <SwipeToDelete key={sub.id} onDelete={() => handleCancelSub(sub.id)} actionLabel="Cancel" actionBg="bg-amber-600" onTap={() => setEditSub(sub)} className="rounded-[18px]">
                       <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
-                        <div className="w-9 h-9 rounded-[10px] bg-bg-overlay flex items-center justify-center text-[15px] flex-shrink-0">
-                          ♻️
+                        <div className="w-9 h-9 rounded-[10px] bg-bg-overlay flex items-center justify-center flex-shrink-0">
+                          <RefreshCw size={15} className="text-ink-muted" strokeWidth={1.75} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-[14px] font-medium text-ink">{sub.name}</p>
@@ -371,8 +372,8 @@ export default function PlansPage() {
                   {cancelledSubs.map(sub => (
                     <SwipeToDelete key={sub.id} onDelete={() => handleDeleteSub(sub.id)} className="rounded-[18px]">
                       <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
-                        <div className="w-9 h-9 rounded-[10px] bg-bg-overlay flex items-center justify-center text-[15px] flex-shrink-0">
-                          ♻️
+                        <div className="w-9 h-9 rounded-[10px] bg-bg-overlay flex items-center justify-center flex-shrink-0">
+                          <RefreshCw size={15} className="text-ink-muted" strokeWidth={1.75} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-[14px] font-medium text-ink line-through">{sub.name}</p>

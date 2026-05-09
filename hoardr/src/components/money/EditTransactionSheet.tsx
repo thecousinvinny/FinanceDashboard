@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import {
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,
@@ -151,7 +152,7 @@ export function EditTransactionSheet({ tx, open, onClose, onSave, cards = [], ba
                     category === cat.name ? 'bg-gold/15 ring-1 ring-gold/40' : 'bg-bg-overlay',
                   )}
                 >
-                  <span className="text-[20px] leading-none">{cat.emoji}</span>
+                  <CategoryIcon category={cat.name} type={tx?.type ?? 'Expense'} size={18} className={category === cat.name ? 'text-gold' : 'text-ink-muted'} />
                   <span className="text-[9px] font-medium text-ink-muted leading-tight text-center px-0.5">{cat.name}</span>
                 </button>
               ))}

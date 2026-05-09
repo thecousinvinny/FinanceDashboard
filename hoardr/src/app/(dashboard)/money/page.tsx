@@ -5,7 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import { PillGroup } from '@/components/ui/Pill'
 import { AddTransactionSheet, type CardOption, type BankOption } from '@/components/money/AddTransactionSheet'
 import { EditTransactionSheet, type TxEdits } from '@/components/money/EditTransactionSheet'
-import { getCategoryEmoji, type SeedTx } from '@/lib/data/transactions'
+import { CategoryIcon } from '@/components/ui/CategoryIcon'
+import { type SeedTx } from '@/lib/data/transactions'
 import { groupByMonth, fmtDate, $fk, $fc, cn } from '@/lib/utils'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 
@@ -301,12 +302,11 @@ export default function MoneyPage() {
                 <div className="space-y-2.5">
                   {group.rows.map(row => {
                     const tx = row as SeedTx
-                    const emoji = getCategoryEmoji(tx.category, tx.type)
                     return (
                       <SwipeToDelete key={tx.id} onDelete={() => handleDelete(tx)} onTap={() => setEditTx(tx)} className="rounded-[18px]">
                         <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
-                          <div className="w-9 h-9 rounded-[10px] bg-bg-overlay flex items-center justify-center text-[15px] flex-shrink-0">
-                            {emoji}
+                          <div className="w-9 h-9 rounded-[10px] bg-bg-overlay flex items-center justify-center flex-shrink-0">
+                            <CategoryIcon category={tx.category} type={tx.type} size={16} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-[14px] font-medium text-ink truncate">{tx.name}</p>

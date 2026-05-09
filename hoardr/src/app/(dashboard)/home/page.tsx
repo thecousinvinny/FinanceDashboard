@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { localToday, daysUntilLabel, $fk, $fc } from '@/lib/utils'
+import { ArrowUpRight, ArrowDownLeft, RefreshCw } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -117,11 +118,11 @@ export default async function HomePage() {
   const activity = [
     ...(recentExp ?? []).map(e => ({
       id: e.id, name: e.name,
-      amount: -Number(e.cost), date: e.date as string, emoji: '💸',
+      amount: -Number(e.cost), date: e.date as string, isIncome: false,
     })),
     ...(recentInc ?? []).map(i => ({
       id: i.id, name: i.name,
-      amount: Number(i.amount), date: i.date as string, emoji: '💵',
+      amount: Number(i.amount), date: i.date as string, isIncome: true,
     })),
   ]
     .sort((a, b) => b.date.localeCompare(a.date))
@@ -219,7 +220,9 @@ export default async function HomePage() {
           <div className="space-y-2.5">
             {upcoming!.map(sub => (
               <div key={sub.id} className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
-                <div className="w-9 h-9 rounded-[10px] bg-bg-overlay flex items-center justify-center text-[15px] flex-shrink-0">♻️</div>
+                <div className="w-9 h-9 rounded-[10px] bg-bg-overlay flex items-center justify-center flex-shrink-0">
+                  <RefreshCw size={15} className="text-ink-muted" strokeWidth={1.75} />
+                </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[14px] font-medium text-ink">{sub.name}</p>
                   <p className="text-[11px] text-ink-muted">{daysUntilLabel(sub.next_renewal)}</p>
@@ -241,8 +244,11 @@ export default async function HomePage() {
           <div className="space-y-2.5">
             {activity.map(row => (
               <div key={row.id} className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
-                <div className="w-9 h-9 rounded-[10px] bg-bg-overlay flex items-center justify-center text-[15px] flex-shrink-0">
-                  {row.emoji}
+                <div className="w-9 h-9 rounded-[10px] bg-bg-overlay flex items-center justify-center flex-shrink-0">
+                  {row.isIncome
+                    ? <ArrowDownLeft size={16} className="text-emerald" strokeWidth={1.75} />
+                    : <ArrowUpRight  size={16} className="text-ink-muted" strokeWidth={1.75} />
+                  }
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[14px] font-medium text-ink truncate">{row.name}</p>
