@@ -36,7 +36,7 @@ export default function MoneyPage() {
         id:       String(e.id),
         type:     'Expense' as const,
         name:     String(e.name),
-        category: (e.categories as { name: string } | null)?.name ?? 'Other',
+        category: (e.categories as unknown as { name: string } | null)?.name ?? 'Other',
         date:     String(e.date),
         amount:   Number(e.cost),
       })),
