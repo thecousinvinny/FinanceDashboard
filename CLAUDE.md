@@ -51,8 +51,8 @@ Next.js 15 App Router with two route groups:
 | Route | Feature |
 |---|---|
 | `/home` | Net worth hero, sparkline, upcoming bills, recent activity |
-| `/money` | Combined expense + income feed with All/Expenses/Income filter |
-| `/plans` | Subscriptions (renewal countdown, monthly/annual totals) + Wishlist (progress rings) |
+| `/money` | 30-day bar chart hero + combined expense/income feed with filter |
+| `/plans` | 30-day renewal strip hero + Subscriptions/Wishlist toggle |
 | `/studio` | Commission desk — Pending → Approved → In Progress → Completed → Paid flow |
 | `/wallet` | Card visuals (black/gold/green styles) + Banks |
 | `/calendar` | Month grid with colored event dots (gold=expense, green=income, red=sub) |
@@ -75,14 +75,44 @@ Two clients, never swap them:
 
 ### Current data phase
 
-Pages currently use **seed data** from `src/lib/data/transactions.ts` (SeedTx interface, SEED_TRANSACTIONS array). Supabase queries will replace these file imports tab by tab. When wiring a tab to Supabase, delete the seed imports and use `src/lib/supabase/client.ts` in client components or `server.ts` in server components.
+Pages currently use **seed data** from `src/lib/data/transactions.ts` (`SeedTx` interface, `SEED_TRANSACTIONS` array). Supabase queries will replace these file imports tab by tab. When wiring a tab to Supabase, delete the seed imports and use `src/lib/supabase/client.ts` in client components or `server.ts` in server components.
+
+`SeedTx` interface:
+```ts
+{ id, type: 'Expense' | 'Income', name, category, date, amount, card_id?, bank_id? }
+```
 
 ### UI components (`src/components/`)
 
 - `nav/BottomNav.tsx` — 6-tab fixed nav, 72px tall; active state via `usePathname()`
 - `ui/Pill.tsx` — exports `Pill` (single) and `PillGroup<T>` (segmented control with gold active state)
-- `ui/Button.tsx`, `Card.tsx`, `Badge.tsx`, `Skeleton.tsx` — primitives
-- `money/AddTransactionSheet.tsx` — canonical bottom sheet implementation (reference for building other sheets)
+- `ui/SwipeToDelete.tsx` — swipe-left-to-delete with optional `onTap` (fires on clean tap when not swiped/revealed), `actionLabel`, and `actionBg` props. The `actionBg` default is `bg-ruby`; pass `'bg-amber-500'` for a cancel/restore action.
+- `money/AddTransactionSheet.tsx` — canonical bottom sheet implementation; exports `CardOption` and `BankOption` interfaces used by all pickers
+- `money/EditTransactionSheet.tsx` — edit existing transaction; exports `TxEdits`
+- `plans/AddSubscriptionSheet.tsx` / `EditSubscriptionSheet.tsx` — exports `NewSub` / `SubEdits`
+- `plans/AddWishlistSheet.tsx` / `EditWishlistSheet.tsx` — exports `WishEdits`
+
+### Card / bank picker pattern
+
+All Add and Edit sheets accept `cards?: CardOption[]` and/or `banks?: BankOption[]`. Expenses attach to a card; income attaches to a bank; subscriptions attach to a card. The picker renders a horizontal chip strip with a "None" chip first:
+
+```tsx
+// CardOption: { id: string; name: string; last4?: string | null }
+// BankOption: { id: string; name: string }
+```
+
+Load wallet data once on mount in a **separate** `useEffect` (not inside `loadData` which runs after mutations) to avoid redundant queries.
+
+### Tap-to-edit pattern
+
+Wrap each list row in `<SwipeToDelete onDelete={...} onTap={() => setEditTarget(row)}>`. The `onTap` callback only fires on clean taps — not when the user swipes or when the delete action is already revealed. Open the corresponding Edit sheet by setting state: `editSub`, `editTx`, `editWish`, etc.
+
+### Inline hero components
+
+`DailyBarChart` (Money page) and `RenewalStrip` (Plans page) are defined as named functions in the same file as their page — they are **not** extracted to `src/components/`. Both are computed entirely from already-loaded page state (no new queries). Follow this pattern for page-specific visualizations.
+
+- `DailyBarChart`: 30-day net bars, `requestAnimationFrame` triggers CSS height transition, emerald/ruby/zero coloring, gold dot for today
+- `RenewalStrip`: 30-day horizontal scrollable chip strip, `scrollIntoView` on mount, ruby pips for renewals, tap-to-expand detail panel
 
 ### Design system
 
@@ -147,10 +177,13 @@ Every page root `<div>` should include `tab-enter` for the mount animation.
 - `$f(n)` — `$1,234` (whole dollars)
 - `$fc(n)` — `$12.50` (with cents)
 - `$fk(n)` — `$4.8K` (compact)
-- `calcSubCosts(cost, billing)` — returns `{ monthly, annual }` matching the original app's exact multipliers (Annual÷12, BiWeekly×2.17/26, Quarterly÷3/×4, Weekly×4.33/52)
+- `calcSubCosts(cost, billing)` — returns `{ monthly, annual }` matching the original app's exact multipliers
+- `nextRenewalDate(from, billing)` — advances a date by one billing cycle
 - `daysUntil(date)` / `daysUntilLabel(date)` — "in 3 days" / "today" / "2 days ago"
 - `localToday()` — returns today as `YYYY-MM-DD` in `America/Los_Angeles` (hardcoded to match original app)
+- `fmtDate(d)` / `fmtMonth(d)` — human-readable date/month strings
 - `groupByMonth(rows)` — groups any `{ date: string }` array into `{ label, key, rows }[]` sorted newest-first
+- `clamp(v, min, max)` — numeric clamp
 - `cn(...classes)` — Tailwind className joiner
 
 ### Studio commission flow

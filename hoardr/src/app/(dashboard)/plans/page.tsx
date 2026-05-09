@@ -30,6 +30,9 @@ interface WishItem {
   id:            string
   name:          string
   original_cost: number | null
+  category:      string | null
+  url:           string | null
+  bought_cost:   number | null
   status:        string
 }
 
@@ -53,6 +56,8 @@ export default function PlansPage() {
   const [showCancelled, setShowCancelled] = useState(false)
   const [editSub,       setEditSub]      = useState<Sub | null>(null)
   const [editWish,      setEditWish]     = useState<WishItem | null>(null)
+  const [buyItem,       setBuyItem]      = useState<WishItem | null>(null)
+  const [buyAmount,     setBuyAmount]    = useState('')
   const [cards,         setCards]        = useState<CardOption[]>([])
 
   const supabase = useMemo(() => createClient(), [])
@@ -65,7 +70,7 @@ export default function PlansPage() {
         .order('next_renewal', { ascending: true }),
       supabase
         .from('wishlist')
-        .select('id, name, original_cost, status')
+        .select('id, name, original_cost, category, url, bought_cost, status')
         .order('created_at', { ascending: false }),
     ])
 
@@ -85,6 +90,9 @@ export default function PlansPage() {
       id:            String(w.id),
       name:          String(w.name),
       original_cost: w.original_cost != null ? Number(w.original_cost) : null,
+      category:      w.category ? String(w.category) : null,
+      url:           w.url ? String(w.url) : null,
+      bought_cost:   w.bought_cost != null ? Number(w.bought_cost) : null,
       status:        String(w.status),
     })))
 
@@ -101,56 +109,39 @@ export default function PlansPage() {
     loadCards()
   }, [supabase])
 
-  async function handleMarkPurchased(id: string) {
+  async function handleBuyItem(id: string, paidCost: number) {
     const item = wishlist.find(w => w.id === id)
-    setWishlist(prev => prev.map(w => w.id === id ? { ...w, status: 'Purchased' } : w))
+    if (!item) return
+
+    setWishlist(prev => prev.map(w => w.id === id ? { ...w, status: 'Purchased', bought_cost: paidCost } : w))
 
     const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { await loadData(); return }
 
-    let expenseId: string | null = null
+    const categoryName = item.category ?? 'Shopping'
+    const { data: existing } = await supabase
+      .from('categories').select('id').eq('user_id', user.id).eq('name', categoryName).maybeSingle()
 
-    // Auto-log as expense if the item has a price
-    if (user && item && item.original_cost != null && item.original_cost > 0) {
-      // Resolve or create a 'Shopping' category
-      const { data: existing } = await supabase
-        .from('categories')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('name', 'Shopping')
-        .maybeSingle()
-
-      let categoryId: string | null = existing?.id ?? null
-      if (!categoryId) {
-        const { data: created } = await supabase
-          .from('categories')
-          .insert({ user_id: user.id, name: 'Shopping' })
-          .select('id')
-          .single()
-        categoryId = created?.id ?? null
-      }
-
-      const today = new Date().toISOString().slice(0, 10)
-      const { data: expRow, error: expErr } = await supabase
-        .from('expenses')
-        .insert({
-          user_id:     user.id,
-          name:        item.name,
-          cost:        item.original_cost,
-          date:        today,
-          category_id: categoryId,
-          status:      'Procured',
-        })
-        .select('id')
-        .single()
-      if (expErr) console.error('wishlist expense create error:', JSON.stringify(expErr))
-      expenseId = expRow?.id ?? null
+    let categoryId: string | null = existing?.id ?? null
+    if (!categoryId) {
+      const { data: created } = await supabase
+        .from('categories').insert({ user_id: user.id, name: categoryName }).select('id').single()
+      categoryId = created?.id ?? null
     }
+
+    const today = new Date().toISOString().slice(0, 10)
+    const { data: expRow, error: expErr } = await supabase
+      .from('expenses')
+      .insert({ user_id: user.id, name: item.name, cost: paidCost, date: today, category_id: categoryId, status: 'Procured' })
+      .select('id')
+      .single()
+    if (expErr) console.error('wishlist buy expense error:', JSON.stringify(expErr))
 
     const { error } = await supabase
       .from('wishlist')
-      .update({ status: 'Purchased', ...(expenseId ? { expense_id: expenseId } : {}) })
+      .update({ status: 'Purchased', bought_cost: paidCost, ...(expRow?.id ? { expense_id: expRow.id } : {}) })
       .eq('id', id)
-    if (error) { console.error('mark purchased error:', JSON.stringify(error)); await loadData() }
+    if (error) { console.error('buy item error:', JSON.stringify(error)); await loadData() }
   }
 
   async function handleCancelSub(id: string) {
@@ -213,7 +204,9 @@ export default function PlansPage() {
     // Optimistic update
     setWishlist(prev => [{
       id: tempId, name: item.name,
-      original_cost: item.original_cost, status: 'Interested',
+      original_cost: item.original_cost,
+      category: item.category, url: item.url,
+      bought_cost: null, status: 'Interested',
     }, ...prev])
 
     const { data: { user } } = await supabase.auth.getUser()
@@ -223,6 +216,8 @@ export default function PlansPage() {
       user_id:       user.id,
       name:          item.name,
       original_cost: item.original_cost,
+      category:      item.category,
+      url:           item.url,
       status:        'Interested',
     })
 
@@ -250,7 +245,7 @@ export default function PlansPage() {
     setWishlist(prev => prev.map(w => w.id === id ? { ...w, ...edits } : w))
     const { error } = await supabase
       .from('wishlist')
-      .update({ name: edits.name, original_cost: edits.original_cost })
+      .update({ name: edits.name, original_cost: edits.original_cost, category: edits.category, url: edits.url })
       .eq('id', id)
     if (error) { console.error('edit wish error:', JSON.stringify(error)); await loadData() }
   }
@@ -329,13 +324,13 @@ export default function PlansPage() {
             </div>
           ) : (
             <div className="mx-4 mt-4">
-              <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
+              <div className="space-y-2.5">
                 {activeSubs.map(sub => {
                   const renewal   = sub.next_renewal ? daysUntilLabel(sub.next_renewal) : '—'
                   const isOverdue = typeof renewal === 'string' && renewal.includes('ago')
                   return (
-                    <SwipeToDelete key={sub.id} onDelete={() => handleCancelSub(sub.id)} actionLabel="Cancel" actionBg="bg-amber-600" onTap={() => setEditSub(sub)}>
-                      <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface">
+                    <SwipeToDelete key={sub.id} onDelete={() => handleCancelSub(sub.id)} actionLabel="Cancel" actionBg="bg-amber-600" onTap={() => setEditSub(sub)} className="rounded-[18px]">
+                      <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
                         <div className="w-9 h-9 rounded-[10px] bg-bg-overlay flex items-center justify-center text-[15px] flex-shrink-0">
                           ♻️
                         </div>
@@ -372,10 +367,10 @@ export default function PlansPage() {
                 Cancelled ({cancelledSubs.length})
               </button>
               {showCancelled && (
-                <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04] opacity-60">
+                <div className="space-y-2.5 opacity-60">
                   {cancelledSubs.map(sub => (
-                    <SwipeToDelete key={sub.id} onDelete={() => handleDeleteSub(sub.id)}>
-                      <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface">
+                    <SwipeToDelete key={sub.id} onDelete={() => handleDeleteSub(sub.id)} className="rounded-[18px]">
+                      <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
                         <div className="w-9 h-9 rounded-[10px] bg-bg-overlay flex items-center justify-center text-[15px] flex-shrink-0">
                           ♻️
                         </div>
@@ -401,37 +396,58 @@ export default function PlansPage() {
 
       {/* ── Wishlist ─────────────────────────────────────────────────────── */}
       {!loading && tab === 'Wishlist' && (
-        <div className="mx-4 mt-4 flex flex-col gap-3">
+        <div className="mx-4 mt-4 space-y-2.5">
           {wishlist.length === 0 && (
-            <div className="bg-bg-surface border border-white/[0.06] rounded-card py-12 text-center text-ink-faint text-[13px]">
+            <div className="bg-bg-surface border border-white/[0.06] rounded-[18px] py-12 text-center text-ink-faint text-[13px]">
               Nothing on your wishlist — tap + to add an item.
             </div>
           )}
           {wishlist.map(item => (
-            <SwipeToDelete key={item.id} onDelete={() => handleDeleteWish(item.id)} className="rounded-card" onTap={() => setEditWish(item)}>
-              <div className="bg-bg-surface border border-white/[0.06] rounded-card p-4 flex items-center gap-4">
-                <div className="w-11 h-11 rounded-[12px] bg-bg-overlay flex items-center justify-center text-[20px] flex-shrink-0">
-                  ✦
+            <SwipeToDelete key={item.id} onDelete={() => handleDeleteWish(item.id)} className="rounded-[18px]" onTap={() => setEditWish(item)}>
+              <div className="bg-bg-surface border border-white/[0.06] rounded-[18px] p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-[12px] bg-bg-overlay flex items-center justify-center text-[18px] flex-shrink-0">✦</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[14px] font-semibold text-ink truncate">{item.name}</p>
+                    {item.original_cost != null && (
+                      <p className="text-[13px] font-mono text-ink-muted mt-0.5">{$fc(item.original_cost)}</p>
+                    )}
+                    {(item.category || item.url) && (
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        {item.category && (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-bg-overlay text-ink-muted">
+                            {item.category}
+                          </span>
+                        )}
+                        {item.url && (
+                          <a
+                            href={item.url} target="_blank" rel="noopener noreferrer"
+                            onClick={e => e.stopPropagation()}
+                            className="text-[10px] font-semibold text-gold select-none"
+                          >
+                            View →
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {item.status === 'Interested' ? (
+                    <button
+                      onClick={() => { setBuyItem(item); setBuyAmount('') }}
+                      className="w-9 h-9 rounded-full bg-emerald/10 border border-emerald/20 flex items-center justify-center text-emerald text-[16px] flex-shrink-0 select-none active:scale-95 transition-transform"
+                      aria-label="Mark as purchased"
+                    >
+                      ✓
+                    </button>
+                  ) : (
+                    <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+                      <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-emerald/10 text-emerald">Bought</span>
+                      {item.bought_cost != null && item.original_cost != null && item.original_cost > item.bought_cost && (
+                        <span className="text-[10px] font-semibold text-emerald font-mono">saved {$fc(item.original_cost - item.bought_cost)}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[14px] font-medium text-ink truncate">{item.name}</p>
-                  <p className="text-[11px] text-ink-muted mt-0.5">
-                    {item.original_cost != null ? `Goal: ${$fc(item.original_cost)}` : 'No price set'}
-                  </p>
-                </div>
-                {item.status === 'Interested' ? (
-                  <button
-                    onClick={() => handleMarkPurchased(item.id)}
-                    className="w-9 h-9 rounded-full bg-emerald/10 border border-emerald/20 flex items-center justify-center text-emerald text-[16px] flex-shrink-0 select-none active:scale-95 transition-transform"
-                    aria-label="Mark as purchased"
-                  >
-                    ✓
-                  </button>
-                ) : (
-                  <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full flex-shrink-0 bg-emerald/10 text-emerald">
-                    Purchased
-                  </span>
-                )}
               </div>
             </SwipeToDelete>
           ))}
@@ -470,6 +486,74 @@ export default function PlansPage() {
       onClose={() => setEditWish(null)}
       onSave={handleEditWish}
     />
+
+    {/* ── Buy sheet ──────────────────────────────────────────────────────── */}
+    <div
+      onClick={() => setBuyItem(null)}
+      className={cn(
+        'fixed inset-0 z-[59] transition-opacity duration-300',
+        buyItem ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
+      )}
+      style={{ background: 'rgba(0,0,0,0.72)' }}
+    />
+    <div
+      className={cn(
+        'fixed inset-x-0 bottom-0 z-[60] rounded-t-[24px] bg-bg-surface transition-transform duration-300',
+        buyItem ? 'translate-y-0' : 'translate-y-full',
+      )}
+      style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+    >
+      <div className="flex justify-center pt-3 pb-2">
+        <div className="w-9 h-1 rounded-full bg-white/20" />
+      </div>
+      <div className="flex items-center justify-between px-5 mb-5">
+        <div>
+          <h2 className="text-[18px] font-bold tracking-tight text-ink">Mark as Bought</h2>
+          {buyItem && <p className="text-[12px] text-ink-muted mt-0.5 truncate max-w-[220px]">{buyItem.name}</p>}
+        </div>
+        <button onClick={() => setBuyItem(null)} className="w-8 h-8 flex items-center justify-center text-[22px] text-ink-muted">×</button>
+      </div>
+      <div className="px-5 space-y-5" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 32px)' }}>
+        {buyItem?.original_cost != null && (
+          <div className="flex items-center justify-between">
+            <p className="text-[13px] text-ink-muted">List price</p>
+            <p className="text-[13px] font-mono text-ink-muted">{$fc(buyItem.original_cost)}</p>
+          </div>
+        )}
+        <div>
+          <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">What did you pay?</p>
+          <div className="flex items-center gap-1.5 bg-bg-overlay rounded-[14px] px-4 py-3">
+            <span className="text-[22px] font-light text-ink-muted font-mono">$</span>
+            <input
+              type="text" inputMode="decimal" placeholder="0.00" value={buyAmount}
+              onChange={e => { const v = e.target.value; if (v === '' || /^\d*\.?\d{0,2}$/.test(v)) setBuyAmount(v) }}
+              className="flex-1 bg-transparent text-[28px] font-bold font-mono text-ink outline-none placeholder:text-ink-faint"
+            />
+          </div>
+          {buyItem?.original_cost != null && parseFloat(buyAmount) > 0 && buyItem.original_cost > parseFloat(buyAmount) && (
+            <p className="text-[11px] text-emerald font-mono mt-2">
+              You saved {$fc(buyItem.original_cost - parseFloat(buyAmount))}
+            </p>
+          )}
+        </div>
+        <button
+          onClick={() => {
+            const paid = parseFloat(buyAmount)
+            if (!paid || !buyItem) return
+            handleBuyItem(buyItem.id, paid)
+            setBuyItem(null)
+            setBuyAmount('')
+          }}
+          disabled={!parseFloat(buyAmount)}
+          className={cn(
+            'w-full py-4 rounded-[14px] text-[15px] font-semibold transition-all select-none',
+            parseFloat(buyAmount) ? 'gradient-gold text-white shadow-gold' : 'bg-bg-overlay text-ink-faint',
+          )}
+        >
+          Add to Expenses
+        </button>
+      </div>
+    </div>
   </>
   )
 }

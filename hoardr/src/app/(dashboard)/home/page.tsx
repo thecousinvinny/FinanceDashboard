@@ -216,9 +216,9 @@ export default async function HomePage() {
       {(upcoming?.length ?? 0) > 0 && (
         <div className="mx-4 mt-6">
           <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Upcoming</p>
-          <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
+          <div className="space-y-2.5">
             {upcoming!.map(sub => (
-              <div key={sub.id} className="flex items-center gap-3 px-4 py-3.5">
+              <div key={sub.id} className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
                 <div className="w-9 h-9 rounded-[10px] bg-bg-overlay flex items-center justify-center text-[15px] flex-shrink-0">♻️</div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[14px] font-medium text-ink">{sub.name}</p>
@@ -238,9 +238,9 @@ export default async function HomePage() {
       <div className="mx-4 mt-6">
         <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Recent Activity</p>
         {activity.length > 0 ? (
-          <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
+          <div className="space-y-2.5">
             {activity.map(row => (
-              <div key={row.id} className="flex items-center gap-3 px-4 py-3.5">
+              <div key={row.id} className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
                 <div className="w-9 h-9 rounded-[10px] bg-bg-overlay flex items-center justify-center text-[15px] flex-shrink-0">
                   {row.emoji}
                 </div>

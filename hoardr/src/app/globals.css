@@ -64,7 +64,7 @@ html, body {
   }
 
   .gradient-gold {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
+    background: linear-gradient(135deg, #F7DF9E, #D4AF37, #A47F23);
   }
 
   .gradient-emerald {
@@ -94,7 +94,7 @@ html, body {
   }
 
   /* Glow effects for hero numbers */
-  .glow-green  { text-shadow: 0 0 25px rgba(34,197,94,0.3),  0 0 50px rgba(34,197,94,0.1);  }
-  .glow-gold   { text-shadow: 0 0 25px rgba(245,158,11,0.3), 0 0 50px rgba(245,158,11,0.1); }
+  .glow-green  { text-shadow: 0 0 25px rgba(34,197,94,0.3),   0 0 50px rgba(34,197,94,0.1);   }
+  .glow-gold   { text-shadow: 0 0 25px rgba(212,175,55,0.3), 0 0 50px rgba(212,175,55,0.1); }
   .glow-ruby   { text-shadow: 0 0 25px rgba(239,68,68,0.3),  0 0 50px rgba(239,68,68,0.1);  }
 }

@@ -75,7 +75,7 @@ export function SwipeToDelete({ onDelete, children, className, actionLabel = 'ðŸ
     setPos(next, false)
   }
 
-  function onTouchEnd() {
+  function onTouchEnd(e: React.TouchEvent) {
     const x = curX.current
     dir.current = null
 
@@ -87,7 +87,9 @@ export function SwipeToDelete({ onDelete, children, className, actionLabel = 'ðŸ
     } else {
       setPos(0, true)
       revealed.current = false
-      if (!didSwipe.current && !startWasRevealed.current) onTap?.()
+      const target = e.changedTouches[0]?.target as Element | null
+      const isInteractive = !!target?.closest('button, a, input, [role="button"]')
+      if (!didSwipe.current && !startWasRevealed.current && !isInteractive) onTap?.()
     }
   }
 

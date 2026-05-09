@@ -7,11 +7,15 @@ interface WishSnapshot {
   id:            string
   name:          string
   original_cost: number | null
+  category:      string | null
+  url:           string | null
 }
 
 export interface WishEdits {
   name:          string
   original_cost: number | null
+  category:      string | null
+  url:           string | null
 }
 
 interface Props {
@@ -22,13 +26,17 @@ interface Props {
 }
 
 export function EditWishlistSheet({ item, open, onClose, onSave }: Props) {
-  const [name,   setName]   = useState('')
-  const [amount, setAmount] = useState('')
+  const [name,     setName]     = useState('')
+  const [amount,   setAmount]   = useState('')
+  const [category, setCategory] = useState('')
+  const [url,      setUrl]      = useState('')
 
   useEffect(() => {
     if (item) {
       setName(item.name)
       setAmount(item.original_cost != null ? String(item.original_cost) : '')
+      setCategory(item.category ?? '')
+      setUrl(item.url ?? '')
     }
   }, [item])
 
@@ -39,14 +47,10 @@ export function EditWishlistSheet({ item, open, onClose, onSave }: Props) {
 
   useEffect(() => {
     if (!open) {
-      const t = setTimeout(() => { setName(''); setAmount('') }, 300)
+      const t = setTimeout(() => { setName(''); setAmount(''); setCategory(''); setUrl('') }, 300)
       return () => clearTimeout(t)
     }
   }, [open])
-
-  function handleAmountChange(raw: string) {
-    if (raw === '' || /^\d*\.?\d{0,2}$/.test(raw)) setAmount(raw)
-  }
 
   function handleSave() {
     if (!name.trim() || !item) return
@@ -54,6 +58,8 @@ export function EditWishlistSheet({ item, open, onClose, onSave }: Props) {
     onSave(item.id, {
       name:          name.trim(),
       original_cost: parsed > 0 ? parsed : null,
+      category:      category.trim() || null,
+      url:           url.trim() || null,
     })
     onClose()
   }
@@ -83,7 +89,7 @@ export function EditWishlistSheet({ item, open, onClose, onSave }: Props) {
         </div>
 
         <div className="flex items-center justify-between px-5 mb-5">
-          <h2 className="text-[18px] font-bold tracking-tight text-ink">Edit Wishlist Item</h2>
+          <h2 className="text-[18px] font-bold tracking-tight text-ink">Edit Item</h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-[22px] text-ink-muted">×</button>
         </div>
 
@@ -92,33 +98,49 @@ export function EditWishlistSheet({ item, open, onClose, onSave }: Props) {
           <div>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Item Name</p>
             <input
-              type="text"
-              value={name}
-              onChange={e => setName(e.target.value)}
+              type="text" value={name} onChange={e => setName(e.target.value)}
               className="w-full bg-bg-overlay rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none"
             />
           </div>
 
           <div>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
-              Goal Price <span className="normal-case text-ink-faint/60">(optional)</span>
+              List Price <span className="normal-case text-ink-faint/60">(optional)</span>
             </p>
             <div className="flex items-center gap-1.5 bg-bg-overlay rounded-[14px] px-4 py-3">
               <span className="text-[22px] font-light text-ink-muted font-mono">$</span>
               <input
-                type="text"
-                inputMode="decimal"
-                placeholder="0.00"
-                value={amount}
-                onChange={e => handleAmountChange(e.target.value)}
+                type="text" inputMode="decimal" placeholder="0.00" value={amount}
+                onChange={e => { const v = e.target.value; if (v === '' || /^\d*\.?\d{0,2}$/.test(v)) setAmount(v) }}
                 className="flex-1 bg-transparent text-[28px] font-bold font-mono text-ink outline-none placeholder:text-ink-faint"
               />
             </div>
           </div>
 
+          <div>
+            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
+              Category <span className="normal-case text-ink-faint/60">(optional)</span>
+            </p>
+            <input
+              type="text" placeholder="e.g. Electronics" value={category}
+              onChange={e => setCategory(e.target.value)}
+              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none"
+            />
+          </div>
+
+          <div>
+            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
+              Buy Link <span className="normal-case text-ink-faint/60">(optional)</span>
+            </p>
+            <input
+              type="url" placeholder="https://..." value={url}
+              onChange={e => setUrl(e.target.value)}
+              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none"
+            />
+          </div>
+
           <button
-            onClick={handleSave}
-            disabled={!canSave}
+            onClick={handleSave} disabled={!canSave}
             className={cn(
               'w-full py-4 rounded-[14px] text-[15px] font-semibold transition-all select-none',
               canSave ? 'gradient-gold text-white shadow-gold' : 'bg-bg-overlay text-ink-faint',

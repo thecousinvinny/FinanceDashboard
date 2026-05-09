@@ -298,13 +298,13 @@ export default function MoneyPage() {
                 </div>
 
                 {/* Rows */}
-                <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
+                <div className="space-y-2.5">
                   {group.rows.map(row => {
                     const tx = row as SeedTx
                     const emoji = getCategoryEmoji(tx.category, tx.type)
                     return (
-                      <SwipeToDelete key={tx.id} onDelete={() => handleDelete(tx)} onTap={() => setEditTx(tx)}>
-                        <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface">
+                      <SwipeToDelete key={tx.id} onDelete={() => handleDelete(tx)} onTap={() => setEditTx(tx)} className="rounded-[18px]">
+                        <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
                           <div className="w-9 h-9 rounded-[10px] bg-bg-overlay flex items-center justify-center text-[15px] flex-shrink-0">
                             {emoji}
                           </div>
