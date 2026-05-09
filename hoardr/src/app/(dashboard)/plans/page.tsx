@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import { PillGroup } from '@/components/ui/Pill'
 import { AddSubscriptionSheet, type NewSub } from '@/components/plans/AddSubscriptionSheet'
 import { AddWishlistSheet, type NewWishItem } from '@/components/plans/AddWishlistSheet'
+import { EditSubscriptionSheet, type SubEdits } from '@/components/plans/EditSubscriptionSheet'
+import { EditWishlistSheet, type WishEdits } from '@/components/plans/EditWishlistSheet'
 import { daysUntilLabel, $fc, $fk, cn, calcSubCosts } from '@/lib/utils'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import type { BillingCycle } from '@/types'
@@ -47,6 +49,8 @@ export default function PlansPage() {
   const [subSheet,      setSubSheet]     = useState(false)
   const [wishSheet,     setWishSheet]    = useState(false)
   const [showCancelled, setShowCancelled] = useState(false)
+  const [editSub,       setEditSub]      = useState<Sub | null>(null)
+  const [editWish,      setEditWish]     = useState<WishItem | null>(null)
 
   const supabase = useMemo(() => createClient(), [])
 
@@ -86,10 +90,53 @@ export default function PlansPage() {
   useEffect(() => { loadData() }, [loadData])
 
   async function handleMarkPurchased(id: string) {
+    const item = wishlist.find(w => w.id === id)
     setWishlist(prev => prev.map(w => w.id === id ? { ...w, status: 'Purchased' } : w))
+
+    const { data: { user } } = await supabase.auth.getUser()
+
+    let expenseId: string | null = null
+
+    // Auto-log as expense if the item has a price
+    if (user && item && item.original_cost != null && item.original_cost > 0) {
+      // Resolve or create a 'Shopping' category
+      const { data: existing } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('name', 'Shopping')
+        .maybeSingle()
+
+      let categoryId: string | null = existing?.id ?? null
+      if (!categoryId) {
+        const { data: created } = await supabase
+          .from('categories')
+          .insert({ user_id: user.id, name: 'Shopping' })
+          .select('id')
+          .single()
+        categoryId = created?.id ?? null
+      }
+
+      const today = new Date().toISOString().slice(0, 10)
+      const { data: expRow, error: expErr } = await supabase
+        .from('expenses')
+        .insert({
+          user_id:     user.id,
+          name:        item.name,
+          cost:        item.original_cost,
+          date:        today,
+          category_id: categoryId,
+          status:      'Procured',
+        })
+        .select('id')
+        .single()
+      if (expErr) console.error('wishlist expense create error:', JSON.stringify(expErr))
+      expenseId = expRow?.id ?? null
+    }
+
     const { error } = await supabase
       .from('wishlist')
-      .update({ status: 'Purchased' })
+      .update({ status: 'Purchased', ...(expenseId ? { expense_id: expenseId } : {}) })
       .eq('id', id)
     if (error) { console.error('mark purchased error:', JSON.stringify(error)); await loadData() }
   }
@@ -167,6 +214,31 @@ export default function PlansPage() {
     })
 
     await loadData()
+  }
+
+  async function handleEditSub(id: string, edits: SubEdits) {
+    setSubs(prev => prev.map(s => s.id === id ? { ...s, ...edits } : s))
+    const { error } = await supabase
+      .from('subscriptions')
+      .update({
+        name:         edits.name,
+        cost:         edits.cost,
+        billing:      edits.billing,
+        next_renewal: edits.next_renewal,
+        monthly_cost: edits.monthly_cost,
+        annual_cost:  edits.annual_cost,
+      })
+      .eq('id', id)
+    if (error) { console.error('edit sub error:', JSON.stringify(error)); await loadData() }
+  }
+
+  async function handleEditWish(id: string, edits: WishEdits) {
+    setWishlist(prev => prev.map(w => w.id === id ? { ...w, ...edits } : w))
+    const { error } = await supabase
+      .from('wishlist')
+      .update({ name: edits.name, original_cost: edits.original_cost })
+      .eq('id', id)
+    if (error) { console.error('edit wish error:', JSON.stringify(error)); await loadData() }
   }
 
   const activeSubs    = useMemo(() => subs.filter(s => s.status === 'Active'),    [subs])
@@ -251,7 +323,7 @@ export default function PlansPage() {
                   const renewal   = sub.next_renewal ? daysUntilLabel(sub.next_renewal) : '—'
                   const isOverdue = typeof renewal === 'string' && renewal.includes('ago')
                   return (
-                    <SwipeToDelete key={sub.id} onDelete={() => handleCancelSub(sub.id)} actionLabel="Cancel" actionBg="bg-amber-600">
+                    <SwipeToDelete key={sub.id} onDelete={() => handleCancelSub(sub.id)} actionLabel="Cancel" actionBg="bg-amber-600" onTap={() => setEditSub(sub)}>
                       <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface">
                         <div className="w-9 h-9 rounded-[10px] bg-bg-overlay flex items-center justify-center text-[15px] flex-shrink-0">
                           ♻️
@@ -325,7 +397,7 @@ export default function PlansPage() {
             </div>
           )}
           {wishlist.map(item => (
-            <SwipeToDelete key={item.id} onDelete={() => handleDeleteWish(item.id)} className="rounded-card">
+            <SwipeToDelete key={item.id} onDelete={() => handleDeleteWish(item.id)} className="rounded-card" onTap={() => setEditWish(item)}>
               <div className="bg-bg-surface border border-white/[0.06] rounded-card p-4 flex items-center gap-4">
                 <div className="w-11 h-11 rounded-[12px] bg-bg-overlay flex items-center justify-center text-[20px] flex-shrink-0">
                   ✦
@@ -373,6 +445,18 @@ export default function PlansPage() {
         onAdd={handleAddWish}
       />
     )}
+    <EditSubscriptionSheet
+      sub={editSub}
+      open={editSub !== null}
+      onClose={() => setEditSub(null)}
+      onSave={handleEditSub}
+    />
+    <EditWishlistSheet
+      item={editWish}
+      open={editWish !== null}
+      onClose={() => setEditWish(null)}
+      onSave={handleEditWish}
+    />
   </>
   )
 }
