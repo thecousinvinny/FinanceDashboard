@@ -1,0 +1,58 @@
+//
+//  CardItem.swift
+//  Lumen
+//
+
+import Foundation
+import SwiftData
+
+enum CardKind: String, Codable, CaseIterable, Identifiable {
+    case debit, credit
+    var id: String { rawValue }
+    var label: String { rawValue.capitalized }
+}
+
+enum CardNetwork: String, Codable, CaseIterable, Identifiable {
+    case visa, mastercard, amex, discover, other
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .visa: "VISA"
+        case .mastercard: "Mastercard"
+        case .amex: "Amex"
+        case .discover: "Discover"
+        case .other: "Card"
+        }
+    }
+}
+
+@Model
+final class CardItem {
+    var nickname: String
+    var last4: String
+    var holderName: String
+    var expMonth: Int
+    var expYear: Int
+    var kindRaw: String
+    var networkRaw: String
+    var styleRaw: String     // "gold", "black", "green"
+    var creditLimit: Double  // 0 = N/A
+    var balance: Double      // current owed (credit) or available (debit)
+
+    init(nickname: String, last4: String, holderName: String, expMonth: Int, expYear: Int, kind: CardKind, network: CardNetwork, style: String = "black", creditLimit: Double = 0, balance: Double = 0) {
+        self.nickname = nickname
+        self.last4 = last4
+        self.holderName = holderName
+        self.expMonth = expMonth
+        self.expYear = expYear
+        self.kindRaw = kind.rawValue
+        self.networkRaw = network.rawValue
+        self.styleRaw = style
+        self.creditLimit = creditLimit
+        self.balance = balance
+    }
+
+    var kind: CardKind { CardKind(rawValue: kindRaw) ?? .debit }
+    var network: CardNetwork { CardNetwork(rawValue: networkRaw) ?? .other }
+    var expString: String { String(format: "%02d/%02d", expMonth, expYear % 100) }
+}

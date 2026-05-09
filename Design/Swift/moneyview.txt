@@ -1,0 +1,280 @@
+//
+//  MoneyView.swift
+//  Lumen
+//
+
+import SwiftUI
+import SwiftData
+
+struct MoneyView: View {
+    @Environment(\.modelContext) private var ctx
+    @Query(sort: \Transaction.date, order: .reverse) private var transactions: [Transaction]
+
+    enum Filter: Hashable { case all, expense, income }
+    @State private var filter: Filter = .all
+    @State private var showAdd: Bool = false
+    @State private var addKind: TransactionKind = .expense
+
+    private var filtered: [Transaction] {
+        switch filter {
+        case .all: return transactions
+        case .expense: return transactions.filter { $0.kind == .expense }
+        case .income: return transactions.filter { $0.kind == .income }
+        }
+    }
+
+    private var totalExpense: Double {
+        transactions.filter { $0.kind == .expense }.map(\.amount).reduce(0,+)
+    }
+    private var totalIncome: Double {
+        transactions.filter { $0.kind == .income }.map(\.amount).reduce(0,+)
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                PageHeader(eyebrow: "Activity", title: "Money", trailing: AnyView(
+                    LumenAddButton {
+                        addKind = filter == .income ? .income : .expense
+                        showAdd = true
+                    }
+                ))
+
+                summaryCard
+
+                LumenSegmented(selection: $filter, options: [
+                    (.all, "All"),
+                    (.expense, "Expenses"),
+                    (.income, "Income")
+                ])
+
+                if filtered.isEmpty {
+                    LumenEmpty(symbol: "tray", title: "Nothing here yet", message: "Tap the + button to log your first transaction.")
+                } else {
+                    ForEach(grouped(filtered), id: \.0) { (key, items) in
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(key.uppercased())
+                                .font(.system(size: 10, weight: .semibold)).tracking(1.6)
+                                .foregroundStyle(LumenTheme.textTertiary)
+                                .padding(.leading, 4)
+                            VStack(spacing: 10) {
+                                ForEach(items, id: \.persistentModelID) { tx in
+                                    TransactionRow(tx: tx)
+                                        .swipeActions(edge: .trailing) {
+                                            Button(role: .destructive) {
+                                                ctx.delete(tx)
+                                            } label: { Label("Delete", systemImage: "trash") }
+                                        }
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(minLength: 100)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+        }
+        .scrollIndicators(.hidden)
+        .sheet(isPresented: $showAdd) {
+            AddTransactionSheet(initialKind: addKind)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+    }
+
+    private var summaryCard: some View {
+        HStack(spacing: 12) {
+            StatTileLarge(label: "Spent", value: totalExpense, tint: LumenTheme.gold, symbol: "arrow.up.right")
+            StatTileLarge(label: "Earned", value: totalIncome, tint: LumenTheme.green, symbol: "arrow.down.left")
+        }
+    }
+
+    private func grouped(_ items: [Transaction]) -> [(String, [Transaction])] {
+        let f = DateFormatter(); f.dateFormat = "MMMM yyyy"
+        var dict: [String: [Transaction]] = [:]
+        var order: [String] = []
+        for t in items {
+            let k = f.string(from: t.date)
+            if dict[k] == nil { order.append(k) }
+            dict[k, default: []].append(t)
+        }
+        return order.map { ($0, dict[$0] ?? []) }
+    }
+}
+
+struct StatTileLarge: View {
+    let label: String
+    let value: Double
+    let tint: Color
+    let symbol: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text(label.uppercased())
+                    .font(.system(size: 10, weight: .semibold)).tracking(1.6)
+                    .foregroundStyle(LumenTheme.textSecondary)
+                Spacer()
+                Image(systemName: symbol)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(tint)
+            }
+            Text(Money.compact(value))
+                .font(.system(size: 26, weight: .bold))
+                .foregroundStyle(LumenTheme.textPrimary)
+                .monospacedDigit()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LumenTheme.surface))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(LumenTheme.hairline, lineWidth: 1))
+    }
+}
+
+// MARK: - Add transaction
+
+struct AddTransactionSheet: View {
+    @Environment(\.modelContext) private var ctx
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var kind: TransactionKind
+    @State private var amountText: String = ""
+    @State private var category: TxCategory = .food
+    @State private var merchant: String = ""
+    @State private var note: String = ""
+    @State private var date: Date = .now
+
+    init(initialKind: TransactionKind) {
+        _kind = State(initialValue: initialKind)
+    }
+
+    private var amount: Double { Double(amountText.replacingOccurrences(of: ",", with: ".")) ?? 0 }
+    private var canSave: Bool { amount > 0 }
+
+    var body: some View {
+        ZStack {
+            LumenTheme.bg.ignoresSafeArea()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    HStack {
+                        Text("New \(kind.label)")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundStyle(LumenTheme.textPrimary)
+                        Spacer()
+                        Button("Cancel") { dismiss() }
+                            .foregroundStyle(LumenTheme.textSecondary)
+                    }
+
+                    LumenSegmented(selection: $kind, options: [
+                        (TransactionKind.expense, "Expense"),
+                        (TransactionKind.income, "Income")
+                    ])
+                    .onChange(of: kind) { _, new in
+                        category = new == .income ? .salary : .food
+                    }
+
+                    // Amount
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("AMOUNT")
+                            .font(.system(size: 10, weight: .semibold)).tracking(1.6)
+                            .foregroundStyle(LumenTheme.textSecondary)
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text("$")
+                                .font(.system(size: 36, weight: .light))
+                                .foregroundStyle(LumenTheme.textTertiary)
+                            TextField("0", text: $amountText)
+                                .keyboardType(.decimalPad)
+                                .font(.system(size: 56, weight: .bold))
+                                .foregroundStyle(kind == .income ? LumenTheme.green : LumenTheme.textPrimary)
+                        }
+                    }
+                    .padding(20)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(LumenTheme.surface))
+                    .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(LumenTheme.hairline, lineWidth: 1))
+
+                    // Category
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("CATEGORY")
+                            .font(.system(size: 10, weight: .semibold)).tracking(1.6)
+                            .foregroundStyle(LumenTheme.textSecondary)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(TxCategory.allCases) { cat in
+                                    Button {
+                                        category = cat
+                                    } label: {
+                                        LumenChip(label: cat.label, symbol: cat.symbol, active: category == cat)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                        .contentMargins(.horizontal, 0, for: .scrollContent)
+                    }
+
+                    // Merchant + note
+                    VStack(spacing: 10) {
+                        FieldRow(label: "Merchant", text: $merchant, placeholder: "e.g. Blue Bottle")
+                        FieldRow(label: "Note", text: $note, placeholder: "Optional")
+                        DatePicker("Date", selection: $date, displayedComponents: [.date])
+                            .datePickerStyle(.compact)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(LumenTheme.surface))
+                            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(LumenTheme.hairline, lineWidth: 1))
+                            .tint(LumenTheme.gold)
+                    }
+
+                    Button {
+                        save()
+                    } label: {
+                        Text("Save \(kind.label)")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.black)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(Capsule().fill(LumenTheme.goldGradient))
+                            .opacity(canSave ? 1 : 0.5)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!canSave)
+                    .sensoryFeedback(.success, trigger: false)
+
+                    Spacer(minLength: 40)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+            }
+        }
+    }
+
+    private func save() {
+        let t = Transaction(amount: amount, kind: kind, category: category, note: note, merchant: merchant, date: date)
+        ctx.insert(t)
+        dismiss()
+    }
+}
+
+struct FieldRow: View {
+    let label: String
+    @Binding var text: String
+    let placeholder: String
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(LumenTheme.textSecondary)
+                .frame(width: 90, alignment: .leading)
+            TextField(placeholder, text: $text)
+                .font(.system(size: 15))
+                .foregroundStyle(LumenTheme.textPrimary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(LumenTheme.surface))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(LumenTheme.hairline, lineWidth: 1))
+    }
+}

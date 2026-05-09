@@ -1,0 +1,242 @@
+//
+//  CalendarView.swift
+//  Lumen
+//
+
+import SwiftUI
+import SwiftData
+
+struct CalendarView: View {
+    @Query private var transactions: [Transaction]
+    @Query private var subs: [SubscriptionItem]
+
+    @State private var selectedDate: Date = .now
+    @State private var monthAnchor: Date = .now
+
+    private let cal = Calendar.current
+
+    private var monthDays: [Date] {
+        guard let interval = cal.dateInterval(of: .month, for: monthAnchor) else { return [] }
+        let firstWeekday = cal.component(.weekday, from: interval.start) - 1
+        let daysInMonth = cal.range(of: .day, in: .month, for: monthAnchor)?.count ?? 30
+        var dates: [Date] = []
+        // Padding before
+        for i in 0..<firstWeekday {
+            if let d = cal.date(byAdding: .day, value: -firstWeekday + i, to: interval.start) {
+                dates.append(d)
+            }
+        }
+        for i in 0..<daysInMonth {
+            if let d = cal.date(byAdding: .day, value: i, to: interval.start) {
+                dates.append(d)
+            }
+        }
+        // Pad to 42
+        while dates.count < 42 {
+            if let last = dates.last, let d = cal.date(byAdding: .day, value: 1, to: last) {
+                dates.append(d)
+            } else { break }
+        }
+        return dates
+    }
+
+    private func eventsCount(_ date: Date) -> (expense: Int, income: Int, sub: Int) {
+        var e = 0, i = 0, s = 0
+        for t in transactions where cal.isDate(t.date, inSameDayAs: date) {
+            if t.kind == .expense { e += 1 } else { i += 1 }
+        }
+        for sub in subs where cal.isDate(sub.nextBillingDate, inSameDayAs: date) {
+            s += 1
+        }
+        return (e, i, s)
+    }
+
+    private var dayItems: [DayItem] {
+        var items: [DayItem] = []
+        for t in transactions where cal.isDate(t.date, inSameDayAs: selectedDate) {
+            items.append(.transaction(t))
+        }
+        for s in subs where cal.isDate(s.nextBillingDate, inSameDayAs: selectedDate) {
+            items.append(.subscription(s))
+        }
+        return items
+    }
+
+    enum DayItem: Identifiable {
+        case transaction(Transaction)
+        case subscription(SubscriptionItem)
+        var id: String {
+            switch self {
+            case .transaction(let t): "tx-\(t.persistentModelID.hashValue)"
+            case .subscription(let s): "sub-\(s.persistentModelID.hashValue)"
+            }
+        }
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                PageHeader(eyebrow: "Schedule", title: "Calendar")
+
+                monthPicker
+                weekdayHeader
+                grid
+
+                selectedDayPanel
+
+                Spacer(minLength: 100)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+        }
+        .scrollIndicators(.hidden)
+    }
+
+    private var monthPicker: some View {
+        HStack {
+            Text(monthAnchor.formatted(.dateTime.month(.wide).year()))
+                .font(.system(size: 22, weight: .bold))
+                .foregroundStyle(LumenTheme.textPrimary)
+                .contentTransition(.numericText())
+            Spacer()
+            HStack(spacing: 10) {
+                circleButton(symbol: "chevron.left") {
+                    withAnimation(.spring(response: 0.4)) {
+                        monthAnchor = cal.date(byAdding: .month, value: -1, to: monthAnchor) ?? monthAnchor
+                    }
+                }
+                circleButton(symbol: "chevron.right") {
+                    withAnimation(.spring(response: 0.4)) {
+                        monthAnchor = cal.date(byAdding: .month, value: 1, to: monthAnchor) ?? monthAnchor
+                    }
+                }
+            }
+        }
+    }
+
+    private func circleButton(symbol: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(LumenTheme.textPrimary)
+                .frame(width: 34, height: 34)
+                .background(Circle().fill(LumenTheme.surface))
+                .overlay(Circle().strokeBorder(LumenTheme.hairline, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var weekdayHeader: some View {
+        let symbols = cal.veryShortStandaloneWeekdaySymbols
+        return HStack {
+            ForEach(symbols, id: \.self) { s in
+                Text(s)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(LumenTheme.textTertiary)
+                    .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    private var grid: some View {
+        let cols = Array(repeating: GridItem(.flexible(), spacing: 6), count: 7)
+        return LazyVGrid(columns: cols, spacing: 6) {
+            ForEach(monthDays, id: \.self) { date in
+                DayCell(
+                    date: date,
+                    isCurrentMonth: cal.isDate(date, equalTo: monthAnchor, toGranularity: .month),
+                    isSelected: cal.isDate(date, inSameDayAs: selectedDate),
+                    isToday: cal.isDateInToday(date),
+                    events: eventsCount(date)
+                )
+                .onTapGesture {
+                    withAnimation(.spring(response: 0.3)) {
+                        selectedDate = date
+                    }
+                }
+            }
+        }
+    }
+
+    private var selectedDayPanel: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(selectedDate.formatted(.dateTime.weekday(.wide)))
+                        .font(.system(size: 11, weight: .semibold)).tracking(1.5)
+                        .foregroundStyle(LumenTheme.gold)
+                    Text(selectedDate.formatted(.dateTime.month(.wide).day()))
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(LumenTheme.textPrimary)
+                }
+                Spacer()
+            }
+
+            if dayItems.isEmpty {
+                Text("Nothing scheduled.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(LumenTheme.textSecondary)
+                    .padding(.vertical, 20)
+                    .frame(maxWidth: .infinity)
+                    .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(LumenTheme.surface))
+                    .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(LumenTheme.hairline, lineWidth: 1))
+            } else {
+                VStack(spacing: 10) {
+                    ForEach(dayItems) { item in
+                        switch item {
+                        case .transaction(let t): TransactionRow(tx: t)
+                        case .subscription(let s): SubscriptionRow(sub: s)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct DayCell: View {
+    let date: Date
+    let isCurrentMonth: Bool
+    let isSelected: Bool
+    let isToday: Bool
+    let events: (expense: Int, income: Int, sub: Int)
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text("\(Calendar.current.component(.day, from: date))")
+                .font(.system(size: 14, weight: isSelected ? .bold : .semibold))
+                .foregroundStyle(textColor)
+            HStack(spacing: 3) {
+                if events.expense > 0 { dot(LumenTheme.gold) }
+                if events.income > 0 { dot(LumenTheme.green) }
+                if events.sub > 0 { dot(LumenTheme.red) }
+            }
+            .frame(height: 5)
+        }
+        .frame(maxWidth: .infinity, minHeight: 46)
+        .background(
+            ZStack {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous).fill(LumenTheme.goldGradient)
+                } else if isToday {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous).fill(LumenTheme.surface2)
+                }
+            }
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(isToday && !isSelected ? LumenTheme.gold.opacity(0.6) : Color.clear, lineWidth: 1)
+        )
+        .opacity(isCurrentMonth ? 1 : 0.3)
+        .contentShape(Rectangle())
+    }
+
+    private var textColor: Color {
+        if isSelected { return .black }
+        return LumenTheme.textPrimary
+    }
+
+    private func dot(_ c: Color) -> some View {
+        Circle().fill(isSelected ? .black : c).frame(width: 4, height: 4)
+    }
+}

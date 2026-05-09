@@ -1,0 +1,74 @@
+//
+//  Transaction.swift
+//  Lumen
+//
+
+import Foundation
+import SwiftData
+import SwiftUI
+
+enum TransactionKind: String, Codable, CaseIterable, Identifiable {
+    case expense, income
+    var id: String { rawValue }
+    var label: String { self == .expense ? "Expense" : "Income" }
+}
+
+enum TxCategory: String, Codable, CaseIterable, Identifiable {
+    case food, transport, shopping, bills, entertainment, health, travel, gifts, salary, freelance, investment, other
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .food: "Food & Drink"
+        case .transport: "Transport"
+        case .shopping: "Shopping"
+        case .bills: "Bills"
+        case .entertainment: "Entertainment"
+        case .health: "Health"
+        case .travel: "Travel"
+        case .gifts: "Gifts"
+        case .salary: "Salary"
+        case .freelance: "Freelance"
+        case .investment: "Investment"
+        case .other: "Other"
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .food: "fork.knife"
+        case .transport: "car.fill"
+        case .shopping: "bag.fill"
+        case .bills: "doc.text.fill"
+        case .entertainment: "play.tv.fill"
+        case .health: "heart.fill"
+        case .travel: "airplane"
+        case .gifts: "gift.fill"
+        case .salary: "briefcase.fill"
+        case .freelance: "laptopcomputer"
+        case .investment: "chart.line.uptrend.xyaxis"
+        case .other: "circle.grid.2x2.fill"
+        }
+    }
+}
+
+@Model
+final class Transaction {
+    var amount: Double
+    var kindRaw: String
+    var categoryRaw: String
+    var note: String
+    var date: Date
+    var merchant: String
+
+    init(amount: Double, kind: TransactionKind, category: TxCategory, note: String = "", merchant: String = "", date: Date = Date()) {
+        self.amount = amount
+        self.kindRaw = kind.rawValue
+        self.categoryRaw = category.rawValue
+        self.note = note
+        self.merchant = merchant
+        self.date = date
+    }
+
+    var kind: TransactionKind { TransactionKind(rawValue: kindRaw) ?? .expense }
+    var category: TxCategory { TxCategory(rawValue: categoryRaw) ?? .other }
+    var signedAmount: Double { kind == .expense ? -amount : amount }
+}

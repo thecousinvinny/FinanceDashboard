@@ -1,0 +1,210 @@
+//
+//  Components.swift
+//  Lumen
+//
+
+import SwiftUI
+
+// MARK: - Section header
+
+struct LumenSectionHeader: View {
+    let title: String
+    var subtitle: String? = nil
+    var trailing: AnyView? = nil
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title.uppercased())
+                    .font(.system(size: 11, weight: .semibold))
+                    .tracking(1.6)
+                    .foregroundStyle(LumenTheme.gold)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(LumenTheme.textPrimary)
+                }
+            }
+            Spacer()
+            trailing
+        }
+    }
+}
+
+// MARK: - Pill / Chip
+
+struct LumenChip: View {
+    let label: String
+    var symbol: String? = nil
+    var active: Bool = false
+    var body: some View {
+        HStack(spacing: 6) {
+            if let symbol {
+                Image(systemName: symbol)
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            Text(label)
+                .font(.system(size: 13, weight: .medium))
+        }
+        .foregroundStyle(active ? Color.black : LumenTheme.textPrimary)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(
+            Capsule()
+                .fill(active ? AnyShapeStyle(LumenTheme.goldGradient) : AnyShapeStyle(LumenTheme.surface))
+        )
+        .overlay(
+            Capsule().strokeBorder(active ? Color.clear : LumenTheme.hairline, lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Big number display
+
+struct DisplayAmount: View {
+    let value: Double
+    var size: CGFloat = 56
+    var tint: Color = LumenTheme.textPrimary
+    var body: some View {
+        let formatted = Money.format(abs(value))
+        HStack(alignment: .firstTextBaseline, spacing: 0) {
+            Text(formatted.prefix(1))
+                .font(.system(size: size * 0.55, weight: .light, design: .default))
+                .foregroundStyle(LumenTheme.textTertiary)
+                .baselineOffset(size * 0.18)
+            Text(formatted.dropFirst())
+                .font(.system(size: size, weight: .bold, design: .default))
+                .foregroundStyle(tint)
+                .kerning(-1)
+        }
+        .contentTransition(.numericText())
+    }
+}
+
+// MARK: - Page header
+
+struct PageHeader: View {
+    let eyebrow: String
+    let title: String
+    var trailing: AnyView? = nil
+
+    var body: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(eyebrow.uppercased())
+                    .font(.system(size: 10, weight: .semibold))
+                    .tracking(2)
+                    .foregroundStyle(LumenTheme.gold)
+                Text(title)
+                    .font(.system(size: 34, weight: .bold))
+                    .foregroundStyle(LumenTheme.textPrimary)
+                    .kerning(-0.8)
+            }
+            Spacer()
+            trailing
+        }
+    }
+}
+
+// MARK: - Empty state
+
+struct LumenEmpty: View {
+    let symbol: String
+    let title: String
+    let message: String
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: symbol)
+                .font(.system(size: 32, weight: .light))
+                .foregroundStyle(LumenTheme.gold)
+                .padding(20)
+                .background(Circle().fill(LumenTheme.surface))
+                .overlay(Circle().strokeBorder(LumenTheme.hairline, lineWidth: 1))
+            Text(title)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(LumenTheme.textPrimary)
+            Text(message)
+                .font(.system(size: 14))
+                .foregroundStyle(LumenTheme.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 40)
+    }
+}
+
+// MARK: - Segmented
+
+struct LumenSegmented<Value: Hashable>: View {
+    @Binding var selection: Value
+    let options: [(value: Value, label: String)]
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(options.indices, id: \.self) { i in
+                let opt = options[i]
+                let isOn = selection == opt.value
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                        selection = opt.value
+                    }
+                } label: {
+                    Text(opt.label)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(isOn ? .black : LumenTheme.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(
+                            Group {
+                                if isOn {
+                                    Capsule().fill(LumenTheme.goldGradient)
+                                } else {
+                                    Color.clear
+                                }
+                            }
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(4)
+        .background(Capsule().fill(LumenTheme.surface))
+        .overlay(Capsule().strokeBorder(LumenTheme.hairline, lineWidth: 1))
+    }
+}
+
+// MARK: - Add button
+
+struct LumenAddButton: View {
+    var action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "plus")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(.black)
+                .frame(width: 38, height: 38)
+                .background(Circle().fill(LumenTheme.goldGradient))
+                .overlay(Circle().strokeBorder(.white.opacity(0.2), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .sensoryFeedback(.impact(weight: .light), trigger: UUID())
+    }
+}
+
+// MARK: - Progress arc bar
+
+struct ThinProgress: View {
+    let progress: Double
+    var tint: LinearGradient = LumenTheme.goldGradient
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule().fill(LumenTheme.surface2)
+                Capsule()
+                    .fill(tint)
+                    .frame(width: max(6, geo.size.width * min(1, max(0, progress))))
+            }
+        }
+        .frame(height: 6)
+    }
+}

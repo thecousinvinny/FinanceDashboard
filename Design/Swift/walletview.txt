@@ -1,0 +1,416 @@
+//
+//  WalletView.swift
+//  Lumen
+//
+
+import SwiftUI
+import SwiftData
+
+struct WalletView: View {
+    @Environment(\.modelContext) private var ctx
+    @Query(sort: \BankAccount.createdAt) private var banks: [BankAccount]
+    @Query private var cards: [CardItem]
+
+    enum Tab: Hashable { case cards, banks }
+    @State private var tab: Tab = .cards
+    @State private var showAddBank = false
+    @State private var showAddCard = false
+
+    private var totalCash: Double { banks.map(\.balance).reduce(0,+) }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                PageHeader(eyebrow: "Wallet", title: "Wallet", trailing: AnyView(
+                    LumenAddButton {
+                        if tab == .cards { showAddCard = true } else { showAddBank = true }
+                    }
+                ))
+
+                LumenSegmented(selection: $tab, options: [
+                    (Tab.cards, "Cards"),
+                    (Tab.banks, "Banks")
+                ])
+
+                if tab == .cards {
+                    if cards.isEmpty {
+                        LumenEmpty(symbol: "creditcard", title: "No cards yet", message: "Add a card to keep tabs on balances and limits.")
+                    } else {
+                        VStack(spacing: 18) {
+                            ForEach(cards, id: \.persistentModelID) { card in
+                                CardVisual(card: card)
+                                    .contextMenu {
+                                        Button(role: .destructive) { ctx.delete(card) } label: { Label("Delete", systemImage: "trash") }
+                                    }
+                            }
+                        }
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: 14) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("TOTAL ACROSS BANKS")
+                                .font(.system(size: 10, weight: .semibold)).tracking(1.6)
+                                .foregroundStyle(LumenTheme.textSecondary)
+                            DisplayAmount(value: totalCash, size: 40, tint: LumenTheme.textPrimary)
+                        }
+                        .glassCard(padding: 20, cornerRadius: 24)
+
+                        if banks.isEmpty {
+                            LumenEmpty(symbol: "building.columns", title: "No banks yet", message: "Add bank accounts to track your balance.")
+                        } else {
+                            VStack(spacing: 10) {
+                                ForEach(banks, id: \.persistentModelID) { bank in
+                                    BankRow(bank: bank)
+                                        .swipeActions(edge: .trailing) {
+                                            Button(role: .destructive) { ctx.delete(bank) } label: { Label("Delete", systemImage: "trash") }
+                                        }
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(minLength: 100)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+        }
+        .scrollIndicators(.hidden)
+        .sheet(isPresented: $showAddBank) {
+            AddBankSheet().presentationDetents([.large]).presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showAddCard) {
+            AddCardSheet().presentationDetents([.large]).presentationDragIndicator(.visible)
+        }
+    }
+}
+
+// MARK: - Card Visual
+
+struct CardVisual: View {
+    let card: CardItem
+
+    private var bgGradient: LinearGradient {
+        switch card.styleRaw {
+        case "gold":
+            return LumenTheme.goldGradient
+        case "green":
+            return LinearGradient(colors: [
+                Color(red: 0.13, green: 0.36, blue: 0.22),
+                Color(red: 0.05, green: 0.18, blue: 0.10)
+            ], startPoint: .topLeading, endPoint: .bottomTrailing)
+        default:
+            return LinearGradient(colors: [
+                Color(red: 0.10, green: 0.10, blue: 0.12),
+                Color(red: 0.04, green: 0.04, blue: 0.05)
+            ], startPoint: .topLeading, endPoint: .bottomTrailing)
+        }
+    }
+
+    private var foreground: Color {
+        card.styleRaw == "gold" ? .black : LumenTheme.textPrimary
+    }
+
+    private var accent: Color {
+        card.styleRaw == "gold" ? .black.opacity(0.7) : LumenTheme.gold
+    }
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            // Background
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(bgGradient)
+            // Subtle pattern
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .strokeBorder(.white.opacity(0.08), lineWidth: 1)
+            // Sheen
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(LinearGradient(colors: [.white.opacity(0.08), .clear], startPoint: .topLeading, endPoint: .center))
+                .blendMode(.plusLighter)
+
+            VStack(alignment: .leading) {
+                HStack {
+                    Text("LUMEN")
+                        .font(.system(size: 11, weight: .bold)).tracking(3)
+                        .foregroundStyle(accent)
+                    Spacer()
+                    Text(card.kind.label.uppercased())
+                        .font(.system(size: 10, weight: .semibold)).tracking(1.5)
+                        .foregroundStyle(foreground.opacity(0.7))
+                }
+                Spacer()
+                // Chip
+                HStack(spacing: 8) {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(LinearGradient(colors: [Color(white: 0.85), Color(white: 0.55)], startPoint: .top, endPoint: .bottom))
+                        .frame(width: 32, height: 22)
+                        .overlay(
+                            VStack(spacing: 1) {
+                                ForEach(0..<3, id: \.self) { _ in
+                                    Rectangle().fill(.black.opacity(0.25)).frame(height: 1)
+                                }
+                            }
+                            .padding(3)
+                        )
+                    Image(systemName: "wave.3.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(foreground.opacity(0.6))
+                }
+                Spacer()
+                Text("•••• •••• •••• \(card.last4)")
+                    .font(.system(size: 18, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(foreground)
+                    .kerning(2)
+                HStack(alignment: .bottom) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("CARDHOLDER")
+                            .font(.system(size: 8, weight: .semibold)).tracking(1.2)
+                            .foregroundStyle(foreground.opacity(0.55))
+                        Text(card.holderName)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(foreground)
+                    }
+                    Spacer()
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("EXPIRES")
+                            .font(.system(size: 8, weight: .semibold)).tracking(1.2)
+                            .foregroundStyle(foreground.opacity(0.55))
+                        Text(card.expString)
+                            .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(foreground)
+                    }
+                    Spacer()
+                    Text(card.network.label)
+                        .font(.system(size: 14, weight: .heavy, design: .default))
+                        .italic()
+                        .foregroundStyle(foreground)
+                }
+            }
+            .padding(20)
+        }
+        .frame(height: 200)
+        .shadow(color: .black.opacity(0.4), radius: 18, y: 10)
+    }
+}
+
+// MARK: - Bank Row
+
+struct BankRow: View {
+    let bank: BankAccount
+
+    private var tint: Color {
+        switch bank.colorHex {
+        case "4ADE80": return LumenTheme.green
+        case "FAFAFA": return LumenTheme.textPrimary
+        default: return LumenTheme.gold
+        }
+    }
+
+    private var symbol: String {
+        switch bank.type {
+        case .checking: "building.columns.fill"
+        case .savings: "lock.fill"
+        case .investment: "chart.line.uptrend.xyaxis"
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12, style: .continuous).fill(tint.opacity(0.12))
+                Image(systemName: symbol)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(tint)
+            }
+            .frame(width: 44, height: 44)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(bank.name)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(LumenTheme.textPrimary)
+                Text("\(bank.type.label.capitalized) • •••\(bank.accountMask)")
+                    .font(.system(size: 12))
+                    .foregroundStyle(LumenTheme.textTertiary)
+            }
+            Spacer()
+            Text(Money.format(bank.balance))
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(LumenTheme.textPrimary)
+                .monospacedDigit()
+        }
+        .padding(.horizontal, 16).padding(.vertical, 14)
+        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(LumenTheme.surface))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(LumenTheme.hairline, lineWidth: 1))
+    }
+}
+
+// MARK: - Add Bank
+
+struct AddBankSheet: View {
+    @Environment(\.modelContext) private var ctx
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var name: String = ""
+    @State private var balanceText: String = ""
+    @State private var mask: String = ""
+    @State private var type: AccountType = .checking
+
+    var canSave: Bool { !name.isEmpty }
+
+    var body: some View {
+        ZStack {
+            LumenTheme.bg.ignoresSafeArea()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    HStack {
+                        Text("New Bank Account").font(.system(size: 24, weight: .bold))
+                            .foregroundStyle(LumenTheme.textPrimary)
+                        Spacer()
+                        Button("Cancel") { dismiss() }.foregroundStyle(LumenTheme.textSecondary)
+                    }
+                    FieldRow(label: "Name", text: $name, placeholder: "Lumen Reserve")
+                    FieldRow(label: "Balance", text: $balanceText, placeholder: "0")
+                    FieldRow(label: "Last 4", text: $mask, placeholder: "0000")
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("TYPE").font(.system(size: 10, weight: .semibold)).tracking(1.6)
+                            .foregroundStyle(LumenTheme.textSecondary)
+                        HStack(spacing: 8) {
+                            ForEach(AccountType.allCases) { t in
+                                Button { type = t } label: { LumenChip(label: t.label, active: type == t) }
+                                    .buttonStyle(.plain)
+                            }
+                        }
+                    }
+
+                    Button {
+                        let bal = Double(balanceText.replacingOccurrences(of: ",", with: ".")) ?? 0
+                        let b = BankAccount(name: name, balance: bal, type: type, accountMask: mask.isEmpty ? "0000" : mask)
+                        ctx.insert(b)
+                        dismiss()
+                    } label: {
+                        Text("Save Account")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.black)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(Capsule().fill(LumenTheme.goldGradient))
+                            .opacity(canSave ? 1 : 0.5)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!canSave)
+                    Spacer(minLength: 40)
+                }
+                .padding(.horizontal, 20).padding(.top, 16)
+            }
+        }
+    }
+}
+
+// MARK: - Add Card
+
+struct AddCardSheet: View {
+    @Environment(\.modelContext) private var ctx
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var nickname: String = ""
+    @State private var holder: String = ""
+    @State private var last4: String = ""
+    @State private var month: String = "12"
+    @State private var year: String = "29"
+    @State private var kind: CardKind = .debit
+    @State private var network: CardNetwork = .visa
+    @State private var style: String = "black"
+
+    var canSave: Bool { !nickname.isEmpty && last4.count >= 3 }
+
+    var body: some View {
+        ZStack {
+            LumenTheme.bg.ignoresSafeArea()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    HStack {
+                        Text("New Card").font(.system(size: 24, weight: .bold))
+                            .foregroundStyle(LumenTheme.textPrimary)
+                        Spacer()
+                        Button("Cancel") { dismiss() }.foregroundStyle(LumenTheme.textSecondary)
+                    }
+
+                    // Preview
+                    let preview = CardItem(nickname: nickname.isEmpty ? "New Card" : nickname,
+                                           last4: last4.isEmpty ? "0000" : last4,
+                                           holderName: holder.isEmpty ? "YOUR NAME" : holder.uppercased(),
+                                           expMonth: Int(month) ?? 12,
+                                           expYear: 2000 + (Int(year) ?? 29),
+                                           kind: kind, network: network, style: style)
+                    CardVisual(card: preview)
+
+                    FieldRow(label: "Nickname", text: $nickname, placeholder: "Lumen Black")
+                    FieldRow(label: "Cardholder", text: $holder, placeholder: "ALEX MORGAN")
+                    FieldRow(label: "Last 4", text: $last4, placeholder: "1234")
+                    HStack(spacing: 10) {
+                        FieldRow(label: "Month", text: $month, placeholder: "12")
+                        FieldRow(label: "Year", text: $year, placeholder: "29")
+                    }
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("TYPE").font(.system(size: 10, weight: .semibold)).tracking(1.6)
+                            .foregroundStyle(LumenTheme.textSecondary)
+                        HStack(spacing: 8) {
+                            ForEach(CardKind.allCases) { k in
+                                Button { kind = k } label: { LumenChip(label: k.label, active: kind == k) }
+                                    .buttonStyle(.plain)
+                            }
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("NETWORK").font(.system(size: 10, weight: .semibold)).tracking(1.6)
+                            .foregroundStyle(LumenTheme.textSecondary)
+                        HStack(spacing: 8) {
+                            ForEach(CardNetwork.allCases) { n in
+                                Button { network = n } label: { LumenChip(label: n.label, active: network == n) }
+                                    .buttonStyle(.plain)
+                            }
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("STYLE").font(.system(size: 10, weight: .semibold)).tracking(1.6)
+                            .foregroundStyle(LumenTheme.textSecondary)
+                        HStack(spacing: 10) {
+                            ForEach(["black","gold","green"], id: \.self) { s in
+                                Button { style = s } label: {
+                                    Circle()
+                                        .fill(s == "black" ? AnyShapeStyle(Color.black) :
+                                              s == "gold" ? AnyShapeStyle(LumenTheme.goldGradient) :
+                                              AnyShapeStyle(LumenTheme.greenGradient))
+                                        .frame(width: 36, height: 36)
+                                        .overlay(Circle().strokeBorder(style == s ? LumenTheme.gold : LumenTheme.hairline, lineWidth: style == s ? 2 : 1))
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+
+                    Button {
+                        let c = CardItem(nickname: nickname, last4: last4, holderName: holder.uppercased(), expMonth: Int(month) ?? 12, expYear: 2000 + (Int(year) ?? 29), kind: kind, network: network, style: style)
+                        ctx.insert(c)
+                        dismiss()
+                    } label: {
+                        Text("Save Card")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.black)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(Capsule().fill(LumenTheme.goldGradient))
+                            .opacity(canSave ? 1 : 0.5)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!canSave)
+                    Spacer(minLength: 40)
+                }
+                .padding(.horizontal, 20).padding(.top, 16)
+            }
+        }
+    }
+}

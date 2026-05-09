@@ -1,0 +1,338 @@
+//
+//  StudioView.swift
+//  Lumen
+//
+
+import SwiftUI
+import SwiftData
+
+struct StudioView: View {
+    @Environment(\.modelContext) private var ctx
+    @Query(sort: \Commission.deadline) private var commissions: [Commission]
+    @State private var selectedStatus: CommissionStatus? = nil
+    @State private var showAddCommission = false
+    @State private var calendarTriggeredID: PersistentIdentifier? = nil
+
+    private var visibleCommissions: [Commission] {
+        guard let selectedStatus else { return commissions }
+        return commissions.filter { $0.status == selectedStatus }
+    }
+
+    private var activeValue: Double {
+        commissions.filter(\.isOpen).map(\.price).reduce(0, +)
+    }
+
+    private var paidValue: Double {
+        commissions.filter { $0.status == .paid }.map(\.price).reduce(0, +)
+    }
+
+    var body: some View {
+        ZStack(alignment: .bottomTrailing) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    PageHeader(eyebrow: "Studio", title: "Commission Desk")
+
+                    studioHero
+
+                    statusRail
+
+                    LumenSectionHeader(title: "Intake", subtitle: "Pending, active, completed")
+
+                    if visibleCommissions.isEmpty {
+                        LumenEmpty(symbol: "paintpalette.fill", title: "No commissions here", message: "Add a client project and move it through your studio workflow.")
+                    } else {
+                        VStack(spacing: 12) {
+                            ForEach(visibleCommissions, id: \.persistentModelID) { commission in
+                                CommissionCard(
+                                    commission: commission,
+                                    didTriggerCalendar: calendarTriggeredID == commission.persistentModelID,
+                                    approveAction: { approve(commission) },
+                                    advanceAction: { advance(commission) },
+                                    markPaidAction: { markPaid(commission) }
+                                )
+                                .swipeActions(edge: .trailing) {
+                                    Button(role: .destructive) { ctx.delete(commission) } label: { Label("Delete", systemImage: "trash") }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(minLength: 110)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+            }
+            .scrollIndicators(.hidden)
+
+            Button {
+                showAddCommission = true
+            } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(.black)
+                    .frame(width: 62, height: 62)
+                    .background(Circle().fill(LumenTheme.goldGradient))
+                    .overlay(Circle().strokeBorder(.white.opacity(0.22), lineWidth: 1))
+                    .shadow(color: LumenTheme.gold.opacity(0.28), radius: 24, y: 10)
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 22)
+            .padding(.bottom, 96)
+        }
+        .sheet(isPresented: $showAddCommission) {
+            AddCommissionSheet()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+    }
+
+    private var studioHero: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("MATTE BLACK LEDGER")
+                        .font(.system(size: 10, weight: .semibold))
+                        .tracking(1.8)
+                        .foregroundStyle(LumenTheme.gold)
+                    DisplayAmount(value: activeValue, size: 40, tint: LumenTheme.textPrimary)
+                    Text("open commission value")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(LumenTheme.textSecondary)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 6) {
+                    Image(systemName: "sparkle.magnifyingglass")
+                        .font(.system(size: 28, weight: .medium))
+                        .foregroundStyle(LumenTheme.gold)
+                    Text(Money.compact(paidValue))
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(LumenTheme.green)
+                    Text("paid")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(LumenTheme.textTertiary)
+                }
+            }
+
+            HStack(spacing: 8) {
+                StudioMetric(label: "Pending", value: commissions.filter { $0.status == .pending }.count, tint: LumenTheme.gold)
+                StudioMetric(label: "Active", value: commissions.filter { $0.status == .approved || $0.status == .inProgress }.count, tint: LumenTheme.green)
+                StudioMetric(label: "Done", value: commissions.filter { $0.status == .completed || $0.status == .paid }.count, tint: LumenTheme.textPrimary)
+            }
+        }
+        .glassCard(padding: 20, cornerRadius: 28)
+        .background(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(LumenTheme.gold.opacity(0.08))
+                .blur(radius: 22)
+        )
+    }
+
+    private var statusRail: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                Button { selectedStatus = nil } label: { LumenChip(label: "All", symbol: "tray.full.fill", active: selectedStatus == nil) }
+                    .buttonStyle(.plain)
+                ForEach(CommissionStatus.allCases) { status in
+                    Button { selectedStatus = status } label: { LumenChip(label: status.label, active: selectedStatus == status) }
+                        .buttonStyle(.plain)
+                }
+            }
+        }
+        .contentMargins(.horizontal, 0, for: .scrollContent)
+    }
+
+    private func approve(_ commission: Commission) {
+        commission.status = .approved
+        calendarTriggeredID = commission.persistentModelID
+    }
+
+    private func advance(_ commission: Commission) {
+        guard let next = commission.status.next else { return }
+        commission.status = next
+    }
+
+    private func markPaid(_ commission: Commission) {
+        commission.status = .paid
+        ctx.insert(Transaction(amount: commission.price, kind: .income, category: .freelance, note: "Commission paid: \(commission.projectType)", merchant: commission.clientName, date: Date()))
+    }
+}
+
+private struct StudioMetric: View {
+    let label: String
+    let value: Int
+    let tint: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("\(value)")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundStyle(tint)
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(LumenTheme.textSecondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(.black.opacity(0.25)))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(LumenTheme.hairline, lineWidth: 1))
+    }
+}
+
+private struct CommissionCard: View {
+    let commission: Commission
+    let didTriggerCalendar: Bool
+    let approveAction: () -> Void
+    let advanceAction: () -> Void
+    let markPaidAction: () -> Void
+
+    private var deadlineText: String {
+        commission.deadline.formatted(date: .abbreviated, time: .omitted)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(commission.clientName)
+                        .font(.system(size: 19, weight: .bold))
+                        .foregroundStyle(LumenTheme.textPrimary)
+                    Text(commission.projectType)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(LumenTheme.textSecondary)
+                }
+                Spacer()
+                Text(Money.format(commission.price))
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(LumenTheme.gold)
+            }
+
+            HStack(spacing: 8) {
+                Label(deadlineText, systemImage: "calendar")
+                Spacer()
+                Text(commission.status.label)
+            }
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(commission.status == .paid ? LumenTheme.green : LumenTheme.textSecondary)
+
+            FlowDots(status: commission.status)
+
+            if didTriggerCalendar {
+                Label("Calendar hold created", systemImage: "checkmark.circle.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(LumenTheme.green)
+            }
+
+            HStack(spacing: 10) {
+                if commission.status == .pending {
+                    GoldActionButton(title: "Approve + Calendar", symbol: "calendar.badge.plus", action: approveAction)
+                } else if commission.status == .completed {
+                    GoldActionButton(title: "Mark Paid", symbol: "banknote.fill", action: markPaidAction)
+                } else if commission.status != .paid {
+                    GoldActionButton(title: "Move to \(commission.status.next?.label ?? "Next")", symbol: "arrow.right", action: advanceAction)
+                } else {
+                    Label("Logged to income", systemImage: "checkmark.seal.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(LumenTheme.green)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+        .glassCard(padding: 18, cornerRadius: 24)
+    }
+}
+
+private struct FlowDots: View {
+    let status: CommissionStatus
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(CommissionStatus.allCases) { step in
+                Capsule()
+                    .fill(isComplete(step) ? AnyShapeStyle(LumenTheme.goldGradient) : AnyShapeStyle(LumenTheme.surface2))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 5)
+            }
+        }
+    }
+
+    private func isComplete(_ step: CommissionStatus) -> Bool {
+        guard let currentIndex = CommissionStatus.allCases.firstIndex(of: status), let stepIndex = CommissionStatus.allCases.firstIndex(of: step) else { return false }
+        return stepIndex <= currentIndex
+    }
+}
+
+private struct GoldActionButton: View {
+    let title: String
+    let symbol: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label(title, systemImage: symbol)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(.black)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Capsule().fill(LumenTheme.goldGradient))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct AddCommissionSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var ctx
+    @State private var clientName: String = ""
+    @State private var projectType: String = ""
+    @State private var priceText: String = ""
+    @State private var deadline: Date = Calendar.current.date(byAdding: .day, value: 14, to: Date()) ?? Date()
+    @State private var status: CommissionStatus = .pending
+
+    private var price: Double { Double(priceText.replacingOccurrences(of: ",", with: "")) ?? 0 }
+    private var canSave: Bool { !clientName.isEmpty && !projectType.isEmpty && price > 0 }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    PageHeader(eyebrow: "New Intake", title: "Add Commission")
+                    FieldRow(label: "Client", text: $clientName, placeholder: "e.g. Nova Lane")
+                    FieldRow(label: "Project", text: $projectType, placeholder: "Logo, portrait, cover art")
+                    FieldRow(label: "Price", text: $priceText, placeholder: "1200")
+                        .keyboardType(.decimalPad)
+                    DatePicker("Deadline", selection: $deadline, displayedComponents: [.date])
+                        .datePickerStyle(.graphical)
+                        .tint(LumenTheme.gold)
+                        .glassCard(padding: 12, cornerRadius: 20)
+
+                    LumenSegmented(selection: $status, options: CommissionStatus.allCases.map { ($0, $0.label) })
+
+                    Button { save() } label: {
+                        Text("Save Commission")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.black)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(Capsule().fill(LumenTheme.goldGradient))
+                            .opacity(canSave ? 1 : 0.45)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!canSave)
+                }
+                .padding(20)
+            }
+            .background(LumenTheme.bg.ignoresSafeArea())
+        }
+    }
+
+    private func save() {
+        ctx.insert(Commission(clientName: clientName, projectType: projectType, price: price, deadline: deadline, status: status))
+        dismiss()
+    }
+}
+
+#Preview {
+    StudioView()
+        .modelContainer(for: [Commission.self, Transaction.self], inMemory: true)
+        .preferredColorScheme(.dark)
+}
