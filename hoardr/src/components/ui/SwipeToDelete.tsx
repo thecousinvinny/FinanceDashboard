@@ -3,8 +3,9 @@
 import { useRef, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 
-const REVEAL = 80   // px to show delete button
-const AUTO   = 200  // px to auto-confirm delete
+const REVEAL   = 80   // px to show delete button
+const AUTO     = 200  // px to auto-confirm delete
+const TAP_SLOP = 10  // max movement (any direction) still counted as a tap
 
 interface Props {
   onDelete:      () => void
@@ -68,7 +69,7 @@ export function SwipeToDelete({ onDelete, children, className, actionLabel = 'ðŸ
     }
     if (dir.current !== 'h') return
 
-    if (Math.abs(dx) > 5) didSwipe.current = true
+    if (Math.abs(dx) > TAP_SLOP || Math.abs(dy) > TAP_SLOP) didSwipe.current = true
 
     const base = revealed.current ? -REVEAL : 0
     const next = Math.min(0, Math.max(-AUTO - 20, base + dx))
