@@ -73,19 +73,15 @@ Two clients, never swap them:
 - `src/lib/supabase/client.ts` — browser (use in `'use client'` components)
 - `src/lib/supabase/server.ts` — server components and API routes (cookie-aware, async)
 
-### Current data phase
+### Data phase
 
-Pages currently use **seed data** from `src/lib/data/transactions.ts` (`SeedTx` interface, `SEED_TRANSACTIONS` array). Supabase queries will replace these file imports tab by tab. When wiring a tab to Supabase, delete the seed imports and use `src/lib/supabase/client.ts` in client components or `server.ts` in server components.
-
-`SeedTx` interface:
-```ts
-{ id, type: 'Expense' | 'Income', name, category, date, amount, card_id?, bank_id? }
-```
+All six tabs are wired to live Supabase. `src/lib/data/transactions.ts` still exists but is only used as a type source — `SeedTx` is kept as the in-memory row shape in `money/page.tsx` (Supabase rows are normalized into it on load). `SEED_TRANSACTIONS` is unused and can be deleted.
 
 ### UI components (`src/components/`)
 
 - `nav/BottomNav.tsx` — 6-tab fixed nav, 72px tall; active state via `usePathname()`
 - `ui/Pill.tsx` — exports `Pill` (single) and `PillGroup<T>` (segmented control with gold active state)
+- `ui/CategoryIcon.tsx` — exports `CategoryIcon` (React component) and `getCategoryIcon` (returns a `LucideIcon`). Maps real Google Sheets category names (`Food`, `Fun`, `Tesla`, `Apparel`, `Tech`, `Home`, `Health`, `Travel`, `PC`, `Life`, `Gift`, `Insurance`, `Stocks`, `Other`, `Subscriptions` for expenses; `Repayment`, `Refund`, `Freelance`, `Projects`, `Stocks`, `Other` for income). Pass `className` to color the icon — use `text-gold` for expenses, `text-emerald` for income.
 - `ui/SwipeToDelete.tsx` — swipe-left-to-delete with optional `onTap` (fires on clean tap when not swiped/revealed), `actionLabel`, and `actionBg` props. The `actionBg` default is `bg-ruby`; pass `'bg-amber-500'` for a cancel/restore action.
 - `money/AddTransactionSheet.tsx` — canonical bottom sheet implementation; exports `CardOption` and `BankOption` interfaces used by all pickers
 - `money/EditTransactionSheet.tsx` — edit existing transaction; exports `TxEdits`
@@ -163,9 +159,19 @@ Active nav items get `text-gold` + a gold drop-shadow glow. The pill toggle (Sub
 <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
 ```
 
-**Icon cell** (left of a list row):
+**Icon cell — transactions** (expense/income rows, circle shape):
 ```tsx
-<div className="w-9 h-9 rounded-[10px] bg-bg-overlay flex items-center justify-center text-[15px] flex-shrink-0">
+<div className="w-10 h-10 rounded-full bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+  <CategoryIcon category={tx.category} type={tx.type} size={15}
+    className={tx.type === 'Income' ? 'text-emerald' : 'text-gold'} />
+</div>
+```
+
+**Icon cell — subscriptions** (rounded square):
+```tsx
+<div className="w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+  <RefreshCw size={15} className="text-gold" strokeWidth={1.75} />
+</div>
 ```
 
 **Bottom sheet pattern**: fixed position, `translate-y-full` ↔ `translate-y-0` with `transition-transform duration-300`, `rgba(0,0,0,0.72)` backdrop, `rounded-t-[24px]` top corners, drag handle (`w-9 h-1 rounded-full bg-white/20`). Form state resets after close animation via `setTimeout(..., 300)` in a `useEffect` watching `open`.

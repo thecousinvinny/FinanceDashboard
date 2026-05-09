@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { localToday, daysUntilLabel, $fk, $fc } from '@/lib/utils'
-import { ArrowUpRight, ArrowDownLeft, RefreshCw } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
+import { CategoryIcon } from '@/components/ui/CategoryIcon'
 
 export const dynamic = 'force-dynamic'
 
@@ -56,8 +57,8 @@ export default async function HomePage() {
       .order('next_renewal', { ascending: true })
       .limit(3),
     supabase.from('wishlist').select('*', { count: 'exact', head: true }).eq('status', 'Interested'),
-    supabase.from('expenses').select('id, name, cost, date').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(5),
-    supabase.from('income').select('id, name, amount, date').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(5),
+    supabase.from('expenses').select('id, name, cost, date, categories(name)').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(5),
+    supabase.from('income').select('id, name, amount, date, source').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(5),
     supabase.from('expenses').select('cost, date').gte('date', sixMonthsAgo),
     supabase.from('income').select('amount, date').gte('date', sixMonthsAgo),
   ])
@@ -118,11 +119,15 @@ export default async function HomePage() {
   const activity = [
     ...(recentExp ?? []).map(e => ({
       id: e.id, name: e.name,
-      amount: -Number(e.cost), date: e.date as string, isIncome: false,
+      amount: -Number(e.cost), date: e.date as string,
+      category: (e.categories as unknown as { name: string } | null)?.name ?? 'Other',
+      isIncome: false,
     })),
     ...(recentInc ?? []).map(i => ({
       id: i.id, name: i.name,
-      amount: Number(i.amount), date: i.date as string, isIncome: true,
+      amount: Number(i.amount), date: i.date as string,
+      category: String(i.source ?? 'Other'),
+      isIncome: true,
     })),
   ]
     .sort((a, b) => b.date.localeCompare(a.date))
@@ -220,8 +225,8 @@ export default async function HomePage() {
           <div className="space-y-2.5">
             {upcoming!.map(sub => (
               <div key={sub.id} className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
-                <div className="w-9 h-9 rounded-[10px] bg-bg-overlay flex items-center justify-center flex-shrink-0">
-                  <RefreshCw size={15} className="text-ink-muted" strokeWidth={1.75} />
+                <div className="w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+                  <RefreshCw size={15} className="text-gold" strokeWidth={1.75} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[14px] font-medium text-ink">{sub.name}</p>
@@ -244,11 +249,13 @@ export default async function HomePage() {
           <div className="space-y-2.5">
             {activity.map(row => (
               <div key={row.id} className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
-                <div className="w-9 h-9 rounded-[10px] bg-bg-overlay flex items-center justify-center flex-shrink-0">
-                  {row.isIncome
-                    ? <ArrowDownLeft size={16} className="text-emerald" strokeWidth={1.75} />
-                    : <ArrowUpRight  size={16} className="text-ink-muted" strokeWidth={1.75} />
-                  }
+                <div className="w-10 h-10 rounded-full bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+                  <CategoryIcon
+                    category={row.category}
+                    type={row.isIncome ? 'Income' : 'Expense'}
+                    size={15}
+                    className={row.isIncome ? 'text-emerald' : 'text-gold'}
+                  />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[14px] font-medium text-ink truncate">{row.name}</p>
