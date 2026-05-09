@@ -1,15 +1,98 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { PillGroup } from '@/components/ui/Pill'
 import { AddTransactionSheet, type CardOption, type BankOption } from '@/components/money/AddTransactionSheet'
 import { EditTransactionSheet, type TxEdits } from '@/components/money/EditTransactionSheet'
 import { getCategoryEmoji, type SeedTx } from '@/lib/data/transactions'
-import { groupByMonth, fmtDate, $fk, $fc, cn } from '@/lib/utils'
+import { groupByMonth, fmtDate, $fk, $fc, cn, localToday } from '@/lib/utils'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 
 type Filter = 'All' | 'Expenses' | 'Income'
+
+/* ── 30-day bar chart hero ─────────────────────────────────────────────────── */
+
+function DailyBarChart({ txList }: { txList: SeedTx[] }) {
+  const [go, setGo] = useState(false)
+  const today = useMemo(() => localToday(), [])
+
+  useEffect(() => {
+    const r = requestAnimationFrame(() => setGo(true))
+    return () => cancelAnimationFrame(r)
+  }, [])
+
+  const { days, monthSpent, monthEarned } = useMemo(() => {
+    const base = new Date(today + 'T12:00:00')
+    const days = Array.from({ length: 30 }, (_, i) => {
+      const d  = new Date(base)
+      d.setDate(d.getDate() - (29 - i))
+      const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      const exp = txList.filter(t => t.type === 'Expense' && t.date === ds).reduce((s, t) => s + t.amount, 0)
+      const inc = txList.filter(t => t.type === 'Income'  && t.date === ds).reduce((s, t) => s + t.amount, 0)
+      return { date: ds, net: inc - exp, isToday: ds === today }
+    })
+    const mo        = today.slice(0, 7)
+    const monthSpent  = txList.filter(t => t.type === 'Expense' && t.date.startsWith(mo)).reduce((s, t) => s + t.amount, 0)
+    const monthEarned = txList.filter(t => t.type === 'Income'  && t.date.startsWith(mo)).reduce((s, t) => s + t.amount, 0)
+    return { days, monthSpent, monthEarned }
+  }, [txList, today])
+
+  const maxAbs   = useMemo(() => Math.max(...days.map(d => Math.abs(d.net)), 1), [days])
+  const monthNet = monthEarned - monthSpent
+
+  return (
+    <div className="mx-4 mt-5 bg-bg-surface border border-white/[0.06] rounded-card p-4">
+      {/* Bars */}
+      <div className="flex items-end gap-[2.5px] h-16 mb-1">
+        {days.map((day, i) => {
+          const pct   = Math.abs(day.net) / maxAbs
+          const isPos = day.net > 0
+          return (
+            <div key={day.date} className="flex-1 flex flex-col justify-end h-full relative">
+              {day.net !== 0 ? (
+                <div
+                  className={cn(
+                    'w-full rounded-t-[2px] transition-all ease-out',
+                    isPos ? 'bg-emerald' : 'bg-ruby',
+                    day.isToday ? 'opacity-100' : 'opacity-55',
+                  )}
+                  style={{
+                    height:            go ? `${Math.max(pct * 100, 4)}%` : '0%',
+                    transitionDuration: '550ms',
+                    transitionDelay:   `${i * 16}ms`,
+                  }}
+                />
+              ) : (
+                <div className="w-full h-px bg-white/[0.06]" />
+              )}
+              {day.isToday && (
+                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-[5px] h-[5px] rounded-full bg-gold" />
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Baseline */}
+      <div className="h-px bg-white/[0.06] mb-4 mt-3" />
+
+      {/* Summary row */}
+      <div className="flex">
+        {([
+          { label: 'Spent',  val: monthSpent,        color: 'text-ruby',    prefix: '−' },
+          { label: 'Earned', val: monthEarned,        color: 'text-emerald', prefix: '+' },
+          { label: 'Net',    val: Math.abs(monthNet), color: monthNet >= 0 ? 'text-emerald' : 'text-ruby', prefix: monthNet >= 0 ? '+' : '−' },
+        ] as const).map(({ label, val, color, prefix }) => (
+          <div key={label} className="flex-1">
+            <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-0.5">{label}</p>
+            <p className={cn('text-[15px] font-bold font-mono', color)}>{prefix}{$fk(val)}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export default function MoneyPage() {
   const [filter,    setFilter]    = useState<Filter>('All')
@@ -177,23 +260,6 @@ export default function MoneyPage() {
     [txList],
   )
 
-  // Stat cards: current month (most recent in data)
-  const currentMonthKey = sorted[0]?.date.slice(0, 7) ?? ''
-
-  const monthSpent = useMemo(
-    () => sorted
-      .filter(t => t.type === 'Expense' && t.date.startsWith(currentMonthKey))
-      .reduce((s, t) => s + t.amount, 0),
-    [sorted, currentMonthKey],
-  )
-
-  const monthEarned = useMemo(
-    () => sorted
-      .filter(t => t.type === 'Income' && t.date.startsWith(currentMonthKey))
-      .reduce((s, t) => s + t.amount, 0),
-    [sorted, currentMonthKey],
-  )
-
   // Filtered + grouped list
   const filtered = useMemo(
     () => filter === 'All'
@@ -232,27 +298,8 @@ export default function MoneyPage() {
         </button>
       </div>
 
-      {/* ── Stat cards ───────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-3 mx-4 mt-5">
-        <div className="bg-bg-surface border border-white/[0.06] rounded-card p-4">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] font-medium tracking-[0.06em] uppercase text-ink-muted">Spent</p>
-            <span className="text-ruby text-lg">↗</span>
-          </div>
-          <p className="text-[26px] font-bold font-mono tracking-tight text-ruby">
-            {$fk(monthSpent)}
-          </p>
-        </div>
-        <div className="bg-bg-surface border border-white/[0.06] rounded-card p-4">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] font-medium tracking-[0.06em] uppercase text-ink-muted">Earned</p>
-            <span className="text-emerald text-lg">↙</span>
-          </div>
-          <p className="text-[26px] font-bold font-mono tracking-tight text-emerald">
-            {$fk(monthEarned)}
-          </p>
-        </div>
-      </div>
+      {/* ── 30-day bar chart ─────────────────────────────────────────────── */}
+      <DailyBarChart txList={sorted} />
 
       {/* ── Filter pills ─────────────────────────────────────────────────── */}
       <div className="mx-4 mt-4">
