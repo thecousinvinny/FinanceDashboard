@@ -16,9 +16,9 @@ const config: Config = {
           overlay:  '#1c1c2a',
         },
         gold: {
-          DEFAULT: '#f59e0b',
-          light:   '#fbbf24',
-          dark:    '#d97706',
+          DEFAULT: '#D4AF37',
+          light:   '#F7DF9E',
+          dark:    '#A47F23',
         },
         emerald: {
           DEFAULT: '#22c55e',

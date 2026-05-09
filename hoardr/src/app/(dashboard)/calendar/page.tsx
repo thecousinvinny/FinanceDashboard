@@ -13,7 +13,7 @@ interface CalEvent {
 }
 
 const DOT_COLOR: Record<EventType, string> = {
-  expense: '#f59e0b',
+  expense: '#D4AF37',
   income:  '#22c55e',
   sub:     '#ef4444',
 }
