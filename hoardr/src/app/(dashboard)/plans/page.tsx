@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { PillGroup } from '@/components/ui/Pill'
 import { AddSubscriptionSheet, type NewSub } from '@/components/plans/AddSubscriptionSheet'
 import { AddWishlistSheet, type NewWishItem } from '@/components/plans/AddWishlistSheet'
 import { EditSubscriptionSheet, type SubEdits } from '@/components/plans/EditSubscriptionSheet'
 import { EditWishlistSheet, type WishEdits } from '@/components/plans/EditWishlistSheet'
-import { daysUntilLabel, $fc, $fk, cn, calcSubCosts, localToday } from '@/lib/utils'
+import { daysUntilLabel, $fc, $fk, cn, calcSubCosts } from '@/lib/utils'
 import type { CardOption } from '@/components/money/AddTransactionSheet'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import type { BillingCycle } from '@/types'
@@ -31,108 +31,6 @@ interface WishItem {
   name:          string
   original_cost: number | null
   status:        string
-}
-
-/* ── Renewal timeline strip ────────────────────────────────────────────────── */
-
-function RenewalStrip({ activeSubs, totals }: { activeSubs: Sub[]; totals: { monthly: number; annual: number } }) {
-  const [sel, setSel] = useState<string | null>(null)
-  const todayRef      = useRef<HTMLButtonElement>(null)
-  const today         = useMemo(() => localToday(), [])
-
-  const days = useMemo(() => {
-    const base = new Date(today + 'T12:00:00')
-    return Array.from({ length: 30 }, (_, i) => {
-      const d  = new Date(base)
-      d.setDate(d.getDate() + i)
-      const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-      return {
-        date:     ds,
-        dayNum:   d.getDate(),
-        dayLabel: d.toLocaleDateString('en-US', { weekday: 'narrow' }),
-        renewals: activeSubs.filter(s => s.next_renewal === ds),
-        isToday:  i === 0,
-      }
-    })
-  }, [activeSubs, today])
-
-  useEffect(() => {
-    todayRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
-  }, [])
-
-  const selDay   = sel ? days.find(d => d.date === sel) : null
-  const selTotal = selDay?.renewals.reduce((s, r) => s + r.cost, 0) ?? 0
-
-  return (
-    <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card p-4">
-
-      {/* Monthly / Annual totals */}
-      <div className="flex items-center mb-4">
-        <div className="flex-1">
-          <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-0.5">Per Month</p>
-          <p className="text-[24px] font-bold font-mono tracking-tight text-ink">{$fk(totals.monthly)}</p>
-        </div>
-        <div className="w-px h-8 bg-white/[0.06] mx-4" />
-        <div className="flex-1 text-right">
-          <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-0.5">Per Year</p>
-          <p className="text-[24px] font-bold font-mono tracking-tight text-ink">{$fk(totals.annual)}</p>
-        </div>
-      </div>
-
-      <div className="h-px bg-white/[0.06] mb-3" />
-
-      <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-2">Next 30 Days</p>
-
-      {/* Day strip */}
-      <div className="flex overflow-x-auto gap-0.5 -mx-4 px-4 pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-        {days.map(day => (
-          <button
-            key={day.date}
-            ref={day.isToday ? todayRef : undefined}
-            onClick={() => setSel(day.date === sel ? null : day.date)}
-            className="flex-shrink-0 flex flex-col items-center gap-[3px] px-[3px] py-1 select-none"
-          >
-            <span className="text-[9px] font-medium text-ink-faint w-7 text-center">{day.dayLabel}</span>
-            <div className={cn(
-              'w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold transition-colors',
-              day.isToday       ? 'gradient-gold text-white'                          :
-              sel === day.date  ? 'bg-bg-overlay border border-white/[0.12] text-ink' :
-                                  'text-ink-muted',
-            )}>
-              {day.dayNum}
-            </div>
-            <div className="h-[7px] flex items-center justify-center gap-[2px]">
-              {day.renewals.slice(0, 3).map((_, j) => (
-                <div key={j} className="w-[5px] h-[5px] rounded-full bg-ruby/60" />
-              ))}
-            </div>
-          </button>
-        ))}
-      </div>
-
-      {/* Selected day detail */}
-      {selDay && selDay.renewals.length > 0 && (
-        <div className="mt-3 bg-bg-overlay rounded-[12px] overflow-hidden divide-y divide-white/[0.04]">
-          {selDay.renewals.map(sub => (
-            <div key={sub.id} className="flex items-center gap-2.5 px-3 py-2.5">
-              <span className="text-[13px] flex-shrink-0">♻️</span>
-              <p className="text-[12px] font-medium text-ink flex-1 truncate">{sub.name}</p>
-              <p className="text-[12px] font-semibold font-mono text-ink flex-shrink-0">{$fc(sub.cost)}</p>
-            </div>
-          ))}
-          {selDay.renewals.length > 1 && (
-            <div className="flex items-center justify-between px-3 py-2">
-              <p className="text-[10px] text-ink-faint">Total due</p>
-              <p className="text-[12px] font-bold font-mono text-ruby">{$fc(selTotal)}</p>
-            </div>
-          )}
-        </div>
-      )}
-      {selDay && selDay.renewals.length === 0 && (
-        <p className="text-center text-[11px] text-ink-faint mt-3">Nothing due this day.</p>
-      )}
-    </div>
-  )
 }
 
 function billingShort(billing: BillingCycle) {
@@ -407,7 +305,23 @@ export default function PlansPage() {
       {/* ── Subscriptions ────────────────────────────────────────────────── */}
       {!loading && tab === 'Subscriptions' && (
         <>
-          <RenewalStrip activeSubs={activeSubs} totals={totals} />
+          {/* Stat tiles */}
+          <div className="mx-4 mt-4 flex gap-3">
+            <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Per Month</p>
+                <span className="text-[13px] text-gold">↻</span>
+              </div>
+              <p className="text-[26px] font-bold font-mono tracking-tight text-ink">{$fk(totals.monthly)}</p>
+            </div>
+            <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Per Year</p>
+                <span className="text-[13px] text-emerald">∞</span>
+              </div>
+              <p className="text-[26px] font-bold font-mono tracking-tight text-ink">{$fk(totals.annual)}</p>
+            </div>
+          </div>
 
           {activeSubs.length === 0 ? (
             <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card py-12 text-center text-ink-faint text-[13px]">
