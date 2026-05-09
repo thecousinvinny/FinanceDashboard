@@ -1,0 +1,438 @@
+//
+//  PlansView.swift
+//  Lumen
+//
+
+import SwiftUI
+import SwiftData
+
+struct PlansView: View {
+    @Environment(\.modelContext) private var ctx
+    @Query(sort: \SubscriptionItem.nextBillingDate) private var subs: [SubscriptionItem]
+    @Query(sort: \WishlistItem.createdAt, order: .reverse) private var wishes: [WishlistItem]
+
+    enum Tab: Hashable { case subs, wish }
+    @State private var tab: Tab = .subs
+    @State private var showAddSub = false
+    @State private var showAddWish = false
+    @State private var contributingTo: WishlistItem? = nil
+
+    private var monthlyTotal: Double { subs.map(\.monthlyCost).reduce(0,+) }
+    private var yearlyTotal: Double { monthlyTotal * 12 }
+    private var totalWish: Double { wishes.map(\.targetAmount).reduce(0,+) }
+    private var savedWish: Double { wishes.map(\.savedAmount).reduce(0,+) }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                PageHeader(eyebrow: "Plans", title: "Plans", trailing: AnyView(
+                    LumenAddButton {
+                        if tab == .subs { showAddSub = true } else { showAddWish = true }
+                    }
+                ))
+
+                LumenSegmented(selection: $tab, options: [
+                    (Tab.subs, "Subscriptions"),
+                    (Tab.wish, "Wishlist")
+                ])
+
+                if tab == .subs {
+                    subsContent
+                } else {
+                    wishContent
+                }
+                Spacer(minLength: 100)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+        }
+        .scrollIndicators(.hidden)
+        .sheet(isPresented: $showAddSub) {
+            AddSubscriptionSheet()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showAddWish) {
+            AddWishlistSheet()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $contributingTo) { wish in
+            ContributeSheet(wish: wish)
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
+    }
+
+    @ViewBuilder
+    private var subsContent: some View {
+        // Summary
+        HStack(spacing: 12) {
+            StatTileLarge(label: "Per Month", value: monthlyTotal, tint: LumenTheme.gold, symbol: "calendar")
+            StatTileLarge(label: "Per Year", value: yearlyTotal, tint: LumenTheme.green, symbol: "infinity")
+        }
+
+        if subs.isEmpty {
+            LumenEmpty(symbol: "repeat", title: "No subscriptions", message: "Add the services you pay for to keep them in check.")
+        } else {
+            VStack(spacing: 10) {
+                ForEach(subs, id: \.persistentModelID) { sub in
+                    SubscriptionRow(sub: sub)
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) { ctx.delete(sub) } label: { Label("Delete", systemImage: "trash") }
+                        }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var wishContent: some View {
+        // Summary
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("TOTAL GOAL").font(.system(size: 10, weight: .semibold)).tracking(1.6)
+                        .foregroundStyle(LumenTheme.textSecondary)
+                    DisplayAmount(value: totalWish, size: 36, tint: LumenTheme.textPrimary)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("\(Int((savedWish / max(1, totalWish)) * 100))%")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(LumenTheme.gold)
+                    Text("saved")
+                        .font(.system(size: 11))
+                        .foregroundStyle(LumenTheme.textTertiary)
+                }
+            }
+            ThinProgress(progress: savedWish / max(1, totalWish))
+        }
+        .glassCard(padding: 20, cornerRadius: 24)
+
+        if wishes.isEmpty {
+            LumenEmpty(symbol: "sparkles", title: "Empty wishlist", message: "Add things you want and watch your savings grow.")
+        } else {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                ForEach(wishes, id: \.persistentModelID) { wish in
+                    WishCard(wish: wish) {
+                        contributingTo = wish
+                    }
+                    .contextMenu {
+                        Button(role: .destructive) { ctx.delete(wish) } label: { Label("Delete", systemImage: "trash") }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Wish card large
+
+struct WishCard: View {
+    let wish: WishlistItem
+    var onContribute: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Image(systemName: wish.symbol)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.black)
+                    .frame(width: 38, height: 38)
+                    .background(Circle().fill(LumenTheme.goldGradient))
+                Spacer()
+                Text(wish.priority.label.uppercased())
+                    .font(.system(size: 9, weight: .bold)).tracking(1.2)
+                    .foregroundStyle(LumenTheme.textSecondary)
+                    .padding(.horizontal, 8).padding(.vertical, 4)
+                    .background(Capsule().fill(LumenTheme.surface2))
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(wish.name)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(LumenTheme.textPrimary)
+                    .lineLimit(1)
+                Text(Money.format(wish.targetAmount))
+                    .font(.system(size: 13))
+                    .foregroundStyle(LumenTheme.textSecondary)
+                    .monospacedDigit()
+            }
+            ThinProgress(progress: wish.progress)
+            HStack {
+                Text("\(Int(wish.progress * 100))%")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(LumenTheme.gold)
+                Spacer()
+                Button(action: onContribute) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "plus")
+                        Text("Add")
+                    }
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(LumenTheme.textPrimary)
+                    .padding(.horizontal, 10).padding(.vertical, 6)
+                    .background(Capsule().fill(LumenTheme.surface2))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LumenTheme.surface))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(LumenTheme.hairline, lineWidth: 1))
+    }
+}
+
+// MARK: - Add Subscription
+
+struct AddSubscriptionSheet: View {
+    @Environment(\.modelContext) private var ctx
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var name: String = ""
+    @State private var amountText: String = ""
+    @State private var cycle: BillingCycle = .monthly
+    @State private var date: Date = Calendar.current.date(byAdding: .month, value: 1, to: .now) ?? .now
+    @State private var symbol: String = "creditcard.fill"
+
+    private let symbols = ["creditcard.fill","music.note","play.rectangle.fill","icloud.fill","wand.and.stars","bolt.fill","cart.fill","gamecontroller.fill","newspaper.fill","graduationcap.fill"]
+
+    private var amount: Double { Double(amountText.replacingOccurrences(of: ",", with: ".")) ?? 0 }
+    private var canSave: Bool { !name.isEmpty && amount > 0 }
+
+    var body: some View {
+        ZStack {
+            LumenTheme.bg.ignoresSafeArea()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    HStack {
+                        Text("New Subscription")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundStyle(LumenTheme.textPrimary)
+                        Spacer()
+                        Button("Cancel") { dismiss() }
+                            .foregroundStyle(LumenTheme.textSecondary)
+                    }
+
+                    FieldRow(label: "Name", text: $name, placeholder: "Spotify")
+
+                    HStack(spacing: 10) {
+                        FieldRow(label: "Amount", text: $amountText, placeholder: "9.99")
+                    }
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("BILLING").font(.system(size: 10, weight: .semibold)).tracking(1.6)
+                            .foregroundStyle(LumenTheme.textSecondary)
+                        HStack(spacing: 8) {
+                            ForEach(BillingCycle.allCases) { c in
+                                Button { cycle = c } label: {
+                                    LumenChip(label: c.label, active: cycle == c)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("ICON").font(.system(size: 10, weight: .semibold)).tracking(1.6)
+                            .foregroundStyle(LumenTheme.textSecondary)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(symbols, id: \.self) { s in
+                                    Button { symbol = s } label: {
+                                        Image(systemName: s)
+                                            .font(.system(size: 16, weight: .semibold))
+                                            .foregroundStyle(symbol == s ? .black : LumenTheme.gold)
+                                            .frame(width: 44, height: 44)
+                                            .background(Circle().fill(symbol == s ? AnyShapeStyle(LumenTheme.goldGradient) : AnyShapeStyle(LumenTheme.surface)))
+                                            .overlay(Circle().strokeBorder(LumenTheme.hairline, lineWidth: 1))
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                        .contentMargins(.horizontal, 0, for: .scrollContent)
+                    }
+
+                    DatePicker("Next billing", selection: $date, displayedComponents: [.date])
+                        .padding(.horizontal, 16).padding(.vertical, 14)
+                        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(LumenTheme.surface))
+                        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(LumenTheme.hairline, lineWidth: 1))
+                        .tint(LumenTheme.gold)
+
+                    Button {
+                        let s = SubscriptionItem(name: name, amount: amount, cycle: cycle, nextBillingDate: date, symbol: symbol)
+                        ctx.insert(s)
+                        dismiss()
+                    } label: {
+                        Text("Save Subscription")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.black)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(Capsule().fill(LumenTheme.goldGradient))
+                            .opacity(canSave ? 1 : 0.5)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!canSave)
+                    Spacer(minLength: 40)
+                }
+                .padding(.horizontal, 20).padding(.top, 16)
+            }
+        }
+    }
+}
+
+// MARK: - Add Wishlist
+
+struct AddWishlistSheet: View {
+    @Environment(\.modelContext) private var ctx
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var name: String = ""
+    @State private var targetText: String = ""
+    @State private var savedText: String = ""
+    @State private var priority: WishPriority = .medium
+    @State private var symbol: String = "sparkles"
+
+    private let symbols = ["sparkles","camera.fill","airplane","sofa.fill","keyboard.fill","car.fill","house.fill","headphones","gift.fill","gamecontroller.fill","book.fill","bicycle"]
+
+    private var target: Double { Double(targetText.replacingOccurrences(of: ",", with: ".")) ?? 0 }
+    private var saved: Double { Double(savedText.replacingOccurrences(of: ",", with: ".")) ?? 0 }
+    private var canSave: Bool { !name.isEmpty && target > 0 }
+
+    var body: some View {
+        ZStack {
+            LumenTheme.bg.ignoresSafeArea()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    HStack {
+                        Text("New Wish").font(.system(size: 24, weight: .bold))
+                            .foregroundStyle(LumenTheme.textPrimary)
+                        Spacer()
+                        Button("Cancel") { dismiss() }
+                            .foregroundStyle(LumenTheme.textSecondary)
+                    }
+
+                    FieldRow(label: "Name", text: $name, placeholder: "Leica Q3")
+                    FieldRow(label: "Target", text: $targetText, placeholder: "0")
+                    FieldRow(label: "Saved", text: $savedText, placeholder: "0")
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("PRIORITY").font(.system(size: 10, weight: .semibold)).tracking(1.6)
+                            .foregroundStyle(LumenTheme.textSecondary)
+                        HStack(spacing: 8) {
+                            ForEach(WishPriority.allCases) { p in
+                                Button { priority = p } label: {
+                                    LumenChip(label: p.label, active: priority == p)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("ICON").font(.system(size: 10, weight: .semibold)).tracking(1.6)
+                            .foregroundStyle(LumenTheme.textSecondary)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(symbols, id: \.self) { s in
+                                    Button { symbol = s } label: {
+                                        Image(systemName: s)
+                                            .font(.system(size: 16, weight: .semibold))
+                                            .foregroundStyle(symbol == s ? .black : LumenTheme.gold)
+                                            .frame(width: 44, height: 44)
+                                            .background(Circle().fill(symbol == s ? AnyShapeStyle(LumenTheme.goldGradient) : AnyShapeStyle(LumenTheme.surface)))
+                                            .overlay(Circle().strokeBorder(LumenTheme.hairline, lineWidth: 1))
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                        .contentMargins(.horizontal, 0, for: .scrollContent)
+                    }
+
+                    Button {
+                        let w = WishlistItem(name: name, targetAmount: target, savedAmount: saved, priority: priority, symbol: symbol)
+                        ctx.insert(w)
+                        dismiss()
+                    } label: {
+                        Text("Save Wish")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.black)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(Capsule().fill(LumenTheme.goldGradient))
+                            .opacity(canSave ? 1 : 0.5)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!canSave)
+                    Spacer(minLength: 40)
+                }
+                .padding(.horizontal, 20).padding(.top, 16)
+            }
+        }
+    }
+}
+
+// MARK: - Contribute
+
+struct ContributeSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Bindable var wish: WishlistItem
+    @State private var amountText: String = ""
+
+    private var amount: Double { Double(amountText.replacingOccurrences(of: ",", with: ".")) ?? 0 }
+
+    var body: some View {
+        ZStack {
+            LumenTheme.bg.ignoresSafeArea()
+            VStack(alignment: .leading, spacing: 22) {
+                HStack {
+                    Text("Add to \(wish.name)")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(LumenTheme.textPrimary)
+                    Spacer()
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(LumenTheme.textSecondary)
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Saved \(Money.format(wish.savedAmount)) of \(Money.format(wish.targetAmount))")
+                        .font(.system(size: 13))
+                        .foregroundStyle(LumenTheme.textSecondary)
+                    ThinProgress(progress: wish.progress)
+                }
+
+                HStack(alignment: .firstTextBaseline) {
+                    Text("$").font(.system(size: 36, weight: .light)).foregroundStyle(LumenTheme.textTertiary)
+                    TextField("0", text: $amountText)
+                        .keyboardType(.decimalPad)
+                        .font(.system(size: 56, weight: .bold))
+                        .foregroundStyle(LumenTheme.gold)
+                }
+                .padding(20)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(LumenTheme.surface))
+                .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(LumenTheme.hairline, lineWidth: 1))
+
+                Button {
+                    wish.savedAmount = min(wish.targetAmount, wish.savedAmount + amount)
+                    dismiss()
+                } label: {
+                    Text("Add Contribution")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Capsule().fill(LumenTheme.goldGradient))
+                        .opacity(amount > 0 ? 1 : 0.5)
+                }
+                .buttonStyle(.plain)
+                .disabled(amount <= 0)
+                Spacer()
+            }
+            .padding(.horizontal, 20).padding(.top, 20)
+        }
+    }
+}

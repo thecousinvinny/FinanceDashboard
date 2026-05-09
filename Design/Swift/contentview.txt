@@ -1,0 +1,106 @@
+//
+//  ContentView.swift
+//  Lumen
+//
+
+import SwiftUI
+import SwiftData
+
+struct RootView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query private var transactions: [Transaction]
+    @State private var selectedTab: Int = 0
+    @State private var didSeed = false
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            LumenTheme.bg.ignoresSafeArea()
+
+            Group {
+                switch selectedTab {
+                case 0: DashboardView()
+                case 1: MoneyView()
+                case 2: PlansView()
+                case 3: StudioView()
+                case 4: WalletView()
+                default: CalendarView()
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            LumenTabBar(selected: $selectedTab)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 8)
+        }
+        .task {
+            if !didSeed && transactions.isEmpty {
+                SeedData.populate(modelContext)
+                didSeed = true
+            }
+        }
+    }
+}
+
+// MARK: - Tab Bar
+
+struct LumenTabBar: View {
+    @Binding var selected: Int
+
+    private let items: [(symbol: String, label: String)] = [
+        ("circle.grid.2x2.fill", "Home"),
+        ("arrow.left.arrow.right", "Money"),
+        ("sparkles", "Plans"),
+        ("paintpalette.fill", "Studio"),
+        ("creditcard.fill", "Wallet"),
+        ("calendar", "Calendar"),
+    ]
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(items.indices, id: \.self) { idx in
+                let isSelected = selected == idx
+                Button {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                        selected = idx
+                    }
+                } label: {
+                    VStack(spacing: 3) {
+                        Image(systemName: items[idx].symbol)
+                            .font(.system(size: 18, weight: .semibold))
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(isSelected ? LumenTheme.gold : LumenTheme.textTertiary)
+                            .frame(height: 22)
+                        Text(items[idx].label)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(isSelected ? LumenTheme.textPrimary : LumenTheme.textTertiary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .sensoryFeedback(.selection, trigger: selected)
+            }
+        }
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(.black.opacity(0.85))
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(LumenTheme.surface)
+                    .opacity(0.7)
+            }
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .strokeBorder(LumenTheme.hairline, lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.5), radius: 24, y: 12)
+    }
+}
+
+#Preview {
+    RootView()
+        .modelContainer(for: [Transaction.self, SubscriptionItem.self, WishlistItem.self, BankAccount.self, CardItem.self, Commission.self], inMemory: true)
+        .preferredColorScheme(.dark)
+}

@@ -1,0 +1,43 @@
+//
+//  WishlistItem.swift
+//  Lumen
+//
+
+import Foundation
+import SwiftData
+
+enum WishPriority: String, Codable, CaseIterable, Identifiable {
+    case low, medium, high
+    var id: String { rawValue }
+    var label: String { rawValue.capitalized }
+}
+
+@Model
+final class WishlistItem {
+    var name: String
+    var targetAmount: Double
+    var savedAmount: Double
+    var priorityRaw: String
+    var symbol: String
+    var note: String
+    var createdAt: Date
+    var targetDate: Date?
+
+    init(name: String, targetAmount: Double, savedAmount: Double = 0, priority: WishPriority = .medium, symbol: String = "sparkles", note: String = "", targetDate: Date? = nil) {
+        self.name = name
+        self.targetAmount = targetAmount
+        self.savedAmount = savedAmount
+        self.priorityRaw = priority.rawValue
+        self.symbol = symbol
+        self.note = note
+        self.createdAt = Date()
+        self.targetDate = targetDate
+    }
+
+    var priority: WishPriority { WishPriority(rawValue: priorityRaw) ?? .medium }
+    var progress: Double {
+        guard targetAmount > 0 else { return 0 }
+        return min(1, savedAmount / targetAmount)
+    }
+    var remaining: Double { max(0, targetAmount - savedAmount) }
+}

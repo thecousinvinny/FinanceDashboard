@@ -1,0 +1,63 @@
+//
+//  Commission.swift
+//  Lumen
+//
+
+import Foundation
+import SwiftData
+
+enum CommissionStatus: String, Codable, CaseIterable, Identifiable {
+    case pending
+    case approved
+    case inProgress
+    case completed
+    case paid
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .pending: "Pending"
+        case .approved: "Approved"
+        case .inProgress: "In Progress"
+        case .completed: "Completed"
+        case .paid: "Paid"
+        }
+    }
+
+    var next: CommissionStatus? {
+        switch self {
+        case .pending: .approved
+        case .approved: .inProgress
+        case .inProgress: .completed
+        case .completed: .paid
+        case .paid: nil
+        }
+    }
+}
+
+@Model
+final class Commission {
+    var clientName: String
+    var projectType: String
+    var price: Double
+    var deadline: Date
+    var statusRaw: String
+    var createdAt: Date
+
+    init(clientName: String, projectType: String, price: Double, deadline: Date, status: CommissionStatus = .pending, createdAt: Date = Date()) {
+        self.clientName = clientName
+        self.projectType = projectType
+        self.price = price
+        self.deadline = deadline
+        self.statusRaw = status.rawValue
+        self.createdAt = createdAt
+    }
+
+    var status: CommissionStatus {
+        get { CommissionStatus(rawValue: statusRaw) ?? .pending }
+        set { statusRaw = newValue.rawValue }
+    }
+
+    var isOpen: Bool { status != .completed && status != .paid }
+}

@@ -1,0 +1,50 @@
+//
+//  SubscriptionItem.swift
+//  Lumen
+//
+
+import Foundation
+import SwiftData
+
+enum BillingCycle: String, Codable, CaseIterable, Identifiable {
+    case weekly, monthly, yearly
+    var id: String { rawValue }
+    var label: String { rawValue.capitalized }
+    var monthlyMultiplier: Double {
+        switch self {
+        case .weekly: 4.345
+        case .monthly: 1
+        case .yearly: 1.0/12.0
+        }
+    }
+}
+
+@Model
+final class SubscriptionItem {
+    var name: String
+    var amount: Double
+    var cycleRaw: String
+    var nextBillingDate: Date
+    var symbol: String
+    var colorHex: String
+    var note: String
+
+    init(name: String, amount: Double, cycle: BillingCycle, nextBillingDate: Date, symbol: String = "creditcard.fill", colorHex: String = "E8C46B", note: String = "") {
+        self.name = name
+        self.amount = amount
+        self.cycleRaw = cycle.rawValue
+        self.nextBillingDate = nextBillingDate
+        self.symbol = symbol
+        self.colorHex = colorHex
+        self.note = note
+    }
+
+    var cycle: BillingCycle { BillingCycle(rawValue: cycleRaw) ?? .monthly }
+    var monthlyCost: Double { amount * cycle.monthlyMultiplier }
+    var daysUntilRenewal: Int {
+        let cal = Calendar.current
+        let start = cal.startOfDay(for: Date())
+        let end = cal.startOfDay(for: nextBillingDate)
+        return cal.dateComponents([.day], from: start, to: end).day ?? 0
+    }
+}

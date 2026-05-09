@@ -1,0 +1,379 @@
+//
+//  DashboardView.swift
+//  Lumen
+//
+
+import SwiftUI
+import SwiftData
+
+struct DashboardView: View {
+    @Query(sort: \Transaction.date, order: .reverse) private var transactions: [Transaction]
+    @Query private var subs: [SubscriptionItem]
+    @Query private var banks: [BankAccount]
+    @Query private var wishes: [WishlistItem]
+
+    private var netWorth: Double { banks.map(\.balance).reduce(0,+) }
+    private var monthSpend: Double {
+        let cal = Calendar.current
+        return transactions
+            .filter { $0.kind == .expense && cal.isDate($0.date, equalTo: Date(), toGranularity: .month) }
+            .map(\.amount).reduce(0,+)
+    }
+    private var monthIncome: Double {
+        let cal = Calendar.current
+        return transactions
+            .filter { $0.kind == .income && cal.isDate($0.date, equalTo: Date(), toGranularity: .month) }
+            .map(\.amount).reduce(0,+)
+    }
+    private var monthlySubs: Double { subs.map(\.monthlyCost).reduce(0,+) }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 28) {
+                header
+                netWorthCard
+                quickStats
+                upcomingSection
+                recentSection
+                wishlistPreview
+                Spacer(minLength: 100)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+        }
+        .scrollIndicators(.hidden)
+    }
+
+    private var header: some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(greeting().uppercased())
+                    .font(.system(size: 11, weight: .semibold)).tracking(2)
+                    .foregroundStyle(LumenTheme.gold)
+                Text("Alex")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundStyle(LumenTheme.textPrimary)
+            }
+            Spacer()
+            Image(systemName: "bell")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(LumenTheme.textPrimary)
+                .frame(width: 40, height: 40)
+                .background(Circle().fill(LumenTheme.surface))
+                .overlay(Circle().strokeBorder(LumenTheme.hairline, lineWidth: 1))
+        }
+    }
+
+    private func greeting() -> String {
+        let h = Calendar.current.component(.hour, from: Date())
+        switch h {
+        case 5..<12: return "Good morning"
+        case 12..<17: return "Good afternoon"
+        case 17..<22: return "Good evening"
+        default: return "Welcome back"
+        }
+    }
+
+    private var netWorthCard: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack {
+                Text("NET WORTH")
+                    .font(.system(size: 10, weight: .semibold)).tracking(2)
+                    .foregroundStyle(LumenTheme.textSecondary)
+                Spacer()
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 10, weight: .bold))
+                    Text("+8.4%")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .foregroundStyle(LumenTheme.green)
+                .padding(.horizontal, 10).padding(.vertical, 5)
+                .background(Capsule().fill(LumenTheme.green.opacity(0.12)))
+            }
+
+            DisplayAmount(value: netWorth, size: 48, tint: LumenTheme.textPrimary)
+
+            // Mini chart
+            MiniSparkline()
+                .frame(height: 56)
+
+            HStack(spacing: 0) {
+                statColumn("Income", value: monthIncome, color: LumenTheme.green)
+                Divider().frame(width: 1, height: 32).overlay(LumenTheme.hairline)
+                statColumn("Spent", value: monthSpend, color: LumenTheme.gold)
+                Divider().frame(width: 1, height: 32).overlay(LumenTheme.hairline)
+                statColumn("Saved", value: max(0, monthIncome - monthSpend), color: LumenTheme.textPrimary)
+            }
+            .padding(.top, 4)
+        }
+        .glassCard(padding: 22, cornerRadius: 28)
+        .overlay(alignment: .topTrailing) {
+            // Subtle gold sigil
+            Image(systemName: "circle.dotted")
+                .font(.system(size: 80, weight: .ultraLight))
+                .foregroundStyle(LumenTheme.gold.opacity(0.08))
+                .offset(x: 30, y: -20)
+                .allowsHitTesting(false)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+    }
+
+    private func statColumn(_ label: String, value: Double, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label.uppercased())
+                .font(.system(size: 9, weight: .semibold)).tracking(1.5)
+                .foregroundStyle(LumenTheme.textTertiary)
+            Text(Money.compact(value))
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(color)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var quickStats: some View {
+        HStack(spacing: 12) {
+            QuickStatCard(label: "Monthly Subs", value: Money.compact(monthlySubs), symbol: "repeat", tint: LumenTheme.gold)
+            QuickStatCard(label: "Wishlist", value: "\(wishes.count) items", symbol: "sparkles", tint: LumenTheme.green)
+        }
+    }
+
+    private var upcomingSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            LumenSectionHeader(title: "Upcoming")
+            let upcoming = subs.sorted { $0.daysUntilRenewal < $1.daysUntilRenewal }.prefix(3)
+            if upcoming.isEmpty {
+                Text("No upcoming bills").foregroundStyle(LumenTheme.textSecondary)
+            } else {
+                VStack(spacing: 10) {
+                    ForEach(Array(upcoming), id: \.persistentModelID) { sub in
+                        SubscriptionRow(sub: sub)
+                    }
+                }
+            }
+        }
+    }
+
+    private var recentSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            LumenSectionHeader(title: "Recent Activity")
+            VStack(spacing: 10) {
+                ForEach(Array(transactions.prefix(4)), id: \.persistentModelID) { t in
+                    TransactionRow(tx: t)
+                }
+            }
+        }
+    }
+
+    private var wishlistPreview: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            LumenSectionHeader(title: "On The Wishlist")
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(wishes.prefix(4), id: \.persistentModelID) { w in
+                        WishCardCompact(wish: w)
+                    }
+                }
+            }
+            .contentMargins(.horizontal, 0, for: .scrollContent)
+        }
+    }
+}
+
+// MARK: - Mini sparkline
+
+struct MiniSparkline: View {
+    let points: [Double] = [0.4, 0.42, 0.39, 0.55, 0.48, 0.62, 0.58, 0.7, 0.65, 0.78, 0.72, 0.85]
+
+    var body: some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            let h = geo.size.height
+            let step = w / CGFloat(points.count - 1)
+            let path = Path { p in
+                for (i, v) in points.enumerated() {
+                    let x = step * CGFloat(i)
+                    let y = h - (h * v)
+                    if i == 0 { p.move(to: CGPoint(x: x, y: y)) }
+                    else { p.addLine(to: CGPoint(x: x, y: y)) }
+                }
+            }
+            let fillPath = Path { p in
+                p.move(to: CGPoint(x: 0, y: h))
+                for (i, v) in points.enumerated() {
+                    let x = step * CGFloat(i)
+                    let y = h - (h * v)
+                    p.addLine(to: CGPoint(x: x, y: y))
+                }
+                p.addLine(to: CGPoint(x: w, y: h))
+                p.closeSubpath()
+            }
+            ZStack {
+                fillPath
+                    .fill(LinearGradient(
+                        colors: [LumenTheme.gold.opacity(0.25), LumenTheme.gold.opacity(0)],
+                        startPoint: .top, endPoint: .bottom
+                    ))
+                path.stroke(LumenTheme.goldGradient, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                if let last = points.last {
+                    let x = step * CGFloat(points.count - 1)
+                    let y = h - (h * last)
+                    Circle()
+                        .fill(LumenTheme.gold)
+                        .frame(width: 8, height: 8)
+                        .position(x: x, y: y)
+                        .shadow(color: LumenTheme.gold.opacity(0.6), radius: 6)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Cards
+
+struct QuickStatCard: View {
+    let label: String
+    let value: String
+    let symbol: String
+    let tint: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: symbol)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(tint)
+                    .frame(width: 28, height: 28)
+                    .background(Circle().fill(tint.opacity(0.12)))
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(LumenTheme.textTertiary)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(value)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(LumenTheme.textPrimary)
+                Text(label)
+                    .font(.system(size: 12))
+                    .foregroundStyle(LumenTheme.textSecondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassCard(padding: 16, cornerRadius: 22)
+    }
+}
+
+struct TransactionRow: View {
+    let tx: Transaction
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle().fill(LumenTheme.surface2)
+                Image(systemName: tx.category.symbol)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(tx.kind == .income ? LumenTheme.green : LumenTheme.gold)
+            }
+            .frame(width: 40, height: 40)
+            .overlay(Circle().strokeBorder(LumenTheme.hairline, lineWidth: 1))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(tx.merchant.isEmpty ? tx.category.label : tx.merchant)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(LumenTheme.textPrimary)
+                    .lineLimit(1)
+                Text(tx.date.formatted(.dateTime.month(.abbreviated).day()))
+                    .font(.system(size: 12))
+                    .foregroundStyle(LumenTheme.textTertiary)
+            }
+            Spacer()
+            Text((tx.kind == .income ? "+" : "−") + Money.format(tx.amount))
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(tx.kind == .income ? LumenTheme.green : LumenTheme.textPrimary)
+                .monospacedDigit()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(LumenTheme.surface))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(LumenTheme.hairline, lineWidth: 1))
+    }
+}
+
+struct SubscriptionRow: View {
+    let sub: SubscriptionItem
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(LumenTheme.surface2)
+                Image(systemName: sub.symbol)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(LumenTheme.gold)
+            }
+            .frame(width: 42, height: 42)
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(LumenTheme.hairline, lineWidth: 1))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(sub.name)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(LumenTheme.textPrimary)
+                Text(daysLabel(sub.daysUntilRenewal))
+                    .font(.system(size: 12))
+                    .foregroundStyle(sub.daysUntilRenewal <= 3 ? LumenTheme.gold : LumenTheme.textTertiary)
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(Money.format(sub.amount))
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(LumenTheme.textPrimary)
+                    .monospacedDigit()
+                Text("/ " + sub.cycle.label.lowercased())
+                    .font(.system(size: 11))
+                    .foregroundStyle(LumenTheme.textTertiary)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(LumenTheme.surface))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(LumenTheme.hairline, lineWidth: 1))
+    }
+
+    func daysLabel(_ d: Int) -> String {
+        if d <= 0 { return "Due today" }
+        if d == 1 { return "Tomorrow" }
+        return "in \(d) days"
+    }
+}
+
+struct WishCardCompact: View {
+    let wish: WishlistItem
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: wish.symbol)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(LumenTheme.gold)
+                    .frame(width: 32, height: 32)
+                    .background(Circle().fill(LumenTheme.gold.opacity(0.12)))
+                Spacer()
+                Text("\(Int(wish.progress * 100))%")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(LumenTheme.gold)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(wish.name)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(LumenTheme.textPrimary)
+                    .lineLimit(1)
+                Text(Money.format(wish.targetAmount))
+                    .font(.system(size: 12))
+                    .foregroundStyle(LumenTheme.textSecondary)
+            }
+            ThinProgress(progress: wish.progress)
+        }
+        .padding(14)
+        .frame(width: 170)
+        .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(LumenTheme.surface))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(LumenTheme.hairline, lineWidth: 1))
+    }
+}
