@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Reset ───────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+html, body {
+  background-color: #080810;
+  color: #f0f0f8;
+  min-height: 100vh;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Hide all scrollbars */
+* { scrollbar-width: none; -ms-overflow-style: none; }
+*::-webkit-scrollbar { display: none; }
+
+/* ── Animations ──────────────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+
+@keyframes tabIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none;            }
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.96) translateY(10px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);    }
+}
+
+@keyframes sheetUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0);    }
+}
+
+@keyframes pulseBorder {
+  0%, 100% { border-color: rgba(239, 68, 68, 0.3); }
+  50%       { border-color: rgba(239, 68, 68, 0.7); }
+}
+
+/* ── Utility classes ─────────────────────────────────────────────────────── */
+@layer utilities {
+  .tab-enter {
+    animation: tabIn 0.2s ease both;
+  }
+
+  .skeleton {
+    border-radius: 6px;
+    background: linear-gradient(90deg, #0f0f1a 25%, #1c1c2a 50%, #0f0f1a 75%);
+    background-size: 800px 100%;
+    animation: shimmer 1.4s infinite;
+  }
+
+  .gradient-gold {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+  }
+
+  .gradient-emerald {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+  }
+
+  /* Editorial baseline-shifted dollar sign */
+  .dollar-prefix {
+    font-family: var(--font-dm-mono);
+    font-size: 0.45em;
+    vertical-align: super;
+    margin-right: 1px;
+    opacity: 0.6;
+  }
+
+  /* Glass surface for nav / headers */
+  .glass {
+    background: rgba(8, 8, 16, 0.85);
+    backdrop-filter: blur(32px) saturate(200%);
+    -webkit-backdrop-filter: blur(32px) saturate(200%);
+  }
+
+  .glass-card {
+    background: rgba(15, 15, 26, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  /* Glow effects for hero numbers */
+  .glow-green  { text-shadow: 0 0 25px rgba(34,197,94,0.3),  0 0 50px rgba(34,197,94,0.1);  }
+  .glow-gold   { text-shadow: 0 0 25px rgba(245,158,11,0.3), 0 0 50px rgba(245,158,11,0.1); }
+  .glow-ruby   { text-shadow: 0 0 25px rgba(239,68,68,0.3),  0 0 50px rgba(239,68,68,0.1);  }
+}
