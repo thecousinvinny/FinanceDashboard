@@ -84,6 +84,15 @@ export default function PlansPage() {
 
   useEffect(() => { loadData() }, [loadData])
 
+  async function handleMarkPurchased(id: string) {
+    setWishlist(prev => prev.map(w => w.id === id ? { ...w, status: 'Purchased' } : w))
+    const { error } = await supabase
+      .from('wishlist')
+      .update({ status: 'Purchased' })
+      .eq('id', id)
+    if (error) { console.error('mark purchased error:', JSON.stringify(error)); await loadData() }
+  }
+
   async function handleDeleteSub(id: string) {
     setSubs(prev => prev.filter(s => s.id !== id))
     const { error } = await supabase.from('subscriptions').delete().eq('id', id)
@@ -277,14 +286,19 @@ export default function PlansPage() {
                     {item.original_cost != null ? `Goal: ${$fc(item.original_cost)}` : 'No price set'}
                   </p>
                 </div>
-                <span className={cn(
-                  'text-[10px] font-semibold px-2.5 py-1 rounded-full flex-shrink-0',
-                  item.status === 'Purchased'
-                    ? 'bg-emerald/10 text-emerald'
-                    : 'bg-gold/10 text-gold',
-                )}>
-                  {item.status}
-                </span>
+                {item.status === 'Interested' ? (
+                  <button
+                    onClick={() => handleMarkPurchased(item.id)}
+                    className="w-9 h-9 rounded-full bg-emerald/10 border border-emerald/20 flex items-center justify-center text-emerald text-[16px] flex-shrink-0 select-none active:scale-95 transition-transform"
+                    aria-label="Mark as purchased"
+                  >
+                    ✓
+                  </button>
+                ) : (
+                  <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full flex-shrink-0 bg-emerald/10 text-emerald">
+                    Purchased
+                  </span>
+                )}
               </div>
             </SwipeToDelete>
           ))}
