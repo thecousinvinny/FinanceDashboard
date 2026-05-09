@@ -67,9 +67,10 @@ export function SwipeToDelete({ onDelete, children, className, actionLabel = 'ðŸ
     if (!dir.current) {
       dir.current = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'
     }
-    if (dir.current !== 'h') return
 
     if (Math.abs(dx) > TAP_SLOP || Math.abs(dy) > TAP_SLOP) didSwipe.current = true
+
+    if (dir.current !== 'h') return
 
     const base = revealed.current ? -REVEAL : 0
     const next = Math.min(0, Math.max(-AUTO - 20, base + dx))
