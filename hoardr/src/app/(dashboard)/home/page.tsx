@@ -25,6 +25,12 @@ export default async function HomePage() {
   const monthStart = `${y}-${m}-01`
   const monthEnd   = `${y}-${m}-${new Date(Number(y), Number(m), 0).getDate()}`
 
+  // 6-month lookback for sparkline
+  const sixMonthsAgo = (() => {
+    const d = new Date(Number(y), Number(m) - 1 - 5, 1)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
+  })()
+
   // ── Parallel queries ────────────────────────────────────────────────────
   const [
     { data: profile },
@@ -35,6 +41,8 @@ export default async function HomePage() {
     { count: wishlistCount },
     { data: recentExp },
     { data: recentInc },
+    { data: sparkExp },
+    { data: sparkInc },
   ] = await Promise.all([
     supabase.from('profiles').select('display_name').eq('id', user.id).single(),
     supabase.from('expenses').select('cost').gte('date', monthStart).lte('date', monthEnd),
@@ -49,7 +57,41 @@ export default async function HomePage() {
     supabase.from('wishlist').select('*', { count: 'exact', head: true }).eq('status', 'Interested'),
     supabase.from('expenses').select('id, name, cost, date').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(5),
     supabase.from('income').select('id, name, amount, date').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(5),
+    supabase.from('expenses').select('cost, date').gte('date', sixMonthsAgo),
+    supabase.from('income').select('amount, date').gte('date', sixMonthsAgo),
   ])
+
+  // ── Sparkline: net (income − expenses) per month, last 6 months ────────
+  const sparkPoints = (() => {
+    const months: { key: string; net: number }[] = []
+    for (let i = 5; i >= 0; i--) {
+      const d   = new Date(Number(y), Number(m) - 1 - i, 1)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const inc = (sparkInc ?? []).filter(r => String(r.date).startsWith(key)).reduce((s, r) => s + Number(r.amount), 0)
+      const exp = (sparkExp ?? []).filter(r => String(r.date).startsWith(key)).reduce((s, r) => s + Number(r.cost),   0)
+      months.push({ key, net: inc - exp })
+    }
+    const vals   = months.map(m => m.net)
+    const minVal = Math.min(...vals, 0)
+    const maxVal = Math.max(...vals, 1)
+    const range  = maxVal - minVal || 1
+    const H = 64, W = 300
+    const pts = months.map((m, i) => ({
+      x: (i / (months.length - 1)) * W,
+      y: H - ((m.net - minVal) / range) * (H - 8) - 4,
+    }))
+    const d = pts.map((p, i) => {
+      if (i === 0) return `M${p.x},${p.y}`
+      const prev = pts[i - 1]
+      const cx = (prev.x + p.x) / 2
+      return `C${cx},${prev.y} ${cx},${p.y} ${p.x},${p.y}`
+    }).join(' ')
+    const area = `${d} L${W},${H} L0,${H} Z`
+    const last  = pts[pts.length - 1]
+    const allPositive = vals.every(v => v >= 0)
+    const color = allPositive ? '#22c55e' : '#f59e0b'
+    return { d, area, last, color }
+  })()
 
   // ── Self-heal: backfill profile if missing ──────────────────────────────
   if (!profile?.display_name) {
@@ -121,18 +163,18 @@ export default async function HomePage() {
           </span>
         </div>
 
-        {/* Sparkline placeholder */}
+        {/* Sparkline — 6-month net (income − expenses) */}
         <div className="h-16 w-full mb-5">
           <svg viewBox="0 0 300 64" className="w-full h-full" preserveAspectRatio="none">
             <defs>
               <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%"   stopColor="#f59e0b" stopOpacity="0.35"/>
-                <stop offset="100%" stopColor="#f59e0b" stopOpacity="0"/>
+                <stop offset="0%"   stopColor={sparkPoints.color} stopOpacity="0.3"/>
+                <stop offset="100%" stopColor={sparkPoints.color} stopOpacity="0"/>
               </linearGradient>
             </defs>
-            <path d="M0,52 C15,48 30,56 50,44 C70,32 90,40 110,28 C130,16 150,24 170,18 C190,12 210,8 230,12 C250,16 270,6 300,2" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"/>
-            <path d="M0,52 C15,48 30,56 50,44 C70,32 90,40 110,28 C130,16 150,24 170,18 C190,12 210,8 230,12 C250,16 270,6 300,2 L300,64 L0,64 Z" fill="url(#sg)"/>
-            <circle cx="300" cy="2" r="3" fill="#f59e0b"/>
+            <path d={sparkPoints.area} fill="url(#sg)"/>
+            <path d={sparkPoints.d} fill="none" stroke={sparkPoints.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <circle cx={sparkPoints.last.x} cy={sparkPoints.last.y} r="3" fill={sparkPoints.color}/>
           </svg>
         </div>
 
