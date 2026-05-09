@@ -40,12 +40,13 @@ function billingShort(billing: BillingCycle) {
 }
 
 export default function PlansPage() {
-  const [tab,        setTab]        = useState<Tab>('Subscriptions')
-  const [subs,       setSubs]       = useState<Sub[]>([])
-  const [wishlist,   setWishlist]   = useState<WishItem[]>([])
-  const [loading,    setLoading]    = useState(true)
-  const [subSheet,   setSubSheet]   = useState(false)
-  const [wishSheet,  setWishSheet]  = useState(false)
+  const [tab,           setTab]          = useState<Tab>('Subscriptions')
+  const [subs,          setSubs]         = useState<Sub[]>([])
+  const [wishlist,      setWishlist]     = useState<WishItem[]>([])
+  const [loading,       setLoading]      = useState(true)
+  const [subSheet,      setSubSheet]     = useState(false)
+  const [wishSheet,     setWishSheet]    = useState(false)
+  const [showCancelled, setShowCancelled] = useState(false)
 
   const supabase = useMemo(() => createClient(), [])
 
@@ -91,6 +92,18 @@ export default function PlansPage() {
       .update({ status: 'Purchased' })
       .eq('id', id)
     if (error) { console.error('mark purchased error:', JSON.stringify(error)); await loadData() }
+  }
+
+  async function handleCancelSub(id: string) {
+    setSubs(prev => prev.map(s => s.id === id ? { ...s, status: 'Cancelled' } : s))
+    const { error } = await supabase.from('subscriptions').update({ status: 'Cancelled' }).eq('id', id)
+    if (error) { console.error('cancel sub error:', JSON.stringify(error)); await loadData() }
+  }
+
+  async function handleRestoreSub(id: string) {
+    setSubs(prev => prev.map(s => s.id === id ? { ...s, status: 'Active' } : s))
+    const { error } = await supabase.from('subscriptions').update({ status: 'Active' }).eq('id', id)
+    if (error) { console.error('restore sub error:', JSON.stringify(error)); await loadData() }
   }
 
   async function handleDeleteSub(id: string) {
@@ -156,7 +169,8 @@ export default function PlansPage() {
     await loadData()
   }
 
-  const activeSubs = useMemo(() => subs.filter(s => s.status === 'Active'), [subs])
+  const activeSubs    = useMemo(() => subs.filter(s => s.status === 'Active'),    [subs])
+  const cancelledSubs = useMemo(() => subs.filter(s => s.status === 'Cancelled'), [subs])
 
   const totals = useMemo(() => ({
     monthly: activeSubs.reduce((s, sub) => s + sub.monthly_cost, 0),
@@ -237,7 +251,7 @@ export default function PlansPage() {
                   const renewal   = sub.next_renewal ? daysUntilLabel(sub.next_renewal) : '—'
                   const isOverdue = typeof renewal === 'string' && renewal.includes('ago')
                   return (
-                    <SwipeToDelete key={sub.id} onDelete={() => handleDeleteSub(sub.id)}>
+                    <SwipeToDelete key={sub.id} onDelete={() => handleCancelSub(sub.id)} actionLabel="Cancel" actionBg="bg-amber-600">
                       <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface">
                         <div className="w-9 h-9 rounded-[10px] bg-bg-overlay flex items-center justify-center text-[15px] flex-shrink-0">
                           ♻️
@@ -261,6 +275,42 @@ export default function PlansPage() {
                   )
                 })}
               </div>
+            </div>
+          )}
+
+          {/* ── Cancelled subs ───────────────────────────────────────────── */}
+          {cancelledSubs.length > 0 && (
+            <div className="mx-4 mt-4">
+              <button
+                onClick={() => setShowCancelled(v => !v)}
+                className="flex items-center gap-2 text-[10px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-3 select-none"
+              >
+                <span className={cn('transition-transform', showCancelled ? 'rotate-90' : '')} style={{ display: 'inline-block' }}>›</span>
+                Cancelled ({cancelledSubs.length})
+              </button>
+              {showCancelled && (
+                <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04] opacity-60">
+                  {cancelledSubs.map(sub => (
+                    <SwipeToDelete key={sub.id} onDelete={() => handleDeleteSub(sub.id)}>
+                      <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface">
+                        <div className="w-9 h-9 rounded-[10px] bg-bg-overlay flex items-center justify-center text-[15px] flex-shrink-0">
+                          ♻️
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[14px] font-medium text-ink line-through">{sub.name}</p>
+                          <p className="text-[11px] text-ink-faint">Cancelled</p>
+                        </div>
+                        <button
+                          onClick={() => handleRestoreSub(sub.id)}
+                          className="text-[11px] font-semibold text-emerald bg-emerald/10 px-3 py-1.5 rounded-[10px] flex-shrink-0 select-none"
+                        >
+                          Restore
+                        </button>
+                      </div>
+                    </SwipeToDelete>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </>

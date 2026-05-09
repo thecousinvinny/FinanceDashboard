@@ -7,12 +7,14 @@ const REVEAL = 80   // px to show delete button
 const AUTO   = 200  // px to auto-confirm delete
 
 interface Props {
-  onDelete:   () => void
-  children:   React.ReactNode
-  className?: string
+  onDelete:      () => void
+  children:      React.ReactNode
+  className?:    string
+  actionLabel?:  React.ReactNode   // default: 🗑️
+  actionBg?:     string            // default: bg-ruby
 }
 
-export function SwipeToDelete({ onDelete, children, className }: Props) {
+export function SwipeToDelete({ onDelete, children, className, actionLabel = '🗑️', actionBg = 'bg-ruby' }: Props) {
   const outerRef   = useRef<HTMLDivElement>(null)
   const slideRef   = useRef<HTMLDivElement>(null)
   const startX     = useRef(0)
@@ -85,11 +87,11 @@ export function SwipeToDelete({ onDelete, children, className }: Props) {
     <div ref={outerRef} className={cn('relative overflow-hidden', className)}>
       {/* Delete zone revealed on swipe */}
       <div
-        className="absolute inset-y-0 right-0 flex items-center justify-center bg-ruby cursor-pointer select-none"
+        className={cn('absolute inset-y-0 right-0 flex items-center justify-center cursor-pointer select-none', actionBg)}
         style={{ width: REVEAL }}
         onClick={triggerDelete}
       >
-        <span className="text-[18px]">🗑️</span>
+        <span className="text-[18px] text-white font-semibold">{actionLabel}</span>
       </div>
 
       {/* Sliding row content */}
