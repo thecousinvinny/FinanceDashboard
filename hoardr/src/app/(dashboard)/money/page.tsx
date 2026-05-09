@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { PillGroup } from '@/components/ui/Pill'
 import { AddTransactionSheet } from '@/components/money/AddTransactionSheet'
+import { EditTransactionSheet } from '@/components/money/EditTransactionSheet'
 import { getCategoryEmoji, type SeedTx } from '@/lib/data/transactions'
 import { groupByMonth, fmtDate, $fk, $fc, cn } from '@/lib/utils'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
@@ -15,6 +16,7 @@ export default function MoneyPage() {
   const [txList,    setTxList]    = useState<SeedTx[]>([])
   const [loading,   setLoading]   = useState(true)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [editTx,    setEditTx]    = useState<SeedTx | null>(null)
 
   const supabase = useMemo(() => createClient(), [])
 
@@ -112,6 +114,48 @@ export default function MoneyPage() {
     }
 
     await loadData()
+  }
+
+  async function handleSave(id: string, updates: { name: string; amount: number; category: string; date: string }) {
+    const tx = txList.find(t => t.id === id)
+    if (!tx) return
+
+    // Optimistic update
+    setTxList(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t))
+
+    if (tx.type === 'Expense') {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { await loadData(); return }
+
+      const { data: existing } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('name', updates.category)
+        .maybeSingle()
+
+      let categoryId: string | null = existing?.id ?? null
+      if (!categoryId) {
+        const { data: created } = await supabase
+          .from('categories')
+          .insert({ user_id: user.id, name: updates.category })
+          .select('id')
+          .single()
+        categoryId = created?.id ?? null
+      }
+
+      const { error } = await supabase
+        .from('expenses')
+        .update({ name: updates.name, cost: updates.amount, date: updates.date, category_id: categoryId })
+        .eq('id', id)
+      if (error) { console.error('edit expense error:', JSON.stringify(error)); await loadData() }
+    } else {
+      const { error } = await supabase
+        .from('income')
+        .update({ name: updates.name, amount: updates.amount, date: updates.date, source: updates.category })
+        .eq('id', id)
+      if (error) { console.error('edit income error:', JSON.stringify(error)); await loadData() }
+    }
   }
 
   // Sort newest-first before any grouping
@@ -259,7 +303,7 @@ export default function MoneyPage() {
                     const tx = row as SeedTx
                     const emoji = getCategoryEmoji(tx.category, tx.type)
                     return (
-                      <SwipeToDelete key={tx.id} onDelete={() => handleDelete(tx)}>
+                      <SwipeToDelete key={tx.id} onDelete={() => handleDelete(tx)} onTap={() => setEditTx(tx)}>
                         <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface">
                           <div className="w-9 h-9 rounded-[10px] bg-bg-overlay flex items-center justify-center text-[15px] flex-shrink-0">
                             {emoji}
@@ -294,6 +338,12 @@ export default function MoneyPage() {
       open={sheetOpen}
       onClose={() => setSheetOpen(false)}
       onAdd={handleAdd}
+    />
+    <EditTransactionSheet
+      tx={editTx}
+      open={editTx !== null}
+      onClose={() => setEditTx(null)}
+      onSave={handleSave}
     />
   </>
   )

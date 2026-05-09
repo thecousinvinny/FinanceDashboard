@@ -12,16 +12,19 @@ interface Props {
   className?:    string
   actionLabel?:  React.ReactNode   // default: 🗑️
   actionBg?:     string            // default: bg-ruby
+  onTap?:        () => void        // fires on tap when not swiped/revealed
 }
 
-export function SwipeToDelete({ onDelete, children, className, actionLabel = '🗑️', actionBg = 'bg-ruby' }: Props) {
-  const outerRef   = useRef<HTMLDivElement>(null)
-  const slideRef   = useRef<HTMLDivElement>(null)
-  const startX     = useRef(0)
-  const startY     = useRef(0)
-  const curX       = useRef(0)
-  const revealed   = useRef(false)
-  const dir        = useRef<'h' | 'v' | null>(null)
+export function SwipeToDelete({ onDelete, children, className, actionLabel = '🗑️', actionBg = 'bg-ruby', onTap }: Props) {
+  const outerRef          = useRef<HTMLDivElement>(null)
+  const slideRef          = useRef<HTMLDivElement>(null)
+  const startX            = useRef(0)
+  const startY            = useRef(0)
+  const curX              = useRef(0)
+  const revealed          = useRef(false)
+  const dir               = useRef<'h' | 'v' | null>(null)
+  const startWasRevealed  = useRef(false)
+  const didSwipe          = useRef(false)
 
   function setPos(x: number, animate: boolean) {
     const el = slideRef.current
@@ -48,9 +51,11 @@ export function SwipeToDelete({ onDelete, children, className, actionLabel = '�
   }, [])
 
   function onTouchStart(e: React.TouchEvent) {
-    startX.current = e.touches[0].clientX
-    startY.current = e.touches[0].clientY
-    dir.current    = null
+    startX.current           = e.touches[0].clientX
+    startY.current           = e.touches[0].clientY
+    dir.current              = null
+    startWasRevealed.current = revealed.current
+    didSwipe.current         = false
     setPos(curX.current, false) // disable transition while dragging
   }
 
@@ -62,6 +67,8 @@ export function SwipeToDelete({ onDelete, children, className, actionLabel = '�
       dir.current = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'
     }
     if (dir.current !== 'h') return
+
+    if (Math.abs(dx) > 5) didSwipe.current = true
 
     const base = revealed.current ? -REVEAL : 0
     const next = Math.min(0, Math.max(-AUTO - 20, base + dx))
@@ -80,6 +87,7 @@ export function SwipeToDelete({ onDelete, children, className, actionLabel = '�
     } else {
       setPos(0, true)
       revealed.current = false
+      if (!didSwipe.current && !startWasRevealed.current) onTap?.()
     }
   }
 
