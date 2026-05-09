@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { localToday, daysUntilLabel, $fk, $fc } from '@/lib/utils'
 
+export const dynamic = 'force-dynamic'
+
 function billingShort(billing: string) {
   switch (billing) {
     case 'Annual':    return '/ yr'
