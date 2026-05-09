@@ -3,8 +3,8 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { PillGroup } from '@/components/ui/Pill'
-import { AddTransactionSheet } from '@/components/money/AddTransactionSheet'
-import { EditTransactionSheet } from '@/components/money/EditTransactionSheet'
+import { AddTransactionSheet, type CardOption, type BankOption } from '@/components/money/AddTransactionSheet'
+import { EditTransactionSheet, type TxEdits } from '@/components/money/EditTransactionSheet'
 import { getCategoryEmoji, type SeedTx } from '@/lib/data/transactions'
 import { groupByMonth, fmtDate, $fk, $fc, cn } from '@/lib/utils'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
@@ -17,6 +17,8 @@ export default function MoneyPage() {
   const [loading,   setLoading]   = useState(true)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editTx,    setEditTx]    = useState<SeedTx | null>(null)
+  const [cards,     setCards]     = useState<CardOption[]>([])
+  const [banks,     setBanks]     = useState<BankOption[]>([])
 
   const supabase = useMemo(() => createClient(), [])
 
@@ -24,12 +26,12 @@ export default function MoneyPage() {
     const [{ data: expenses }, { data: income }] = await Promise.all([
       supabase
         .from('expenses')
-        .select('id, name, cost, date, categories(name)')
+        .select('id, name, cost, date, card_id, categories(name)')
         .order('date', { ascending: false })
         .order('created_at', { ascending: false }),
       supabase
         .from('income')
-        .select('id, name, amount, date, source')
+        .select('id, name, amount, date, source, bank_id')
         .order('date', { ascending: false })
         .order('created_at', { ascending: false }),
     ])
@@ -42,6 +44,7 @@ export default function MoneyPage() {
         category: (e.categories as unknown as { name: string } | null)?.name ?? 'Other',
         date:     String(e.date),
         amount:   Number(e.cost),
+        card_id:  e.card_id ? String(e.card_id) : null,
       })),
       ...(income ?? []).map(i => ({
         id:       String(i.id),
@@ -50,6 +53,7 @@ export default function MoneyPage() {
         category: String(i.source ?? 'Other'),
         date:     String(i.date),
         amount:   Number(i.amount),
+        bank_id:  i.bank_id ? String(i.bank_id) : null,
       })),
     ]
 
@@ -58,6 +62,19 @@ export default function MoneyPage() {
   }, [supabase])
 
   useEffect(() => { loadData() }, [loadData])
+
+  // Load wallet data once on mount — cards/banks change only in Wallet tab
+  useEffect(() => {
+    async function loadWallet() {
+      const [{ data: c }, { data: b }] = await Promise.all([
+        supabase.from('cards').select('id, name, last4').order('created_at', { ascending: false }),
+        supabase.from('banks').select('id, name').order('created_at', { ascending: false }),
+      ])
+      setCards((c ?? []).map(x => ({ id: String(x.id), name: String(x.name), last4: x.last4 ? String(x.last4) : null })))
+      setBanks((b ?? []).map(x => ({ id: String(x.id), name: String(x.name) })))
+    }
+    loadWallet()
+  }, [supabase])
 
   async function handleDelete(tx: SeedTx) {
     setTxList(prev => prev.filter(t => t.id !== tx.id))
@@ -100,6 +117,7 @@ export default function MoneyPage() {
         date:        tx.date,
         category_id: categoryId,
         status:      'Procured',
+        card_id:     tx.card_id ?? null,
       })
       if (expErr) console.error('expense insert error:', JSON.stringify(expErr))
     } else {
@@ -109,6 +127,7 @@ export default function MoneyPage() {
         amount:  tx.amount,
         date:    tx.date,
         source:  tx.category,
+        bank_id: tx.bank_id ?? null,
       })
       if (incErr) console.error('income insert error:', JSON.stringify(incErr))
     }
@@ -116,43 +135,37 @@ export default function MoneyPage() {
     await loadData()
   }
 
-  async function handleSave(id: string, updates: { name: string; amount: number; category: string; date: string }) {
+  async function handleSave(id: string, updates: TxEdits) {
     const tx = txList.find(t => t.id === id)
     if (!tx) return
 
-    // Optimistic update
-    setTxList(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t))
+    setTxList(prev => prev.map(t => t.id === id
+      ? { ...t, name: updates.name, amount: updates.amount, category: updates.category, date: updates.date, card_id: updates.card_id, bank_id: updates.bank_id }
+      : t))
 
     if (tx.type === 'Expense') {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { await loadData(); return }
 
       const { data: existing } = await supabase
-        .from('categories')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('name', updates.category)
-        .maybeSingle()
+        .from('categories').select('id').eq('user_id', user.id).eq('name', updates.category).maybeSingle()
 
       let categoryId: string | null = existing?.id ?? null
       if (!categoryId) {
         const { data: created } = await supabase
-          .from('categories')
-          .insert({ user_id: user.id, name: updates.category })
-          .select('id')
-          .single()
+          .from('categories').insert({ user_id: user.id, name: updates.category }).select('id').single()
         categoryId = created?.id ?? null
       }
 
       const { error } = await supabase
         .from('expenses')
-        .update({ name: updates.name, cost: updates.amount, date: updates.date, category_id: categoryId })
+        .update({ name: updates.name, cost: updates.amount, date: updates.date, category_id: categoryId, card_id: updates.card_id })
         .eq('id', id)
       if (error) { console.error('edit expense error:', JSON.stringify(error)); await loadData() }
     } else {
       const { error } = await supabase
         .from('income')
-        .update({ name: updates.name, amount: updates.amount, date: updates.date, source: updates.category })
+        .update({ name: updates.name, amount: updates.amount, date: updates.date, source: updates.category, bank_id: updates.bank_id })
         .eq('id', id)
       if (error) { console.error('edit income error:', JSON.stringify(error)); await loadData() }
     }
@@ -338,12 +351,16 @@ export default function MoneyPage() {
       open={sheetOpen}
       onClose={() => setSheetOpen(false)}
       onAdd={handleAdd}
+      cards={cards}
+      banks={banks}
     />
     <EditTransactionSheet
       tx={editTx}
       open={editTx !== null}
       onClose={() => setEditTx(null)}
       onSave={handleSave}
+      cards={cards}
+      banks={banks}
     />
   </>
   )

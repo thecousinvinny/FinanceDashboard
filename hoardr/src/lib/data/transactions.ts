@@ -5,6 +5,8 @@ export interface SeedTx {
   category: string
   date:     string  // YYYY-MM-DD
   amount:   number  // always positive
+  card_id?: string | null  // expenses only
+  bank_id?: string | null  // income only
 }
 
 export interface TxCategory {

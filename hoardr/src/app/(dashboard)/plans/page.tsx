@@ -8,6 +8,7 @@ import { AddWishlistSheet, type NewWishItem } from '@/components/plans/AddWishli
 import { EditSubscriptionSheet, type SubEdits } from '@/components/plans/EditSubscriptionSheet'
 import { EditWishlistSheet, type WishEdits } from '@/components/plans/EditWishlistSheet'
 import { daysUntilLabel, $fc, $fk, cn, calcSubCosts } from '@/lib/utils'
+import type { CardOption } from '@/components/money/AddTransactionSheet'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import type { BillingCycle } from '@/types'
 
@@ -22,6 +23,7 @@ interface Sub {
   annual_cost:  number
   next_renewal: string | null
   status:       string
+  card_id:      string | null
 }
 
 interface WishItem {
@@ -51,6 +53,7 @@ export default function PlansPage() {
   const [showCancelled, setShowCancelled] = useState(false)
   const [editSub,       setEditSub]      = useState<Sub | null>(null)
   const [editWish,      setEditWish]     = useState<WishItem | null>(null)
+  const [cards,         setCards]        = useState<CardOption[]>([])
 
   const supabase = useMemo(() => createClient(), [])
 
@@ -58,7 +61,7 @@ export default function PlansPage() {
     const [{ data: subsData }, { data: wishData }] = await Promise.all([
       supabase
         .from('subscriptions')
-        .select('id, name, cost, billing, status, next_renewal, monthly_cost, annual_cost')
+        .select('id, name, cost, billing, status, next_renewal, monthly_cost, annual_cost, card_id')
         .order('next_renewal', { ascending: true }),
       supabase
         .from('wishlist')
@@ -75,6 +78,7 @@ export default function PlansPage() {
       annual_cost:  Number(s.annual_cost  ?? 0),
       next_renewal: s.next_renewal ? String(s.next_renewal) : null,
       status:       String(s.status),
+      card_id:      s.card_id ? String(s.card_id) : null,
     })))
 
     setWishlist((wishData ?? []).map(w => ({
@@ -88,6 +92,14 @@ export default function PlansPage() {
   }, [supabase])
 
   useEffect(() => { loadData() }, [loadData])
+
+  useEffect(() => {
+    async function loadCards() {
+      const { data } = await supabase.from('cards').select('id, name, last4').order('created_at', { ascending: false })
+      setCards((data ?? []).map(c => ({ id: String(c.id), name: String(c.name), last4: c.last4 ? String(c.last4) : null })))
+    }
+    loadCards()
+  }, [supabase])
 
   async function handleMarkPurchased(id: string) {
     const item = wishlist.find(w => w.id === id)
@@ -173,7 +185,7 @@ export default function PlansPage() {
     setSubs(prev => [...prev, {
       id: tempId, name: sub.name, billing: sub.billing,
       cost: sub.cost, monthly_cost: monthly, annual_cost: annual,
-      next_renewal: sub.next_renewal, status: 'Active',
+      next_renewal: sub.next_renewal, status: 'Active', card_id: sub.card_id,
     }])
 
     const { data: { user } } = await supabase.auth.getUser()
@@ -189,6 +201,7 @@ export default function PlansPage() {
       payments:     0,
       monthly_cost: monthly,
       annual_cost:  annual,
+      card_id:      sub.card_id,
     })
 
     await loadData()
@@ -227,6 +240,7 @@ export default function PlansPage() {
         next_renewal: edits.next_renewal,
         monthly_cost: edits.monthly_cost,
         annual_cost:  edits.annual_cost,
+        card_id:      edits.card_id,
       })
       .eq('id', id)
     if (error) { console.error('edit sub error:', JSON.stringify(error)); await loadData() }
@@ -436,6 +450,7 @@ export default function PlansPage() {
         open={subSheet}
         onClose={() => setSubSheet(false)}
         onAdd={handleAddSub}
+        cards={cards}
       />
     )}
     {tab === 'Wishlist' && (
@@ -450,6 +465,7 @@ export default function PlansPage() {
       open={editSub !== null}
       onClose={() => setEditSub(null)}
       onSave={handleEditSub}
+      cards={cards}
     />
     <EditWishlistSheet
       item={editWish}

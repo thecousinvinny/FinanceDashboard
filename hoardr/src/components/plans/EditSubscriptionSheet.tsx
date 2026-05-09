@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { calcSubCosts, cn } from '@/lib/utils'
 import type { BillingCycle } from '@/types'
+import type { CardOption } from '@/components/money/AddTransactionSheet'
 
 const BILLING_OPTIONS: { value: BillingCycle; label: string }[] = [
   { value: 'Weekly',    label: 'Weekly'    },
@@ -18,6 +19,7 @@ interface SubSnapshot {
   cost:         number
   billing:      BillingCycle
   next_renewal: string | null
+  card_id:      string | null
 }
 
 export interface SubEdits {
@@ -27,6 +29,7 @@ export interface SubEdits {
   next_renewal: string
   monthly_cost: number
   annual_cost:  number
+  card_id:      string | null
 }
 
 interface Props {
@@ -34,13 +37,15 @@ interface Props {
   open:    boolean
   onClose: () => void
   onSave:  (id: string, edits: SubEdits) => void
+  cards?:  CardOption[]
 }
 
-export function EditSubscriptionSheet({ sub, open, onClose, onSave }: Props) {
+export function EditSubscriptionSheet({ sub, open, onClose, onSave, cards = [] }: Props) {
   const [name,        setName]        = useState('')
   const [amount,      setAmount]      = useState('')
   const [billing,     setBilling]     = useState<BillingCycle>('Monthly')
   const [nextRenewal, setNextRenewal] = useState('')
+  const [cardId,      setCardId]      = useState<string | null>(null)
 
   useEffect(() => {
     if (sub) {
@@ -48,6 +53,7 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave }: Props) {
       setAmount(String(sub.cost))
       setBilling(sub.billing)
       setNextRenewal(sub.next_renewal ?? '')
+      setCardId(sub.card_id)
     }
   }, [sub])
 
@@ -59,10 +65,7 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave }: Props) {
   useEffect(() => {
     if (!open) {
       const t = setTimeout(() => {
-        setName('')
-        setAmount('')
-        setBilling('Monthly')
-        setNextRenewal('')
+        setName(''); setAmount(''); setBilling('Monthly'); setNextRenewal(''); setCardId(null)
       }, 300)
       return () => clearTimeout(t)
     }
@@ -77,12 +80,8 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave }: Props) {
     if (!parsed || !name.trim() || !nextRenewal || !sub) return
     const { monthly, annual } = calcSubCosts(parsed, billing)
     onSave(sub.id, {
-      name: name.trim(),
-      cost: parsed,
-      billing,
-      next_renewal: nextRenewal,
-      monthly_cost: monthly,
-      annual_cost:  annual,
+      name: name.trim(), cost: parsed, billing, next_renewal: nextRenewal,
+      monthly_cost: monthly, annual_cost: annual, card_id: cardId,
     })
     onClose()
   }
@@ -121,9 +120,7 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave }: Props) {
           <div>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Name</p>
             <input
-              type="text"
-              value={name}
-              onChange={e => setName(e.target.value)}
+              type="text" value={name} onChange={e => setName(e.target.value)}
               className="w-full bg-bg-overlay rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none"
             />
           </div>
@@ -133,10 +130,7 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave }: Props) {
             <div className="flex items-center gap-1.5 bg-bg-overlay rounded-[14px] px-4 py-3">
               <span className="text-[22px] font-light text-ink-muted font-mono">$</span>
               <input
-                type="text"
-                inputMode="decimal"
-                placeholder="0.00"
-                value={amount}
+                type="text" inputMode="decimal" placeholder="0.00" value={amount}
                 onChange={e => handleAmountChange(e.target.value)}
                 className="flex-1 bg-transparent text-[28px] font-bold font-mono text-ink outline-none placeholder:text-ink-faint"
               />
@@ -148,8 +142,7 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave }: Props) {
             <div className="grid grid-cols-3 gap-2">
               {BILLING_OPTIONS.map(opt => (
                 <button
-                  key={opt.value}
-                  onClick={() => setBilling(opt.value)}
+                  key={opt.value} onClick={() => setBilling(opt.value)}
                   className={cn(
                     'py-2.5 rounded-[14px] text-[12px] font-semibold transition-all select-none',
                     billing === opt.value ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted',
@@ -161,20 +154,42 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave }: Props) {
             </div>
           </div>
 
+          {/* Card picker */}
+          <div>
+            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Card</p>
+            {cards.length === 0 ? (
+              <p className="text-[12px] text-ink-faint py-2">No cards yet — add one in Wallet</p>
+            ) : (
+              <div className="flex gap-2 overflow-x-auto pb-1 -mx-5 px-5">
+                <button
+                  onClick={() => setCardId(null)}
+                  className={cn('flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all select-none', cardId === null ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}
+                >
+                  None
+                </button>
+                {cards.map(c => (
+                  <button
+                    key={c.id} onClick={() => setCardId(c.id)}
+                    className={cn('flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all select-none', cardId === c.id ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}
+                  >
+                    {c.name}{c.last4 ? ` ••••${c.last4}` : ''}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Next Renewal</p>
             <input
-              type="date"
-              value={nextRenewal}
-              onChange={e => setNextRenewal(e.target.value)}
+              type="date" value={nextRenewal} onChange={e => setNextRenewal(e.target.value)}
               style={{ colorScheme: 'dark' }}
               className="w-full bg-bg-overlay rounded-[14px] px-4 py-3.5 text-[15px] text-ink outline-none"
             />
           </div>
 
           <button
-            onClick={handleSave}
-            disabled={!canSave}
+            onClick={handleSave} disabled={!canSave}
             className={cn(
               'w-full py-4 rounded-[14px] text-[15px] font-semibold transition-all select-none',
               canSave ? 'gradient-gold text-white shadow-gold' : 'bg-bg-overlay text-ink-faint',
