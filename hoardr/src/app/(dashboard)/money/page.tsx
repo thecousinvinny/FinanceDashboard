@@ -6,6 +6,7 @@ import { PillGroup } from '@/components/ui/Pill'
 import { AddTransactionSheet } from '@/components/money/AddTransactionSheet'
 import { getCategoryEmoji, type SeedTx } from '@/lib/data/transactions'
 import { groupByMonth, fmtDate, $fk, $fc, cn } from '@/lib/utils'
+import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 
 type Filter = 'All' | 'Expenses' | 'Income'
 
@@ -55,6 +56,13 @@ export default function MoneyPage() {
   }, [supabase])
 
   useEffect(() => { loadData() }, [loadData])
+
+  async function handleDelete(tx: SeedTx) {
+    setTxList(prev => prev.filter(t => t.id !== tx.id))
+    const table = tx.type === 'Expense' ? 'expenses' : 'income'
+    const { error } = await supabase.from(table).delete().eq('id', tx.id)
+    if (error) { console.error('delete error:', JSON.stringify(error)); await loadData() }
+  }
 
   async function handleAdd(tx: SeedTx) {
     // Optimistic insert
@@ -251,23 +259,25 @@ export default function MoneyPage() {
                     const tx = row as SeedTx
                     const emoji = getCategoryEmoji(tx.category, tx.type)
                     return (
-                      <div key={tx.id} className="flex items-center gap-3 px-4 py-3.5">
-                        <div className="w-9 h-9 rounded-[10px] bg-bg-overlay flex items-center justify-center text-[15px] flex-shrink-0">
-                          {emoji}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[14px] font-medium text-ink truncate">{tx.name}</p>
-                          <p className="text-[11px] text-ink-muted">
-                            {tx.category} · {fmtDate(tx.date)}
+                      <SwipeToDelete key={tx.id} onDelete={() => handleDelete(tx)}>
+                        <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface">
+                          <div className="w-9 h-9 rounded-[10px] bg-bg-overlay flex items-center justify-center text-[15px] flex-shrink-0">
+                            {emoji}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[14px] font-medium text-ink truncate">{tx.name}</p>
+                            <p className="text-[11px] text-ink-muted">
+                              {tx.category} · {fmtDate(tx.date)}
+                            </p>
+                          </div>
+                          <p className={cn(
+                            'text-[15px] font-semibold font-mono flex-shrink-0',
+                            tx.type === 'Income' ? 'text-emerald' : 'text-ink',
+                          )}>
+                            {tx.type === 'Income' ? '+' : '−'}{$fc(tx.amount)}
                           </p>
                         </div>
-                        <p className={cn(
-                          'text-[15px] font-semibold font-mono flex-shrink-0',
-                          tx.type === 'Income' ? 'text-emerald' : 'text-ink',
-                        )}>
-                          {tx.type === 'Income' ? '+' : '−'}{$fc(tx.amount)}
-                        </p>
-                      </div>
+                      </SwipeToDelete>
                     )
                   })}
                 </div>

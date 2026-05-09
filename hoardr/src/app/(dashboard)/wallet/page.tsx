@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { PillGroup } from '@/components/ui/Pill'
 import { AddCardSheet, type NewCard } from '@/components/wallet/AddCardSheet'
 import { AddBankSheet, type NewBank } from '@/components/wallet/AddBankSheet'
+import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import type { Card, Bank } from '@/types'
 import type { CardStyle } from '@/types'
 import { cn } from '@/lib/utils'
@@ -38,6 +39,18 @@ export default function WalletPage() {
   }, [supabase])
 
   useEffect(() => { loadData() }, [loadData])
+
+  async function handleDeleteCard(id: string) {
+    setCards(prev => prev.filter(c => c.id !== id))
+    const { error } = await supabase.from('cards').delete().eq('id', id)
+    if (error) { console.error('delete card error:', JSON.stringify(error)); await loadData() }
+  }
+
+  async function handleDeleteBank(id: string) {
+    setBanks(prev => prev.filter(b => b.id !== id))
+    const { error } = await supabase.from('banks').delete().eq('id', id)
+    if (error) { console.error('delete bank error:', JSON.stringify(error)); await loadData() }
+  }
 
   async function handleAddCard(newCard: NewCard) {
     const { data: { user } } = await supabase.auth.getUser()
@@ -121,7 +134,11 @@ export default function WalletPage() {
                 No cards yet — add your first one above.
               </div>
             )}
-            {cards.map(card => <CardVisual key={card.id} card={card} />)}
+            {cards.map(card => (
+              <SwipeToDelete key={card.id} onDelete={() => handleDeleteCard(card.id)} className="rounded-card">
+                <CardVisual card={card} />
+              </SwipeToDelete>
+            ))}
           </div>
         )}
 
@@ -137,7 +154,8 @@ export default function WalletPage() {
                 {banks.map(bank => {
                   const linked = cards.filter(c => c.bank_id === bank.id)
                   return (
-                    <div key={bank.id} className="flex items-center gap-3 px-4 py-4">
+                    <SwipeToDelete key={bank.id} onDelete={() => handleDeleteBank(bank.id)}>
+                    <div className="flex items-center gap-3 px-4 py-4 bg-bg-surface">
                       <div className="w-10 h-10 rounded-[10px] bg-bg-overlay flex items-center justify-center text-lg flex-shrink-0">🏦</div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[14px] font-medium text-ink">{bank.name}</p>
@@ -149,6 +167,7 @@ export default function WalletPage() {
                         {linked.length} {linked.length === 1 ? 'card' : 'cards'}
                       </p>
                     </div>
+                    </SwipeToDelete>
                   )
                 })}
               </div>

@@ -6,6 +6,7 @@ import { NEXT_STATUS, STATUS_LABEL, STATUS_COLORS, STATUS_PROGRESS } from '@/lib
 import { fmtDate, daysUntilLabel, $fc, cn } from '@/lib/utils'
 import type { CommissionStatus } from '@/types'
 import { AddCommissionSheet, type NewCommission } from '@/components/studio/AddCommissionSheet'
+import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 
 type Filter = 'All' | 'Pending' | 'Approved' | 'In Progress'
 
@@ -57,6 +58,12 @@ export default function StudioPage() {
   }, [supabase])
 
   useEffect(() => { loadData() }, [loadData])
+
+  async function handleDelete(id: string) {
+    setCommissions(prev => prev.filter(c => c.id !== id))
+    const { error } = await supabase.from('commissions').delete().eq('id', id)
+    if (error) { console.error('delete commission error:', JSON.stringify(error)); await loadData() }
+  }
 
   async function handleAdd(newC: NewCommission) {
     const { data: { user } } = await supabase.auth.getUser()
@@ -250,7 +257,8 @@ export default function StudioPage() {
             const isPastDue  = deadline?.includes('ago')
 
             return (
-              <div key={c.id} className="bg-bg-surface border border-white/[0.06] rounded-card p-4">
+              <SwipeToDelete key={c.id} onDelete={() => handleDelete(c.id)} className="rounded-card">
+            <div className="bg-bg-surface border border-white/[0.06] rounded-card p-4">
                 {/* Top row */}
                 <div className="flex items-start justify-between mb-2">
                   <div className="min-w-0 flex-1">
@@ -310,12 +318,10 @@ export default function StudioPage() {
                     >
                       {nextLabel}
                     </button>
-                    <button className="py-2 px-3 text-[11px] font-semibold text-ink-muted bg-bg-overlay border border-white/[0.06] rounded-xl">
-                      Edit
-                    </button>
                   </div>
                 )}
               </div>
+            </SwipeToDelete>
             )
           })}
         </div>

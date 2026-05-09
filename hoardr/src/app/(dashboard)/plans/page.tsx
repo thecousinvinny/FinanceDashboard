@@ -6,6 +6,7 @@ import { PillGroup } from '@/components/ui/Pill'
 import { AddSubscriptionSheet, type NewSub } from '@/components/plans/AddSubscriptionSheet'
 import { AddWishlistSheet, type NewWishItem } from '@/components/plans/AddWishlistSheet'
 import { daysUntilLabel, $fc, $fk, cn, calcSubCosts } from '@/lib/utils'
+import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import type { BillingCycle } from '@/types'
 
 type Tab = 'Subscriptions' | 'Wishlist'
@@ -82,6 +83,18 @@ export default function PlansPage() {
   }, [supabase])
 
   useEffect(() => { loadData() }, [loadData])
+
+  async function handleDeleteSub(id: string) {
+    setSubs(prev => prev.filter(s => s.id !== id))
+    const { error } = await supabase.from('subscriptions').delete().eq('id', id)
+    if (error) { console.error('delete sub error:', JSON.stringify(error)); await loadData() }
+  }
+
+  async function handleDeleteWish(id: string) {
+    setWishlist(prev => prev.filter(w => w.id !== id))
+    const { error } = await supabase.from('wishlist').delete().eq('id', id)
+    if (error) { console.error('delete wish error:', JSON.stringify(error)); await loadData() }
+  }
 
   async function handleAddSub(sub: NewSub) {
     const { monthly, annual } = calcSubCosts(sub.cost, sub.billing)
@@ -215,25 +228,27 @@ export default function PlansPage() {
                   const renewal   = sub.next_renewal ? daysUntilLabel(sub.next_renewal) : '—'
                   const isOverdue = typeof renewal === 'string' && renewal.includes('ago')
                   return (
-                    <div key={sub.id} className="flex items-center gap-3 px-4 py-3.5">
-                      <div className="w-9 h-9 rounded-[10px] bg-bg-overlay flex items-center justify-center text-[15px] flex-shrink-0">
-                        ♻️
+                    <SwipeToDelete key={sub.id} onDelete={() => handleDeleteSub(sub.id)}>
+                      <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface">
+                        <div className="w-9 h-9 rounded-[10px] bg-bg-overlay flex items-center justify-center text-[15px] flex-shrink-0">
+                          ♻️
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[14px] font-medium text-ink">{sub.name}</p>
+                          <p className={cn('text-[11px]', isOverdue ? 'text-ruby' : 'text-ink-muted')}>
+                            {renewal}
+                          </p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-[15px] font-semibold font-mono text-ink">
+                            {$fc(sub.cost)}
+                          </p>
+                          <p className="text-[10px] text-ink-faint">
+                            {billingShort(sub.billing)}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[14px] font-medium text-ink">{sub.name}</p>
-                        <p className={cn('text-[11px]', isOverdue ? 'text-ruby' : 'text-ink-muted')}>
-                          {renewal}
-                        </p>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-[15px] font-semibold font-mono text-ink">
-                          {$fc(sub.cost)}
-                        </p>
-                        <p className="text-[10px] text-ink-faint">
-                          {billingShort(sub.billing)}
-                        </p>
-                      </div>
-                    </div>
+                    </SwipeToDelete>
                   )
                 })}
               </div>
@@ -251,28 +266,27 @@ export default function PlansPage() {
             </div>
           )}
           {wishlist.map(item => (
-            <div
-              key={item.id}
-              className="bg-bg-surface border border-white/[0.06] rounded-card p-4 flex items-center gap-4"
-            >
-              <div className="w-11 h-11 rounded-[12px] bg-bg-overlay flex items-center justify-center text-[20px] flex-shrink-0">
-                ✦
+            <SwipeToDelete key={item.id} onDelete={() => handleDeleteWish(item.id)} className="rounded-card">
+              <div className="bg-bg-surface border border-white/[0.06] rounded-card p-4 flex items-center gap-4">
+                <div className="w-11 h-11 rounded-[12px] bg-bg-overlay flex items-center justify-center text-[20px] flex-shrink-0">
+                  ✦
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[14px] font-medium text-ink truncate">{item.name}</p>
+                  <p className="text-[11px] text-ink-muted mt-0.5">
+                    {item.original_cost != null ? `Goal: ${$fc(item.original_cost)}` : 'No price set'}
+                  </p>
+                </div>
+                <span className={cn(
+                  'text-[10px] font-semibold px-2.5 py-1 rounded-full flex-shrink-0',
+                  item.status === 'Purchased'
+                    ? 'bg-emerald/10 text-emerald'
+                    : 'bg-gold/10 text-gold',
+                )}>
+                  {item.status}
+                </span>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[14px] font-medium text-ink truncate">{item.name}</p>
-                <p className="text-[11px] text-ink-muted mt-0.5">
-                  {item.original_cost != null ? `Goal: ${$fc(item.original_cost)}` : 'No price set'}
-                </p>
-              </div>
-              <span className={cn(
-                'text-[10px] font-semibold px-2.5 py-1 rounded-full flex-shrink-0',
-                item.status === 'Purchased'
-                  ? 'bg-emerald/10 text-emerald'
-                  : 'bg-gold/10 text-gold',
-              )}>
-                {item.status}
-              </span>
-            </div>
+            </SwipeToDelete>
           ))}
         </div>
       )}
