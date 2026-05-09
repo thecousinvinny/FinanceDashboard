@@ -1,30 +1,37 @@
 import {
-  Utensils, Coffee, ShoppingBag, Car, Tv2, Home, Heart, Plane,
-  Zap, Briefcase, RefreshCw, LayoutGrid, Laptop, Palette,
-  ArrowLeftRight, Undo2, type LucideIcon,
+  Utensils, Gamepad2, Shirt, Laptop, Home, Heart, Plane,
+  Zap, Monitor, Sparkles, Gift, Shield, TrendingUp, LayoutGrid,
+  ArrowLeftRight, RotateCcw, Palette, RefreshCw,
+  type LucideIcon,
 } from 'lucide-react'
 
 const EXPENSE_MAP: Record<string, LucideIcon> = {
-  'Food & Drink':  Utensils,
-  'Coffee':        Coffee,
-  'Shopping':      ShoppingBag,
-  'Transport':     Car,
-  'Entertainment': Tv2,
-  'Housing':       Home,
-  'Health':        Heart,
-  'Travel':        Plane,
-  'Utilities':     Zap,
-  'Business':      Briefcase,
+  // Real categories from Google Sheets
+  'Food':      Utensils,
+  'Fun':       Gamepad2,
+  'Apparel':   Shirt,
+  'Tech':      Laptop,
+  'Home':      Home,
+  'Health':    Heart,
+  'Travel':    Plane,
+  'Tesla':     Zap,
+  'PC':        Monitor,
+  'Life':      Sparkles,
+  'Gift':      Gift,
+  'Insurance': Shield,
+  'Stocks':    TrendingUp,
+  'Other':     LayoutGrid,
+  // Subscriptions shown in expense context
   'Subscriptions': RefreshCw,
-  'Other':         LayoutGrid,
 }
 
 const INCOME_MAP: Record<string, LucideIcon> = {
-  'Freelance':  Laptop,
-  'Projects':   Palette,
-  'Repayment':  ArrowLeftRight,
-  'Refund':     Undo2,
-  'Other':      LayoutGrid,
+  'Repayment': ArrowLeftRight,
+  'Refund':    RotateCcw,
+  'Freelance': Laptop,
+  'Projects':  Palette,
+  'Stocks':    TrendingUp,
+  'Other':     LayoutGrid,
 }
 
 export function getCategoryIcon(category: string, type: 'Expense' | 'Income'): LucideIcon {
@@ -33,10 +40,10 @@ export function getCategoryIcon(category: string, type: 'Expense' | 'Income'): L
 }
 
 interface Props {
-  category:    string
-  type:        'Expense' | 'Income'
-  size?:       number
-  className?:  string
+  category:     string
+  type:         'Expense' | 'Income'
+  size?:        number
+  className?:   string
   strokeWidth?: number
 }
 

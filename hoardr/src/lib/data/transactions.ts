@@ -14,25 +14,28 @@ export interface TxCategory {
 }
 
 export const EXPENSE_CATEGORIES: TxCategory[] = [
-  { name: 'Food & Drink'  },
-  { name: 'Coffee'        },
-  { name: 'Shopping'      },
-  { name: 'Transport'     },
-  { name: 'Entertainment' },
-  { name: 'Housing'       },
-  { name: 'Health'        },
-  { name: 'Travel'        },
-  { name: 'Utilities'     },
-  { name: 'Business'      },
-  { name: 'Subscriptions' },
-  { name: 'Other'         },
+  { name: 'Food'      },
+  { name: 'Fun'       },
+  { name: 'Apparel'   },
+  { name: 'Tech'      },
+  { name: 'Home'      },
+  { name: 'Health'    },
+  { name: 'Travel'    },
+  { name: 'Tesla'     },
+  { name: 'PC'        },
+  { name: 'Life'      },
+  { name: 'Gift'      },
+  { name: 'Insurance' },
+  { name: 'Stocks'    },
+  { name: 'Other'     },
 ]
 
 export const INCOME_CATEGORIES: TxCategory[] = [
-  { name: 'Freelance' },
-  { name: 'Projects'  },
   { name: 'Repayment' },
   { name: 'Refund'    },
+  { name: 'Freelance' },
+  { name: 'Projects'  },
+  { name: 'Stocks'    },
   { name: 'Other'     },
 ]
 
