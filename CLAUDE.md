@@ -119,7 +119,9 @@ Tailwind custom theme in `tailwind.config.ts`. Key tokens:
 | `bg-base` | `#080810` | page background |
 | `bg-surface` | `#0f0f1a` | cards |
 | `bg-overlay` | `#1c1c2a` | icon backgrounds, popovers |
-| `gold` | `#f59e0b` | active nav, accents, positive amounts (Studio) |
+| `gold` | `#D4AF37` | active nav, accents, positive amounts (Studio) |
+| `gold.light` | `#F7DF9E` | gradient start (cream gold) |
+| `gold.dark` | `#A47F23` | gradient end (deep gold) |
 | `emerald` | `#22c55e` | income, positive deltas, success states |
 | `ruby` | `#ef4444` | expenses, overdue, destructive |
 | `ink` | `#f0f0f8` | primary text |
@@ -130,9 +132,11 @@ Fonts are CSS variables loaded via `next/font/google` in `src/app/layout.tsx`:
 - `--font-inter` → `font-sans` — all UI text
 - `--font-dm-mono` → `font-mono` — every dollar amount and number
 
-Utility classes defined in `globals.css`: `gradient-gold`, `gradient-emerald`, `glass`, `glow-green/gold/ruby`, `tab-enter` (page transition animation), `skeleton`.
+Utility classes defined in `globals.css`: `gradient-gold` (`135deg, #F7DF9E → #D4AF37 → #A47F23`), `gradient-emerald`, `glass`, `glow-green/gold/ruby`, `tab-enter` (page transition animation), `skeleton`.
 
-Active nav items get `text-gold` + a gold drop-shadow glow. The pill toggle (Subscriptions/Wishlist, Cards/Banks, filter pills) uses `gradient-gold` for the active state and `bg-bg-surface border border-white/[0.06]` for inactive.
+Active nav items get `text-gold`, a subtle white-gold gradient pill background, and a `drop-shadow` glow. The pill toggle (Subscriptions/Wishlist, Cards/Banks, filter pills) uses `gradient-gold` for the active state and `bg-bg-surface border border-white/[0.06]` for inactive.
+
+When writing hardcoded gold hex values (SVG stroke colors, inline styles) use `#D4AF37` — never the old amber `#f59e0b`.
 
 ### Typography conventions
 
@@ -191,6 +195,17 @@ Every page root `<div>` should include `tab-enter` for the mount animation.
 - `groupByMonth(rows)` — groups any `{ date: string }` array into `{ label, key, rows }[]` sorted newest-first
 - `clamp(v, min, max)` — numeric clamp
 - `cn(...classes)` — Tailwind className joiner
+
+### PWA / home screen install
+
+`src/app/manifest.ts` generates `/manifest.webmanifest` (Next.js built-in). `src/app/layout.tsx` sets `appleWebApp.capable: true` and `statusBarStyle: 'black-translucent'` so the app runs chrome-free when launched from the iPhone home screen.
+
+Three icon files are expected in `hoardr/public/` (not yet committed — create and add them):
+- `apple-touch-icon.png` — 180×180, used by Safari Add to Home Screen
+- `icon-192.png` — 192×192, Android / manifest
+- `icon-512.png` — 512×512, splash / maskable
+
+To install on iPhone: Safari → Share → Add to Home Screen.
 
 ### Studio commission flow
 
