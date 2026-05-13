@@ -63,39 +63,41 @@ export default async function HomePage() {
     supabase.from('income').select('amount, date').gte('date', sixMonthsAgo),
   ])
 
-  // ── Monthly chart: cumulative income vs expenses, day by day ───────────
-  const monthlyChart = (() => {
-    const monthKey = `${y}-${m}`
+  // ── 14-day chart: cumulative income vs expenses ─────────────────────────
+  const twoWeekChart = (() => {
     const todayDay = Number(todayStr.split('-')[2])
     const W = 300, H = 64
 
-    const expByDay = new Array(todayDay).fill(0)
-    const incByDay = new Array(todayDay).fill(0)
+    const days: string[] = []
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(Number(y), Number(m) - 1, todayDay - i)
+      days.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`)
+    }
+
+    const expByDay = new Array(14).fill(0)
+    const incByDay = new Array(14).fill(0)
 
     for (const r of sparkExp ?? []) {
-      if (!String(r.date).startsWith(monthKey)) continue
-      const day = Number(String(r.date).split('-')[2]) - 1
-      if (day >= 0 && day < todayDay) expByDay[day] += Number(r.cost)
+      const idx = days.indexOf(String(r.date))
+      if (idx >= 0) expByDay[idx] += Number(r.cost)
     }
     for (const r of sparkInc ?? []) {
-      if (!String(r.date).startsWith(monthKey)) continue
-      const day = Number(String(r.date).split('-')[2]) - 1
-      if (day >= 0 && day < todayDay) incByDay[day] += Number(r.amount)
+      const idx = days.indexOf(String(r.date))
+      if (idx >= 0) incByDay[idx] += Number(r.amount)
     }
 
     let runExp = 0, runInc = 0
     const cumExp: number[] = []
     const cumInc: number[] = []
-    for (let i = 0; i < todayDay; i++) {
+    for (let i = 0; i < 14; i++) {
       runExp += expByDay[i]; cumExp.push(runExp)
       runInc += incByDay[i]; cumInc.push(runInc)
     }
 
     const maxVal = Math.max(...cumExp, ...cumInc, 1)
-    const n = todayDay
 
-    function toY(v: number) { return H - (v / maxVal) * (H - 8) - 4 }
-    function toX(i: number) { return n <= 1 ? W / 2 : (i / (n - 1)) * W }
+    function toY(v: number) { return H - (v / maxVal) * (H - 10) - 5 }
+    function toX(i: number) { return (i / 13) * W }
 
     function buildPath(vals: number[]) {
       return vals.map((v, i) => {
@@ -107,16 +109,20 @@ export default async function HomePage() {
       }).join(' ')
     }
 
-    const monthName = new Date(Number(y), Number(m) - 1, 1)
-      .toLocaleString('en-US', { month: 'long', year: 'numeric' })
+    function buildArea(vals: number[]) {
+      return `${buildPath(vals)} L${W},${H} L0,${H} Z`
+    }
+
+    const startLabel = new Date(days[0]).toLocaleString('en-US', { month: 'short', day: 'numeric' })
 
     return {
       expPath: buildPath(cumExp),
+      expArea: buildArea(cumExp),
       incPath: buildPath(cumInc),
-      monthName,
-      todayDay,
+      incArea: buildArea(cumInc),
       totalExp: runExp,
       totalInc: runInc,
+      startLabel,
     }
   })()
 
@@ -177,7 +183,7 @@ export default async function HomePage() {
           </p>
           {hasData && (
             <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
-              netPositive ? 'text-emerald bg-emerald/10' : 'text-ruby bg-ruby/10'
+              netPositive ? 'text-emerald bg-emerald/10' : 'text-gold bg-gold/10'
             }`}>
               {netPositive ? '↑' : '↓'} {netPositive ? '+' : '−'}{$fk(Math.abs(saved))} net
             </span>
@@ -186,7 +192,7 @@ export default async function HomePage() {
 
         <div className="flex items-start mb-5">
           <span className="font-mono text-[22px] font-light text-ink-muted mt-[7px] mr-0.5">$</span>
-          <span className={`font-mono text-[52px] font-light leading-none tracking-[-0.04em] text-ink ${netPositive ? 'glow-green' : 'glow-ruby'}`}>
+          <span className={`font-mono text-[52px] font-light leading-none tracking-[-0.04em] text-ink ${netPositive ? 'glow-green' : 'glow-gold'}`}>
             {Math.floor(earned).toLocaleString('en-US')}
             <span className="text-[32px] text-ink-muted">
               .{String(Math.round((earned % 1) * 100)).padStart(2, '0')}
@@ -194,29 +200,41 @@ export default async function HomePage() {
           </span>
         </div>
 
-        {/* Monthly chart — cumulative income vs expenses */}
+        {/* 14-day chart — cumulative income vs expenses */}
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint">{monthlyChart.monthName}</p>
+            <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint">14 days</p>
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1 text-[10px] font-medium font-mono text-emerald">
                 <span className="w-2 h-0.5 rounded-full bg-emerald inline-block" />
-                {$fk(monthlyChart.totalInc)}
+                {$fk(twoWeekChart.totalInc)}
               </span>
-              <span className="flex items-center gap-1 text-[10px] font-medium font-mono text-ruby">
-                <span className="w-2 h-0.5 rounded-full bg-ruby inline-block" />
-                {$fk(monthlyChart.totalExp)}
+              <span className="flex items-center gap-1 text-[10px] font-medium font-mono text-gold">
+                <span className="w-2 h-0.5 rounded-full bg-gold inline-block" />
+                {$fk(twoWeekChart.totalExp)}
               </span>
             </div>
           </div>
           <div className="h-16 w-full">
             <svg viewBox="0 0 300 64" className="w-full h-full" preserveAspectRatio="none">
-              <path d={monthlyChart.expPath} fill="none" stroke="#F36369" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" opacity="0.85"/>
-              <path d={monthlyChart.incPath} fill="none" stroke="#4ADE80" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" opacity="0.85"/>
+              <defs>
+                <linearGradient id="inc-grad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#4ADE80" stopOpacity="0.25"/>
+                  <stop offset="100%" stopColor="#4ADE80" stopOpacity="0"/>
+                </linearGradient>
+                <linearGradient id="exp-grad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#E8C46B" stopOpacity="0.25"/>
+                  <stop offset="100%" stopColor="#E8C46B" stopOpacity="0"/>
+                </linearGradient>
+              </defs>
+              <path d={twoWeekChart.expArea} fill="url(#exp-grad)"/>
+              <path d={twoWeekChart.incArea} fill="url(#inc-grad)"/>
+              <path d={twoWeekChart.expPath} fill="none" stroke="#E8C46B" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d={twoWeekChart.incPath} fill="none" stroke="#4ADE80" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
           <div className="flex justify-between mt-1">
-            <span className="text-[9px] text-ink-faint">1</span>
+            <span className="text-[9px] text-ink-faint">{twoWeekChart.startLabel}</span>
             <span className="text-[9px] text-ink-faint">Today</span>
           </div>
         </div>
@@ -224,8 +242,8 @@ export default async function HomePage() {
         <div className="flex border-t border-white/[0.06] pt-4 -mx-1">
           {[
             { label: 'Income', value: $fk(earned),           color: 'text-emerald' },
-            { label: 'Spent',  value: $fk(spent),            color: 'text-ruby'    },
-            { label: 'Saved',  value: $fk(Math.abs(saved)),  color: netPositive ? 'text-ink' : 'text-ruby' },
+            { label: 'Spent',  value: $fk(spent),            color: 'text-gold'    },
+            { label: 'Saved',  value: $fk(Math.abs(saved)),  color: netPositive ? 'text-ink' : 'text-gold' },
           ].map(({ label, value, color }) => (
             <div key={label} className="flex-1 px-1">
               <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-1">{label}</p>

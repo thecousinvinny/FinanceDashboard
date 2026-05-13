@@ -281,13 +281,13 @@ export default function MoneyPage() {
                   {filter === 'All' && (
                     <p className={cn(
                       'text-[11px] font-semibold font-mono',
-                      net >= 0 ? 'text-emerald' : 'text-ruby',
+                      net >= 0 ? 'text-emerald' : 'text-gold',
                     )}>
                       {net >= 0 ? '+' : '−'}{$fk(Math.abs(net))} net
                     </p>
                   )}
                   {filter === 'Expenses' && (
-                    <p className="text-[11px] font-semibold font-mono text-ruby">
+                    <p className="text-[11px] font-semibold font-mono text-gold">
                       −{$fk(group.spent)}
                     </p>
                   )}
