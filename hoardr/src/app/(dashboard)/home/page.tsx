@@ -65,13 +65,13 @@ export default async function HomePage() {
 
   // ── Sparkline: net (income − expenses) per month, last 6 months ────────
   const sparkPoints = (() => {
-    const months: { key: string; net: number }[] = []
+    const months: { key: string; label: string; net: number }[] = []
     for (let i = 5; i >= 0; i--) {
       const d   = new Date(Number(y), Number(m) - 1 - i, 1)
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
       const inc = (sparkInc ?? []).filter(r => String(r.date).startsWith(key)).reduce((s, r) => s + Number(r.amount), 0)
       const exp = (sparkExp ?? []).filter(r => String(r.date).startsWith(key)).reduce((s, r) => s + Number(r.cost),   0)
-      months.push({ key, net: inc - exp })
+      months.push({ key, label: d.toLocaleString('en-US', { month: 'short' }), net: inc - exp })
     }
     const vals   = months.map(m => m.net)
     const minVal = Math.min(...vals, 0)
@@ -92,7 +92,8 @@ export default async function HomePage() {
     const last  = pts[pts.length - 1]
     const allPositive = vals.every(v => v >= 0)
     const color = allPositive ? '#4ADE80' : '#E8C46B'
-    return { d, area, last, color }
+    const zeroY = minVal < 0 ? H - ((0 - minVal) / range) * (H - 8) - 4 : null
+    return { d, area, last, color, months, zeroY }
   })()
 
   // ── Self-heal: backfill profile if missing ──────────────────────────────
@@ -170,18 +171,35 @@ export default async function HomePage() {
         </div>
 
         {/* Sparkline — 6-month net (income − expenses) */}
-        <div className="h-16 w-full mb-5">
-          <svg viewBox="0 0 300 64" className="w-full h-full" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%"   stopColor={sparkPoints.color} stopOpacity="0.3"/>
-                <stop offset="100%" stopColor={sparkPoints.color} stopOpacity="0"/>
-              </linearGradient>
-            </defs>
-            <path d={sparkPoints.area} fill="url(#sg)"/>
-            <path d={sparkPoints.d} fill="none" stroke={sparkPoints.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <circle cx={sparkPoints.last.x} cy={sparkPoints.last.y} r="3" fill={sparkPoints.color}/>
-          </svg>
+        <div className="mb-1">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint">6-mo net</p>
+            <p className={`text-[12px] font-semibold font-mono ${sparkPoints.color === '#4ADE80' ? 'text-emerald' : 'text-gold'}`}>
+              {sparkPoints.months[5].net >= 0 ? '+' : '−'}{$fk(Math.abs(sparkPoints.months[5].net))} this month
+            </p>
+          </div>
+          <div className="h-16 w-full">
+            <svg viewBox="0 0 300 64" className="w-full h-full" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%"   stopColor={sparkPoints.color} stopOpacity="0.3"/>
+                  <stop offset="100%" stopColor={sparkPoints.color} stopOpacity="0"/>
+                </linearGradient>
+              </defs>
+              {sparkPoints.zeroY !== null && (
+                <line x1="0" y1={sparkPoints.zeroY} x2="300" y2={sparkPoints.zeroY}
+                  stroke="rgba(255,255,255,0.12)" strokeWidth="1" strokeDasharray="4,4"/>
+              )}
+              <path d={sparkPoints.area} fill="url(#sg)"/>
+              <path d={sparkPoints.d} fill="none" stroke={sparkPoints.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <circle cx={sparkPoints.last.x} cy={sparkPoints.last.y} r="3" fill={sparkPoints.color}/>
+            </svg>
+          </div>
+          <div className="flex justify-between mt-1">
+            {sparkPoints.months.map(mo => (
+              <span key={mo.key} className="text-[9px] text-ink-faint font-medium">{mo.label}</span>
+            ))}
+          </div>
         </div>
 
         <div className="flex border-t border-white/[0.06] pt-4 -mx-1">

@@ -21,9 +21,9 @@ export default function BottomNav() {
     <nav
       className="fixed bottom-0 inset-x-0 h-[72px] z-50 flex items-stretch justify-around px-2"
       style={{
-        background:           'rgba(8,8,16,0.88)',
-        backdropFilter:       'blur(32px) saturate(200%)',
-        WebkitBackdropFilter: 'blur(32px) saturate(200%)',
+        background:           'rgba(10,10,11,0.92)',
+        backdropFilter:       'blur(32px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(32px) saturate(180%)',
       }}
     >
       <div
@@ -45,22 +45,16 @@ export default function BottomNav() {
               active ? 'text-gold' : 'text-ink-faint',
             )}
           >
-            <span
-              className={cn(
-                'relative flex items-center justify-center w-8 h-7 rounded-full transition-all duration-200',
-                active
-                  ? 'drop-shadow-[0_0_8px_rgba(232,196,107,0.7)]'
-                  : '',
-              )}
-              style={active ? {
-                background: 'linear-gradient(135deg, rgba(246,223,158,0.18), rgba(232,196,107,0.12), rgba(164,127,35,0.08))',
-              } : undefined}
-            >
+            <span className="transition-colors duration-200">
               <Icon size={22} strokeWidth={active ? 2 : 1.5} />
             </span>
             <span className="text-[9px] font-medium tracking-[0.07em] uppercase leading-none">
               {label}
             </span>
+            <span className={cn(
+              'w-1 h-1 rounded-full transition-all duration-200',
+              active ? 'bg-gold' : 'bg-transparent',
+            )} />
           </Link>
         )
       })}
