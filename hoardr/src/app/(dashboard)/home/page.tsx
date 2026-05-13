@@ -113,7 +113,7 @@ export default async function HomePage() {
       return `${buildPath(vals)} L${W},${H} L0,${H} Z`
     }
 
-    const startLabel = new Date(days[0]).toLocaleString('en-US', { month: 'short', day: 'numeric' })
+    const dayLabels = days.map(d => String(Number(d.split('-')[2])))
 
     return {
       expPath: buildPath(cumExp),
@@ -122,7 +122,7 @@ export default async function HomePage() {
       incArea: buildArea(cumInc),
       totalExp: runExp,
       totalInc: runInc,
-      startLabel,
+      dayLabels,
     }
   })()
 
@@ -234,8 +234,9 @@ export default async function HomePage() {
             </svg>
           </div>
           <div className="flex justify-between mt-1">
-            <span className="text-[9px] text-ink-faint">{twoWeekChart.startLabel}</span>
-            <span className="text-[9px] text-ink-faint">Today</span>
+            {twoWeekChart.dayLabels.map((d, i) => (
+              <span key={i} className={`text-[8px] font-medium leading-none ${i === 13 ? 'text-gold' : 'text-ink-faint'}`}>{d}</span>
+            ))}
           </div>
         </div>
 
