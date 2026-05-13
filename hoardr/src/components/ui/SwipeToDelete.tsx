@@ -22,6 +22,7 @@ const DEFAULT_ICON = <Trash2 size={18} strokeWidth={1.5} />
 export function SwipeToDelete({ onDelete, children, className, actionLabel = DEFAULT_ICON, actionBg = 'bg-ruby', onTap }: Props) {
   const outerRef          = useRef<HTMLDivElement>(null)
   const slideRef          = useRef<HTMLDivElement>(null)
+  const actionRef         = useRef<HTMLDivElement>(null)
   const startX            = useRef(0)
   const startY            = useRef(0)
   const curX              = useRef(0)
@@ -32,11 +33,17 @@ export function SwipeToDelete({ onDelete, children, className, actionLabel = DEF
   const mouseDown         = useRef(false)
 
   function setPos(x: number, animate: boolean) {
-    const el = slideRef.current
+    const el  = slideRef.current
+    const act = actionRef.current
     if (!el) return
-    el.style.transition = animate ? 'transform 0.25s cubic-bezier(0.25,1,0.5,1)' : 'none'
+    const t = animate ? 'transform 0.25s cubic-bezier(0.25,1,0.5,1)' : 'none'
+    el.style.transition = t
     el.style.transform  = `translateX(${x}px)`
     curX.current = x
+    if (act) {
+      act.style.transition = animate ? 'opacity 0.25s' : 'none'
+      act.style.opacity    = String(Math.min(1, Math.abs(x) / REVEAL))
+    }
   }
 
   function triggerDelete() {
@@ -136,10 +143,11 @@ export function SwipeToDelete({ onDelete, children, className, actionLabel = DEF
 
   return (
     <div ref={outerRef} className={cn('relative overflow-hidden bg-bg-surface', className)}>
-      {/* Delete zone */}
+      {/* Delete zone — starts invisible, fades in as user swipes */}
       <div
+        ref={actionRef}
         className={cn('absolute inset-y-0 right-0 flex items-center justify-center cursor-pointer select-none text-white', actionBg)}
-        style={{ width: REVEAL }}
+        style={{ width: REVEAL, opacity: 0 }}
         onClick={triggerDelete}
       >
         {actionLabel}

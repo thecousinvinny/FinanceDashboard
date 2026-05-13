@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { localToday, daysUntilLabel, $fk, $fc } from '@/lib/utils'
 import { RefreshCw } from 'lucide-react'
-import { CategoryIcon } from '@/components/ui/CategoryIcon'
+import { CategoryIcon, getCategoryIcon } from '@/components/ui/CategoryIcon'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,7 +51,7 @@ export default async function HomePage() {
     supabase.from('income').select('amount').gte('date', monthStart).lte('date', monthEnd),
     supabase.from('subscriptions').select('monthly_cost').eq('status', 'Active'),
     supabase.from('subscriptions')
-      .select('id, name, cost, next_renewal, billing')
+      .select('id, name, cost, next_renewal, billing, category')
       .eq('status', 'Active')
       .gte('next_renewal', todayStr)
       .order('next_renewal', { ascending: true })
@@ -63,37 +63,61 @@ export default async function HomePage() {
     supabase.from('income').select('amount, date').gte('date', sixMonthsAgo),
   ])
 
-  // ── Sparkline: net (income − expenses) per month, last 6 months ────────
-  const sparkPoints = (() => {
-    const months: { key: string; label: string; net: number }[] = []
-    for (let i = 5; i >= 0; i--) {
-      const d   = new Date(Number(y), Number(m) - 1 - i, 1)
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-      const inc = (sparkInc ?? []).filter(r => String(r.date).startsWith(key)).reduce((s, r) => s + Number(r.amount), 0)
-      const exp = (sparkExp ?? []).filter(r => String(r.date).startsWith(key)).reduce((s, r) => s + Number(r.cost),   0)
-      months.push({ key, label: d.toLocaleString('en-US', { month: 'short' }), net: inc - exp })
+  // ── Monthly chart: cumulative income vs expenses, day by day ───────────
+  const monthlyChart = (() => {
+    const monthKey = `${y}-${m}`
+    const todayDay = Number(todayStr.split('-')[2])
+    const W = 300, H = 64
+
+    const expByDay = new Array(todayDay).fill(0)
+    const incByDay = new Array(todayDay).fill(0)
+
+    for (const r of sparkExp ?? []) {
+      if (!String(r.date).startsWith(monthKey)) continue
+      const day = Number(String(r.date).split('-')[2]) - 1
+      if (day >= 0 && day < todayDay) expByDay[day] += Number(r.cost)
     }
-    const vals   = months.map(m => m.net)
-    const minVal = Math.min(...vals, 0)
-    const maxVal = Math.max(...vals, 1)
-    const range  = maxVal - minVal || 1
-    const H = 64, W = 300
-    const pts = months.map((m, i) => ({
-      x: (i / (months.length - 1)) * W,
-      y: H - ((m.net - minVal) / range) * (H - 8) - 4,
-    }))
-    const d = pts.map((p, i) => {
-      if (i === 0) return `M${p.x},${p.y}`
-      const prev = pts[i - 1]
-      const cx = (prev.x + p.x) / 2
-      return `C${cx},${prev.y} ${cx},${p.y} ${p.x},${p.y}`
-    }).join(' ')
-    const area = `${d} L${W},${H} L0,${H} Z`
-    const last  = pts[pts.length - 1]
-    const allPositive = vals.every(v => v >= 0)
-    const color = allPositive ? '#4ADE80' : '#E8C46B'
-    const zeroY = minVal < 0 ? H - ((0 - minVal) / range) * (H - 8) - 4 : null
-    return { d, area, last, color, months, zeroY }
+    for (const r of sparkInc ?? []) {
+      if (!String(r.date).startsWith(monthKey)) continue
+      const day = Number(String(r.date).split('-')[2]) - 1
+      if (day >= 0 && day < todayDay) incByDay[day] += Number(r.amount)
+    }
+
+    let runExp = 0, runInc = 0
+    const cumExp: number[] = []
+    const cumInc: number[] = []
+    for (let i = 0; i < todayDay; i++) {
+      runExp += expByDay[i]; cumExp.push(runExp)
+      runInc += incByDay[i]; cumInc.push(runInc)
+    }
+
+    const maxVal = Math.max(...cumExp, ...cumInc, 1)
+    const n = todayDay
+
+    function toY(v: number) { return H - (v / maxVal) * (H - 8) - 4 }
+    function toX(i: number) { return n <= 1 ? W / 2 : (i / (n - 1)) * W }
+
+    function buildPath(vals: number[]) {
+      return vals.map((v, i) => {
+        const x = toX(i), y = toY(v)
+        if (i === 0) return `M${x},${y}`
+        const px = toX(i - 1), py = toY(vals[i - 1])
+        const cx = (px + x) / 2
+        return `C${cx},${py} ${cx},${y} ${x},${y}`
+      }).join(' ')
+    }
+
+    const monthName = new Date(Number(y), Number(m) - 1, 1)
+      .toLocaleString('en-US', { month: 'long', year: 'numeric' })
+
+    return {
+      expPath: buildPath(cumExp),
+      incPath: buildPath(cumInc),
+      monthName,
+      todayDay,
+      totalExp: runExp,
+      totalInc: runInc,
+    }
   })()
 
   // ── Self-heal: backfill profile if missing ──────────────────────────────
@@ -170,35 +194,30 @@ export default async function HomePage() {
           </span>
         </div>
 
-        {/* Sparkline — 6-month net (income − expenses) */}
-        <div className="mb-1">
-          <div className="flex items-center justify-between mb-1.5">
-            <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint">6-mo net</p>
-            <p className={`text-[12px] font-semibold font-mono ${sparkPoints.color === '#4ADE80' ? 'text-emerald' : 'text-gold'}`}>
-              {sparkPoints.months[5].net >= 0 ? '+' : '−'}{$fk(Math.abs(sparkPoints.months[5].net))} this month
-            </p>
+        {/* Monthly chart — cumulative income vs expenses */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint">{monthlyChart.monthName}</p>
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1 text-[10px] font-medium font-mono text-emerald">
+                <span className="w-2 h-0.5 rounded-full bg-emerald inline-block" />
+                {$fk(monthlyChart.totalInc)}
+              </span>
+              <span className="flex items-center gap-1 text-[10px] font-medium font-mono text-ruby">
+                <span className="w-2 h-0.5 rounded-full bg-ruby inline-block" />
+                {$fk(monthlyChart.totalExp)}
+              </span>
+            </div>
           </div>
           <div className="h-16 w-full">
             <svg viewBox="0 0 300 64" className="w-full h-full" preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%"   stopColor={sparkPoints.color} stopOpacity="0.3"/>
-                  <stop offset="100%" stopColor={sparkPoints.color} stopOpacity="0"/>
-                </linearGradient>
-              </defs>
-              {sparkPoints.zeroY !== null && (
-                <line x1="0" y1={sparkPoints.zeroY} x2="300" y2={sparkPoints.zeroY}
-                  stroke="rgba(255,255,255,0.12)" strokeWidth="1" strokeDasharray="4,4"/>
-              )}
-              <path d={sparkPoints.area} fill="url(#sg)"/>
-              <path d={sparkPoints.d} fill="none" stroke={sparkPoints.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <circle cx={sparkPoints.last.x} cy={sparkPoints.last.y} r="3" fill={sparkPoints.color}/>
+              <path d={monthlyChart.expPath} fill="none" stroke="#F36369" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" opacity="0.85"/>
+              <path d={monthlyChart.incPath} fill="none" stroke="#4ADE80" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" opacity="0.85"/>
             </svg>
           </div>
           <div className="flex justify-between mt-1">
-            {sparkPoints.months.map(mo => (
-              <span key={mo.key} className="text-[9px] text-ink-faint font-medium">{mo.label}</span>
-            ))}
+            <span className="text-[9px] text-ink-faint">1</span>
+            <span className="text-[9px] text-ink-faint">Today</span>
           </div>
         </div>
 
@@ -244,7 +263,10 @@ export default async function HomePage() {
             {upcoming!.map(sub => (
               <div key={sub.id} className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
                 <div className="w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
-                  <RefreshCw size={15} className="text-gold" strokeWidth={1.75} />
+                  {sub.category
+                    ? (() => { const Icon = getCategoryIcon(sub.category, 'Expense'); return <Icon size={15} strokeWidth={1.75} className="text-gold" /> })()
+                    : <RefreshCw size={15} className="text-gold" strokeWidth={1.75} />
+                  }
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[14px] font-medium text-ink">{sub.name}</p>
