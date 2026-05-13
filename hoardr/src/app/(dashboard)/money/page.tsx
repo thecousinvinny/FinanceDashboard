@@ -18,8 +18,9 @@ export default function MoneyPage() {
   const [loading,   setLoading]   = useState(true)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editTx,    setEditTx]    = useState<SeedTx | null>(null)
-  const [cards,     setCards]     = useState<CardOption[]>([])
-  const [banks,     setBanks]     = useState<BankOption[]>([])
+  const [cards,         setCards]         = useState<CardOption[]>([])
+  const [banks,         setBanks]         = useState<BankOption[]>([])
+  const [defaultCardId, setDefaultCardId] = useState<string | null>(null)
 
   const supabase = useMemo(() => createClient(), [])
 
@@ -68,10 +69,12 @@ export default function MoneyPage() {
   useEffect(() => {
     async function loadWallet() {
       const [{ data: c }, { data: b }] = await Promise.all([
-        supabase.from('cards').select('id, name, last4').order('created_at', { ascending: false }),
+        supabase.from('cards').select('id, name, last4, is_default').order('is_default', { ascending: false }).order('created_at', { ascending: false }),
         supabase.from('banks').select('id, name').order('created_at', { ascending: false }),
       ])
-      setCards((c ?? []).map(x => ({ id: String(x.id), name: String(x.name), last4: x.last4 ? String(x.last4) : null })))
+      const cList = c ?? []
+      setDefaultCardId((cList as { is_default: boolean; id: string }[]).find(x => x.is_default)?.id ?? null)
+      setCards(cList.map(x => ({ id: String(x.id), name: String(x.name), last4: x.last4 ? String(x.last4) : null })))
       setBanks((b ?? []).map(x => ({ id: String(x.id), name: String(x.name) })))
     }
     loadWallet()
@@ -341,6 +344,7 @@ export default function MoneyPage() {
       onAdd={handleAdd}
       cards={cards}
       banks={banks}
+      defaultCardId={defaultCardId}
     />
     <EditTransactionSheet
       tx={editTx}

@@ -11,6 +11,21 @@
   touch-action: manipulation;
 }
 
+/* ── Press feedback ──────────────────────────────────────────────────────── */
+button:not(:disabled) {
+  transition: transform 0.08s ease-out, opacity 0.08s ease-out;
+}
+button:not(:disabled):active {
+  transform: scale(0.96);
+  opacity: 0.85;
+}
+a {
+  transition: opacity 0.08s ease-out;
+}
+a:active {
+  opacity: 0.72;
+}
+
 html, body {
   background-color: #0A0A0B;
   color: #F7F7F5;

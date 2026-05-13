@@ -16,14 +16,15 @@ export interface CardOption { id: string; name: string; last4: string | null }
 export interface BankOption { id: string; name: string }
 
 interface Props {
-  open:    boolean
-  onClose: () => void
-  onAdd:   (tx: SeedTx) => void
-  cards?:  CardOption[]
-  banks?:  BankOption[]
+  open:           boolean
+  onClose:        () => void
+  onAdd:          (tx: SeedTx) => void
+  cards?:         CardOption[]
+  banks?:         BankOption[]
+  defaultCardId?: string | null
 }
 
-export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = [] }: Props) {
+export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = [], defaultCardId }: Props) {
   const [type,     setType]     = useState<TxType>('Expense')
   const [amount,   setAmount]   = useState('')
   const [name,     setName]     = useState('')
@@ -42,18 +43,21 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
   }, [open])
 
   useEffect(() => {
-    if (!open) {
+    if (open) {
+      setCardId(defaultCardId ?? null)
+    } else {
       const t = setTimeout(() => {
         setType('Expense')
         setAmount('')
         setName('')
         setCategory(null)
         setDate(localToday())
-        setCardId(null)
+        setCardId(defaultCardId ?? null)
         setBankId(null)
       }, 300)
       return () => clearTimeout(t)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   function handleAmountChange(raw: string) {

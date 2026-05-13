@@ -62,6 +62,7 @@ export default function PlansPage() {
   const [buyItem,       setBuyItem]      = useState<WishItem | null>(null)
   const [buyAmount,     setBuyAmount]    = useState('')
   const [cards,         setCards]        = useState<CardOption[]>([])
+  const [defaultCardId, setDefaultCardId] = useState<string | null>(null)
 
   const supabase = useMemo(() => createClient(), [])
 
@@ -108,8 +109,10 @@ export default function PlansPage() {
 
   useEffect(() => {
     async function loadCards() {
-      const { data } = await supabase.from('cards').select('id, name, last4').order('created_at', { ascending: false })
-      setCards((data ?? []).map(c => ({ id: String(c.id), name: String(c.name), last4: c.last4 ? String(c.last4) : null })))
+      const { data } = await supabase.from('cards').select('id, name, last4, is_default').order('is_default', { ascending: false }).order('created_at', { ascending: false })
+      const cList = data ?? []
+      setDefaultCardId((cList as { is_default: boolean; id: string }[]).find(x => x.is_default)?.id ?? null)
+      setCards(cList.map(c => ({ id: String(c.id), name: String(c.name), last4: c.last4 ? String(c.last4) : null })))
     }
     loadCards()
   }, [supabase])
@@ -476,6 +479,7 @@ export default function PlansPage() {
         onClose={() => setSubSheet(false)}
         onAdd={handleAddSub}
         cards={cards}
+        defaultCardId={defaultCardId}
       />
     )}
     {tab === 'Wishlist' && (

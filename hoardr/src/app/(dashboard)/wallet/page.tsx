@@ -5,11 +5,12 @@ import { createClient } from '@/lib/supabase/client'
 import { PillGroup } from '@/components/ui/Pill'
 import { AddCardSheet, type NewCard } from '@/components/wallet/AddCardSheet'
 import { AddBankSheet, type NewBank } from '@/components/wallet/AddBankSheet'
+import { EditCardSheet, type CardEdits } from '@/components/wallet/EditCardSheet'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import type { Card, Bank } from '@/types'
 import type { CardStyle } from '@/types'
-import { cn, $fc, fmtDate } from '@/lib/utils'
+import { cn, $fc, $fk, fmtDate } from '@/lib/utils'
 
 interface CardExpense {
   id:         string
@@ -28,6 +29,8 @@ export default function WalletPage() {
   const [loading,         setLoading]       = useState(true)
   const [sheetOpen,       setSheetOpen]     = useState(false)
   const [selectedCard,    setSelectedCard]  = useState<Card | null>(null)
+  const [editCard,        setEditCard]      = useState<Card | null>(null)
+  const [editSheetOpen,   setEditSheetOpen] = useState(false)
   const [cardExpenses,    setCardExpenses]  = useState<CardExpense[]>([])
   const [expLoading,      setExpLoading]    = useState(false)
 
@@ -102,6 +105,22 @@ export default function WalletPage() {
     await loadData()
   }
 
+  async function handleSaveCard(id: string, edits: CardEdits) {
+    setCards(prev => prev.map(c => c.id === id ? { ...c, ...edits } : c))
+    const { error } = await supabase.from('cards').update(edits).eq('id', id)
+    if (error) { console.error('update card error:', JSON.stringify(error)); await loadData() }
+  }
+
+  async function handleMakeDefault(cardId: string) {
+    setCards(prev => prev.map(c => ({ ...c, is_default: c.id === cardId })))
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    await supabase.from('cards').update({ is_default: false }).eq('user_id', user.id)
+    await supabase.from('cards').update({ is_default: true  }).eq('id', cardId)
+    await supabase.from('profiles').update({ default_card_id: cardId }).eq('id', user.id)
+    await loadData()
+  }
+
   async function handleAddBank(newBank: NewBank) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -163,7 +182,9 @@ export default function WalletPage() {
             )}
             {cards.map(card => (
               <SwipeToDelete key={card.id} onDelete={() => handleDeleteCard(card.id)} onTap={() => setSelectedCard(card)} className="rounded-card">
-                <CardVisual card={card} />
+                <div className="active:scale-[0.98] transition-transform duration-75">
+                  <CardVisual card={card} />
+                </div>
               </SwipeToDelete>
             ))}
           </div>
@@ -221,6 +242,15 @@ export default function WalletPage() {
         />
       )}
 
+      <EditCardSheet
+        card={editCard}
+        open={editSheetOpen}
+        onClose={() => setEditSheetOpen(false)}
+        onSave={handleSaveCard}
+        onMakeDefault={handleMakeDefault}
+        banks={banks.map(b => ({ id: b.id, name: b.name }))}
+      />
+
       {/* ── Card expenses sheet ──────────────────────────────────────────── */}
       <div
         onClick={() => setSelectedCard(null)}
@@ -242,12 +272,41 @@ export default function WalletPage() {
         </div>
         <div className="flex items-center justify-between px-5 mb-4">
           <div>
-            <p className="text-[10px] font-medium tracking-[0.12em] uppercase text-ink-faint">Card Expenses</p>
+            <p className="text-[10px] font-medium tracking-[0.12em] uppercase text-ink-faint">Card</p>
             <h2 className="text-[18px] font-bold tracking-tight text-ink">{selectedCard?.name}</h2>
           </div>
-          <button onClick={() => setSelectedCard(null)} className="w-8 h-8 flex items-center justify-center text-[22px] text-ink-muted">×</button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => { setEditCard(selectedCard); setSelectedCard(null); setEditSheetOpen(true) }}
+              className="px-3 h-8 rounded-full bg-bg-overlay text-[11px] font-medium text-ink-muted select-none"
+            >
+              Edit
+            </button>
+            <button onClick={() => setSelectedCard(null)} className="w-8 h-8 flex items-center justify-center text-[22px] text-ink-muted">×</button>
+          </div>
         </div>
-        <div className="overflow-y-auto" style={{ maxHeight: '60vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
+
+        {/* Stats */}
+        {!expLoading && (() => {
+          const now        = new Date()
+          const monthStart = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`
+          const yearStart  = `${now.getFullYear()}-01-01`
+          const mo  = cardExpenses.filter(e => e.date >= monthStart).reduce((s, e) => s + Number(e.cost), 0)
+          const yr  = cardExpenses.filter(e => e.date >= yearStart ).reduce((s, e) => s + Number(e.cost), 0)
+          const all = cardExpenses.reduce((s, e) => s + Number(e.cost), 0)
+          return (
+            <div className="grid grid-cols-3 gap-2 px-5 mb-4">
+              {[['This Month', mo], ['This Year', yr], ['All Time', all]].map(([label, val]) => (
+                <div key={label as string} className="bg-bg-overlay rounded-[14px] px-3 py-3">
+                  <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-1">{label}</p>
+                  <p className="text-[14px] font-bold font-mono text-gold">{$fk(val as number)}</p>
+                </div>
+              ))}
+            </div>
+          )
+        })()}
+
+        <div className="overflow-y-auto" style={{ maxHeight: '50vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
           {expLoading ? (
             <div className="px-4 space-y-2.5 pb-4">
               {[1,2,3].map(i => <div key={i} className="h-14 rounded-[18px] skeleton" />)}

@@ -25,13 +25,14 @@ export interface NewSub {
 }
 
 interface Props {
-  open:    boolean
-  onClose: () => void
-  onAdd:   (sub: NewSub) => void
-  cards?:  CardOption[]
+  open:           boolean
+  onClose:        () => void
+  onAdd:          (sub: NewSub) => void
+  cards?:         CardOption[]
+  defaultCardId?: string | null
 }
 
-export function AddSubscriptionSheet({ open, onClose, onAdd, cards = [] }: Props) {
+export function AddSubscriptionSheet({ open, onClose, onAdd, cards = [], defaultCardId }: Props) {
   const [name,        setName]        = useState('')
   const [amount,      setAmount]      = useState('')
   const [billing,     setBilling]     = useState<BillingCycle>('Monthly')
@@ -45,13 +46,16 @@ export function AddSubscriptionSheet({ open, onClose, onAdd, cards = [] }: Props
   }, [open])
 
   useEffect(() => {
-    if (!open) {
+    if (open) {
+      setCardId(defaultCardId ?? null)
+    } else {
       const t = setTimeout(() => {
         setName(''); setAmount(''); setBilling('Monthly')
-        setNextRenewal(localToday()); setCardId(null); setCategory(null)
+        setNextRenewal(localToday()); setCardId(defaultCardId ?? null); setCategory(null)
       }, 300)
       return () => clearTimeout(t)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   function handleAmountChange(raw: string) {
