@@ -86,6 +86,13 @@ export const CARD_STYLE_DEFS: Record<CardStyle, CardStyleDef> = {
   },
 }
 
+export const STYLE_GROUPS: { label: string; styles: CardStyle[] }[] = [
+  { label: 'Neutral', styles: ['black', 'graphite', 'platinum', 'midnight'] },
+  { label: 'Blue',    styles: ['sapphire', 'cobalt', 'obsidian'] },
+  { label: 'Green',   styles: ['green', 'forest'] },
+  { label: 'Warm',    styles: ['gold', 'rose', 'ruby'] },
+]
+
 export const CARD_TEXTURE_DEFS: Record<CardTexture, { label: string }> = {
   none:     { label: 'None'    },
   diamonds: { label: 'Diamond' },
