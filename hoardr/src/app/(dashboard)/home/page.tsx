@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { localToday, daysUntilLabel, $fk, $fc } from '@/lib/utils'
 import { RefreshCw } from 'lucide-react'
 import { CategoryIcon, getCategoryIcon } from '@/components/ui/CategoryIcon'
+import { SparkChart } from '@/components/home/SparkChart'
 
 export const dynamic = 'force-dynamic'
 
@@ -63,20 +64,16 @@ export default async function HomePage() {
     supabase.from('income').select('amount, date').gte('date', sixMonthsAgo),
   ])
 
-  // ── 14-day chart: cumulative income vs expenses ─────────────────────────
-  const twoWeekChart = (() => {
+  // ── 14-day chart data (daily, non-cumulative) ───────────────────────────
+  const sparkPoints = (() => {
     const todayDay = Number(todayStr.split('-')[2])
-    const W = 300, H = 64
-
     const days: string[] = []
     for (let i = 13; i >= 0; i--) {
       const d = new Date(Number(y), Number(m) - 1, todayDay - i)
       days.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`)
     }
-
     const expByDay = new Array(14).fill(0)
     const incByDay = new Array(14).fill(0)
-
     for (const r of sparkExp ?? []) {
       const idx = days.indexOf(String(r.date))
       if (idx >= 0) expByDay[idx] += Number(r.cost)
@@ -85,45 +82,12 @@ export default async function HomePage() {
       const idx = days.indexOf(String(r.date))
       if (idx >= 0) incByDay[idx] += Number(r.amount)
     }
-
-    let runExp = 0, runInc = 0
-    const cumExp: number[] = []
-    const cumInc: number[] = []
-    for (let i = 0; i < 14; i++) {
-      runExp += expByDay[i]; cumExp.push(runExp)
-      runInc += incByDay[i]; cumInc.push(runInc)
-    }
-
-    const maxVal = Math.max(...cumExp, ...cumInc, 1)
-
-    function toY(v: number) { return H - (v / maxVal) * (H - 10) - 5 }
-    function toX(i: number) { return (i / 13) * W }
-
-    function buildPath(vals: number[]) {
-      return vals.map((v, i) => {
-        const x = toX(i), y = toY(v)
-        if (i === 0) return `M${x},${y}`
-        const px = toX(i - 1), py = toY(vals[i - 1])
-        const cx = (px + x) / 2
-        return `C${cx},${py} ${cx},${y} ${x},${y}`
-      }).join(' ')
-    }
-
-    function buildArea(vals: number[]) {
-      return `${buildPath(vals)} L${W},${H} L0,${H} Z`
-    }
-
-    const dayLabels = days.map(d => String(Number(d.split('-')[2])))
-
-    return {
-      expPath: buildPath(cumExp),
-      expArea: buildArea(cumExp),
-      incPath: buildPath(cumInc),
-      incArea: buildArea(cumInc),
-      totalExp: runExp,
-      totalInc: runInc,
-      dayLabels,
-    }
+    return days.map((dateStr, i) => ({
+      day:   String(Number(dateStr.split('-')[2])),
+      label: new Date(dateStr + 'T12:00:00').toLocaleString('en-US', { month: 'short', day: 'numeric' }),
+      exp:   expByDay[i],
+      inc:   incByDay[i],
+    }))
   })()
 
   // ── Self-heal: backfill profile if missing ──────────────────────────────
@@ -200,45 +164,7 @@ export default async function HomePage() {
           </span>
         </div>
 
-        {/* 14-day chart — cumulative income vs expenses */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint">14 days</p>
-            <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1 text-[10px] font-medium font-mono text-emerald">
-                <span className="w-2 h-0.5 rounded-full bg-emerald inline-block" />
-                {$fk(twoWeekChart.totalInc)}
-              </span>
-              <span className="flex items-center gap-1 text-[10px] font-medium font-mono text-gold">
-                <span className="w-2 h-0.5 rounded-full bg-gold inline-block" />
-                {$fk(twoWeekChart.totalExp)}
-              </span>
-            </div>
-          </div>
-          <div className="h-16 w-full">
-            <svg viewBox="0 0 300 64" className="w-full h-full" preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="inc-grad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#4ADE80" stopOpacity="0.25"/>
-                  <stop offset="100%" stopColor="#4ADE80" stopOpacity="0"/>
-                </linearGradient>
-                <linearGradient id="exp-grad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#E8C46B" stopOpacity="0.25"/>
-                  <stop offset="100%" stopColor="#E8C46B" stopOpacity="0"/>
-                </linearGradient>
-              </defs>
-              <path d={twoWeekChart.expArea} fill="url(#exp-grad)"/>
-              <path d={twoWeekChart.incArea} fill="url(#inc-grad)"/>
-              <path d={twoWeekChart.expPath} fill="none" stroke="#E8C46B" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d={twoWeekChart.incPath} fill="none" stroke="#4ADE80" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
-          <div className="flex justify-between mt-1">
-            {twoWeekChart.dayLabels.map((d, i) => (
-              <span key={i} className={`text-[8px] font-medium leading-none ${i === 13 ? 'text-gold' : 'text-ink-faint'}`}>{d}</span>
-            ))}
-          </div>
-        </div>
+        <SparkChart points={sparkPoints} />
 
         <div className="flex border-t border-white/[0.06] pt-4 -mx-1">
           {[
