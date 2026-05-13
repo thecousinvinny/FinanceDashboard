@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { localToday, cn } from '@/lib/utils'
 import type { BillingCycle } from '@/types'
 import type { CardOption } from '@/components/money/AddTransactionSheet'
+import { EXPENSE_CATEGORIES } from '@/lib/data/transactions'
+import { getCategoryIcon } from '@/components/ui/CategoryIcon'
 
 const BILLING_OPTIONS: { value: BillingCycle; label: string }[] = [
   { value: 'Weekly',    label: 'Weekly'    },
@@ -19,6 +21,7 @@ export interface NewSub {
   billing:      BillingCycle
   next_renewal: string
   card_id:      string | null
+  category:     string | null
 }
 
 interface Props {
@@ -34,6 +37,7 @@ export function AddSubscriptionSheet({ open, onClose, onAdd, cards = [] }: Props
   const [billing,     setBilling]     = useState<BillingCycle>('Monthly')
   const [nextRenewal, setNextRenewal] = useState(localToday())
   const [cardId,      setCardId]      = useState<string | null>(null)
+  const [category,    setCategory]    = useState<string | null>(null)
 
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : ''
@@ -44,7 +48,7 @@ export function AddSubscriptionSheet({ open, onClose, onAdd, cards = [] }: Props
     if (!open) {
       const t = setTimeout(() => {
         setName(''); setAmount(''); setBilling('Monthly')
-        setNextRenewal(localToday()); setCardId(null)
+        setNextRenewal(localToday()); setCardId(null); setCategory(null)
       }, 300)
       return () => clearTimeout(t)
     }
@@ -57,7 +61,7 @@ export function AddSubscriptionSheet({ open, onClose, onAdd, cards = [] }: Props
   function handleAdd() {
     const parsed = parseFloat(amount)
     if (!parsed || !name.trim()) return
-    onAdd({ name: name.trim(), cost: parsed, billing, next_renewal: nextRenewal, card_id: cardId })
+    onAdd({ name: name.trim(), cost: parsed, billing, next_renewal: nextRenewal, card_id: cardId, category })
     onClose()
   }
 
@@ -110,6 +114,29 @@ export function AddSubscriptionSheet({ open, onClose, onAdd, cards = [] }: Props
                 onChange={e => handleAmountChange(e.target.value)}
                 className="flex-1 bg-transparent text-[28px] font-bold font-mono text-ink outline-none placeholder:text-ink-faint"
               />
+            </div>
+          </div>
+
+          <div>
+            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-3">Category <span className="normal-case">(optional)</span></p>
+            <div className="grid grid-cols-4 gap-2">
+              {EXPENSE_CATEGORIES.map(cat => {
+                const Icon = getCategoryIcon(cat.name, 'Expense')
+                const active = category === cat.name
+                return (
+                  <button
+                    key={cat.name}
+                    onClick={() => setCategory(active ? null : cat.name)}
+                    className={cn(
+                      'flex flex-col items-center gap-1.5 py-2.5 rounded-[14px] text-[10px] font-semibold transition-all select-none',
+                      active ? 'bg-gold/15 text-gold ring-1 ring-gold/40' : 'bg-bg-overlay text-ink-muted',
+                    )}
+                  >
+                    <Icon size={16} strokeWidth={1.75} />
+                    {cat.name}
+                  </button>
+                )
+              })}
             </div>
           </div>
 

@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { calcSubCosts, cn } from '@/lib/utils'
 import type { BillingCycle } from '@/types'
 import type { CardOption } from '@/components/money/AddTransactionSheet'
+import { EXPENSE_CATEGORIES } from '@/lib/data/transactions'
+import { getCategoryIcon } from '@/components/ui/CategoryIcon'
 
 const BILLING_OPTIONS: { value: BillingCycle; label: string }[] = [
   { value: 'Weekly',    label: 'Weekly'    },
@@ -20,6 +22,7 @@ interface SubSnapshot {
   billing:      BillingCycle
   next_renewal: string | null
   card_id:      string | null
+  category:     string | null
 }
 
 export interface SubEdits {
@@ -30,6 +33,7 @@ export interface SubEdits {
   monthly_cost: number
   annual_cost:  number
   card_id:      string | null
+  category:     string | null
 }
 
 interface Props {
@@ -46,6 +50,7 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave, cards = [] }
   const [billing,     setBilling]     = useState<BillingCycle>('Monthly')
   const [nextRenewal, setNextRenewal] = useState('')
   const [cardId,      setCardId]      = useState<string | null>(null)
+  const [category,    setCategory]    = useState<string | null>(null)
 
   useEffect(() => {
     if (sub) {
@@ -54,6 +59,7 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave, cards = [] }
       setBilling(sub.billing)
       setNextRenewal(sub.next_renewal ?? '')
       setCardId(sub.card_id)
+      setCategory(sub.category ?? null)
     }
   }, [sub])
 
@@ -65,7 +71,7 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave, cards = [] }
   useEffect(() => {
     if (!open) {
       const t = setTimeout(() => {
-        setName(''); setAmount(''); setBilling('Monthly'); setNextRenewal(''); setCardId(null)
+        setName(''); setAmount(''); setBilling('Monthly'); setNextRenewal(''); setCardId(null); setCategory(null)
       }, 300)
       return () => clearTimeout(t)
     }
@@ -81,7 +87,7 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave, cards = [] }
     const { monthly, annual } = calcSubCosts(parsed, billing)
     onSave(sub.id, {
       name: name.trim(), cost: parsed, billing, next_renewal: nextRenewal,
-      monthly_cost: monthly, annual_cost: annual, card_id: cardId,
+      monthly_cost: monthly, annual_cost: annual, card_id: cardId, category,
     })
     onClose()
   }
@@ -151,6 +157,29 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave, cards = [] }
                   {opt.label}
                 </button>
               ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-3">Category <span className="normal-case">(optional)</span></p>
+            <div className="grid grid-cols-4 gap-2">
+              {EXPENSE_CATEGORIES.map(cat => {
+                const Icon = getCategoryIcon(cat.name, 'Expense')
+                const active = category === cat.name
+                return (
+                  <button
+                    key={cat.name}
+                    onClick={() => setCategory(active ? null : cat.name)}
+                    className={cn(
+                      'flex flex-col items-center gap-1.5 py-2.5 rounded-[14px] text-[10px] font-semibold transition-all select-none',
+                      active ? 'bg-gold/15 text-gold ring-1 ring-gold/40' : 'bg-bg-overlay text-ink-muted',
+                    )}
+                  >
+                    <Icon size={16} strokeWidth={1.75} />
+                    {cat.name}
+                  </button>
+                )
+              })}
             </div>
           </div>
 

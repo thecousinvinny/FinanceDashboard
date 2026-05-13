@@ -49,11 +49,11 @@ export default function BottomNav() {
               className={cn(
                 'relative flex items-center justify-center w-8 h-7 rounded-full transition-all duration-200',
                 active
-                  ? 'drop-shadow-[0_0_8px_rgba(212,175,55,0.7)]'
+                  ? 'drop-shadow-[0_0_8px_rgba(232,196,107,0.7)]'
                   : '',
               )}
               style={active ? {
-                background: 'linear-gradient(135deg, rgba(247,223,158,0.18), rgba(212,175,55,0.12), rgba(164,127,35,0.08))',
+                background: 'linear-gradient(135deg, rgba(246,223,158,0.18), rgba(232,196,107,0.12), rgba(164,127,35,0.08))',
               } : undefined}
             >
               <Icon size={22} strokeWidth={active ? 2 : 1.5} />

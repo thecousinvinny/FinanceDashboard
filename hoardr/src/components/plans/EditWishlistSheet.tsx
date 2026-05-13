@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
+import { EXPENSE_CATEGORIES } from '@/lib/data/transactions'
+import { getCategoryIcon } from '@/components/ui/CategoryIcon'
 
 interface WishSnapshot {
   id:            string
@@ -118,14 +120,28 @@ export function EditWishlistSheet({ item, open, onClose, onSave }: Props) {
           </div>
 
           <div>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
+            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-3">
               Category <span className="normal-case text-ink-faint/60">(optional)</span>
             </p>
-            <input
-              type="text" placeholder="e.g. Electronics" value={category}
-              onChange={e => setCategory(e.target.value)}
-              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none"
-            />
+            <div className="grid grid-cols-4 gap-2">
+              {EXPENSE_CATEGORIES.map(cat => {
+                const Icon = getCategoryIcon(cat.name, 'Expense')
+                const active = category === cat.name
+                return (
+                  <button
+                    key={cat.name}
+                    onClick={() => setCategory(active ? '' : cat.name)}
+                    className={cn(
+                      'flex flex-col items-center gap-1.5 py-2.5 rounded-[14px] text-[10px] font-semibold transition-all select-none',
+                      active ? 'bg-gold/15 text-gold ring-1 ring-gold/40' : 'bg-bg-overlay text-ink-muted',
+                    )}
+                  >
+                    <Icon size={16} strokeWidth={1.75} />
+                    {cat.name}
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           <div>

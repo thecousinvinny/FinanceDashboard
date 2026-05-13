@@ -1,22 +1,25 @@
 'use client'
 
 import { useRef, useEffect } from 'react'
+import { Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const REVEAL   = 80   // px to show delete button
 const AUTO     = 200  // px to auto-confirm delete
-const TAP_SLOP = 10  // max movement (any direction) still counted as a tap
+const TAP_SLOP = 10   // max movement (any direction) still counted as a tap
 
 interface Props {
   onDelete:      () => void
   children:      React.ReactNode
   className?:    string
-  actionLabel?:  React.ReactNode   // default: 🗑️
-  actionBg?:     string            // default: bg-ruby
-  onTap?:        () => void        // fires on tap when not swiped/revealed
+  actionLabel?:  React.ReactNode
+  actionBg?:     string   // default: bg-ruby
+  onTap?:        () => void
 }
 
-export function SwipeToDelete({ onDelete, children, className, actionLabel = '🗑️', actionBg = 'bg-ruby', onTap }: Props) {
+const DEFAULT_ICON = <Trash2 size={18} strokeWidth={1.5} />
+
+export function SwipeToDelete({ onDelete, children, className, actionLabel = DEFAULT_ICON, actionBg = 'bg-ruby', onTap }: Props) {
   const outerRef          = useRef<HTMLDivElement>(null)
   const slideRef          = useRef<HTMLDivElement>(null)
   const startX            = useRef(0)
@@ -26,6 +29,7 @@ export function SwipeToDelete({ onDelete, children, className, actionLabel = '�
   const dir               = useRef<'h' | 'v' | null>(null)
   const startWasRevealed  = useRef(false)
   const didSwipe          = useRef(false)
+  const mouseDown         = useRef(false)
 
   function setPos(x: number, animate: boolean) {
     const el = slideRef.current
@@ -51,36 +55,30 @@ export function SwipeToDelete({ onDelete, children, className, actionLabel = '�
     return () => el.removeEventListener('touchmove', handler)
   }, [])
 
+  // ── Touch handlers ───────────────────────────────────────────────────────
+
   function onTouchStart(e: React.TouchEvent) {
     startX.current           = e.touches[0].clientX
     startY.current           = e.touches[0].clientY
     dir.current              = null
     startWasRevealed.current = revealed.current
     didSwipe.current         = false
-    setPos(curX.current, false) // disable transition while dragging
+    setPos(curX.current, false)
   }
 
   function onTouchMove(e: React.TouchEvent) {
     const dx = e.touches[0].clientX - startX.current
     const dy = e.touches[0].clientY - startY.current
-
-    if (!dir.current) {
-      dir.current = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'
-    }
-
+    if (!dir.current) dir.current = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'
     if (Math.abs(dx) > TAP_SLOP || Math.abs(dy) > TAP_SLOP) didSwipe.current = true
-
     if (dir.current !== 'h') return
-
     const base = revealed.current ? -REVEAL : 0
-    const next = Math.min(0, Math.max(-AUTO - 20, base + dx))
-    setPos(next, false)
+    setPos(Math.min(0, Math.max(-AUTO - 20, base + dx)), false)
   }
 
   function onTouchEnd(e: React.TouchEvent) {
     const x = curX.current
     dir.current = null
-
     if (x <= -AUTO) {
       triggerDelete()
     } else if (x < -(REVEAL / 2)) {
@@ -95,15 +93,56 @@ export function SwipeToDelete({ onDelete, children, className, actionLabel = '�
     }
   }
 
+  // ── Mouse handlers (desktop drag-to-delete) ──────────────────────────────
+
+  function onMouseDown(e: React.MouseEvent) {
+    mouseDown.current        = true
+    startX.current           = e.clientX
+    startY.current           = e.clientY
+    dir.current              = null
+    startWasRevealed.current = revealed.current
+    didSwipe.current         = false
+    setPos(curX.current, false)
+  }
+
+  function onMouseMove(e: React.MouseEvent) {
+    if (!mouseDown.current) return
+    const dx = e.clientX - startX.current
+    const dy = e.clientY - startY.current
+    if (!dir.current) dir.current = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'
+    if (Math.abs(dx) > TAP_SLOP || Math.abs(dy) > TAP_SLOP) didSwipe.current = true
+    if (dir.current !== 'h') return
+    e.preventDefault()
+    const base = revealed.current ? -REVEAL : 0
+    setPos(Math.min(0, Math.max(-AUTO - 20, base + dx)), false)
+  }
+
+  function onMouseUp() {
+    if (!mouseDown.current) return
+    mouseDown.current = false
+    const x = curX.current
+    dir.current = null
+    if (x <= -AUTO) {
+      triggerDelete()
+    } else if (x < -(REVEAL / 2)) {
+      setPos(-REVEAL, true)
+      revealed.current = true
+    } else {
+      setPos(0, true)
+      revealed.current = false
+      if (!didSwipe.current && !startWasRevealed.current) onTap?.()
+    }
+  }
+
   return (
-    <div ref={outerRef} className={cn('relative overflow-hidden', className)}>
-      {/* Delete zone revealed on swipe */}
+    <div ref={outerRef} className={cn('relative overflow-hidden bg-bg-surface', className)}>
+      {/* Delete zone */}
       <div
-        className={cn('absolute inset-y-0 right-0 flex items-center justify-center cursor-pointer select-none', actionBg)}
+        className={cn('absolute inset-y-0 right-0 flex items-center justify-center cursor-pointer select-none text-white', actionBg)}
         style={{ width: REVEAL }}
         onClick={triggerDelete}
       >
-        <span className="text-[18px] text-white font-semibold">{actionLabel}</span>
+        {actionLabel}
       </div>
 
       {/* Sliding row content */}
@@ -113,6 +152,10 @@ export function SwipeToDelete({ onDelete, children, className, actionLabel = '�
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseUp}
       >
         {children}
       </div>

@@ -91,7 +91,7 @@ export default async function HomePage() {
     const area = `${d} L${W},${H} L0,${H} Z`
     const last  = pts[pts.length - 1]
     const allPositive = vals.every(v => v >= 0)
-    const color = allPositive ? '#22c55e' : '#D4AF37'
+    const color = allPositive ? '#4ADE80' : '#E8C46B'
     return { d, area, last, color }
   })()
 

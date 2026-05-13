@@ -10,6 +10,7 @@ import { EditWishlistSheet, type WishEdits } from '@/components/plans/EditWishli
 import { daysUntilLabel, $fc, $fk, cn, calcSubCosts } from '@/lib/utils'
 import { RefreshCw } from 'lucide-react'
 import type { CardOption } from '@/components/money/AddTransactionSheet'
+import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import type { BillingCycle } from '@/types'
 
@@ -25,6 +26,7 @@ interface Sub {
   next_renewal: string | null
   status:       string
   card_id:      string | null
+  category:     string | null
 }
 
 interface WishItem {
@@ -67,11 +69,12 @@ export default function PlansPage() {
     const [{ data: subsData }, { data: wishData }] = await Promise.all([
       supabase
         .from('subscriptions')
-        .select('id, name, cost, billing, status, next_renewal, monthly_cost, annual_cost, card_id')
+        .select('id, name, cost, billing, status, next_renewal, monthly_cost, annual_cost, card_id, category')
         .order('next_renewal', { ascending: true }),
       supabase
         .from('wishlist')
         .select('id, name, original_cost, category, url, bought_cost, status')
+        .eq('status', 'Interested')
         .order('created_at', { ascending: false }),
     ])
 
@@ -85,6 +88,7 @@ export default function PlansPage() {
       next_renewal: s.next_renewal ? String(s.next_renewal) : null,
       status:       String(s.status),
       card_id:      s.card_id ? String(s.card_id) : null,
+      category:     s.category ? String(s.category) : null,
     })))
 
     setWishlist((wishData ?? []).map(w => ({
@@ -178,6 +182,7 @@ export default function PlansPage() {
       id: tempId, name: sub.name, billing: sub.billing,
       cost: sub.cost, monthly_cost: monthly, annual_cost: annual,
       next_renewal: sub.next_renewal, status: 'Active', card_id: sub.card_id,
+      category: sub.category ?? null,
     }])
 
     const { data: { user } } = await supabase.auth.getUser()
@@ -194,6 +199,7 @@ export default function PlansPage() {
       monthly_cost: monthly,
       annual_cost:  annual,
       card_id:      sub.card_id,
+      category:     sub.category ?? null,
     })
 
     await loadData()
@@ -237,6 +243,7 @@ export default function PlansPage() {
         monthly_cost: edits.monthly_cost,
         annual_cost:  edits.annual_cost,
         card_id:      edits.card_id,
+        category:     edits.category ?? null,
       })
       .eq('id', id)
     if (error) { console.error('edit sub error:', JSON.stringify(error)); await loadData() }
@@ -333,7 +340,9 @@ export default function PlansPage() {
                     <SwipeToDelete key={sub.id} onDelete={() => handleCancelSub(sub.id)} actionLabel="Cancel" actionBg="bg-amber-600" onTap={() => setEditSub(sub)} className="rounded-[18px]">
                       <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
                         <div className="w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
-                          <RefreshCw size={15} className="text-gold" strokeWidth={1.75} />
+                          {sub.category
+                            ? <CategoryIcon category={sub.category} type="Expense" size={15} className="text-gold" />
+                            : <RefreshCw size={15} className="text-gold" strokeWidth={1.75} />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-[14px] font-medium text-ink">{sub.name}</p>
@@ -407,7 +416,9 @@ export default function PlansPage() {
             <SwipeToDelete key={item.id} onDelete={() => handleDeleteWish(item.id)} className="rounded-[18px]" onTap={() => setEditWish(item)}>
               <div className="bg-bg-surface border border-white/[0.06] rounded-[18px] p-4">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-[12px] bg-bg-overlay flex items-center justify-center text-[18px] flex-shrink-0">✦</div>
+                  <div className="w-10 h-10 rounded-full bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+                    <CategoryIcon category={item.category ?? 'Other'} type="Expense" size={15} className="text-gold" />
+                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[14px] font-semibold text-ink truncate">{item.name}</p>
                     {item.original_cost != null && (

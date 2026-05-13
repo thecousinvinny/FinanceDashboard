@@ -10,27 +10,27 @@ const config: Config = {
     extend: {
       colors: {
         bg: {
-          base:     '#080810',
-          surface:  '#0f0f1a',
-          elevated: '#14141f',
-          overlay:  '#1c1c2a',
+          base:     '#0A0A0B',
+          surface:  '#131315',
+          elevated: '#181818',
+          overlay:  '#1C1C1E',
         },
         gold: {
-          DEFAULT: '#D4AF37',
-          light:   '#F7DF9E',
+          DEFAULT: '#E8C46B',
+          light:   '#F6DF9E',
           dark:    '#A47F23',
         },
         emerald: {
-          DEFAULT: '#22c55e',
-          dark:    '#16a34a',
+          DEFAULT: '#4ADE80',
+          dark:    '#22B14C',
         },
         ruby: {
-          DEFAULT: '#ef4444',
+          DEFAULT: '#F36369',
         },
         ink: {
-          DEFAULT: '#f0f0f8',
-          muted:   '#7a7a9a',
-          faint:   '#45455a',
+          DEFAULT: '#F7F7F5',
+          muted:   '#8C8C8C',
+          faint:   '#545454',
         },
       },
       fontFamily: {
@@ -46,7 +46,7 @@ const config: Config = {
         card:  '0 1px 24px rgba(0,0,0,0.4)',
         sheet: '0 -8px 32px rgba(0,0,0,0.6)',
         nav:   '0 -1px 40px rgba(0,0,0,0.5)',
-        gold:  '0 0 20px rgba(212,175,55,0.35), 0 4px 12px rgba(0,0,0,0.4)',
+        gold:  '0 0 20px rgba(232,196,107,0.35), 0 4px 12px rgba(0,0,0,0.4)',
       },
     },
   },

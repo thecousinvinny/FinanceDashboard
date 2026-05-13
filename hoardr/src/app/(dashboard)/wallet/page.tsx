@@ -6,18 +6,30 @@ import { PillGroup } from '@/components/ui/Pill'
 import { AddCardSheet, type NewCard } from '@/components/wallet/AddCardSheet'
 import { AddBankSheet, type NewBank } from '@/components/wallet/AddBankSheet'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
+import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import type { Card, Bank } from '@/types'
 import type { CardStyle } from '@/types'
-import { cn } from '@/lib/utils'
+import { cn, $fc, fmtDate } from '@/lib/utils'
+
+interface CardExpense {
+  id:         string
+  name:       string
+  cost:       number
+  date:       string
+  categories: { name: string } | null
+}
 
 type Tab = 'Cards' | 'Banks'
 
 export default function WalletPage() {
-  const [tab,       setTab]       = useState<Tab>('Cards')
-  const [cards,     setCards]     = useState<Card[]>([])
-  const [banks,     setBanks]     = useState<Bank[]>([])
-  const [loading,   setLoading]   = useState(true)
-  const [sheetOpen, setSheetOpen] = useState(false)
+  const [tab,             setTab]           = useState<Tab>('Cards')
+  const [cards,           setCards]         = useState<Card[]>([])
+  const [banks,           setBanks]         = useState<Bank[]>([])
+  const [loading,         setLoading]       = useState(true)
+  const [sheetOpen,       setSheetOpen]     = useState(false)
+  const [selectedCard,    setSelectedCard]  = useState<Card | null>(null)
+  const [cardExpenses,    setCardExpenses]  = useState<CardExpense[]>([])
+  const [expLoading,      setExpLoading]    = useState(false)
 
   const supabase = useMemo(() => createClient(), [])
 
@@ -39,6 +51,21 @@ export default function WalletPage() {
   }, [supabase])
 
   useEffect(() => { loadData() }, [loadData])
+
+  useEffect(() => {
+    if (!selectedCard) { setCardExpenses([]); return }
+    setExpLoading(true)
+    supabase
+      .from('expenses')
+      .select('id, name, cost, date, categories(name)')
+      .eq('card_id', selectedCard.id)
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        setCardExpenses((data ?? []) as unknown as CardExpense[])
+        setExpLoading(false)
+      })
+  }, [selectedCard, supabase])
 
   async function handleDeleteCard(id: string) {
     setCards(prev => prev.filter(c => c.id !== id))
@@ -135,7 +162,7 @@ export default function WalletPage() {
               </div>
             )}
             {cards.map(card => (
-              <SwipeToDelete key={card.id} onDelete={() => handleDeleteCard(card.id)} className="rounded-card">
+              <SwipeToDelete key={card.id} onDelete={() => handleDeleteCard(card.id)} onTap={() => setSelectedCard(card)} className="rounded-card">
                 <CardVisual card={card} />
               </SwipeToDelete>
             ))}
@@ -193,6 +220,58 @@ export default function WalletPage() {
           onAdd={handleAddBank}
         />
       )}
+
+      {/* ── Card expenses sheet ──────────────────────────────────────────── */}
+      <div
+        onClick={() => setSelectedCard(null)}
+        className={cn(
+          'fixed inset-0 z-[59] transition-opacity duration-300',
+          selectedCard ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
+        )}
+        style={{ background: 'rgba(0,0,0,0.72)' }}
+      />
+      <div
+        className={cn(
+          'fixed inset-x-0 bottom-0 z-[60] rounded-t-[24px] bg-bg-surface transition-transform duration-300',
+          selectedCard ? 'translate-y-0' : 'translate-y-full',
+        )}
+        style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
+        <div className="flex justify-center pt-3 pb-2">
+          <div className="w-9 h-1 rounded-full bg-white/20" />
+        </div>
+        <div className="flex items-center justify-between px-5 mb-4">
+          <div>
+            <p className="text-[10px] font-medium tracking-[0.12em] uppercase text-ink-faint">Card Expenses</p>
+            <h2 className="text-[18px] font-bold tracking-tight text-ink">{selectedCard?.name}</h2>
+          </div>
+          <button onClick={() => setSelectedCard(null)} className="w-8 h-8 flex items-center justify-center text-[22px] text-ink-muted">×</button>
+        </div>
+        <div className="overflow-y-auto" style={{ maxHeight: '60vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
+          {expLoading ? (
+            <div className="px-4 space-y-2.5 pb-4">
+              {[1,2,3].map(i => <div key={i} className="h-14 rounded-[18px] skeleton" />)}
+            </div>
+          ) : cardExpenses.length === 0 ? (
+            <div className="py-12 text-center text-ink-faint text-[13px]">No expenses on this card yet.</div>
+          ) : (
+            <div className="px-4 space-y-2.5 pb-4">
+              {cardExpenses.map(exp => (
+                <div key={exp.id} className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
+                  <div className="w-10 h-10 rounded-full bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+                    <CategoryIcon category={exp.categories?.name ?? 'Other'} type="Expense" size={15} className="text-gold" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[14px] font-medium text-ink truncate">{exp.name}</p>
+                    <p className="text-[11px] text-ink-muted">{fmtDate(exp.date)}</p>
+                  </div>
+                  <p className="text-[15px] font-semibold font-mono text-ink flex-shrink-0">−{$fc(exp.cost)}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </>
   )
 }
