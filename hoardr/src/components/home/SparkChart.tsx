@@ -23,10 +23,7 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
   function buildPath(vals: number[]) {
     return vals.map((v, i) => {
       const x = toX(i), y = toY(v)
-      if (i === 0) return `M${x},${y}`
-      const px = toX(i - 1), py = toY(vals[i - 1])
-      const cx = (px + x) / 2
-      return `C${cx},${py} ${cx},${y} ${x},${y}`
+      return i === 0 ? `M${x},${y}` : `L${x},${y}`
     }).join(' ')
   }
 
@@ -88,8 +85,8 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
 
           <path d={buildArea(expVals)} fill="url(#exp-grad)"/>
           <path d={buildArea(incVals)} fill="url(#inc-grad)"/>
-          <path d={buildPath(expVals)} fill="none" stroke="#E8C46B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d={buildPath(incVals)} fill="none" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d={buildPath(expVals)} fill="none" stroke="#E8C46B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
+          <path d={buildPath(incVals)} fill="none" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
 
           {hoverIdx !== null && (
             <>
