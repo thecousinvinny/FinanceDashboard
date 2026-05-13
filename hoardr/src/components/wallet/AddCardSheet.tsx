@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
-import type { CardType, CardNetwork, CardStyle } from '@/types'
+import type { CardType, CardNetwork, CardStyle, CardTexture } from '@/types'
+import { CARD_STYLE_DEFS, CARD_TEXTURE_DEFS } from '@/lib/cardStyles'
 
 const CARD_TYPES: CardType[]   = ['Debit', 'Credit', 'Prepaid', 'Business']
 const NETWORKS:  CardNetwork[] = ['Visa', 'Mastercard', 'Amex', 'Discover']
@@ -16,6 +17,7 @@ export interface NewCard {
   expires:    string
   cardholder: string
   style:      CardStyle
+  texture:    CardTexture
   bank_id:    string | null
 }
 
@@ -37,6 +39,7 @@ export function AddCardSheet({ open, onClose, onAdd, banks }: Props) {
   const [expires,    setExpires]    = useState('')
   const [cardholder, setCardholder] = useState('')
   const [style,      setStyle]      = useState<CardStyle>('black')
+  const [texture,    setTexture]    = useState<CardTexture>('none')
   const [bankId,     setBankId]     = useState<string | null>(null)
 
   useEffect(() => {
@@ -49,7 +52,7 @@ export function AddCardSheet({ open, onClose, onAdd, banks }: Props) {
       const t = setTimeout(() => {
         setName(''); setAlias(''); setType('Debit'); setLast4('')
         setNetwork('Visa'); setExpires(''); setCardholder('')
-        setStyle('black'); setBankId(null)
+        setStyle('black'); setTexture('none'); setBankId(null)
       }, 300)
       return () => clearTimeout(t)
     }
@@ -71,18 +74,12 @@ export function AddCardSheet({ open, onClose, onAdd, banks }: Props) {
       alias:      alias.trim() || null,
       type, last4, network, expires,
       cardholder: cardholder.trim().toUpperCase(),
-      style, bank_id: bankId,
+      style, texture, bank_id: bankId,
     })
     onClose()
   }
 
   const canAdd = !!name.trim() && last4.length === 4
-
-  const STYLES: { value: CardStyle; bg: string; textColor: string; inlineStyle?: React.CSSProperties }[] = [
-    { value: 'black', bg: 'bg-[#13131f]', textColor: 'text-ink' },
-    { value: 'gold',  bg: '',             textColor: 'text-yellow-950', inlineStyle: { background: 'linear-gradient(135deg,#b8860b 0%,#d4af37 40%,#f0d060 60%,#c8952a 100%)' } },
-    { value: 'green', bg: 'bg-[#0c2d1c]', textColor: 'text-emerald' },
-  ]
 
   return (
     <>
@@ -107,16 +104,35 @@ export function AddCardSheet({ open, onClose, onAdd, banks }: Props) {
 
           {/* Style picker */}
           <div>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-3">Style</p>
-            <div className="grid grid-cols-3 gap-2">
-              {STYLES.map(s => (
+            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-3">Color</p>
+            <div className="grid grid-cols-4 gap-2">
+              {(Object.keys(CARD_STYLE_DEFS) as CardStyle[]).map(s => {
+                const def = CARD_STYLE_DEFS[s]
+                return (
+                  <button
+                    key={s}
+                    onClick={() => setStyle(s)}
+                    className={cn('h-[52px] rounded-[12px] border-2 transition-all select-none flex items-end p-1.5 overflow-hidden', style === s ? 'border-gold' : 'border-transparent')}
+                    style={{ background: def.gradient }}
+                  >
+                    <span className="text-[9px] font-semibold leading-tight" style={{ color: def.textPrimary }}>{def.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Texture picker */}
+          <div>
+            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-3">Texture</p>
+            <div className="grid grid-cols-4 gap-2">
+              {(Object.keys(CARD_TEXTURE_DEFS) as CardTexture[]).map(t => (
                 <button
-                  key={s.value}
-                  onClick={() => setStyle(s.value)}
-                  className={cn('h-12 rounded-[14px] border-2 transition-all select-none flex items-center justify-center', s.bg, style === s.value ? 'border-gold' : 'border-transparent')}
-                  style={s.inlineStyle}
+                  key={t}
+                  onClick={() => setTexture(t)}
+                  className={cn('py-2.5 rounded-[12px] text-[10px] font-semibold transition-all select-none', texture === t ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}
                 >
-                  <span className={cn('text-[11px] font-semibold capitalize', s.textColor)}>{s.value}</span>
+                  {CARD_TEXTURE_DEFS[t].label}
                 </button>
               ))}
             </div>

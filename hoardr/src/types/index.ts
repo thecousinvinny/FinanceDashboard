@@ -5,7 +5,8 @@ export type ExpenseStatus    = 'Ordered' | 'Procured'
 export type WishlistStatus   = 'Interested' | 'Purchased'
 export type SubStatus        = 'Active' | 'Cancelled'
 export type CardType         = 'Credit' | 'Debit' | 'Prepaid' | 'Business'
-export type CardStyle        = 'black' | 'gold' | 'green'
+export type CardStyle        = 'black' | 'gold' | 'green' | 'platinum' | 'sapphire' | 'cobalt' | 'graphite' | 'ruby' | 'midnight' | 'rose' | 'forest' | 'obsidian'
+export type CardTexture      = 'none' | 'diamonds' | 'slate' | 'fractal' | 'waves' | 'circuit' | 'dots'
 export type CardNetwork      = 'Visa' | 'Mastercard' | 'Amex' | 'Discover'
 export type BankType         = 'Checking' | 'Savings' | 'Investment' | 'Business'
 export type IncomeSource     = 'Repayment' | 'Refund' | 'Projects' | 'Freelance' | 'Other'
@@ -51,6 +52,7 @@ export interface Card {
   expires:     string | null        // "MM/YY"
   cardholder:  string | null
   style:       CardStyle
+  texture:     CardTexture
   is_default:  boolean
   created_at:  string
   bank?:       Bank
