@@ -226,7 +226,7 @@ export function EditTransactionSheet({ tx, open, onClose, onSave, cards = [], ba
             onClick={handleSave} disabled={!canSave}
             className={cn(
               'w-full py-4 rounded-[14px] text-[15px] font-semibold transition-all select-none',
-              canSave ? 'gradient-gold text-white shadow-gold' : 'bg-bg-overlay text-ink-faint',
+              canSave ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-faint',
             )}
           >
             Save Changes

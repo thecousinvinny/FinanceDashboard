@@ -21,14 +21,23 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
   function toX(i: number) { return (i / (n - 1)) * W }
 
   function buildPath(vals: number[]) {
-    return vals.map((v, i) => {
-      const x = toX(i), y = toY(v)
-      return i === 0 ? `M${x},${y}` : `L${x},${y}`
-    }).join(' ')
+    const pts = vals.map((v, i) => ({ x: toX(i), y: toY(v) }))
+    if (pts.length < 2) return ''
+    // Horizontal-tangent S-curves: control points share y with their endpoint,
+    // so the curve can never overshoot above or below the data points.
+    let d = `M${pts[0].x},${pts[0].y}`
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p1 = pts[i], p2 = pts[i + 1]
+      const dx = (p2.x - p1.x) / 3
+      d += ` C${(p1.x + dx).toFixed(1)},${p1.y.toFixed(1)} ${(p2.x - dx).toFixed(1)},${p2.y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`
+    }
+    return d
   }
 
   function buildArea(vals: number[]) {
-    return `${buildPath(vals)} L${W},${H} L0,${H} Z`
+    const pts = vals.map((v, i) => ({ x: toX(i), y: toY(v) }))
+    if (pts.length < 2) return ''
+    return `${buildPath(vals)} L${pts[pts.length - 1].x},${H} L${pts[0].x},${H} Z`
   }
 
   const expVals = points.map(p => p.exp)

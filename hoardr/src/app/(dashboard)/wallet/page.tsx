@@ -9,8 +9,10 @@ import { EditCardSheet, type CardEdits } from '@/components/wallet/EditCardSheet
 import { CardVisual } from '@/components/wallet/CardVisual'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
+
 import type { Card, Bank } from '@/types'
 import { cn, $fc, $fk, fmtDate } from '@/lib/utils'
+import { pageCache } from '@/lib/page-cache'
 
 interface CardExpense {
   id:         string
@@ -20,19 +22,33 @@ interface CardExpense {
   categories: { name: string } | null
 }
 
+interface CardSub {
+  id:           string
+  name:         string
+  cost:         number
+  billing:      string
+  monthly_cost: number
+  next_renewal: string | null
+  category:     string | null
+}
+
 type Tab = 'Cards' | 'Banks'
 
 export default function WalletPage() {
   const [tab,             setTab]           = useState<Tab>('Cards')
-  const [cards,           setCards]         = useState<Card[]>([])
-  const [banks,           setBanks]         = useState<Bank[]>([])
-  const [loading,         setLoading]       = useState(true)
+  type WalletCache = { cards: Card[]; banks: Bank[] }
+  const cached = pageCache.get<WalletCache>('wallet')
+  const [cards,           setCards]         = useState<Card[]>(cached?.cards ?? [])
+  const [banks,           setBanks]         = useState<Bank[]>(cached?.banks ?? [])
+  const [loading,         setLoading]       = useState(!cached)
   const [sheetOpen,       setSheetOpen]     = useState(false)
   const [selectedCard,    setSelectedCard]  = useState<Card | null>(null)
   const [editCard,        setEditCard]      = useState<Card | null>(null)
   const [editSheetOpen,   setEditSheetOpen] = useState(false)
   const [cardExpenses,    setCardExpenses]  = useState<CardExpense[]>([])
+  const [cardSubs,        setCardSubs]      = useState<CardSub[]>([])
   const [expLoading,      setExpLoading]    = useState(false)
+  const [reorderMode,     setReorderMode]   = useState(false)
 
   const supabase = useMemo(() => createClient(), [])
 
@@ -41,33 +57,52 @@ export default function WalletPage() {
       supabase
         .from('cards')
         .select('*, bank:banks(id, name, type, last4)')
-        .order('is_default', { ascending: false })
+        .order('sort_order',  { ascending: true,  nullsFirst: false })
+        .order('is_default',  { ascending: false })
         .order('created_at',  { ascending: false }),
       supabase
         .from('banks')
         .select('*')
         .order('created_at', { ascending: false }),
     ])
-    setCards((cardsData ?? []) as Card[])
-    setBanks((banksData  ?? []) as Bank[])
+    const newCards = (cardsData ?? []) as Card[]
+    const newBanks = (banksData  ?? []) as Bank[]
+    setCards(newCards)
+    setBanks(newBanks)
+    pageCache.set('wallet', { cards: newCards, banks: newBanks })
     setLoading(false)
   }, [supabase])
 
   useEffect(() => { loadData() }, [loadData])
 
   useEffect(() => {
-    if (!selectedCard) { setCardExpenses([]); return }
+    if (!selectedCard) { setCardExpenses([]); setCardSubs([]); return }
     setExpLoading(true)
-    supabase
-      .from('expenses')
-      .select('id, name, cost, date, categories(name)')
-      .eq('card_id', selectedCard.id)
-      .order('date', { ascending: false })
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        setCardExpenses((data ?? []) as unknown as CardExpense[])
-        setExpLoading(false)
-      })
+    Promise.all([
+      supabase
+        .from('expenses')
+        .select('id, name, cost, date, categories(name)')
+        .eq('card_id', selectedCard.id)
+        .order('date', { ascending: false })
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('subscriptions')
+        .select('id, name, cost, billing, monthly_cost, next_renewal, category')
+        .eq('card_id', selectedCard.id)
+        .order('next_renewal', { ascending: true }),
+    ]).then(([{ data: expData }, { data: subData }]) => {
+      setCardExpenses((expData ?? []) as unknown as CardExpense[])
+      setCardSubs((subData ?? []).map(s => ({
+        id:           String(s.id),
+        name:         String(s.name),
+        cost:         Number(s.cost),
+        billing:      String(s.billing),
+        monthly_cost: Number(s.monthly_cost ?? 0),
+        next_renewal: s.next_renewal ? String(s.next_renewal) : null,
+        category:     s.category ? String(s.category) : null,
+      })))
+      setExpLoading(false)
+    })
   }, [selectedCard, supabase])
 
   async function handleDeleteCard(id: string) {
@@ -113,6 +148,21 @@ export default function WalletPage() {
     if (error) { console.error('update card error:', JSON.stringify(error)); await loadData() }
   }
 
+  async function handleMoveCard(id: string, dir: 'up' | 'down') {
+    const idx = cards.findIndex(c => c.id === id)
+    if (idx === -1) return
+    const swapIdx = dir === 'up' ? idx - 1 : idx + 1
+    if (swapIdx < 0 || swapIdx >= cards.length) return
+
+    const reordered = [...cards]
+    ;[reordered[idx], reordered[swapIdx]] = [reordered[swapIdx], reordered[idx]]
+    setCards(reordered)
+
+    await Promise.all(
+      reordered.map((c, i) => supabase.from('cards').update({ sort_order: i }).eq('id', c.id))
+    )
+  }
+
   async function handleMakeDefault(cardId: string) {
     setCards(prev => prev.map(c => ({ ...c, is_default: c.id === cardId })))
     const { data: { user } } = await supabase.auth.getUser()
@@ -151,13 +201,26 @@ export default function WalletPage() {
             <p className="text-[10px] font-medium tracking-[0.14em] uppercase text-gold mb-1">Wallet</p>
             <h1 className="text-[32px] font-bold tracking-[-0.04em] text-ink">Wallet</h1>
           </div>
-          <button
-            onClick={() => setSheetOpen(true)}
-            className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-white text-[22px] font-light shadow-gold mt-10 select-none"
-            aria-label="Add"
-          >
-            +
-          </button>
+          <div className="flex items-center gap-2 mt-10">
+            {tab === 'Cards' && cards.length > 1 && (
+              <button
+                onClick={() => setReorderMode(v => !v)}
+                className={cn(
+                  'h-8 px-3 rounded-full text-[11px] font-medium select-none transition-colors',
+                  reorderMode ? 'bg-gold/20 text-gold' : 'bg-bg-overlay text-ink-muted'
+                )}
+              >
+                {reorderMode ? 'Done' : 'Reorder'}
+              </button>
+            )}
+            <button
+              onClick={() => setSheetOpen(true)}
+              className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-white text-[22px] font-light select-none"
+              aria-label="Add"
+            >
+              +
+            </button>
+          </div>
         </div>
 
         {/* ── Tab toggle ─────────────────────────────────────────────────── */}
@@ -182,12 +245,32 @@ export default function WalletPage() {
                 No cards yet — add your first one above.
               </div>
             )}
-            {cards.map(card => (
-              <SwipeToDelete key={card.id} onDelete={() => handleDeleteCard(card.id)} onTap={() => setSelectedCard(card)} className="rounded-card">
-                <div className="active:scale-[0.98] transition-transform duration-75">
-                  <CardVisual card={card} />
-                </div>
-              </SwipeToDelete>
+            {cards.map((card, idx) => (
+              <div key={card.id}>
+                <SwipeToDelete onDelete={() => handleDeleteCard(card.id)} onTap={reorderMode ? undefined : () => setSelectedCard(card)} className="rounded-card">
+                  <div className={cn('transition-transform duration-75', !reorderMode && 'active:scale-[0.98]')}>
+                    <CardVisual card={card} />
+                  </div>
+                </SwipeToDelete>
+                {reorderMode && (
+                  <div className="flex justify-end gap-2 mt-2 pr-1">
+                    <button
+                      onClick={() => handleMoveCard(card.id, 'up')}
+                      disabled={idx === 0}
+                      className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center text-ink-muted disabled:opacity-30 select-none"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      onClick={() => handleMoveCard(card.id, 'down')}
+                      disabled={idx === cards.length - 1}
+                      className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center text-ink-muted disabled:opacity-30 select-none"
+                    >
+                      ↓
+                    </button>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         )}
@@ -293,18 +376,39 @@ export default function WalletPage() {
           const now        = new Date()
           const monthStart = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`
           const yearStart  = `${now.getFullYear()}-01-01`
-          const mo  = cardExpenses.filter(e => e.date >= monthStart).reduce((s, e) => s + Number(e.cost), 0)
-          const yr  = cardExpenses.filter(e => e.date >= yearStart ).reduce((s, e) => s + Number(e.cost), 0)
-          const all = cardExpenses.reduce((s, e) => s + Number(e.cost), 0)
+          const mo   = cardExpenses.filter(e => e.date >= monthStart).reduce((s, e) => s + Number(e.cost), 0)
+          const yr   = cardExpenses.filter(e => e.date >= yearStart ).reduce((s, e) => s + Number(e.cost), 0)
+          const all  = cardExpenses.reduce((s, e) => s + Number(e.cost), 0)
+          const subNames   = new Set(cardSubs.map(s => s.name.toLowerCase()))
+          const subExp     = cardExpenses.filter(e => subNames.has(e.name.toLowerCase()))
+          const subMo      = subExp.filter(e => e.date >= monthStart).reduce((s, e) => s + Number(e.cost), 0)
+          const subYr      = subExp.filter(e => e.date >= yearStart ).reduce((s, e) => s + Number(e.cost), 0)
+          const subAllTime = subExp.reduce((s, e) => s + Number(e.cost), 0)
           return (
-            <div className="grid grid-cols-3 gap-2 px-5 mb-4">
-              {[['This Month', mo], ['This Year', yr], ['All Time', all]].map(([label, val]) => (
-                <div key={label as string} className="bg-bg-overlay rounded-[14px] px-3 py-3">
-                  <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-1">{label}</p>
-                  <p className="text-[14px] font-bold font-mono text-gold">{$fk(val as number)}</p>
+            <>
+              {/* Expense stats */}
+              <div className="grid grid-cols-3 gap-2 px-5 mb-2">
+                {[['This Month', mo], ['This Year', yr], ['All Time', all]].map(([label, val]) => (
+                  <div key={label as string} className="bg-bg-overlay rounded-[14px] px-3 py-3">
+                    <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-1">{label}</p>
+                    <p className="text-[14px] font-bold font-mono text-gold">{$fk(val as number)}</p>
+                  </div>
+                ))}
+              </div>
+              {/* Sub stats */}
+              {subAllTime > 0 && (
+                <div className="grid grid-cols-3 gap-2 px-5 mb-3">
+                  {[['Sub / Mo', subMo], ['Sub / Yr', subYr], ['All Time', subAllTime]].map(([label, val]) => (
+                    <div key={label as string} className="bg-bg-overlay rounded-[14px] px-3 py-3">
+                      <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-1">{label}</p>
+                      <p className="text-[14px] font-bold font-mono text-emerald">
+                        {$fk(val as number)}
+                      </p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )
         })()}
 
@@ -315,22 +419,35 @@ export default function WalletPage() {
             </div>
           ) : cardExpenses.length === 0 ? (
             <div className="py-12 text-center text-ink-faint text-[13px]">No expenses on this card yet.</div>
-          ) : (
-            <div className="px-4 space-y-2.5 pb-4">
-              {cardExpenses.map(exp => (
-                <div key={exp.id} className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
-                  <div className="w-10 h-10 rounded-full bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
-                    <CategoryIcon category={exp.categories?.name ?? 'Other'} type="Expense" size={15} className="text-gold" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[14px] font-medium text-ink truncate">{exp.name}</p>
-                    <p className="text-[11px] text-ink-muted">{fmtDate(exp.date)}</p>
-                  </div>
-                  <p className="text-[15px] font-semibold font-mono text-ink flex-shrink-0">−{$fc(exp.cost)}</p>
-                </div>
-              ))}
-            </div>
-          )}
+          ) : (() => {
+            const subNameSet = new Set(cardSubs.map(s => s.name.toLowerCase()))
+            return (
+              <div className="px-4 space-y-2.5 pb-4">
+                {cardExpenses.map(exp => {
+                  const isSub = subNameSet.has(exp.name.toLowerCase())
+                  return (
+                    <div key={exp.id} className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
+                      <div className="w-10 h-10 rounded-full bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+                        <CategoryIcon
+                          category={exp.categories?.name ?? 'Other'}
+                          type="Expense"
+                          size={15}
+                          className={isSub ? 'text-emerald' : 'text-gold'}
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[14px] font-medium text-ink truncate">{exp.name}</p>
+                        <p className="text-[11px] text-ink-muted">{fmtDate(exp.date)}</p>
+                      </div>
+                      <p className="text-[15px] font-semibold font-mono flex-shrink-0 text-ink">
+                        −{$fc(exp.cost)}
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()}
         </div>
       </div>
     </>

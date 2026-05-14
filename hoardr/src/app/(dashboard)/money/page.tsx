@@ -8,14 +8,16 @@ import { EditTransactionSheet, type TxEdits } from '@/components/money/EditTrans
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import { type SeedTx } from '@/lib/data/transactions'
 import { groupByMonth, fmtDate, $fk, $fc, cn } from '@/lib/utils'
+import { pageCache } from '@/lib/page-cache'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 
 type Filter = 'All' | 'Expenses' | 'Income'
 
 export default function MoneyPage() {
   const [filter,    setFilter]    = useState<Filter>('All')
-  const [txList,    setTxList]    = useState<SeedTx[]>([])
-  const [loading,   setLoading]   = useState(true)
+  const cachedTx = pageCache.get<SeedTx[]>('money')
+  const [txList,    setTxList]    = useState<SeedTx[]>(cachedTx ?? [])
+  const [loading,   setLoading]   = useState(!cachedTx)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editTx,    setEditTx]    = useState<SeedTx | null>(null)
   const [cards,         setCards]         = useState<CardOption[]>([])
@@ -60,6 +62,7 @@ export default function MoneyPage() {
     ]
 
     setTxList(rows)
+    pageCache.set('money', rows)
     setLoading(false)
   }, [supabase])
 
@@ -220,7 +223,7 @@ export default function MoneyPage() {
         </div>
         <button
           onClick={() => setSheetOpen(true)}
-          className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-white text-[22px] font-light shadow-gold mt-10 select-none"
+          className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-white text-[22px] font-light mt-10 select-none"
           aria-label="Add transaction"
         >
           +

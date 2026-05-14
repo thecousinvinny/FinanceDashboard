@@ -148,7 +148,7 @@ export function AddWishlistSheet({ open, onClose, onAdd }: Props) {
             onClick={handleAdd} disabled={!canAdd}
             className={cn(
               'w-full py-4 rounded-[14px] text-[15px] font-semibold transition-all select-none',
-              canAdd ? 'gradient-gold text-white shadow-gold' : 'bg-bg-overlay text-ink-faint',
+              canAdd ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-faint',
             )}
           >
             Add to Wishlist

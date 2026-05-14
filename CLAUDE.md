@@ -54,7 +54,7 @@ Next.js 15 App Router with two route groups:
 | `/money` | 30-day bar chart hero + combined expense/income feed with filter |
 | `/plans` | 30-day renewal strip hero + Subscriptions/Wishlist toggle |
 | `/studio` | Commission desk — Pending → Approved → In Progress → Completed → Paid flow |
-| `/wallet` | Card visuals (black/gold/green styles) + Banks |
+| `/wallet` | Card visuals (12 styles, 7 textures) + Banks |
 | `/calendar` | Month grid with colored event dots (gold=expense, green=income, red=sub) |
 
 ### Data model
@@ -87,6 +87,9 @@ All six tabs are wired to live Supabase. `src/lib/data/transactions.ts` still ex
 - `money/EditTransactionSheet.tsx` — edit existing transaction; exports `TxEdits`
 - `plans/AddSubscriptionSheet.tsx` / `EditSubscriptionSheet.tsx` — exports `NewSub` / `SubEdits`
 - `plans/AddWishlistSheet.tsx` / `EditWishlistSheet.tsx` — exports `WishEdits`
+- `wallet/CardVisual.tsx` — renders a credit card from a `Card` prop using `CARD_STYLE_DEFS`; draws SVG texture overlay from `getTexturePattern` (defined inline); use this everywhere a card is displayed
+- `wallet/AddCardSheet.tsx` / `EditCardSheet.tsx` — card add/edit sheets with grouped 12-style color picker and 7-texture picker; `NewCard` and `CardEdits` interfaces both include `texture: CardTexture`
+- `home/SparkChart.tsx` — 14-day two-line sparkline (income vs expenses), `'use client'`; accepts `DayPoint[]`; extracted because it requires client interactivity (hover/touch crosshair)
 
 ### Card / bank picker pattern
 
@@ -107,7 +110,7 @@ Wrap each list row in `<SwipeToDelete onDelete={...} onTap={() => setEditTarget(
 
 `DailyBarChart` (Money page) and `RenewalStrip` (Plans page) are defined as named functions in the same file as their page — they are **not** extracted to `src/components/`. Both are computed entirely from already-loaded page state (no new queries). Follow this pattern for page-specific visualizations.
 
-- `DailyBarChart`: 30-day net bars, `requestAnimationFrame` triggers CSS height transition, emerald/ruby/zero coloring, gold dot for today
+- `DailyBarChart`: 30-day net bars, `requestAnimationFrame` triggers CSS height transition, emerald/gold/zero coloring (not ruby), gold dot for today
 - `RenewalStrip`: 30-day horizontal scrollable chip strip, `scrollIntoView` on mount, ruby pips for renewals, tap-to-expand detail panel
 
 ### Design system
@@ -134,7 +137,7 @@ Fonts are CSS variables loaded via `next/font/google` in `src/app/layout.tsx`:
 
 Utility classes defined in `globals.css`: `gradient-gold` (`135deg, #F7DF9E → #D4AF37 → #A47F23`), `gradient-emerald`, `glass`, `glow-green/gold/ruby`, `tab-enter` (page transition animation), `skeleton`.
 
-Active nav items get `text-gold`, a subtle white-gold gradient pill background, and a `drop-shadow` glow. The pill toggle (Subscriptions/Wishlist, Cards/Banks, filter pills) uses `gradient-gold` for the active state and `bg-bg-surface border border-white/[0.06]` for inactive.
+Active nav items get `text-gold` and a `w-1 h-1 rounded-full bg-gold` dot below the label — no glow pill or drop-shadow. The pill toggle (Subscriptions/Wishlist, Cards/Banks, filter pills) uses `gradient-gold` for the active state and `bg-bg-surface border border-white/[0.06]` for inactive.
 
 When writing hardcoded gold hex values (SVG stroke colors, inline styles) use `#D4AF37` — never the old amber `#f59e0b`.
 
@@ -153,7 +156,8 @@ When writing hardcoded gold hex values (SVG stroke colors, inline styles) use `#
 ### Amount display rules
 
 - **Income**: `text-emerald`, prefixed with `+`
-- **Expense in a row**: `text-ink` (not ruby — only stat cards use ruby for the "Spent" total)
+- **Expense in a row**: `text-ink` (neutral, not colored)
+- **Spent stat card**: `text-gold` — gold, not ruby (RORK color system: emerald = income, gold = spent)
 - Use the unicode minus `−` (U+2212), never a hyphen `-`, before expense amounts
 
 ### Recurring layout patterns
@@ -180,7 +184,15 @@ When writing hardcoded gold hex values (SVG stroke colors, inline styles) use `#
 
 **Bottom sheet pattern**: fixed position, `translate-y-full` ↔ `translate-y-0` with `transition-transform duration-300`, `rgba(0,0,0,0.72)` backdrop, `rounded-t-[24px]` top corners, drag handle (`w-9 h-1 rounded-full bg-white/20`). Form state resets after close animation via `setTimeout(..., 300)` in a `useEffect` watching `open`.
 
-Every page root `<div>` should include `tab-enter` for the mount animation.
+Every page root `<div>` should include `tab-enter` for the mount animation. Each route also has a `loading.tsx` that renders a skeleton instantly on navigation — keeps tab switches feeling instant while server data loads. Match the skeleton layout to the page's actual structure.
+
+### Card styles & textures (`src/lib/cardStyles.ts`)
+
+- `CARD_STYLE_DEFS: Record<CardStyle, CardStyleDef>` — 12 gradient styles (black, gold, green, platinum, sapphire, cobalt, graphite, ruby, midnight, rose, forest, obsidian), each with `gradient`, `chipFill`, `chipStroke`, `textPrimary`, `textMuted`
+- `CARD_TEXTURE_DEFS: Record<CardTexture, { label }>` — 7 texture options: none, diamonds, slate, fractal, waves, circuit, dots
+- `STYLE_GROUPS` — 4 named groups (Neutral, Blue, Green, Warm) used to organize the color picker UI
+- Texture patterns are gold-tinted (`rgba(232,196,107,opacity)`) SVG `<pattern>` elements. `getTexturePattern` is defined inline in `CardVisual.tsx` (not in `cardStyles.ts`) since `.ts` files can't contain JSX.
+- `cards` DB table has a `texture text not null default 'none'` column (added by migration `20260512_cards_style_texture_fix.sql`). That migration also runs `alter column style type text` to remove any check constraint on style values.
 
 ### Key utilities (`src/lib/utils.ts`)
 

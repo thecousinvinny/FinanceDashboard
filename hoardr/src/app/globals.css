@@ -2,6 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Theme variables ─────────────────────────────────────────────────────── */
+:root {
+  --rgb-bg-base:     10 10 11;
+  --rgb-bg-surface:  22 22 27;
+  --rgb-bg-elevated: 26 26 30;
+  --rgb-bg-overlay:  32 32 38;
+  --rgb-ink:         247 247 245;
+  --rgb-ink-muted:   140 140 140;
+  --rgb-ink-faint:   84 84 84;
+
+  --nav-bg:          rgba(10,10,11,0.92);
+  --card-border:     rgba(255,255,255,0.08);
+  --card-divider:    rgba(255,255,255,0.05);
+}
+
+html.light {
+  --rgb-bg-base:     244 244 240;
+  --rgb-bg-surface:  255 255 255;
+  --rgb-bg-elevated: 248 248 245;
+  --rgb-bg-overlay:  237 237 234;
+  --rgb-ink:         28 28 30;
+  --rgb-ink-muted:   110 110 115;
+  --rgb-ink-faint:   174 174 178;
+
+  --nav-bg:          rgba(255,255,255,0.92);
+  --card-border:     rgba(0,0,0,0.08);
+  --card-divider:    rgba(0,0,0,0.05);
+}
+
 /* ── Reset ───────────────────────────────────────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -27,8 +56,8 @@ a:active {
 }
 
 html, body {
-  background-color: #0A0A0B;
-  color: #F7F7F5;
+  background-color: rgb(var(--rgb-bg-base));
+  color: rgb(var(--rgb-ink));
   min-height: 100vh;
   overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
@@ -73,7 +102,7 @@ html, body {
 
   .skeleton {
     border-radius: 6px;
-    background: linear-gradient(90deg, #131315 25%, #1C1C1E 50%, #131315 75%);
+    background: linear-gradient(90deg, rgb(var(--rgb-bg-surface)) 25%, rgb(var(--rgb-bg-overlay)) 50%, rgb(var(--rgb-bg-surface)) 75%);
     background-size: 800px 100%;
     animation: shimmer 1.4s infinite;
   }
@@ -97,19 +126,30 @@ html, body {
 
   /* Glass surface for nav / headers */
   .glass {
-    background: rgba(10, 10, 11, 0.85);
+    background: var(--nav-bg);
     backdrop-filter: blur(32px) saturate(200%);
     -webkit-backdrop-filter: blur(32px) saturate(200%);
   }
 
   .glass-card {
-    background: rgba(15, 15, 26, 0.7);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: rgba(var(--rgb-bg-surface) / 0.75);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
   }
 
   /* Glow effects for hero numbers */
   .glow-green  { text-shadow: 0 0 25px rgba(74,222,128,0.3),   0 0 50px rgba(74,222,128,0.1);   }
   .glow-gold   { text-shadow: 0 0 25px rgba(232,196,107,0.3), 0 0 50px rgba(232,196,107,0.1); }
   .glow-ruby   { text-shadow: 0 0 25px rgba(243,99,105,0.3),  0 0 50px rgba(243,99,105,0.1);  }
+}
+
+/* ── Light-mode border overrides ─────────────────────────────────────────── */
+html.light .border-white\/\[0\.06\]  { border-color: var(--card-border) !important; }
+html.light .border-white\/\[0\.04\]  { border-color: var(--card-divider) !important; }
+html.light .ring-white\/\[0\.06\]    { --tw-ring-color: var(--card-border) !important; }
+html.light .divide-white\/\[0\.04\] > * + * { border-color: var(--card-divider) !important; }
+
+/* ── Light-mode nav ──────────────────────────────────────────────────────── */
+html.light nav[class*="fixed bottom-0"] {
+  border-top: 1px solid rgba(0,0,0,0.06);
 }

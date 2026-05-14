@@ -2,8 +2,10 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { localToday, daysUntilLabel, $fk, $fc } from '@/lib/utils'
 import { RefreshCw } from 'lucide-react'
+import Link from 'next/link'
 import { CategoryIcon, getCategoryIcon } from '@/components/ui/CategoryIcon'
-import { SparkChart } from '@/components/home/SparkChart'
+import { HomeHero } from '@/components/home/HomeHero'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,7 +43,7 @@ export default async function HomePage() {
     { data: monthInc },
     { data: activeSubs },
     { data: upcoming },
-    { count: wishlistCount },
+    { data: wishlistItems },
     { data: recentExp },
     { data: recentInc },
     { data: sparkExp },
@@ -57,7 +59,7 @@ export default async function HomePage() {
       .gte('next_renewal', todayStr)
       .order('next_renewal', { ascending: true })
       .limit(3),
-    supabase.from('wishlist').select('*', { count: 'exact', head: true }).eq('status', 'Interested'),
+    supabase.from('wishlist').select('original_cost').eq('status', 'Interested'),
     supabase.from('expenses').select('id, name, cost, date, categories(name)').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(5),
     supabase.from('income').select('id, name, amount, date, source').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(5),
     supabase.from('expenses').select('cost, date').gte('date', sixMonthsAgo),
@@ -98,12 +100,13 @@ export default async function HomePage() {
   }
 
   // ── Computed stats ──────────────────────────────────────────────────────
-  const spent  = monthExp?.reduce((s, e) => s + Number(e.cost), 0)   ?? 0
-  const earned = monthInc?.reduce((s, i) => s + Number(i.amount), 0) ?? 0
-  const saved  = earned - spent
-  const monthlySubs = activeSubs?.reduce((s, r) => s + Number(r.monthly_cost ?? 0), 0) ?? 0
-  const hasData     = spent > 0 || earned > 0
-  const netPositive = saved >= 0
+  const spent        = monthExp?.reduce((s, e) => s + Number(e.cost), 0)              ?? 0
+  const earned       = monthInc?.reduce((s, i) => s + Number(i.amount), 0)            ?? 0
+  const saved        = earned - spent
+  const monthlySubs  = activeSubs?.reduce((s, r) => s + Number(r.monthly_cost ?? 0), 0) ?? 0
+  const wishlistTotal = wishlistItems?.reduce((s, w) => s + Number(w.original_cost ?? 0), 0) ?? 0
+  const hasData      = spent > 0 || earned > 0
+  const netPositive  = saved >= 0
 
   // ── Display name ────────────────────────────────────────────────────────
   const meta      = user.user_metadata as Record<string, string> | undefined
@@ -132,72 +135,48 @@ export default async function HomePage() {
     <div className="min-h-screen bg-bg-base tab-enter">
 
       {/* ── Header ───────────────────────────────────────────────────────── */}
-      <div className="px-5 pt-14 pb-0">
-        <p className="text-[10px] font-medium tracking-[0.14em] uppercase text-gold mb-1">
-          Welcome back
-        </p>
-        <h1 className="text-[32px] font-bold tracking-[-0.04em] text-ink">{firstName}</h1>
-      </div>
-
-      {/* ── Monthly hero card ─────────────────────────────────────────────── */}
-      <div className="mx-4 mt-5 bg-bg-surface border border-white/[0.06] rounded-card p-5">
-        <div className="flex items-start justify-between mb-3">
-          <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint">
-            This Month
+      <div className="px-5 pt-14 pb-0 flex items-start justify-between">
+        <div>
+          <p className="text-[10px] font-medium tracking-[0.14em] uppercase text-gold mb-1">
+            Welcome back
           </p>
-          {hasData && (
-            <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
-              netPositive ? 'text-emerald bg-emerald/10' : 'text-gold bg-gold/10'
-            }`}>
-              {netPositive ? '↑' : '↓'} {netPositive ? '+' : '−'}{$fk(Math.abs(saved))} net
-            </span>
-          )}
+          <h1 className="text-[32px] font-bold tracking-[-0.04em] text-ink">{firstName}</h1>
         </div>
-
-        <div className="flex items-start mb-5">
-          <span className="font-mono text-[22px] font-light text-ink-muted mt-[7px] mr-0.5">$</span>
-          <span className={`font-mono text-[52px] font-light leading-none tracking-[-0.04em] text-ink ${netPositive ? 'glow-green' : 'glow-gold'}`}>
-            {Math.floor(earned).toLocaleString('en-US')}
-            <span className="text-[32px] text-ink-muted">
-              .{String(Math.round((earned % 1) * 100)).padStart(2, '0')}
-            </span>
-          </span>
-        </div>
-
-        <SparkChart points={sparkPoints} />
-
-        <div className="flex border-t border-white/[0.06] pt-4 -mx-1">
-          {[
-            { label: 'Income', value: $fk(earned),           color: 'text-emerald' },
-            { label: 'Spent',  value: $fk(spent),            color: 'text-gold'    },
-            { label: 'Saved',  value: $fk(Math.abs(saved)),  color: netPositive ? 'text-ink' : 'text-gold' },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="flex-1 px-1">
-              <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-1">{label}</p>
-              <p className={`text-[16px] font-semibold font-mono tracking-tight ${color}`}>{value}</p>
-            </div>
-          ))}
+        <div className="mt-14">
+          <ThemeToggle />
         </div>
       </div>
+
+      {/* ── Monthly hero card (animated) ──────────────────────────────────── */}
+      <HomeHero
+        earned={earned}
+        spent={spent}
+        saved={saved}
+        netPositive={netPositive}
+        hasData={hasData}
+        points={sparkPoints}
+      />
 
       {/* ── Quick tiles ───────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 mx-4 mt-3">
-        <div className="bg-bg-surface border border-white/[0.06] rounded-card p-4 flex flex-col gap-3">
-          <div className="w-8 h-8 rounded-[10px] bg-gold/10 flex items-center justify-center text-gold text-sm">↻</div>
-          <div>
-            <p className="text-[22px] font-bold font-mono tracking-tight text-ink">{$fc(monthlySubs)}</p>
-            <p className="text-[11px] text-ink-muted mt-0.5">Monthly Subs</p>
+        <Link href="/plans" className="block">
+          <div className="bg-bg-surface border border-white/[0.06] rounded-card p-4 flex flex-col gap-3 active:scale-[0.97] transition-transform">
+            <div className="w-8 h-8 rounded-[10px] bg-gold/10 flex items-center justify-center text-gold text-sm">↻</div>
+            <div>
+              <p className="text-[22px] font-bold font-mono tracking-tight text-ink">{$fc(monthlySubs)}</p>
+              <p className="text-[11px] text-ink-muted mt-0.5">Monthly Subs</p>
+            </div>
           </div>
-        </div>
-        <div className="bg-bg-surface border border-white/[0.06] rounded-card p-4 flex flex-col gap-3">
-          <div className="w-8 h-8 rounded-[10px] bg-emerald/10 flex items-center justify-center text-emerald text-sm">✦</div>
-          <div>
-            <p className="text-[22px] font-bold tracking-tight text-ink">
-              {wishlistCount ?? 0} {wishlistCount === 1 ? 'item' : 'items'}
-            </p>
-            <p className="text-[11px] text-ink-muted mt-0.5">Wishlist</p>
+        </Link>
+        <Link href="/plans?tab=Wishlist" className="block">
+          <div className="bg-bg-surface border border-white/[0.06] rounded-card p-4 flex flex-col gap-3 active:scale-[0.97] transition-transform">
+            <div className="w-8 h-8 rounded-[10px] bg-emerald/10 flex items-center justify-center text-emerald text-sm">✦</div>
+            <div>
+              <p className="text-[22px] font-bold font-mono tracking-tight text-ink">{$fc(wishlistTotal)}</p>
+              <p className="text-[11px] text-ink-muted mt-0.5">Wishlist</p>
+            </div>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* ── Upcoming bills ────────────────────────────────────────────────── */}

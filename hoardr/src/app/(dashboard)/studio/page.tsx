@@ -165,7 +165,7 @@ export default function StudioPage() {
         </div>
         <button
           onClick={() => setSheetOpen(true)}
-          className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-white text-[22px] font-light shadow-gold mt-10 select-none"
+          className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-white text-[22px] font-light mt-10 select-none"
           aria-label="Add commission"
         >
           +

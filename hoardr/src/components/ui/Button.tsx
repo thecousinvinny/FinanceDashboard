@@ -5,7 +5,7 @@ type Size    = 'sm' | 'md' | 'lg'
 
 const VARIANTS: Record<Variant, string> = {
   default: 'bg-bg-surface border border-white/[0.10] text-ink hover:border-white/20',
-  gold:    'gradient-gold text-white shadow-gold hover:opacity-90',
+  gold:    'gradient-gold text-white hover:opacity-90',
   emerald: 'bg-emerald/10 border border-emerald/30 text-emerald hover:bg-emerald/20',
   ruby:    'bg-ruby/10 border border-ruby/30 text-ruby hover:bg-ruby/20',
   ghost:   'text-ink-muted hover:text-ink hover:bg-white/[0.04]',
@@ -42,7 +42,7 @@ export function FAB({ onClick, 'aria-label': label = 'Add' }: { onClick?: () => 
     <button
       onClick={onClick}
       aria-label={label}
-      className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-white text-[22px] font-light shadow-gold select-none active:scale-90 transition-transform"
+      className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-white text-[22px] font-light select-none active:scale-90 transition-transform"
     >
       +
     </button>

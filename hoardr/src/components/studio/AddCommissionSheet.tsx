@@ -159,7 +159,7 @@ export function AddCommissionSheet({ open, onClose, onAdd }: Props) {
 
           {/* Submit */}
           <button onClick={handleAdd} disabled={!canAdd}
-            className={cn('w-full py-4 rounded-[14px] text-[15px] font-semibold transition-all select-none', canAdd ? 'gradient-gold text-white shadow-gold' : 'bg-bg-overlay text-ink-faint')}>
+            className={cn('w-full py-4 rounded-[14px] text-[15px] font-semibold transition-all select-none', canAdd ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-faint')}>
             Add Commission
           </button>
         </div>

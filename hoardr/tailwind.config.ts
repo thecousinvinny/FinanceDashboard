@@ -10,10 +10,10 @@ const config: Config = {
     extend: {
       colors: {
         bg: {
-          base:     '#0A0A0B',
-          surface:  '#131315',
-          elevated: '#181818',
-          overlay:  '#1C1C1E',
+          base:     'rgb(var(--rgb-bg-base)    / <alpha-value>)',
+          surface:  'rgb(var(--rgb-bg-surface) / <alpha-value>)',
+          elevated: 'rgb(var(--rgb-bg-elevated)/ <alpha-value>)',
+          overlay:  'rgb(var(--rgb-bg-overlay) / <alpha-value>)',
         },
         gold: {
           DEFAULT: '#E8C46B',
@@ -28,9 +28,9 @@ const config: Config = {
           DEFAULT: '#F36369',
         },
         ink: {
-          DEFAULT: '#F7F7F5',
-          muted:   '#8C8C8C',
-          faint:   '#545454',
+          DEFAULT: 'rgb(var(--rgb-ink)       / <alpha-value>)',
+          muted:   'rgb(var(--rgb-ink-muted) / <alpha-value>)',
+          faint:   'rgb(var(--rgb-ink-faint) / <alpha-value>)',
         },
       },
       fontFamily: {

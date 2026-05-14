@@ -9,9 +9,9 @@ const tabs = [
   { href: '/home',     label: 'Home',     Icon: LayoutGrid     },
   { href: '/money',    label: 'Money',    Icon: ArrowLeftRight },
   { href: '/plans',    label: 'Plans',    Icon: Sparkles       },
-  { href: '/studio',   label: 'Studio',   Icon: Palette        },
   { href: '/wallet',   label: 'Wallet',   Icon: CreditCard     },
   { href: '/calendar', label: 'Calendar', Icon: CalendarDays   },
+  { href: '/studio',   label: 'Studio',   Icon: Palette        },
 ]
 
 export default function BottomNav() {
@@ -21,7 +21,7 @@ export default function BottomNav() {
     <nav
       className="fixed bottom-0 inset-x-0 h-[72px] z-50 flex items-stretch justify-around px-2"
       style={{
-        background:           'rgba(10,10,11,0.92)',
+        background:           'var(--nav-bg)',
         backdropFilter:       'blur(32px) saturate(180%)',
         WebkitBackdropFilter: 'blur(32px) saturate(180%)',
       }}

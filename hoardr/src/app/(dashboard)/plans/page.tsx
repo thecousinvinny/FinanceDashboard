@@ -1,14 +1,16 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { PillGroup } from '@/components/ui/Pill'
 import { AddSubscriptionSheet, type NewSub } from '@/components/plans/AddSubscriptionSheet'
 import { AddWishlistSheet, type NewWishItem } from '@/components/plans/AddWishlistSheet'
 import { EditSubscriptionSheet, type SubEdits } from '@/components/plans/EditSubscriptionSheet'
 import { EditWishlistSheet, type WishEdits } from '@/components/plans/EditWishlistSheet'
-import { daysUntilLabel, $fc, $fk, cn, calcSubCosts } from '@/lib/utils'
-import { RefreshCw } from 'lucide-react'
+import { daysUntilLabel, $fc, $fk, cn, calcSubCosts, localToday, nextRenewalDate } from '@/lib/utils'
+import { pageCache } from '@/lib/page-cache'
+import { RefreshCw, CreditCard } from 'lucide-react'
 import type { CardOption } from '@/components/money/AddTransactionSheet'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
@@ -50,10 +52,22 @@ function billingShort(billing: BillingCycle) {
 }
 
 export default function PlansPage() {
-  const [tab,           setTab]          = useState<Tab>('Subscriptions')
-  const [subs,          setSubs]         = useState<Sub[]>([])
-  const [wishlist,      setWishlist]     = useState<WishItem[]>([])
-  const [loading,       setLoading]      = useState(true)
+  return (
+    <Suspense fallback={null}>
+      <PlansPageInner />
+    </Suspense>
+  )
+}
+
+function PlansPageInner() {
+  const searchParams = useSearchParams()
+  const initialTab   = (searchParams.get('tab') as Tab | null) ?? 'Subscriptions'
+  const [tab,           setTab]          = useState<Tab>(initialTab)
+  type PlansCache = { subs: Sub[]; wishlist: WishItem[] }
+  const cached = pageCache.get<PlansCache>('plans')
+  const [subs,          setSubs]         = useState<Sub[]>(cached?.subs ?? [])
+  const [wishlist,      setWishlist]     = useState<WishItem[]>(cached?.wishlist ?? [])
+  const [loading,       setLoading]      = useState(!cached)
   const [subSheet,      setSubSheet]     = useState(false)
   const [wishSheet,     setWishSheet]    = useState(false)
   const [showCancelled, setShowCancelled] = useState(false)
@@ -79,7 +93,7 @@ export default function PlansPage() {
         .order('created_at', { ascending: false }),
     ])
 
-    setSubs((subsData ?? []).map(s => ({
+    const newSubs: Sub[] = (subsData ?? []).map(s => ({
       id:           String(s.id),
       name:         String(s.name),
       billing:      s.billing as BillingCycle,
@@ -90,9 +104,8 @@ export default function PlansPage() {
       status:       String(s.status),
       card_id:      s.card_id ? String(s.card_id) : null,
       category:     s.category ? String(s.category) : null,
-    })))
-
-    setWishlist((wishData ?? []).map(w => ({
+    }))
+    const newWish: WishItem[] = (wishData ?? []).map(w => ({
       id:            String(w.id),
       name:          String(w.name),
       original_cost: w.original_cost != null ? Number(w.original_cost) : null,
@@ -100,8 +113,10 @@ export default function PlansPage() {
       url:           w.url ? String(w.url) : null,
       bought_cost:   w.bought_cost != null ? Number(w.bought_cost) : null,
       status:        String(w.status),
-    })))
-
+    }))
+    setSubs(newSubs)
+    setWishlist(newWish)
+    pageCache.set('plans', { subs: newSubs, wishlist: newWish })
     setLoading(false)
   }, [supabase])
 
@@ -150,6 +165,44 @@ export default function PlansPage() {
       .update({ status: 'Purchased', bought_cost: paidCost, ...(expRow?.id ? { expense_id: expRow.id } : {}) })
       .eq('id', id)
     if (error) { console.error('buy item error:', JSON.stringify(error)); await loadData() }
+  }
+
+  async function handlePaySub(id: string) {
+    const sub = subs.find(s => s.id === id)
+    if (!sub) return
+
+    const today = localToday()
+    const newRenewal = nextRenewalDate(sub.next_renewal ?? today, sub.billing)
+    setSubs(prev => prev.map(s => s.id === id ? { ...s, next_renewal: newRenewal } : s))
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { await loadData(); return }
+
+    // Find or create category for the subscription
+    const categoryName = sub.category ?? 'Subscriptions'
+    const { data: existingCat } = await supabase
+      .from('categories').select('id').eq('user_id', user.id).eq('name', categoryName).maybeSingle()
+    let categoryId: string | null = existingCat?.id ?? null
+    if (!categoryId) {
+      const { data: created } = await supabase
+        .from('categories').insert({ user_id: user.id, name: categoryName }).select('id').single()
+      categoryId = created?.id ?? null
+    }
+
+    await supabase.from('expenses').insert({
+      user_id:     user.id,
+      name:        sub.name,
+      cost:        sub.cost,
+      date:        today,
+      category_id: categoryId,
+      card_id:     sub.card_id,
+    })
+
+    const { error } = await supabase
+      .from('subscriptions')
+      .update({ next_renewal: newRenewal })
+      .eq('id', id)
+    if (error) { console.error('pay sub error:', JSON.stringify(error)); await loadData() }
   }
 
   async function handleCancelSub(id: string) {
@@ -283,7 +336,7 @@ export default function PlansPage() {
         </div>
         <button
           onClick={() => tab === 'Subscriptions' ? setSubSheet(true) : setWishSheet(true)}
-          className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-white text-[22px] font-light shadow-gold mt-10 select-none"
+          className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-white text-[22px] font-light mt-10 select-none"
           aria-label="Add"
         >
           +
@@ -340,7 +393,15 @@ export default function PlansPage() {
                   const renewal   = sub.next_renewal ? daysUntilLabel(sub.next_renewal) : '—'
                   const isOverdue = typeof renewal === 'string' && renewal.includes('ago')
                   return (
-                    <SwipeToDelete key={sub.id} onDelete={() => handleCancelSub(sub.id)} actionLabel="Cancel" actionBg="bg-amber-600" onTap={() => setEditSub(sub)} className="rounded-[18px]">
+                    <SwipeToDelete
+                      key={sub.id}
+                      onDelete={() => handleCancelSub(sub.id)}
+                      actionLabel="Cancel" actionBg="bg-amber-600"
+                      onTap={() => setEditSub(sub)}
+                      className="rounded-[18px]"
+                      onRight={() => handlePaySub(sub.id)}
+                      rightLabel={<CreditCard size={18} strokeWidth={1.5} className="text-white" />}
+                    >
                       <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
                         <div className="w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
                           {sub.category
@@ -416,7 +477,14 @@ export default function PlansPage() {
             </div>
           )}
           {wishlist.map(item => (
-            <SwipeToDelete key={item.id} onDelete={() => handleDeleteWish(item.id)} className="rounded-[18px]" onTap={() => setEditWish(item)}>
+            <SwipeToDelete
+              key={item.id}
+              onDelete={() => handleDeleteWish(item.id)}
+              className="rounded-[18px]"
+              onTap={() => setEditWish(item)}
+              onRight={item.status === 'Interested' ? () => { setBuyItem(item); setBuyAmount('') } : undefined}
+              rightLabel={<CreditCard size={18} strokeWidth={1.5} className="text-white" />}
+            >
               <div className="bg-bg-surface border border-white/[0.06] rounded-[18px] p-4">
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-full bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
@@ -446,15 +514,7 @@ export default function PlansPage() {
                       </div>
                     )}
                   </div>
-                  {item.status === 'Interested' ? (
-                    <button
-                      onClick={() => { setBuyItem(item); setBuyAmount('') }}
-                      className="w-9 h-9 rounded-full bg-emerald/10 border border-emerald/20 flex items-center justify-center text-emerald text-[16px] flex-shrink-0 select-none active:scale-95 transition-transform"
-                      aria-label="Mark as purchased"
-                    >
-                      ✓
-                    </button>
-                  ) : (
+                  {item.status !== 'Interested' && (
                     <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
                       <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-emerald/10 text-emerald">Bought</span>
                       {item.bought_cost != null && item.original_cost != null && item.original_cost > item.bought_cost && (
@@ -563,7 +623,7 @@ export default function PlansPage() {
           disabled={!parseFloat(buyAmount)}
           className={cn(
             'w-full py-4 rounded-[14px] text-[15px] font-semibold transition-all select-none',
-            parseFloat(buyAmount) ? 'gradient-gold text-white shadow-gold' : 'bg-bg-overlay text-ink-faint',
+            parseFloat(buyAmount) ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-faint',
           )}
         >
           Add to Expenses
@@ -573,3 +633,4 @@ export default function PlansPage() {
   </>
   )
 }
+
