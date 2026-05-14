@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect, Suspense } from 'react'
+import { useState, useMemo, useCallback, useEffect, Suspense, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { PillGroup } from '@/components/ui/Pill'
@@ -79,8 +79,10 @@ function PlansPageInner() {
   const [defaultCardId, setDefaultCardId] = useState<string | null>(null)
 
   const supabase = useMemo(() => createClient(), [])
+  const loadGen  = useRef(0)
 
   const loadData = useCallback(async () => {
+    const gen = ++loadGen.current
     const [{ data: subsData }, { data: wishData }] = await Promise.all([
       supabase
         .from('subscriptions')
@@ -114,13 +116,14 @@ function PlansPageInner() {
       bought_cost:   w.bought_cost != null ? Number(w.bought_cost) : null,
       status:        String(w.status),
     }))
+    if (gen !== loadGen.current) return
     setSubs(newSubs)
     setWishlist(newWish)
     pageCache.set('plans', { subs: newSubs, wishlist: newWish })
     setLoading(false)
   }, [supabase])
 
-  useEffect(() => { loadData() }, [loadData])
+  useEffect(() => { loadData(); return () => { loadGen.current++ } }, [loadData])
 
   useEffect(() => {
     async function loadCards() {

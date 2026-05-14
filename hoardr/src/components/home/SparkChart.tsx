@@ -62,11 +62,11 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
         </p>
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1 text-[10px] font-medium font-mono text-emerald">
-            <span className="w-2 h-0.5 rounded-full bg-emerald inline-block" />
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald inline-block" />
             {hovered ? $fc(hovered.inc) : $fk(totalInc)}
           </span>
           <span className="flex items-center gap-1 text-[10px] font-medium font-mono text-gold">
-            <span className="w-2 h-0.5 rounded-full bg-gold inline-block" />
+            <span className="w-1.5 h-1.5 rounded-full bg-gold inline-block" />
             {hovered ? $fc(hovered.exp) : $fk(totalExp)}
           </span>
         </div>

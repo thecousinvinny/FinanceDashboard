@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { NEXT_STATUS, STATUS_LABEL, STATUS_COLORS, STATUS_PROGRESS } from '@/lib/data/studio'
 import { fmtDate, daysUntilLabel, $fc, cn } from '@/lib/utils'
@@ -33,13 +33,16 @@ export default function StudioPage() {
   const [sheetOpen,   setSheetOpen]   = useState(false)
 
   const supabase = useMemo(() => createClient(), [])
+  const loadGen  = useRef(0)
 
   const loadData = useCallback(async () => {
+    const gen = ++loadGen.current
     const { data } = await supabase
       .from('commissions')
       .select('id, client_name, project_name, project_type, value, deposit, deadline, status, notes, paid_at, income_id')
       .order('created_at', { ascending: false })
 
+    if (gen !== loadGen.current) return
     setCommissions((data ?? []).map(c => ({
       id:           String(c.id),
       client_name:  String(c.client_name),
@@ -57,7 +60,7 @@ export default function StudioPage() {
     setLoading(false)
   }, [supabase])
 
-  useEffect(() => { loadData() }, [loadData])
+  useEffect(() => { loadData(); return () => { loadGen.current++ } }, [loadData])
 
   async function handleDelete(id: string) {
     setCommissions(prev => prev.filter(c => c.id !== id))

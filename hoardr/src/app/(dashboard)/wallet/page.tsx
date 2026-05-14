@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { PillGroup } from '@/components/ui/Pill'
 import { AddCardSheet, type NewCard } from '@/components/wallet/AddCardSheet'
@@ -50,9 +50,12 @@ export default function WalletPage() {
   const [expLoading,      setExpLoading]    = useState(false)
   const [reorderMode,     setReorderMode]   = useState(false)
 
-  const supabase = useMemo(() => createClient(), [])
+  const supabase    = useMemo(() => createClient(), [])
+  const loadGen     = useRef(0)
+  const detailGen   = useRef(0)
 
   const loadData = useCallback(async () => {
+    const gen = ++loadGen.current
     const [{ data: cardsData }, { data: banksData }] = await Promise.all([
       supabase
         .from('cards')
@@ -67,30 +70,34 @@ export default function WalletPage() {
     ])
     const newCards = (cardsData ?? []) as Card[]
     const newBanks = (banksData  ?? []) as Bank[]
+    if (gen !== loadGen.current) return
     setCards(newCards)
     setBanks(newBanks)
     pageCache.set('wallet', { cards: newCards, banks: newBanks })
     setLoading(false)
   }, [supabase])
 
-  useEffect(() => { loadData() }, [loadData])
+  useEffect(() => { loadData(); return () => { loadGen.current++ } }, [loadData])
 
   useEffect(() => {
     if (!selectedCard) { setCardExpenses([]); setCardSubs([]); return }
+    const gen = ++detailGen.current
     setExpLoading(true)
-    Promise.all([
-      supabase
-        .from('expenses')
-        .select('id, name, cost, date, categories(name)')
-        .eq('card_id', selectedCard.id)
-        .order('date', { ascending: false })
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('subscriptions')
-        .select('id, name, cost, billing, monthly_cost, next_renewal, category')
-        .eq('card_id', selectedCard.id)
-        .order('next_renewal', { ascending: true }),
-    ]).then(([{ data: expData }, { data: subData }]) => {
+    async function loadDetail() {
+      const [{ data: expData }, { data: subData }] = await Promise.all([
+        supabase
+          .from('expenses')
+          .select('id, name, cost, date, categories(name)')
+          .eq('card_id', selectedCard!.id)
+          .order('date', { ascending: false })
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('subscriptions')
+          .select('id, name, cost, billing, monthly_cost, next_renewal, category')
+          .eq('card_id', selectedCard!.id)
+          .order('next_renewal', { ascending: true }),
+      ])
+      if (gen !== detailGen.current) return
       setCardExpenses((expData ?? []) as unknown as CardExpense[])
       setCardSubs((subData ?? []).map(s => ({
         id:           String(s.id),
@@ -102,7 +109,9 @@ export default function WalletPage() {
         category:     s.category ? String(s.category) : null,
       })))
       setExpLoading(false)
-    })
+    }
+    loadDetail()
+    return () => { detailGen.current++ }
   }, [selectedCard, supabase])
 
   async function handleDeleteCard(id: string) {

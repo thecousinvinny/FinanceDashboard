@@ -135,14 +135,12 @@ export default async function HomePage() {
     <div className="min-h-screen bg-bg-base tab-enter">
 
       {/* ── Header ───────────────────────────────────────────────────────── */}
-      <div className="px-5 pt-14 pb-0 flex items-start justify-between">
-        <div>
-          <p className="text-[10px] font-medium tracking-[0.14em] uppercase text-gold mb-1">
-            Welcome back
-          </p>
-          <h1 className="text-[32px] font-bold tracking-[-0.04em] text-ink">{firstName}</h1>
-        </div>
-        <div className="mt-14">
+      <div className="px-5 pt-14 pb-0 relative">
+        <p className="text-[10px] font-medium tracking-[0.14em] uppercase text-gold mb-1">
+          Welcome back
+        </p>
+        <h1 className="text-[32px] font-bold tracking-[-0.04em] text-ink">{firstName}</h1>
+        <div className="absolute top-14 right-5">
           <ThemeToggle />
         </div>
       </div>

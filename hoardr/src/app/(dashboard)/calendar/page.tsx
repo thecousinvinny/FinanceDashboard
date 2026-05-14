@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 
@@ -34,8 +34,10 @@ export default function CalendarPage() {
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
   const supabase = useMemo(() => createClient(), [])
+  const loadGen  = useRef(0)
 
   const loadData = useCallback(async () => {
+    const gen = ++loadGen.current
     const [{ data: expenses }, { data: income }, { data: subs }] = await Promise.all([
       supabase.from('expenses').select('name, cost, date'),
       supabase.from('income').select('name, amount, date'),
@@ -75,10 +77,11 @@ export default function CalendarPage() {
       }
     }
 
+    if (gen !== loadGen.current) return
     setEventMap(map)
   }, [supabase])
 
-  useEffect(() => { loadData() }, [loadData])
+  useEffect(() => { loadData(); return () => { loadGen.current++ } }, [loadData])
 
   const firstDay    = new Date(year, month, 1).getDay()
   const daysInMonth = new Date(year, month + 1, 0).getDate()

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { PillGroup } from '@/components/ui/Pill'
 import { AddTransactionSheet, type CardOption, type BankOption } from '@/components/money/AddTransactionSheet'
@@ -25,8 +25,10 @@ export default function MoneyPage() {
   const [defaultCardId, setDefaultCardId] = useState<string | null>(null)
 
   const supabase = useMemo(() => createClient(), [])
+  const loadGen  = useRef(0)
 
   const loadData = useCallback(async () => {
+    const gen = ++loadGen.current
     const [{ data: expenses }, { data: income }] = await Promise.all([
       supabase
         .from('expenses')
@@ -61,12 +63,13 @@ export default function MoneyPage() {
       })),
     ]
 
+    if (gen !== loadGen.current) return
     setTxList(rows)
     pageCache.set('money', rows)
     setLoading(false)
   }, [supabase])
 
-  useEffect(() => { loadData() }, [loadData])
+  useEffect(() => { loadData(); return () => { loadGen.current++ } }, [loadData])
 
   // Load wallet data once on mount — cards/banks change only in Wallet tab
   useEffect(() => {
