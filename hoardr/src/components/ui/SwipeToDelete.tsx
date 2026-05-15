@@ -30,6 +30,7 @@ export function SwipeToDelete({
 }: Props) {
   const outerRef          = useRef<HTMLDivElement>(null)
   const slideRef          = useRef<HTMLDivElement>(null)
+  const pressRef          = useRef<HTMLDivElement>(null)
   const leftActionRef     = useRef<HTMLDivElement>(null)   // shows on right swipe (x > 0)
   const rightActionRef    = useRef<HTMLDivElement>(null)   // shows on left swipe  (x < 0)
   const startX            = useRef(0)
@@ -40,6 +41,17 @@ export function SwipeToDelete({
   const startWasRevealed  = useRef<'none' | 'left' | 'right'>('none')
   const didSwipe          = useRef(false)
   const mouseDown         = useRef(false)
+
+  function applyPress() {
+    const el = pressRef.current; if (!el) return
+    el.style.transition = 'transform 0.08s ease-out'
+    el.style.transform  = 'scale(0.97)'
+  }
+  function clearPress() {
+    const el = pressRef.current; if (!el) return
+    el.style.transition = 'transform 0.18s ease-out'
+    el.style.transform  = 'scale(1)'
+  }
 
   function setPos(x: number, animate: boolean) {
     const el  = slideRef.current
@@ -97,18 +109,20 @@ export function SwipeToDelete({
     startWasRevealed.current = revealed.current
     didSwipe.current         = false
     setPos(curX.current, false)
+    applyPress()
   }
 
   function onTouchMove(e: React.TouchEvent) {
     const dx = e.touches[0].clientX - startX.current
     const dy = e.touches[0].clientY - startY.current
     if (!dir.current) dir.current = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'
-    if (Math.abs(dx) > TAP_SLOP || Math.abs(dy) > TAP_SLOP) didSwipe.current = true
+    if (Math.abs(dx) > TAP_SLOP || Math.abs(dy) > TAP_SLOP) { didSwipe.current = true; clearPress() }
     if (dir.current !== 'h') return
     setPos(clampX(dx), false)
   }
 
   function onTouchEnd(e: React.TouchEvent) {
+    clearPress()
     const x = curX.current
     dir.current = null
     if (x >= AUTO && onRight) {
@@ -140,6 +154,7 @@ export function SwipeToDelete({
     startWasRevealed.current = revealed.current
     didSwipe.current         = false
     setPos(curX.current, false)
+    applyPress()
   }
 
   function onMouseMove(e: React.MouseEvent) {
@@ -147,7 +162,7 @@ export function SwipeToDelete({
     const dx = e.clientX - startX.current
     const dy = e.clientY - startY.current
     if (!dir.current) dir.current = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'
-    if (Math.abs(dx) > TAP_SLOP || Math.abs(dy) > TAP_SLOP) didSwipe.current = true
+    if (Math.abs(dx) > TAP_SLOP || Math.abs(dy) > TAP_SLOP) { didSwipe.current = true; clearPress() }
     if (dir.current !== 'h') return
     e.preventDefault()
     setPos(clampX(dx), false)
@@ -156,6 +171,7 @@ export function SwipeToDelete({
   function onMouseUp() {
     if (!mouseDown.current) return
     mouseDown.current = false
+    clearPress()
     const x = curX.current
     dir.current = null
     if (x >= AUTO && onRight) {
@@ -211,7 +227,9 @@ export function SwipeToDelete({
         onMouseUp={onMouseUp}
         onMouseLeave={onMouseUp}
       >
-        {children}
+        <div ref={pressRef}>
+          {children}
+        </div>
       </div>
     </div>
   )
