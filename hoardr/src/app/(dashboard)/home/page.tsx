@@ -1,23 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { localToday, daysUntilLabel, $fk, $fc } from '@/lib/utils'
-import { RefreshCw } from 'lucide-react'
+import { localToday, $fk, $fc } from '@/lib/utils'
 import Link from 'next/link'
-import { CategoryIcon, getCategoryIcon } from '@/components/ui/CategoryIcon'
+import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import { HomeHero } from '@/components/home/HomeHero'
 import { ThemeToggle, SignOutButton } from '@/components/ui/ThemeToggle'
+import { UpcomingBills, type UpcomingSub } from '@/components/home/UpcomingBills'
 
 export const dynamic = 'force-dynamic'
 
-function billingShort(billing: string) {
-  switch (billing) {
-    case 'Annual':    return '/ yr'
-    case 'Weekly':    return '/ wk'
-    case 'BiWeekly':  return '/ 2wk'
-    case 'Quarterly': return '/ qtr'
-    default:          return '/ mo'
-  }
-}
 
 export default async function HomePage() {
   const supabase = await createClient()
@@ -54,7 +45,7 @@ export default async function HomePage() {
     supabase.from('income').select('amount').gte('date', monthStart).lte('date', monthEnd),
     supabase.from('subscriptions').select('monthly_cost').eq('status', 'Active'),
     supabase.from('subscriptions')
-      .select('id, name, cost, next_renewal, billing, category')
+      .select('id, name, cost, next_renewal, billing, category, card_id')
       .eq('status', 'Active')
       .gte('next_renewal', todayStr)
       .order('next_renewal', { ascending: true })
@@ -178,31 +169,15 @@ export default async function HomePage() {
       </div>
 
       {/* ── Upcoming bills ────────────────────────────────────────────────── */}
-      {(upcoming?.length ?? 0) > 0 && (
-        <div className="mx-4 mt-6">
-          <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Upcoming</p>
-          <div className="space-y-2.5">
-            {upcoming!.map(sub => (
-              <div key={sub.id} className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
-                <div className="w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
-                  {sub.category
-                    ? (() => { const Icon = getCategoryIcon(sub.category, 'Expense'); return <Icon size={15} strokeWidth={1.75} className="text-gold" /> })()
-                    : <RefreshCw size={15} className="text-gold" strokeWidth={1.75} />
-                  }
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[14px] font-medium text-ink">{sub.name}</p>
-                  <p className="text-[11px] text-ink-muted">{daysUntilLabel(sub.next_renewal)}</p>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-[15px] font-semibold font-mono text-ink">{$fc(Number(sub.cost))}</p>
-                  <p className="text-[10px] text-ink-faint">{billingShort(sub.billing)}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <UpcomingBills initial={(upcoming ?? []).map(s => ({
+        id:           String(s.id),
+        name:         String(s.name),
+        cost:         Number(s.cost),
+        next_renewal: s.next_renewal ? String(s.next_renewal) : null,
+        billing:      s.billing as UpcomingSub['billing'],
+        category:     s.category ? String(s.category) : null,
+        card_id:      (s as { card_id?: string | null }).card_id ? String((s as { card_id?: string | null }).card_id) : null,
+      }))} />
 
       {/* ── Recent activity ───────────────────────────────────────────────── */}
       <div className="mx-4 mt-6">

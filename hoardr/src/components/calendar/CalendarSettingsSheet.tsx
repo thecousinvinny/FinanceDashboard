@@ -42,6 +42,15 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
     if (open) setLocal(prefs)
   }, [open, prefs])
 
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [open])
+
   function toggleType(type: EventTypeFilter) {
     setLocal(p => ({
       ...p,
@@ -69,7 +78,7 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
       />
 
       <div className={`fixed inset-x-0 bottom-0 z-50 transition-transform duration-300 ${open ? 'translate-y-0' : 'translate-y-full'}`}>
-        <div className="bg-bg-surface rounded-t-[24px] px-5 pt-3 pb-10 max-h-[85vh] overflow-y-auto">
+        <div className="bg-bg-surface rounded-t-[24px] px-5 pt-3 pb-10 max-h-[90dvh] overflow-y-auto overscroll-contain">
 
           <div className="w-9 h-1 rounded-full bg-white/20 mx-auto mb-5" />
 

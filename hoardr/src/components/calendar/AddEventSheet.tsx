@@ -2,37 +2,39 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { MapPin, Clock, AlignLeft, X } from 'lucide-react'
+import type { GCalendar } from './CalendarSettingsSheet'
 
 export interface NewCalEvent {
-  title:     string
-  date:      string
-  allDay:    boolean
-  startTime: string
-  endTime:   string
-  location:  string
-  notes:     string
+  title:      string
+  date:       string
+  allDay:     boolean
+  startTime:  string
+  endTime:    string
+  location:   string
+  notes:      string
+  calendarId: string
 }
 
 interface Props {
-  open:       boolean
+  open:         boolean
   defaultDate?: string
-  onClose:    () => void
-  onAdd:      (ev: NewCalEvent) => Promise<void>
+  googleCals?:  GCalendar[]
+  onClose:      () => void
+  onAdd:        (ev: NewCalEvent) => Promise<void>
 }
 
 const EMPTY: NewCalEvent = {
   title: '', date: '', allDay: true,
   startTime: '09:00', endTime: '10:00',
-  location: '', notes: '',
+  location: '', notes: '', calendarId: 'primary',
 }
 
-export function AddEventSheet({ open, defaultDate, onClose, onAdd }: Props) {
-  const [form,    setForm]    = useState<NewCalEvent>(EMPTY)
-  const [saving,  setSaving]  = useState(false)
+export function AddEventSheet({ open, defaultDate, googleCals = [], onClose, onAdd }: Props) {
+  const [form,   setForm]   = useState<NewCalEvent>(EMPTY)
+  const [saving, setSaving] = useState(false)
   const locationRef = useRef<HTMLInputElement>(null)
   const acRef       = useRef<unknown>(null)
 
-  // Reset form when sheet opens
   useEffect(() => {
     if (open) {
       setForm({ ...EMPTY, date: defaultDate ?? '' })
@@ -40,6 +42,16 @@ export function AddEventSheet({ open, defaultDate, onClose, onAdd }: Props) {
       setTimeout(() => { setForm(EMPTY); setSaving(false) }, 300)
     }
   }, [open, defaultDate])
+
+  // Body scroll lock
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [open])
 
   // Google Places Autocomplete — loads the Maps JS API on demand
   useEffect(() => {
@@ -49,7 +61,12 @@ export function AddEventSheet({ open, defaultDate, onClose, onAdd }: Props) {
 
     function init() {
       if (!locationRef.current) return
-      const g = (window as unknown as Record<string, unknown>).google as { maps?: { places?: { Autocomplete: new (el: HTMLInputElement, opts: unknown) => { addListener: (ev: string, fn: () => void) => void; getPlace: () => { formatted_address?: string; name?: string } } } } } | undefined
+      const g = (window as unknown as Record<string, unknown>).google as {
+        maps?: { places?: { Autocomplete: new (el: HTMLInputElement, opts: unknown) => {
+          addListener: (ev: string, fn: () => void) => void
+          getPlace:    () => { formatted_address?: string; name?: string }
+        } } }
+      } | undefined
       if (!g?.maps?.places) return
       acRef.current = new g.maps.places.Autocomplete(locationRef.current, {
         types: ['geocode', 'establishment'],
@@ -68,11 +85,11 @@ export function AddEventSheet({ open, defaultDate, onClose, onAdd }: Props) {
     } else {
       const existing = document.getElementById('gmaps-script')
       if (!existing) {
-        const s = document.createElement('script')
-        s.id    = 'gmaps-script'
-        s.src   = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`
-        s.async = true
-        s.onload = init
+        const s    = document.createElement('script')
+        s.id       = 'gmaps-script'
+        s.src      = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`
+        s.async    = true
+        s.onload   = init
         document.head.appendChild(s)
       } else {
         existing.addEventListener('load', init, { once: true })
@@ -96,21 +113,17 @@ export function AddEventSheet({ open, defaultDate, onClose, onAdd }: Props) {
 
   return (
     <>
-      {/* Backdrop */}
       <div
         className={`fixed inset-0 z-40 transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         style={{ background: 'rgba(0,0,0,0.72)' }}
         onClick={onClose}
       />
 
-      {/* Sheet */}
       <div className={`fixed inset-x-0 bottom-0 z-50 transition-transform duration-300 ${open ? 'translate-y-0' : 'translate-y-full'}`}>
-        <div className="bg-bg-surface rounded-t-[24px] px-5 pt-3 pb-10 max-h-[90vh] overflow-y-auto">
+        <div className="bg-bg-surface rounded-t-[24px] max-h-[90dvh] overflow-y-auto overscroll-contain px-5 pt-3 pb-10">
 
-          {/* Handle */}
           <div className="w-9 h-1 rounded-full bg-white/20 mx-auto mb-5" />
 
-          {/* Header */}
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-[18px] font-bold text-ink">New Event</h2>
             <button onClick={onClose} className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center">
@@ -137,6 +150,33 @@ export function AddEventSheet({ open, defaultDate, onClose, onAdd }: Props) {
               className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink outline-none focus:border-gold/40 [color-scheme:dark]"
             />
 
+            {/* Calendar picker */}
+            {googleCals.length > 0 && (
+              <div>
+                <p className="text-[10px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-2 pl-1">Calendar</p>
+                <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 no-scrollbar">
+                  {googleCals.map(cal => {
+                    const calId  = cal.primary ? 'primary' : cal.id
+                    const active = form.calendarId === calId
+                    return (
+                      <button
+                        key={cal.id}
+                        onClick={() => set('calendarId', calId)}
+                        className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium border transition-colors ${
+                          active
+                            ? 'gradient-gold text-white border-transparent'
+                            : 'bg-bg-overlay border-white/10 text-ink-muted'
+                        }`}
+                      >
+                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: cal.backgroundColor }} />
+                        {cal.summary}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* All-day toggle */}
             <div className="flex items-center justify-between bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5">
               <div className="flex items-center gap-2.5">
@@ -145,7 +185,7 @@ export function AddEventSheet({ open, defaultDate, onClose, onAdd }: Props) {
               </div>
               <button
                 onClick={() => set('allDay', !form.allDay)}
-                className={`w-11 h-6 rounded-full transition-colors relative ${form.allDay ? 'gradient-gold' : 'bg-bg-base border border-white/10'}`}
+                className={`w-11 h-6 rounded-full transition-colors relative overflow-hidden ${form.allDay ? 'gradient-gold' : 'bg-bg-base border border-white/10'}`}
               >
                 <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${form.allDay ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
               </button>
@@ -175,7 +215,7 @@ export function AddEventSheet({ open, defaultDate, onClose, onAdd }: Props) {
               </div>
             )}
 
-            {/* Location (Google Places autocomplete attaches here) */}
+            {/* Location */}
             <div className="relative">
               <MapPin size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
               <input
@@ -201,7 +241,6 @@ export function AddEventSheet({ open, defaultDate, onClose, onAdd }: Props) {
             </div>
           </div>
 
-          {/* Save */}
           <button
             onClick={handleSubmit}
             disabled={!canSave || saving}

@@ -75,10 +75,11 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { action, event, eventId } = await req.json() as {
-      action:   'create' | 'update' | 'delete'
-      event?:   Record<string, unknown>
-      eventId?: string
+    const { action, event, eventId, calendarId } = await req.json() as {
+      action:      'create' | 'update' | 'delete'
+      event?:      Record<string, unknown>
+      eventId?:    string
+      calendarId?: string
     }
 
     const { data: profile } = await supabase
@@ -98,7 +99,8 @@ export async function POST(req: NextRequest) {
     const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
 
     if (action === 'create') {
-      const res  = await fetch(CAL_BASE, { method: 'POST', headers, body: JSON.stringify(event) })
+      const calBase = `${GCAL_API}/calendars/${encodeURIComponent(calendarId ?? 'primary')}/events`
+      const res  = await fetch(calBase, { method: 'POST', headers, body: JSON.stringify(event) })
       const json = await res.json() as { id?: string; error?: unknown }
       if (!res.ok) return NextResponse.json({ error: json.error }, { status: res.status })
       return NextResponse.json({ googleEventId: json.id })

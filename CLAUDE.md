@@ -73,6 +73,42 @@ Two clients, never swap them:
 - `src/lib/supabase/client.ts` — browser (use in `'use client'` components)
 - `src/lib/supabase/server.ts` — server components and API routes (cookie-aware, async)
 
+### Server vs client pages
+
+`/home` is a **server component** — it fetches all data at render time via `src/lib/supabase/server.ts` and streams HTML. All other five tabs (`/money`, `/plans`, `/studio`, `/wallet`, `/calendar`) are `'use client'` components that fetch on mount via `src/lib/supabase/client.ts`.
+
+### Async safety pattern (required on every `'use client'` page)
+
+Rapid tab switching causes in-flight Supabase queries to resolve after a component unmounts, which produces setState-on-unmounted-component crashes in Safari's WKWebView. Every client page **must** use a generation counter to discard stale results:
+
+```typescript
+const supabase = useMemo(() => createClient(), [])
+const loadGen  = useRef(0)
+
+const loadData = useCallback(async () => {
+  const gen = ++loadGen.current
+  const { data } = await supabase.from('...').select('...')
+  if (gen !== loadGen.current) return   // unmounted or superseded — discard
+  setState(data ?? [])
+  setLoading(false)
+}, [supabase])
+
+useEffect(() => {
+  loadData()
+  return () => { loadGen.current++ }    // invalidate on unmount
+}, [loadData])
+```
+
+If a page has a second `useEffect` for detail data (e.g. Wallet card detail), use a separate `detailGen = useRef(0)` with the same pattern.
+
+### pageCache (`src/lib/page-cache.ts`)
+
+Module-level in-memory cache (survives tab switches within a session, clears on hard reload). TTL = 60 seconds. Used by Money, Plans, and Wallet to show stale data instantly while the background refresh runs.
+
+- `pageCache.get<T>(key)` — returns `T | undefined` (undefined if missing or expired)
+- `pageCache.set(key, data)` — call after a successful load, before `setLoading(false)`
+- Initialize state from cache: `useState<T[]>(pageCache.get<T[]>('key') ?? [])` and `useState(!pageCache.get('key'))` for the loading flag
+
 ### Data phase
 
 All six tabs are wired to live Supabase. `src/lib/data/transactions.ts` still exists but is only used as a type source — `SeedTx` is kept as the in-memory row shape in `money/page.tsx` (Supabase rows are normalized into it on load). `SEED_TRANSACTIONS` is unused and can be deleted.
@@ -89,6 +125,8 @@ All six tabs are wired to live Supabase. `src/lib/data/transactions.ts` still ex
 - `plans/AddWishlistSheet.tsx` / `EditWishlistSheet.tsx` — exports `WishEdits`
 - `wallet/CardVisual.tsx` — renders a credit card from a `Card` prop using `CARD_STYLE_DEFS`; draws SVG texture overlay from `getTexturePattern` (defined inline); use this everywhere a card is displayed
 - `wallet/AddCardSheet.tsx` / `EditCardSheet.tsx` — card add/edit sheets with grouped 12-style color picker and 7-texture picker; `NewCard` and `CardEdits` interfaces both include `texture: CardTexture`
+
+**Wallet sub stats** (Sub/Mo, Sub/Yr, All Time) are computed by cross-referencing actual paid expenses against subscription names via a case-insensitive `Set`: `new Set(cardSubs.map(s => s.name.toLowerCase()))`. The subscription name in the `subscriptions` table **must exactly match** the expense name (case-insensitive) for payments to be counted. A name mismatch silently drops those payments from the stats.
 - `home/SparkChart.tsx` — 14-day two-line sparkline (income vs expenses), `'use client'`; accepts `DayPoint[]`; extracted because it requires client interactivity (hover/touch crosshair)
 
 ### Card / bank picker pattern

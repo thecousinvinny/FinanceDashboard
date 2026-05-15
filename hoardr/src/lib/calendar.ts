@@ -9,12 +9,12 @@ export interface GCalEvent {
   end:          { date: string } | { dateTime: string; timeZone: string }
 }
 
-export async function createCalEvent(event: GCalEvent): Promise<string | null> {
+export async function createCalEvent(event: GCalEvent, calendarId?: string): Promise<string | null> {
   try {
     const res  = await fetch('/api/calendar', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ action: 'create', event }),
+      body:    JSON.stringify({ action: 'create', event, calendarId }),
     })
     const json = await res.json()
     return (json.googleEventId as string) ?? null

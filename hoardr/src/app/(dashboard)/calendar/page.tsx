@@ -119,9 +119,9 @@ export default function CalendarPage() {
 
   useEffect(() => { loadData(); return () => { loadGen.current++ } }, [loadData])
 
-  // ── Load Google Calendar list when settings opens ─────────────────────────
+  // ── Load Google Calendar list when settings or add sheet opens ───────────
   useEffect(() => {
-    if (!settingsOpen || googleCals.length > 0) return
+    if ((!settingsOpen && !addOpen) || googleCals.length > 0) return
     setCalsLoading(true)
     fetch('/api/calendar?action=calendars')
       .then(r => r.json())
@@ -130,7 +130,7 @@ export default function CalendarPage() {
       })
       .catch(() => {})
       .finally(() => setCalsLoading(false))
-  }, [settingsOpen, googleCals.length])
+  }, [settingsOpen, addOpen, googleCals.length])
 
   // ── Fetch Google Calendar events when month or selected calendars change ───
   useEffect(() => {
@@ -203,7 +203,7 @@ export default function CalendarPage() {
           description: ev.notes    || undefined,
           location:    ev.location || undefined,
         })
-    const googleEventId = await createCalEvent(gcal)
+    const googleEventId = await createCalEvent(gcal, ev.calendarId)
     await supabase.from('cal_events').insert({
       user_id: user.id, title: ev.title, date: ev.date,
       start_time: ev.allDay ? null : ev.startTime,
@@ -399,6 +399,7 @@ export default function CalendarPage() {
     <AddEventSheet
       open={addOpen}
       defaultDate={selected ?? undefined}
+      googleCals={googleCals}
       onClose={() => setAddOpen(false)}
       onAdd={handleAddEvent}
     />
