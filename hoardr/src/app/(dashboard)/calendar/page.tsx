@@ -399,7 +399,7 @@ export default function CalendarPage() {
     <AddEventSheet
       open={addOpen}
       defaultDate={selected ?? undefined}
-      googleCals={googleCals}
+      googleCals={googleCals.filter(cal => prefs.googleCalendarIds.includes(cal.id))}
       onClose={() => setAddOpen(false)}
       onAdd={handleAddEvent}
     />
