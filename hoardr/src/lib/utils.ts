@@ -138,3 +138,10 @@ export function clamp(v: number, min: number, max: number) {
 export function cn(...classes: (string | undefined | false | null)[]): string {
   return classes.filter(Boolean).join(' ')
 }
+
+/** Trigger a brief vibration where supported (Android Chrome; silent on iOS) */
+export function haptic(style: 'tap' | 'confirm' | 'delete' = 'tap') {
+  if (typeof navigator === 'undefined' || !navigator.vibrate) return
+  const ms: number | number[] = style === 'delete' ? [12, 50, 12] : style === 'confirm' ? 10 : 6
+  navigator.vibrate(ms)
+}

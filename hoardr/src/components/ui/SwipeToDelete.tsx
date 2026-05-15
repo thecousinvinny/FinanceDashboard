@@ -2,7 +2,7 @@
 
 import { useRef, useEffect } from 'react'
 import { Trash2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, haptic } from '@/lib/utils'
 
 const REVEAL   = 80    // px to show action button
 const AUTO     = 200   // px to auto-confirm
@@ -74,11 +74,13 @@ export function SwipeToDelete({
   }
 
   function triggerDelete() {
+    haptic('delete')
     setPos(-window.innerWidth, true)
     setTimeout(onDelete, 240)
   }
 
   function triggerRight() {
+    haptic('confirm')
     setPos(window.innerWidth, true)
     setTimeout(() => { onRight?.(); setPos(0, true); revealed.current = 'none' }, 240)
   }
@@ -140,7 +142,7 @@ export function SwipeToDelete({
       revealed.current = 'none'
       const target = e.changedTouches[0]?.target as Element | null
       const isInteractive = !!target?.closest('button, a, input, [role="button"]')
-      if (!didSwipe.current && startWasRevealed.current === 'none' && !isInteractive) onTap?.()
+      if (!didSwipe.current && startWasRevealed.current === 'none' && !isInteractive) { haptic('tap'); onTap?.() }
     }
   }
 
@@ -187,7 +189,7 @@ export function SwipeToDelete({
     } else {
       setPos(0, true)
       revealed.current = 'none'
-      if (!didSwipe.current && startWasRevealed.current === 'none') onTap?.()
+      if (!didSwipe.current && startWasRevealed.current === 'none') { haptic('tap'); onTap?.() }
     }
   }
 

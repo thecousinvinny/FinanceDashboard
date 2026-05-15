@@ -193,7 +193,10 @@ export default async function HomePage() {
 
       {/* ── Recent activity ───────────────────────────────────────────────── */}
       <div className="mx-4 mt-6">
-        <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Recent Activity</p>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint">Recent Activity</p>
+          <Link href="/money" className="text-[11px] font-medium text-gold">All →</Link>
+        </div>
         {activity.length > 0 ? (
           <div className="space-y-2.5">
             {activity.map(row => (

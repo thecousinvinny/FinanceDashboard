@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { RefreshCw, CheckCircle, XCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
@@ -76,7 +77,10 @@ export function UpcomingBills({ initial }: { initial: UpcomingSub[] }) {
 
   return (
     <div className="mx-4 mt-6">
-      <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Upcoming</p>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint">Upcoming</p>
+        <Link href="/plans" className="text-[11px] font-medium text-gold">All →</Link>
+      </div>
       <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
         {items.map(sub => {
           const Icon = sub.category ? getCategoryIcon(sub.category, 'Expense') : RefreshCw
