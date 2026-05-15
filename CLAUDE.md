@@ -118,7 +118,7 @@ All six tabs are wired to live Supabase. `src/lib/data/transactions.ts` still ex
 - `nav/BottomNav.tsx` — 6-tab fixed nav, 72px tall; active state via `usePathname()`
 - `ui/Pill.tsx` — exports `Pill` (single) and `PillGroup<T>` (segmented control with gold active state)
 - `ui/CategoryIcon.tsx` — exports `CategoryIcon` (React component) and `getCategoryIcon` (returns a `LucideIcon`). Maps real Google Sheets category names (`Food`, `Fun`, `Tesla`, `Apparel`, `Tech`, `Home`, `Health`, `Travel`, `PC`, `Life`, `Gift`, `Insurance`, `Stocks`, `Other`, `Subscriptions` for expenses; `Repayment`, `Refund`, `Freelance`, `Projects`, `Stocks`, `Other` for income). Pass `className` to color the icon — use `text-gold` for expenses, `text-emerald` for income.
-- `ui/SwipeToDelete.tsx` — swipe-left-to-delete with optional `onTap` (fires on clean tap when not swiped/revealed), `actionLabel`, and `actionBg` props. The `actionBg` default is `bg-ruby`; pass `'bg-amber-500'` for a cancel/restore action.
+- `ui/SwipeToDelete.tsx` — swipe-left-to-delete with optional `onTap` (fires on clean tap when not swiped/revealed), `actionLabel`, and `actionBg` props. The `actionBg` default is `bg-ruby`; pass `'bg-amber-500'` for a cancel/restore action. Also accepts `onRight` / `rightLabel` / `rightBg` for a right-swipe confirm action (e.g. pay). Includes automatic press-scale animation (97%) and haptic feedback — no configuration needed.
 - `money/AddTransactionSheet.tsx` — canonical bottom sheet implementation; exports `CardOption` and `BankOption` interfaces used by all pickers
 - `money/EditTransactionSheet.tsx` — edit existing transaction; exports `TxEdits`
 - `plans/AddSubscriptionSheet.tsx` / `EditSubscriptionSheet.tsx` — exports `NewSub` / `SubEdits`
@@ -127,7 +127,8 @@ All six tabs are wired to live Supabase. `src/lib/data/transactions.ts` still ex
 - `wallet/AddCardSheet.tsx` / `EditCardSheet.tsx` — card add/edit sheets with grouped 12-style color picker and 7-texture picker; `NewCard` and `CardEdits` interfaces both include `texture: CardTexture`
 
 **Wallet sub stats** (Sub/Mo, Sub/Yr, All Time) are computed by cross-referencing actual paid expenses against subscription names via a case-insensitive `Set`: `new Set(cardSubs.map(s => s.name.toLowerCase()))`. The subscription name in the `subscriptions` table **must exactly match** the expense name (case-insensitive) for payments to be counted. A name mismatch silently drops those payments from the stats.
-- `home/SparkChart.tsx` — 14-day two-line sparkline (income vs expenses), `'use client'`; accepts `DayPoint[]`; extracted because it requires client interactivity (hover/touch crosshair)
+- `home/SparkChart.tsx` — 14-day sparkline with three **non-overlapping** series: `inc` (income), `exp` (non-sub expenses), `sub` (subscription payments only). The hero total = `exp + sub`. Series are separated at the `sparkPoints` computation in `home/page.tsx` using the same case-insensitive active-sub name set.
+- `home/UpcomingBills.tsx` — `'use client'` component that receives `initial: UpcomingSub[]` from the server-rendered home page. Right-swipe pays (creates an expense + advances `next_renewal`), left-swipe cancels (sets status `Cancelled`). Calls `router.refresh()` after pay so the server component re-renders and the hero number animates up.
 
 ### Card / bank picker pattern
 
@@ -198,6 +199,15 @@ When writing hardcoded gold hex values (SVG stroke colors, inline styles) use `#
 - **Spent stat card**: `text-gold` — gold, not ruby (RORK color system: emerald = income, gold = spent)
 - Use the unicode minus `−` (U+2212), never a hyphen `-`, before expense amounts
 
+### Icon color rules
+
+CategoryIcon `className` follows a three-way rule applied consistently across Home, Money, and Wallet:
+- Income → `text-emerald`
+- Subscription payment (expense name matches an active subscription name, case-insensitive) → `text-white/60`
+- Regular expense → `text-gold`
+
+Detection pattern (used in Money and Wallet): load `subscriptions.name` where `status = 'Active'` once on mount; build `new Set(names.map(n => n.toLowerCase()))`; check `subNames.has(tx.name.toLowerCase())`. The home page server component uses the already-fetched `activeSubs` array.
+
 ### Recurring layout patterns
 
 **Card list** (transactions, subscriptions, etc.):
@@ -209,7 +219,7 @@ When writing hardcoded gold hex values (SVG stroke colors, inline styles) use `#
 ```tsx
 <div className="w-10 h-10 rounded-full bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
   <CategoryIcon category={tx.category} type={tx.type} size={15}
-    className={tx.type === 'Income' ? 'text-emerald' : 'text-gold'} />
+    className={tx.type === 'Income' ? 'text-emerald' : isSub ? 'text-white/60' : 'text-gold'} />
 </div>
 ```
 
@@ -221,6 +231,13 @@ When writing hardcoded gold hex values (SVG stroke colors, inline styles) use `#
 ```
 
 **Bottom sheet pattern**: fixed position, `translate-y-full` ↔ `translate-y-0` with `transition-transform duration-300`, `rgba(0,0,0,0.72)` backdrop, `rounded-t-[24px]` top corners, drag handle (`w-9 h-1 rounded-full bg-white/20`). Form state resets after close animation via `setTimeout(..., 300)` in a `useEffect` watching `open`.
+
+**Critical iOS scroll rules for bottom sheets:**
+- **Never** set `document.body.style.overflow = 'hidden'` — this breaks touch scroll on all children in iOS Safari
+- Use a static handle+header block, then a separate scrollable `<div>` with **inline styles** (not Tailwind): `style={{ maxHeight: '65vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}`
+- Outer sheet wrapper: `style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}`
+- Wrap `<input type="date">` and `<input type="time">` in an `overflow-hidden` container div — iOS Safari native controls don't clip to `border-radius` otherwise
+- Use `style={{ colorScheme: 'dark' }}` on date/time inputs (not Tailwind `[color-scheme:dark]`)
 
 Every page root `<div>` should include `tab-enter` for the mount animation. Each route also has a `loading.tsx` that renders a skeleton instantly on navigation — keeps tab switches feeling instant while server data loads. Match the skeleton layout to the page's actual structure.
 
@@ -245,6 +262,7 @@ Every page root `<div>` should include `tab-enter` for the mount animation. Each
 - `groupByMonth(rows)` — groups any `{ date: string }` array into `{ label, key, rows }[]` sorted newest-first
 - `clamp(v, min, max)` — numeric clamp
 - `cn(...classes)` — Tailwind className joiner
+- `haptic(style)` — triggers `navigator.vibrate()` where supported (Android); silent on iOS. Styles: `'tap'` (6ms), `'confirm'` (10ms), `'delete'` (double-pulse). SwipeToDelete calls this automatically; call it manually on other destructive or confirming actions.
 
 ### PWA / home screen install
 
@@ -265,3 +283,5 @@ Status transitions: `Pending → Approved → In Progress → Completed → Paid
 - **Mark Paid**: creates an `income` row with `source: 'Freelance'` and `commission_id` pointing back; sets `commissions.income_id` and `paid_at`
 
 The Google Calendar integration is proxied through `src/app/api/calendar/route.ts` (keeps credentials server-side). Direct gapi calls from the client are not used in the new app.
+
+`AddEventSheet` accepts `googleCals?: GCalendar[]` and renders a native `<select>` dropdown for choosing which calendar to create the event in. The calendar page filters this list to only calendars enabled in settings (`prefs.googleCalendarIds`). The selected `calendarId` is passed to `createCalEvent()` which forwards it to the API route.
