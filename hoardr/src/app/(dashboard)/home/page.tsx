@@ -72,9 +72,11 @@ export default async function HomePage() {
     for (const r of sparkExp ?? []) {
       const idx = days.indexOf(String(r.date))
       if (idx < 0) continue
-      expByDay[idx] += Number(r.cost)
-      if (subNames.has(String(r.name ?? '').toLowerCase())) {
+      const isSub = subNames.has(String(r.name ?? '').toLowerCase())
+      if (isSub) {
         subByDay[idx] += Number(r.cost)
+      } else {
+        expByDay[idx] += Number(r.cost)
       }
     }
     for (const r of sparkInc ?? []) {
@@ -98,11 +100,10 @@ export default async function HomePage() {
   }
 
   // ── Computed stats ──────────────────────────────────────────────────────
-  const spentExpenses = monthExp?.reduce((s, e) => s + Number(e.cost), 0)               ?? 0
-  const earned        = monthInc?.reduce((s, i) => s + Number(i.amount), 0)             ?? 0
-  const monthlySubs   = activeSubs?.reduce((s, r) => s + Number(r.monthly_cost ?? 0), 0) ?? 0
-  const spent         = spentExpenses + monthlySubs
-  const saved         = earned - spent
+  const spent        = monthExp?.reduce((s, e) => s + Number(e.cost), 0)               ?? 0
+  const earned       = monthInc?.reduce((s, i) => s + Number(i.amount), 0)             ?? 0
+  const monthlySubs  = activeSubs?.reduce((s, r) => s + Number(r.monthly_cost ?? 0), 0) ?? 0
+  const saved        = earned - spent
   const wishlistTotal = wishlistItems?.reduce((s, w) => s + Number(w.original_cost ?? 0), 0) ?? 0
   const hasData      = spent > 0 || earned > 0
   const netPositive  = saved >= 0
