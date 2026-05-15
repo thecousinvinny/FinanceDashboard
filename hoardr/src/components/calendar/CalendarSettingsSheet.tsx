@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export type EventTypeFilter = 'expense' | 'income' | 'sub' | 'custom' | 'google'
 
@@ -19,12 +20,12 @@ export interface GCalendar {
 }
 
 interface Props {
-  open:       boolean
-  onClose:    () => void
-  prefs:      CalPrefs
-  googleCals: GCalendar[]
+  open:        boolean
+  onClose:     () => void
+  prefs:       CalPrefs
+  googleCals:  GCalendar[]
   calsLoading: boolean
-  onSave:     (prefs: CalPrefs) => void
+  onSave:      (prefs: CalPrefs) => void
 }
 
 const TYPE_META: { type: EventTypeFilter; label: string; color: string }[] = [
@@ -41,15 +42,6 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
   useEffect(() => {
     if (open) setLocal(prefs)
   }, [open, prefs])
-
-  useEffect(() => {
-    if (open) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
-    return () => { document.body.style.overflow = '' }
-  }, [open])
 
   function toggleType(type: EventTypeFilter) {
     setLocal(p => ({
@@ -77,18 +69,31 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
         onClick={onClose}
       />
 
-      <div className={`fixed inset-x-0 bottom-0 z-50 transition-transform duration-300 ${open ? 'translate-y-0' : 'translate-y-full'}`}>
-        <div className="bg-bg-surface rounded-t-[24px] px-5 pt-3 pb-10 max-h-[90dvh] overflow-y-auto overscroll-contain">
+      <div
+        className={cn(
+          'fixed inset-x-0 bottom-0 z-50 rounded-t-[24px] bg-bg-surface transition-transform duration-300',
+          open ? 'translate-y-0' : 'translate-y-full',
+        )}
+        style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
+        {/* Handle */}
+        <div className="flex justify-center pt-3 pb-2">
+          <div className="w-9 h-1 rounded-full bg-white/20" />
+        </div>
 
-          <div className="w-9 h-1 rounded-full bg-white/20 mx-auto mb-5" />
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 mb-4">
+          <h2 className="text-[18px] font-bold text-ink">Calendar Filters</h2>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center">
+            <X size={14} className="text-ink-muted" />
+          </button>
+        </div>
 
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-[18px] font-bold text-ink">Calendar Filters</h2>
-            <button onClick={onClose} className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center">
-              <X size={14} className="text-ink-muted" />
-            </button>
-          </div>
-
+        {/* Scrollable content */}
+        <div
+          className="px-5 overflow-y-auto"
+          style={{ maxHeight: '65vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}
+        >
           {/* ── Financial event types ──────────────────────────────── */}
           <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">
             Show on Calendar
