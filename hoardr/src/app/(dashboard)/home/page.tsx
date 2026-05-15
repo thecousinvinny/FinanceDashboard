@@ -21,10 +21,17 @@ export default async function HomePage() {
   const monthStart = `${y}-${m}-01`
   const monthEnd   = `${y}-${m}-${new Date(Number(y), Number(m), 0).getDate()}`
 
-  // 6-month lookback for sparkline
+  // 6-month lookback for expense/income sparkline
   const sixMonthsAgo = (() => {
     const d = new Date(Number(y), Number(m) - 1 - 5, 1)
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
+  })()
+
+  // 14-day window start for sub sparkline
+  const fourteenDaysAgo = (() => {
+    const todayDay = Number(todayStr.split('-')[2])
+    const d = new Date(Number(y), Number(m) - 1, todayDay - 13)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   })()
 
   // ── Parallel queries ────────────────────────────────────────────────────
@@ -39,6 +46,7 @@ export default async function HomePage() {
     { data: recentInc },
     { data: sparkExp },
     { data: sparkInc },
+    { data: sparkSubs },
   ] = await Promise.all([
     supabase.from('profiles').select('display_name').eq('id', user.id).single(),
     supabase.from('expenses').select('cost').gte('date', monthStart).lte('date', monthEnd),
@@ -55,6 +63,7 @@ export default async function HomePage() {
     supabase.from('income').select('id, name, amount, date, source').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(5),
     supabase.from('expenses').select('cost, date').gte('date', sixMonthsAgo),
     supabase.from('income').select('amount, date').gte('date', sixMonthsAgo),
+    supabase.from('subscriptions').select('cost, next_renewal').eq('status', 'Active').gte('next_renewal', fourteenDaysAgo).lte('next_renewal', todayStr),
   ])
 
   // ── 14-day chart data (daily, non-cumulative) ───────────────────────────
@@ -67,6 +76,7 @@ export default async function HomePage() {
     }
     const expByDay = new Array(14).fill(0)
     const incByDay = new Array(14).fill(0)
+    const subByDay = new Array(14).fill(0)
     for (const r of sparkExp ?? []) {
       const idx = days.indexOf(String(r.date))
       if (idx >= 0) expByDay[idx] += Number(r.cost)
@@ -75,11 +85,16 @@ export default async function HomePage() {
       const idx = days.indexOf(String(r.date))
       if (idx >= 0) incByDay[idx] += Number(r.amount)
     }
+    for (const r of sparkSubs ?? []) {
+      const idx = days.indexOf(String(r.next_renewal))
+      if (idx >= 0) subByDay[idx] += Number(r.cost)
+    }
     return days.map((dateStr, i) => ({
       day:   String(Number(dateStr.split('-')[2])),
       label: new Date(dateStr + 'T12:00:00').toLocaleString('en-US', { month: 'short', day: 'numeric' }),
       exp:   expByDay[i],
       inc:   incByDay[i],
+      sub:   subByDay[i],
     }))
   })()
 
@@ -91,10 +106,11 @@ export default async function HomePage() {
   }
 
   // ── Computed stats ──────────────────────────────────────────────────────
-  const spent        = monthExp?.reduce((s, e) => s + Number(e.cost), 0)              ?? 0
-  const earned       = monthInc?.reduce((s, i) => s + Number(i.amount), 0)            ?? 0
-  const saved        = earned - spent
-  const monthlySubs  = activeSubs?.reduce((s, r) => s + Number(r.monthly_cost ?? 0), 0) ?? 0
+  const spentExpenses = monthExp?.reduce((s, e) => s + Number(e.cost), 0)               ?? 0
+  const earned        = monthInc?.reduce((s, i) => s + Number(i.amount), 0)             ?? 0
+  const monthlySubs   = activeSubs?.reduce((s, r) => s + Number(r.monthly_cost ?? 0), 0) ?? 0
+  const spent         = spentExpenses + monthlySubs
+  const saved         = earned - spent
   const wishlistTotal = wishlistItems?.reduce((s, w) => s + Number(w.original_cost ?? 0), 0) ?? 0
   const hasData      = spent > 0 || earned > 0
   const netPositive  = saved >= 0

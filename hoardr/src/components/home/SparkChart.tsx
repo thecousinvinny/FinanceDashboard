@@ -8,6 +8,7 @@ export interface DayPoint {
   label: string  // "Apr 29", "May 12"
   exp:   number
   inc:   number
+  sub:   number
 }
 
 export function SparkChart({ points }: { points: DayPoint[] }) {
@@ -15,7 +16,7 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   const W = 300, H = 64, n = points.length
-  const maxVal = Math.max(...points.map(p => Math.max(p.exp, p.inc)), 1)
+  const maxVal = Math.max(...points.map(p => Math.max(p.exp, p.inc, p.sub)), 1)
 
   function toY(v: number) { return H - (v / maxVal) * (H - 10) - 5 }
   function toX(i: number) { return (i / (n - 1)) * W }
@@ -23,8 +24,6 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
   function buildPath(vals: number[]) {
     const pts = vals.map((v, i) => ({ x: toX(i), y: toY(v) }))
     if (pts.length < 2) return ''
-    // Horizontal-tangent S-curves: control points share y with their endpoint,
-    // so the curve can never overshoot above or below the data points.
     let d = `M${pts[0].x},${pts[0].y}`
     for (let i = 0; i < pts.length - 1; i++) {
       const p1 = pts[i], p2 = pts[i + 1]
@@ -42,8 +41,10 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
 
   const expVals = points.map(p => p.exp)
   const incVals = points.map(p => p.inc)
+  const subVals = points.map(p => p.sub)
   const totalExp = expVals.reduce((s, v) => s + v, 0)
   const totalInc = incVals.reduce((s, v) => s + v, 0)
+  const totalSub = subVals.reduce((s, v) => s + v, 0)
 
   function pickIdx(clientX: number) {
     const rect = containerRef.current?.getBoundingClientRect()
@@ -69,6 +70,12 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
             <span className="w-1.5 h-1.5 rounded-full bg-gold inline-block" />
             {hovered ? $fc(hovered.exp) : $fk(totalExp)}
           </span>
+          {totalSub > 0 && (
+            <span className="flex items-center gap-1 text-[10px] font-medium font-mono text-white/60">
+              <span className="w-1.5 h-1.5 rounded-full bg-white/60 inline-block" />
+              {hovered ? $fc(hovered.sub) : $fk(totalSub)}
+            </span>
+          )}
         </div>
       </div>
 
@@ -90,12 +97,20 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
               <stop offset="0%" stopColor="#E8C46B" stopOpacity="0.22"/>
               <stop offset="100%" stopColor="#E8C46B" stopOpacity="0"/>
             </linearGradient>
+            <linearGradient id="sub-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="rgba(255,255,255,0.18)"/>
+              <stop offset="100%" stopColor="rgba(255,255,255,0)"/>
+            </linearGradient>
           </defs>
 
           <path d={buildArea(expVals)} fill="url(#exp-grad)"/>
           <path d={buildArea(incVals)} fill="url(#inc-grad)"/>
+          {totalSub > 0 && <path d={buildArea(subVals)} fill="url(#sub-grad)"/>}
           <path d={buildPath(expVals)} fill="none" stroke="#E8C46B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
           <path d={buildPath(incVals)} fill="none" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
+          {totalSub > 0 && (
+            <path d={buildPath(subVals)} fill="none" stroke="rgba(255,255,255,0.65)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
+          )}
 
           {hoverIdx !== null && (
             <>
@@ -105,6 +120,9 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
               />
               <circle cx={toX(hoverIdx)} cy={toY(expVals[hoverIdx])} r="2.5" fill="#E8C46B"/>
               <circle cx={toX(hoverIdx)} cy={toY(incVals[hoverIdx])} r="2.5" fill="#4ADE80"/>
+              {totalSub > 0 && (
+                <circle cx={toX(hoverIdx)} cy={toY(subVals[hoverIdx])} r="2.5" fill="rgba(255,255,255,0.8)"/>
+              )}
             </>
           )}
         </svg>
