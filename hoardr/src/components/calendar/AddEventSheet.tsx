@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { MapPin, Clock, AlignLeft, X } from 'lucide-react'
+import { MapPin, Clock, AlignLeft, X, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { GCalendar } from './CalendarSettingsSheet'
 
@@ -146,75 +146,82 @@ export function AddEventSheet({ open, defaultDate, googleCals = [], onClose, onA
             className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40"
           />
 
-          {/* Date */}
-          <input
-            type="date"
-            value={form.date}
-            onChange={e => set('date', e.target.value)}
-            className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink outline-none focus:border-gold/40 [color-scheme:dark]"
-          />
+          {/* Date — wrapper clips iOS native control to border-radius */}
+          <div className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] overflow-hidden">
+            <input
+              type="date"
+              value={form.date}
+              onChange={e => set('date', e.target.value)}
+              className="w-full px-4 py-3.5 text-[15px] text-ink bg-transparent outline-none"
+              style={{ colorScheme: 'dark' }}
+            />
+          </div>
 
-          {/* Calendar picker */}
+          {/* Calendar dropdown */}
           {googleCals.length > 0 && (
             <div>
               <p className="text-[10px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-2 pl-1">Calendar</p>
-              <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-                {googleCals.map(cal => {
-                  const calId  = cal.primary ? 'primary' : cal.id
-                  const active = form.calendarId === calId
-                  return (
-                    <button
-                      key={cal.id}
-                      onClick={() => set('calendarId', calId)}
-                      className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium border transition-colors ${
-                        active
-                          ? 'gradient-gold text-white border-transparent'
-                          : 'bg-bg-overlay border-white/10 text-ink-muted'
-                      }`}
-                    >
-                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: cal.backgroundColor }} />
-                      {cal.summary}
-                    </button>
-                  )
-                })}
+              <div className="relative w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] overflow-hidden">
+                <select
+                  value={form.calendarId}
+                  onChange={e => set('calendarId', e.target.value)}
+                  className="w-full px-4 py-3.5 pr-10 text-[15px] text-ink bg-transparent outline-none appearance-none"
+                  style={{ colorScheme: 'dark' }}
+                >
+                  {googleCals.map(cal => (
+                    <option key={cal.id} value={cal.primary ? 'primary' : cal.id}>
+                      {cal.summary}{cal.primary ? ' (primary)' : ''}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
               </div>
             </div>
           )}
 
-          {/* All-day toggle */}
-          <div className="flex items-center justify-between bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5">
-            <div className="flex items-center gap-2.5">
+          {/* All-day toggle — whole row is clickable; toggle visual uses span, not nested button */}
+          <button
+            type="button"
+            onClick={() => set('allDay', !form.allDay)}
+            className="w-full flex items-center justify-between bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-left"
+          >
+            <div className="flex items-center gap-2.5 pointer-events-none">
               <Clock size={15} className="text-ink-muted" />
               <span className="text-[14px] text-ink">All day</span>
             </div>
-            <button
-              onClick={() => set('allDay', !form.allDay)}
-              className={`w-11 h-6 rounded-full transition-colors relative ${form.allDay ? 'gradient-gold' : 'bg-bg-base border border-white/10'}`}
+            <span
+              className={`w-11 h-6 rounded-full relative flex-shrink-0 inline-block transition-colors pointer-events-none ${form.allDay ? 'gradient-gold' : 'bg-bg-base border border-white/10'}`}
             >
-              <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${form.allDay ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
-            </button>
-          </div>
+              <span className={`absolute top-0.5 left-0 w-5 h-5 rounded-full bg-white shadow transition-transform ${form.allDay ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+            </span>
+          </button>
 
-          {/* Time pickers (hidden when all-day) */}
+          {/* Time pickers — wrapper clips iOS native time control */}
           {!form.allDay && (
             <div className="flex gap-2">
               <div className="flex-1">
                 <p className="text-[10px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-1.5 pl-1">Start</p>
-                <input
-                  type="time"
-                  value={form.startTime}
-                  onChange={e => set('startTime', e.target.value)}
-                  className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 text-[15px] text-ink outline-none focus:border-gold/40 [color-scheme:dark]"
-                />
+                <div className="bg-bg-overlay border border-white/[0.08] rounded-[14px] overflow-hidden">
+                  <input
+                    type="time"
+                    value={form.startTime}
+                    onChange={e => set('startTime', e.target.value)}
+                    className="w-full px-4 py-3 text-[15px] text-ink bg-transparent outline-none"
+                    style={{ colorScheme: 'dark' }}
+                  />
+                </div>
               </div>
               <div className="flex-1">
                 <p className="text-[10px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-1.5 pl-1">End</p>
-                <input
-                  type="time"
-                  value={form.endTime}
-                  onChange={e => set('endTime', e.target.value)}
-                  className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 text-[15px] text-ink outline-none focus:border-gold/40 [color-scheme:dark]"
-                />
+                <div className="bg-bg-overlay border border-white/[0.08] rounded-[14px] overflow-hidden">
+                  <input
+                    type="time"
+                    value={form.endTime}
+                    onChange={e => set('endTime', e.target.value)}
+                    className="w-full px-4 py-3 text-[15px] text-ink bg-transparent outline-none"
+                    style={{ colorScheme: 'dark' }}
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -246,6 +253,7 @@ export function AddEventSheet({ open, defaultDate, googleCals = [], onClose, onA
 
           {/* Save */}
           <button
+            type="button"
             onClick={handleSubmit}
             disabled={!canSave || saving}
             className="w-full gradient-gold rounded-[14px] py-4 text-[15px] font-bold text-white disabled:opacity-40 transition-opacity"
