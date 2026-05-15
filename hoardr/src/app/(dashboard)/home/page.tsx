@@ -27,13 +27,6 @@ export default async function HomePage() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
   })()
 
-  // 14-day window start for sub sparkline
-  const fourteenDaysAgo = (() => {
-    const todayDay = Number(todayStr.split('-')[2])
-    const d = new Date(Number(y), Number(m) - 1, todayDay - 13)
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-  })()
-
   // ── Parallel queries ────────────────────────────────────────────────────
   const [
     { data: profile },
@@ -46,12 +39,11 @@ export default async function HomePage() {
     { data: recentInc },
     { data: sparkExp },
     { data: sparkInc },
-    { data: sparkSubs },
   ] = await Promise.all([
     supabase.from('profiles').select('display_name').eq('id', user.id).single(),
     supabase.from('expenses').select('cost').gte('date', monthStart).lte('date', monthEnd),
     supabase.from('income').select('amount').gte('date', monthStart).lte('date', monthEnd),
-    supabase.from('subscriptions').select('monthly_cost').eq('status', 'Active'),
+    supabase.from('subscriptions').select('monthly_cost, name').eq('status', 'Active'),
     supabase.from('subscriptions')
       .select('id, name, cost, next_renewal, billing, category, card_id')
       .eq('status', 'Active')
@@ -61,9 +53,8 @@ export default async function HomePage() {
     supabase.from('wishlist').select('original_cost').eq('status', 'Interested'),
     supabase.from('expenses').select('id, name, cost, date, categories(name)').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(5),
     supabase.from('income').select('id, name, amount, date, source').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(5),
-    supabase.from('expenses').select('cost, date').gte('date', sixMonthsAgo),
+    supabase.from('expenses').select('cost, date, name').gte('date', sixMonthsAgo),
     supabase.from('income').select('amount, date').gte('date', sixMonthsAgo),
-    supabase.from('subscriptions').select('cost, next_renewal').eq('status', 'Active').gte('next_renewal', fourteenDaysAgo).lte('next_renewal', todayStr),
   ])
 
   // ── 14-day chart data (daily, non-cumulative) ───────────────────────────
@@ -74,20 +65,21 @@ export default async function HomePage() {
       const d = new Date(Number(y), Number(m) - 1, todayDay - i)
       days.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`)
     }
+    const subNames = new Set((activeSubs ?? []).map(s => String(s.name).toLowerCase()))
     const expByDay = new Array(14).fill(0)
     const incByDay = new Array(14).fill(0)
     const subByDay = new Array(14).fill(0)
     for (const r of sparkExp ?? []) {
       const idx = days.indexOf(String(r.date))
-      if (idx >= 0) expByDay[idx] += Number(r.cost)
+      if (idx < 0) continue
+      expByDay[idx] += Number(r.cost)
+      if (subNames.has(String(r.name ?? '').toLowerCase())) {
+        subByDay[idx] += Number(r.cost)
+      }
     }
     for (const r of sparkInc ?? []) {
       const idx = days.indexOf(String(r.date))
       if (idx >= 0) incByDay[idx] += Number(r.amount)
-    }
-    for (const r of sparkSubs ?? []) {
-      const idx = days.indexOf(String(r.next_renewal))
-      if (idx >= 0) subByDay[idx] += Number(r.cost)
     }
     return days.map((dateStr, i) => ({
       day:   String(Number(dateStr.split('-')[2])),
