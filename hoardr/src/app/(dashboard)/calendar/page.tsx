@@ -3,11 +3,12 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, SlidersHorizontal } from 'lucide-react'
 import { AddEventSheet, type NewCalEvent } from '@/components/calendar/AddEventSheet'
+import { CalendarSettingsSheet, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
 import { createCalEvent, deleteCalEvent, allDayEvent, timedEvent } from '@/lib/calendar'
 
-type EventType = 'expense' | 'income' | 'sub' | 'custom'
+type EventType = 'expense' | 'income' | 'sub' | 'custom' | 'google'
 
 interface CalEvent {
   id?:            string
@@ -17,6 +18,7 @@ interface CalEvent {
   location?:      string
   notes?:         string
   googleEventId?: string
+  color?:         string   // per-calendar color for google events
 }
 
 const DOT_COLOR: Record<EventType, string> = {
@@ -24,6 +26,7 @@ const DOT_COLOR: Record<EventType, string> = {
   income:  '#4ADE80',
   sub:     '#F36369',
   custom:  '#a78bfa',
+  google:  '#4285F4',
 }
 
 const EVENT_COLOR: Record<EventType, string> = {
@@ -31,32 +34,57 @@ const EVENT_COLOR: Record<EventType, string> = {
   income:  'bg-emerald/20 text-emerald',
   sub:     'bg-ruby/20    text-ruby',
   custom:  'bg-violet-500/20 text-violet-300',
+  google:  'bg-blue-500/20   text-blue-300',
+}
+
+const DEFAULT_PREFS: CalPrefs = {
+  visibleTypes:      ['sub', 'custom', 'google'],
+  googleCalendarIds: [],
 }
 
 export default function CalendarPage() {
   const today = useMemo(() => new Date(), [])
-  const [year,       setYear]      = useState(today.getFullYear())
-  const [month,      setMonth]     = useState(today.getMonth())
-  const [selected,   setSelected]  = useState<string | null>(null)
-  const [eventMap,   setEventMap]  = useState<Record<string, CalEvent[]>>({})
-  const [sheetOpen,  setSheetOpen] = useState(false)
+  const [year,          setYear]         = useState(today.getFullYear())
+  const [month,         setMonth]        = useState(today.getMonth())
+  const [selected,      setSelected]     = useState<string | null>(null)
+  const [eventMap,      setEventMap]     = useState<Record<string, CalEvent[]>>({})
+  const [googleEvMap,   setGoogleEvMap]  = useState<Record<string, CalEvent[]>>({})
+  const [prefs,         setPrefs]        = useState<CalPrefs>(DEFAULT_PREFS)
+  const [googleCals,    setGoogleCals]   = useState<GCalendar[]>([])
+  const [calsLoading,   setCalsLoading]  = useState(false)
+  const [addOpen,       setAddOpen]      = useState(false)
+  const [settingsOpen,  setSettingsOpen] = useState(false)
 
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
-  const supabase = useMemo(() => createClient(), [])
-  const loadGen  = useRef(0)
+  const supabase   = useMemo(() => createClient(), [])
+  const loadGen    = useRef(0)
+  const gEvLoadGen = useRef(0)
 
+  // ── Load Supabase events + saved prefs ────────────────────────────────────
   const loadData = useCallback(async () => {
     const gen = ++loadGen.current
-    const [{ data: expenses }, { data: income }, { data: subs }, { data: customEvents }] = await Promise.all([
+    const [
+      { data: expenses },
+      { data: income },
+      { data: subs },
+      { data: customEvents },
+      { data: profile },
+    ] = await Promise.all([
       supabase.from('expenses').select('name, cost, date'),
       supabase.from('income').select('name, amount, date'),
       supabase.from('subscriptions').select('name, cost, next_renewal').eq('status', 'Active'),
-      supabase.from('cal_events').select('id, title, date, start_time, end_time, location, notes, google_event_id').order('created_at', { ascending: true }),
+      supabase.from('cal_events').select('id, title, date, start_time, end_time, location, notes, google_event_id').order('created_at'),
+      supabase.from('profiles').select('calendar_prefs').single(),
     ])
 
-    const map: Record<string, CalEvent[]> = {}
+    if (gen !== loadGen.current) return
 
+    if (profile?.calendar_prefs) {
+      setPrefs(profile.calendar_prefs as CalPrefs)
+    }
+
+    const map: Record<string, CalEvent[]> = {}
     function push(date: string, ev: CalEvent) {
       if (!map[date]) map[date] = []
       map[date].push(ev)
@@ -74,50 +102,116 @@ export default function CalendarPage() {
       }
     }
     for (const c of customEvents ?? []) {
-      const label = c.start_time
-        ? `${c.start_time}${c.end_time ? ` – ${c.end_time}` : ''}`
-        : ''
+      const label = c.start_time ? `${c.start_time}${c.end_time ? ` – ${c.end_time}` : ''}` : ''
       push(String(c.date), {
         id:            String(c.id),
         title:         String(c.title),
         type:          'custom',
         amount:        label,
         location:      c.location ? String(c.location) : undefined,
-        notes:         c.notes ? String(c.notes) : undefined,
+        notes:         c.notes    ? String(c.notes)    : undefined,
         googleEventId: c.google_event_id ? String(c.google_event_id) : undefined,
       })
     }
 
-    if (gen !== loadGen.current) return
     setEventMap(map)
   }, [supabase])
 
   useEffect(() => { loadData(); return () => { loadGen.current++ } }, [loadData])
 
+  // ── Load Google Calendar list when settings opens ─────────────────────────
+  useEffect(() => {
+    if (!settingsOpen || googleCals.length > 0) return
+    setCalsLoading(true)
+    fetch('/api/calendar?action=calendars')
+      .then(r => r.json())
+      .then((data: { items?: GCalendar[] }) => {
+        setGoogleCals(data.items ?? [])
+      })
+      .catch(() => {})
+      .finally(() => setCalsLoading(false))
+  }, [settingsOpen, googleCals.length])
+
+  // ── Fetch Google Calendar events when month or selected calendars change ───
+  useEffect(() => {
+    const calIds = prefs.googleCalendarIds
+    if (calIds.length === 0) { setGoogleEvMap({}); return }
+
+    const gen    = ++gEvLoadGen.current
+    const tMin   = new Date(year, month, 1).toISOString()
+    const tMax   = new Date(year, month + 1, 0, 23, 59, 59).toISOString()
+
+    // Build a color lookup from already-fetched calendar list
+    const colorMap: Record<string, string> = {}
+    for (const cal of googleCals) colorMap[cal.id] = cal.backgroundColor
+
+    Promise.all(
+      calIds.map(calId =>
+        fetch(`/api/calendar?action=events&calendarId=${encodeURIComponent(calId)}&timeMin=${encodeURIComponent(tMin)}&timeMax=${encodeURIComponent(tMax)}`)
+          .then(r => r.json())
+          .then((data: { items?: Array<{
+            id: string; summary?: string; location?: string;
+            start: { date?: string; dateTime?: string };
+            end:   { date?: string; dateTime?: string };
+          }> }) => ({ calId, items: data.items ?? [] }))
+          .catch(() => ({ calId, items: [] })),
+      ),
+    ).then(results => {
+      if (gen !== gEvLoadGen.current) return
+      const map: Record<string, CalEvent[]> = {}
+      for (const { calId, items } of results) {
+        const color = colorMap[calId] ?? '#4285F4'
+        for (const ev of items) {
+          const date = ev.start.date ?? ev.start.dateTime?.slice(0, 10)
+          if (!date) continue
+          const startT = ev.start.dateTime ? ev.start.dateTime.slice(11, 16) : null
+          const endT   = ev.end.dateTime   ? ev.end.dateTime.slice(11, 16)   : null
+          const label  = startT ? `${startT}${endT ? ` – ${endT}` : ''}` : ''
+          if (!map[date]) map[date] = []
+          map[date].push({
+            id:       ev.id,
+            title:    ev.summary ?? '(no title)',
+            type:     'google',
+            amount:   label,
+            location: ev.location,
+            color,
+          })
+        }
+      }
+      setGoogleEvMap(map)
+    })
+
+    return () => { gEvLoadGen.current++ }
+  }, [prefs.googleCalendarIds, year, month, googleCals])
+
+  // ── Save prefs to Supabase ─────────────────────────────────────────────────
+  async function savePrefs(newPrefs: CalPrefs) {
+    setPrefs(newPrefs)
+    await supabase.from('profiles').update({ calendar_prefs: newPrefs }).eq(
+      'id',
+      (await supabase.auth.getUser()).data.user?.id ?? '',
+    )
+  }
+
+  // ── Custom event handlers ──────────────────────────────────────────────────
   async function handleAddEvent(ev: NewCalEvent) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-
     const gcal = ev.allDay
       ? allDayEvent(ev.title, ev.date, ev.notes || undefined, ev.location || undefined)
       : timedEvent(ev.title, ev.date, ev.startTime, ev.endTime, {
-          description: ev.notes || undefined,
+          description: ev.notes    || undefined,
           location:    ev.location || undefined,
         })
-
     const googleEventId = await createCalEvent(gcal)
-
     await supabase.from('cal_events').insert({
-      user_id:         user.id,
-      title:           ev.title,
-      date:            ev.date,
-      start_time:      ev.allDay ? null : ev.startTime,
-      end_time:        ev.allDay ? null : ev.endTime,
-      location:        ev.location || null,
-      notes:           ev.notes    || null,
+      user_id: user.id, title: ev.title, date: ev.date,
+      start_time: ev.allDay ? null : ev.startTime,
+      end_time:   ev.allDay ? null : ev.endTime,
+      location:   ev.location || null,
+      notes:      ev.notes    || null,
       google_event_id: googleEventId,
     })
-
     await loadData()
   }
 
@@ -128,7 +222,23 @@ export default function CalendarPage() {
     await loadData()
   }
 
-  // ── Grid helpers ────────────────────────────────────────────────────────
+  // ── Merged + filtered event map ────────────────────────────────────────────
+  const visibleMap = useMemo(() => {
+    const m: Record<string, CalEvent[]> = {}
+    for (const [date, evs] of Object.entries(eventMap)) {
+      const filtered = evs.filter(e => prefs.visibleTypes.includes(e.type))
+      if (filtered.length) m[date] = filtered
+    }
+    if (prefs.visibleTypes.includes('google')) {
+      for (const [date, evs] of Object.entries(googleEvMap)) {
+        if (!m[date]) m[date] = []
+        m[date].push(...evs)
+      }
+    }
+    return m
+  }, [eventMap, googleEvMap, prefs.visibleTypes])
+
+  // ── Grid helpers ───────────────────────────────────────────────────────────
   const firstDay    = new Date(year, month, 1).getDay()
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   const cells: (number | null)[] = [
@@ -146,7 +256,7 @@ export default function CalendarPage() {
   function goToNext() { if (month === 11) { setMonth(0); setYear(y => y + 1) } else setMonth(m => m + 1); setSelected(null) }
   function goToToday() { setYear(today.getFullYear()); setMonth(today.getMonth()); setSelected(todayStr) }
 
-  const selectedEvents = selected ? (eventMap[selected] ?? []) : []
+  const selectedEvents = selected ? (visibleMap[selected] ?? []) : []
   const selectedLabel  = selected
     ? new Date(selected + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
     : null
@@ -155,14 +265,21 @@ export default function CalendarPage() {
     <>
     <div className="min-h-screen bg-bg-base tab-enter flex flex-col">
 
-      {/* ── Header ───────────────────────────────────────────────────────── */}
+      {/* ── Header ─────────────────────────────────────────────────── */}
       <div className="px-5 pt-14 pb-4">
         <p className="text-[10px] font-medium tracking-[0.14em] uppercase text-gold mb-1">Schedule</p>
         <div className="flex items-center justify-between">
           <h1 className="text-[32px] font-bold tracking-[-0.04em] text-ink">Calendar</h1>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setSheetOpen(true)}
+              onClick={() => setSettingsOpen(true)}
+              className="w-9 h-9 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center select-none"
+              aria-label="Calendar filters"
+            >
+              <SlidersHorizontal size={15} className="text-ink-muted" />
+            </button>
+            <button
+              onClick={() => setAddOpen(true)}
               className="w-9 h-9 rounded-full gradient-gold flex items-center justify-center select-none"
               aria-label="Add event"
             >
@@ -178,29 +295,19 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* ── Legend ───────────────────────────────────────────────────────── */}
-      <div className="flex gap-4 px-5 pb-3 flex-wrap">
-        {([['expense', 'Expense'], ['income', 'Income'], ['sub', 'Sub'], ['custom', 'Event']] as [EventType, string][]).map(([type, label]) => (
-          <div key={type} className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: DOT_COLOR[type] }}/>
-            <span className="text-[10px] text-ink-faint">{label}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Day headers ──────────────────────────────────────────────────── */}
+      {/* ── Day headers ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-7 px-3 mb-1">
         {['S','M','T','W','T','F','S'].map((d, i) => (
           <div key={i} className="text-center text-[10px] font-medium tracking-[0.08em] uppercase text-ink-faint py-1">{d}</div>
         ))}
       </div>
 
-      {/* ── Month grid ───────────────────────────────────────────────────── */}
+      {/* ── Month grid ──────────────────────────────────────────────── */}
       <div className="grid grid-cols-7 px-3 gap-y-0.5">
         {cells.map((day, i) => {
           if (day === null) return <div key={i} className="h-12"/>
           const ds        = dateStr(day)
-          const dayEvents = eventMap[ds] ?? []
+          const dayEvents = visibleMap[ds] ?? []
           const isSel     = selected === ds
           const isTod     = ds === todayStr
           return (
@@ -211,15 +318,19 @@ export default function CalendarPage() {
             >
               <span className={cn(
                 'w-8 h-8 flex items-center justify-center rounded-xl text-[13px] font-medium transition-all',
-                isTod       ? 'gradient-gold text-white font-bold'                : '',
-                isSel && !isTod ? 'bg-bg-surface border border-white/10 text-ink' : '',
-                !isTod && !isSel ? 'text-ink-muted'                              : '',
+                isTod           ? 'gradient-gold text-white font-bold'             : '',
+                isSel && !isTod ? 'bg-bg-surface border border-white/10 text-ink'  : '',
+                !isTod && !isSel ? 'text-ink-muted'                                : '',
               )}>
                 {day}
               </span>
               <div className="flex gap-[3px]">
                 {dayEvents.slice(0, 3).map((ev, j) => (
-                  <span key={j} className="w-[5px] h-[5px] rounded-full flex-shrink-0" style={{ background: DOT_COLOR[ev.type] }}/>
+                  <span
+                    key={j}
+                    className="w-[5px] h-[5px] rounded-full flex-shrink-0"
+                    style={{ background: ev.color ?? DOT_COLOR[ev.type] }}
+                  />
                 ))}
               </div>
             </button>
@@ -227,13 +338,13 @@ export default function CalendarPage() {
         })}
       </div>
 
-      {/* ── Selected day panel ───────────────────────────────────────────── */}
+      {/* ── Selected day panel ──────────────────────────────────────── */}
       {selectedLabel && (
         <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden mb-4">
           <div className="px-4 pt-4 pb-3 border-b border-white/[0.04] flex items-center justify-between">
             <p className="text-[18px] font-semibold text-ink">{selectedLabel}</p>
             <button
-              onClick={() => { setSheetOpen(true) }}
+              onClick={() => setAddOpen(true)}
               className="w-7 h-7 rounded-full gradient-gold flex items-center justify-center select-none"
               aria-label="Add event on this day"
             >
@@ -247,7 +358,10 @@ export default function CalendarPage() {
             <div className="divide-y divide-white/[0.04]">
               {selectedEvents.map((ev, idx) => (
                 <div key={idx} className="flex items-start gap-3 px-4 py-3.5">
-                  <span className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5" style={{ background: DOT_COLOR[ev.type] }}/>
+                  <span
+                    className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5"
+                    style={{ background: ev.color ?? DOT_COLOR[ev.type] }}
+                  />
                   <div className="flex-1 min-w-0">
                     <p className="text-[14px] font-medium text-ink">{ev.title}</p>
                     {ev.location && <p className="text-[11px] text-ink-muted mt-0.5 truncate">📍 {ev.location}</p>}
@@ -283,10 +397,19 @@ export default function CalendarPage() {
     </div>
 
     <AddEventSheet
-      open={sheetOpen}
+      open={addOpen}
       defaultDate={selected ?? undefined}
-      onClose={() => setSheetOpen(false)}
+      onClose={() => setAddOpen(false)}
       onAdd={handleAddEvent}
+    />
+
+    <CalendarSettingsSheet
+      open={settingsOpen}
+      onClose={() => setSettingsOpen(false)}
+      prefs={prefs}
+      googleCals={googleCals}
+      calsLoading={calsLoading}
+      onSave={savePrefs}
     />
     </>
   )
