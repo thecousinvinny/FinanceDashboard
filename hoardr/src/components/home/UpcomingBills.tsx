@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { RefreshCw, CheckCircle, XCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
@@ -30,6 +31,7 @@ function billingShort(b: BillingCycle) {
 
 export function UpcomingBills({ initial }: { initial: UpcomingSub[] }) {
   const [items, setItems] = useState<UpcomingSub[]>(initial)
+  const router = useRouter()
 
   async function handlePay(id: string) {
     const sub = items.find(s => s.id === id)
@@ -60,6 +62,8 @@ export function UpcomingBills({ initial }: { initial: UpcomingSub[] }) {
       }),
       supabase.from('subscriptions').update({ next_renewal: newRenewal }).eq('id', id),
     ])
+
+    router.refresh()
   }
 
   async function handleCancel(id: string) {
