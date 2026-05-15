@@ -441,7 +441,7 @@ export default function WalletPage() {
                           category={exp.categories?.name ?? 'Other'}
                           type="Expense"
                           size={15}
-                          className={isSub ? 'text-emerald' : 'text-gold'}
+                          className={isSub ? 'text-white/60' : 'text-gold'}
                         />
                       </div>
                       <div className="flex-1 min-w-0">

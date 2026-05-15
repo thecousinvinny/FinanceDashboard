@@ -23,6 +23,7 @@ export default function MoneyPage() {
   const [cards,         setCards]         = useState<CardOption[]>([])
   const [banks,         setBanks]         = useState<BankOption[]>([])
   const [defaultCardId, setDefaultCardId] = useState<string | null>(null)
+  const [subNames,      setSubNames]      = useState<Set<string>>(new Set())
 
   const supabase = useMemo(() => createClient(), [])
   const loadGen  = useRef(0)
@@ -74,14 +75,16 @@ export default function MoneyPage() {
   // Load wallet data once on mount — cards/banks change only in Wallet tab
   useEffect(() => {
     async function loadWallet() {
-      const [{ data: c }, { data: b }] = await Promise.all([
+      const [{ data: c }, { data: b }, { data: subs }] = await Promise.all([
         supabase.from('cards').select('id, name, last4, is_default').order('is_default', { ascending: false }).order('created_at', { ascending: false }),
         supabase.from('banks').select('id, name').order('created_at', { ascending: false }),
+        supabase.from('subscriptions').select('name').eq('status', 'Active'),
       ])
       const cList = c ?? []
       setDefaultCardId((cList as { is_default: boolean; id: string }[]).find(x => x.is_default)?.id ?? null)
       setCards(cList.map(x => ({ id: String(x.id), name: String(x.name), last4: x.last4 ? String(x.last4) : null })))
       setBanks((b ?? []).map(x => ({ id: String(x.id), name: String(x.name) })))
+      setSubNames(new Set((subs ?? []).map(s => String(s.name).toLowerCase())))
     }
     loadWallet()
   }, [supabase])
@@ -316,7 +319,7 @@ export default function MoneyPage() {
                         <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
                           <div className="w-10 h-10 rounded-full bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
                             <CategoryIcon category={tx.category} type={tx.type} size={15}
-                              className={tx.type === 'Income' ? 'text-emerald' : 'text-gold'} />
+                              className={tx.type === 'Income' ? 'text-emerald' : subNames.has(tx.name.toLowerCase()) ? 'text-white/60' : 'text-gold'} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-[14px] font-medium text-ink truncate">{tx.name}</p>

@@ -114,18 +114,21 @@ export default async function HomePage() {
   const firstName = fullName.includes('@') ? fullName.split('@')[0] : fullName.split(' ')[0]
 
   // ── Recent activity ─────────────────────────────────────────────────────
+  const subNameSet = new Set((activeSubs ?? []).map(s => String(s.name).toLowerCase()))
   const activity = [
     ...(recentExp ?? []).map(e => ({
       id: e.id, name: e.name,
       amount: -Number(e.cost), date: e.date as string,
       category: (e.categories as unknown as { name: string } | null)?.name ?? 'Other',
       isIncome: false,
+      isSub: subNameSet.has(String(e.name ?? '').toLowerCase()),
     })),
     ...(recentInc ?? []).map(i => ({
       id: i.id, name: i.name,
       amount: Number(i.amount), date: i.date as string,
       category: String(i.source ?? 'Other'),
       isIncome: true,
+      isSub: false,
     })),
   ]
     .sort((a, b) => b.date.localeCompare(a.date))
@@ -200,7 +203,7 @@ export default async function HomePage() {
                     category={row.category}
                     type={row.isIncome ? 'Income' : 'Expense'}
                     size={15}
-                    className={row.isIncome ? 'text-emerald' : 'text-gold'}
+                    className={row.isIncome ? 'text-emerald' : row.isSub ? 'text-white/60' : 'text-gold'}
                   />
                 </div>
                 <div className="flex-1 min-w-0">
