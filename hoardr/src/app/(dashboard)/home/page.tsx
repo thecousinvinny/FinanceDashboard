@@ -5,7 +5,7 @@ import { RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 import { CategoryIcon, getCategoryIcon } from '@/components/ui/CategoryIcon'
 import { HomeHero } from '@/components/home/HomeHero'
-import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import { ThemeToggle, SignOutButton } from '@/components/ui/ThemeToggle'
 
 export const dynamic = 'force-dynamic'
 
@@ -140,7 +140,8 @@ export default async function HomePage() {
           Welcome back
         </p>
         <h1 className="text-[32px] font-bold tracking-[-0.04em] text-ink">{firstName}</h1>
-        <div className="absolute top-14 right-5">
+        <div className="absolute top-14 right-5 flex items-center gap-2">
+          <SignOutButton />
           <ThemeToggle />
         </div>
       </div>
