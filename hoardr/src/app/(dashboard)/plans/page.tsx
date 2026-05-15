@@ -9,6 +9,7 @@ import { AddWishlistSheet, type NewWishItem } from '@/components/plans/AddWishli
 import { EditSubscriptionSheet, type SubEdits } from '@/components/plans/EditSubscriptionSheet'
 import { EditWishlistSheet, type WishEdits } from '@/components/plans/EditWishlistSheet'
 import { daysUntilLabel, $fc, $fk, cn, calcSubCosts, localToday, nextRenewalDate } from '@/lib/utils'
+import { createCalEvent, updateCalEvent, deleteCalEvent, allDayEvent } from '@/lib/calendar'
 import { pageCache } from '@/lib/page-cache'
 import { RefreshCw, CreditCard } from 'lucide-react'
 import type { CardOption } from '@/components/money/AddTransactionSheet'
@@ -29,6 +30,7 @@ interface Sub {
   status:       string
   card_id:      string | null
   category:     string | null
+  cal_event_id: string | null
 }
 
 interface WishItem {
@@ -86,7 +88,7 @@ function PlansPageInner() {
     const [{ data: subsData }, { data: wishData }] = await Promise.all([
       supabase
         .from('subscriptions')
-        .select('id, name, cost, billing, status, next_renewal, monthly_cost, annual_cost, card_id, category')
+        .select('id, name, cost, billing, status, next_renewal, monthly_cost, annual_cost, card_id, category, cal_event_id')
         .order('next_renewal', { ascending: true }),
       supabase
         .from('wishlist')
@@ -106,6 +108,7 @@ function PlansPageInner() {
       status:       String(s.status),
       card_id:      s.card_id ? String(s.card_id) : null,
       category:     s.category ? String(s.category) : null,
+      cal_event_id: s.cal_event_id ? String(s.cal_event_id) : null,
     }))
     const newWish: WishItem[] = (wishData ?? []).map(w => ({
       id:            String(w.id),
@@ -221,6 +224,8 @@ function PlansPageInner() {
   }
 
   async function handleDeleteSub(id: string) {
+    const sub = subs.find(s => s.id === id)
+    if (sub?.cal_event_id) await deleteCalEvent(sub.cal_event_id)
     setSubs(prev => prev.filter(s => s.id !== id))
     const { error } = await supabase.from('subscriptions').delete().eq('id', id)
     if (error) { console.error('delete sub error:', JSON.stringify(error)); await loadData() }
@@ -241,13 +246,13 @@ function PlansPageInner() {
       id: tempId, name: sub.name, billing: sub.billing,
       cost: sub.cost, monthly_cost: monthly, annual_cost: annual,
       next_renewal: sub.next_renewal, status: 'Active', card_id: sub.card_id,
-      category: sub.category ?? null,
+      category: sub.category ?? null, cal_event_id: null,
     }])
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { await loadData(); return }
 
-    await supabase.from('subscriptions').insert({
+    const { data: inserted } = await supabase.from('subscriptions').insert({
       user_id:      user.id,
       name:         sub.name,
       cost:         sub.cost,
@@ -259,7 +264,18 @@ function PlansPageInner() {
       annual_cost:  annual,
       card_id:      sub.card_id,
       category:     sub.category ?? null,
-    })
+    }).select('id').single()
+
+    if (sub.next_renewal && inserted?.id) {
+      const googleEventId = await createCalEvent(allDayEvent(
+        `🔄 ${sub.name}`,
+        sub.next_renewal,
+        `${sub.billing} · $${sub.cost}`,
+      ))
+      if (googleEventId) {
+        await supabase.from('subscriptions').update({ cal_event_id: googleEventId }).eq('id', inserted.id)
+      }
+    }
 
     await loadData()
   }
@@ -305,7 +321,20 @@ function PlansPageInner() {
         category:     edits.category ?? null,
       })
       .eq('id', id)
-    if (error) { console.error('edit sub error:', JSON.stringify(error)); await loadData() }
+    if (error) { console.error('edit sub error:', JSON.stringify(error)); await loadData(); return }
+
+    if (edits.next_renewal) {
+      const existing = subs.find(s => s.id === id)
+      const gcalEv   = allDayEvent(`🔄 ${edits.name}`, edits.next_renewal, `${edits.billing} · $${edits.cost}`)
+      if (existing?.cal_event_id) {
+        await updateCalEvent(existing.cal_event_id, gcalEv)
+      } else {
+        const googleEventId = await createCalEvent(gcalEv)
+        if (googleEventId) {
+          await supabase.from('subscriptions').update({ cal_event_id: googleEventId }).eq('id', id)
+        }
+      }
+    }
   }
 
   async function handleEditWish(id: string, edits: WishEdits) {

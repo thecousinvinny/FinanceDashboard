@@ -31,8 +31,16 @@ export async function GET(request: NextRequest) {
       },
     )
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
+      // Persist the Google OAuth refresh token so the calendar API route can use it.
+      // provider_refresh_token is only present immediately after the OAuth exchange.
+      if (data.session?.provider_refresh_token) {
+        await supabase.from('profiles').upsert(
+          { id: data.session.user.id, google_refresh_token: data.session.provider_refresh_token },
+          { onConflict: 'id' },
+        )
+      }
       return NextResponse.redirect(`${origin}/home`)
     }
   }

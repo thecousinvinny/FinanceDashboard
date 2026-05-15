@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { NEXT_STATUS, STATUS_LABEL, STATUS_COLORS, STATUS_PROGRESS } from '@/lib/data/studio'
 import { fmtDate, daysUntilLabel, $fc, cn } from '@/lib/utils'
+import { createCalEvent, allDayEvent } from '@/lib/calendar'
 import type { CommissionStatus } from '@/types'
 import { AddCommissionSheet, type NewCommission } from '@/components/studio/AddCommissionSheet'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
@@ -24,6 +25,7 @@ interface Commission {
   notes:        string | null
   paid_at:      string | null
   income_id:    string | null
+  cal_event_id: string | null
 }
 
 export default function StudioPage() {
@@ -39,7 +41,7 @@ export default function StudioPage() {
     const gen = ++loadGen.current
     const { data } = await supabase
       .from('commissions')
-      .select('id, client_name, project_name, project_type, value, deposit, deadline, status, notes, paid_at, income_id')
+      .select('id, client_name, project_name, project_type, value, deposit, deadline, status, notes, paid_at, income_id, cal_event_id')
       .order('created_at', { ascending: false })
 
     if (gen !== loadGen.current) return
@@ -52,9 +54,10 @@ export default function StudioPage() {
       deposit:      c.deposit != null ? Number(c.deposit) : null,
       deadline:     c.deadline     ? String(c.deadline)     : null,
       status:       c.status as CommissionStatus,
-      notes:        c.notes    ? String(c.notes)    : null,
-      paid_at:      c.paid_at  ? String(c.paid_at)  : null,
-      income_id:    c.income_id ? String(c.income_id) : null,
+      notes:        c.notes       ? String(c.notes)       : null,
+      paid_at:      c.paid_at    ? String(c.paid_at)    : null,
+      income_id:    c.income_id  ? String(c.income_id)  : null,
+      cal_event_id: c.cal_event_id ? String(c.cal_event_id) : null,
     })))
 
     setLoading(false)
@@ -76,7 +79,7 @@ export default function StudioPage() {
       id: `tmp-${Date.now()}`, client_name: newC.client_name,
       project_name: newC.project_name, project_type: newC.project_type,
       value: newC.value, deposit: newC.deposit, deadline: newC.deadline,
-      status: 'Pending', notes: newC.notes, paid_at: null, income_id: null,
+      status: 'Pending', notes: newC.notes, paid_at: null, income_id: null, cal_event_id: null,
     }
     setCommissions(prev => [optimistic, ...prev])
 
@@ -128,6 +131,17 @@ export default function StudioPage() {
       }
     } else {
       await supabase.from('commissions').update({ status: next }).eq('id', commission.id)
+
+      if (next === 'Approved' && commission.deadline) {
+        const googleEventId = await createCalEvent(allDayEvent(
+          `🎨 ${commission.client_name} — ${commission.project_name}`,
+          commission.deadline,
+          `Commission deadline · $${commission.value}${commission.notes ? '\n\n' + commission.notes : ''}`,
+        ))
+        if (googleEventId) {
+          await supabase.from('commissions').update({ cal_event_id: googleEventId }).eq('id', commission.id)
+        }
+      }
     }
 
     await loadData()

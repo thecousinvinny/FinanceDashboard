@@ -147,7 +147,6 @@ export default async function HomePage() {
 
       {/* ── Monthly hero card (animated) ──────────────────────────────────── */}
       <HomeHero
-        earned={earned}
         spent={spent}
         saved={saved}
         netPositive={netPositive}
