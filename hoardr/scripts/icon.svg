@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="40%" cy="35%" r="70%">
+      <stop offset="0%" stop-color="#111118"/>
+      <stop offset="100%" stop-color="#060608"/>
+    </radialGradient>
+    <radialGradient id="iris" cx="48%" cy="42%" r="58%">
+      <stop offset="0%"   stop-color="#FAEAA0"/>
+      <stop offset="28%"  stop-color="#D4AF37"/>
+      <stop offset="62%"  stop-color="#A47F23"/>
+      <stop offset="100%" stop-color="#5A3E00"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#D4AF37" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#D4AF37" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blur-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="18" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="icon-clip">
+      <rect width="512" height="512" rx="112"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- Ambient glow behind eye -->
+  <ellipse cx="256" cy="256" rx="230" ry="160" fill="url(#glow)" filter="url(#blur-glow)"/>
+
+  <!-- Scales texture (subtle diamond grid) -->
+  <g opacity="0.07" clip-path="url(#icon-clip)">
+    <line x1="0"   y1="128" x2="512" y2="128" stroke="#D4AF37" stroke-width="1"/>
+    <line x1="0"   y1="192" x2="512" y2="192" stroke="#D4AF37" stroke-width="1"/>
+    <line x1="0"   y1="320" x2="512" y2="320" stroke="#D4AF37" stroke-width="1"/>
+    <line x1="0"   y1="384" x2="512" y2="384" stroke="#D4AF37" stroke-width="1"/>
+    <line x1="128" y1="0"   x2="128" y2="512" stroke="#D4AF37" stroke-width="1"/>
+    <line x1="192" y1="0"   x2="192" y2="512" stroke="#D4AF37" stroke-width="1"/>
+    <line x1="320" y1="0"   x2="320" y2="512" stroke="#D4AF37" stroke-width="1"/>
+    <line x1="384" y1="0"   x2="384" y2="512" stroke="#D4AF37" stroke-width="1"/>
+  </g>
+
+  <!-- Eyelid shadow (top) -->
+  <path d="M 54,256 C 80,170 168,96 256,118 C 344,96 432,170 458,256"
+        fill="#0a0a10" opacity="0.55"/>
+
+  <!-- Dragon eye — almond/pointed shape -->
+  <path d="M 54,256
+           C 100,158 176,108 256,118
+           C 336,108 412,158 458,256
+           C 412,354 336,404 256,394
+           C 176,404 100,354 54,256 Z"
+        fill="url(#iris)"/>
+
+  <!-- Iris rings (radial texture) -->
+  <path d="M 54,256
+           C 100,158 176,108 256,118
+           C 336,108 412,158 458,256
+           C 412,354 336,404 256,394
+           C 176,404 100,354 54,256 Z"
+        fill="none" stroke="#F7DF9E" stroke-width="1.5" opacity="0.35"/>
+  <path d="M 116,256
+           C 144,188 196,152 256,158
+           C 316,152 368,188 396,256
+           C 368,324 316,360 256,354
+           C 196,360 144,324 116,256 Z"
+        fill="none" stroke="#F7DF9E" stroke-width="1" opacity="0.2"/>
+
+  <!-- Vertical slit pupil -->
+  <ellipse cx="256" cy="256" rx="44" ry="128"
+           fill="#030306"/>
+
+  <!-- Pupil depth -->
+  <ellipse cx="256" cy="256" rx="30" ry="112"
+           fill="#010103"/>
+
+  <!-- Pupil highlight — top-left catchlight -->
+  <ellipse cx="234" cy="200" rx="13" ry="24"
+           fill="rgba(255,248,210,0.42)"
+           transform="rotate(-12,234,200)"/>
+  <!-- Secondary small highlight -->
+  <ellipse cx="270" cy="300" rx="6" ry="10"
+           fill="rgba(255,248,210,0.18)"
+           transform="rotate(8,270,300)"/>
+
+  <!-- Limbal ring (dark edge of iris) -->
+  <path d="M 54,256
+           C 100,158 176,108 256,118
+           C 336,108 412,158 458,256
+           C 412,354 336,404 256,394
+           C 176,404 100,354 54,256 Z"
+        fill="none" stroke="#2a1800" stroke-width="6" opacity="0.6"/>
+
+  <!-- Eyelid crease lines -->
+  <path d="M 54,256 C 100,158 176,108 256,118 C 336,108 412,158 458,256"
+        fill="none" stroke="#D4AF37" stroke-width="1.5" opacity="0.15"/>
+  <path d="M 54,256 C 100,354 176,404 256,394 C 336,404 412,354 458,256"
+        fill="none" stroke="#1a0e00" stroke-width="3" opacity="0.4"/>
+</svg>
