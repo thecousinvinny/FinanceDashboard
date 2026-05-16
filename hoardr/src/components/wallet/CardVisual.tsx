@@ -66,24 +66,6 @@ export function CardVisual({ card }: { card: Card }) {
         </svg>
       )}
 
-      {/* Kintsugi overlay */}
-      <svg
-        className="absolute inset-0 w-full h-full pointer-events-none"
-        viewBox="0 0 400 252"
-        preserveAspectRatio="xMidYMid slice"
-      >
-        <g stroke="#D4AF37" fill="none" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M 58,0 L 84,38 L 74,82 L 100,124 L 87,252" strokeWidth="1.2" opacity="0.22"/>
-          <path d="M 84,38 L 132,60 L 198,50 L 258,72 L 316,62 L 400,70" strokeWidth="1.0" opacity="0.18"/>
-          <path d="M 198,50 L 208,22 L 230,6" strokeWidth="0.7" opacity="0.14"/>
-          <path d="M 258,72 L 265,106 L 250,148" strokeWidth="0.7" opacity="0.14"/>
-          <path d="M 316,62 L 348,40 L 372,46 L 400,38" strokeWidth="0.7" opacity="0.14"/>
-          <path d="M 100,124 L 158,140 L 202,133 L 244,150 L 284,142 L 322,155" strokeWidth="0.9" opacity="0.18"/>
-          <path d="M 202,252 L 214,208 L 224,180 L 244,150" strokeWidth="0.8" opacity="0.15"/>
-          <path d="M 322,155 L 350,148 L 380,162 L 400,158" strokeWidth="0.7" opacity="0.13"/>
-          <path d="M 158,140 L 148,168 L 155,195" strokeWidth="0.6" opacity="0.12"/>
-        </g>
-      </svg>
 
       {is_default && (
         <span
