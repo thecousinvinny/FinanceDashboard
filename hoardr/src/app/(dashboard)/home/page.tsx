@@ -137,16 +137,10 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen bg-bg-base tab-enter">
 
-      {/* ── Header ───────────────────────────────────────────────────────── */}
-      <div className="px-5 pt-14 pb-0 relative">
-        <p className="text-[10px] font-medium tracking-[0.14em] uppercase text-gold mb-1">
-          Welcome back
-        </p>
-        <h1 className="text-[32px] font-bold tracking-[-0.04em] text-ink">{firstName}</h1>
-        <div className="absolute top-14 right-5 flex items-center gap-2">
-          <SignOutButton />
-          <ThemeToggle />
-        </div>
+      {/* ── Top bar ──────────────────────────────────────────────────────── */}
+      <div className="px-5 pt-12 flex justify-end gap-2">
+        <SignOutButton />
+        <ThemeToggle />
       </div>
 
       {/* ── Monthly hero card (animated) ──────────────────────────────────── */}
