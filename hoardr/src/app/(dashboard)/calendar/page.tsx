@@ -4,6 +4,8 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { Plus, Trash2, SlidersHorizontal } from 'lucide-react'
+import { PullIndicator } from '@/components/ui/PullIndicator'
+import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { AddEventSheet, type NewCalEvent } from '@/components/calendar/AddEventSheet'
 import { CalendarSettingsSheet, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
 import { createCalEvent, deleteCalEvent, allDayEvent, timedEvent } from '@/lib/calendar'
@@ -118,6 +120,9 @@ export default function CalendarPage() {
   }, [supabase])
 
   useEffect(() => { loadData(); return () => { loadGen.current++ } }, [loadData])
+
+  const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } =
+    usePullToRefresh(loadData)
 
   // ── Load Google Calendar list when settings or add sheet opens ───────────
   useEffect(() => {
@@ -264,6 +269,8 @@ export default function CalendarPage() {
   return (
     <>
     <div className="min-h-screen bg-bg-base tab-enter flex flex-col">
+
+      <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
 
       {/* ── Header ─────────────────────────────────────────────────── */}
       <div className="px-5 pt-14 pb-4">

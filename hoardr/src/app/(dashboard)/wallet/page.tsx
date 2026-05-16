@@ -13,6 +13,8 @@ import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import type { Card, Bank } from '@/types'
 import { cn, $fc, $fk, fmtDate } from '@/lib/utils'
 import { pageCache } from '@/lib/page-cache'
+import { PullIndicator } from '@/components/ui/PullIndicator'
+import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 
 interface CardExpense {
   id:         string
@@ -78,6 +80,9 @@ export default function WalletPage() {
   }, [supabase])
 
   useEffect(() => { loadData(); return () => { loadGen.current++ } }, [loadData])
+
+  const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } =
+    usePullToRefresh(loadData)
 
   useEffect(() => {
     if (!selectedCard) { setCardExpenses([]); setCardSubs([]); return }
@@ -203,6 +208,8 @@ export default function WalletPage() {
   return (
     <>
       <div className="min-h-screen bg-bg-base tab-enter">
+
+        <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <div className="px-5 pt-14 pb-0 flex items-start justify-between">

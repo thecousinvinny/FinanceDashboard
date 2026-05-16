@@ -10,11 +10,15 @@ import { type SeedTx } from '@/lib/data/transactions'
 import { groupByMonth, fmtDate, $fk, $fc, cn } from '@/lib/utils'
 import { pageCache } from '@/lib/page-cache'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
+import { PullIndicator } from '@/components/ui/PullIndicator'
+import { usePullToRefresh } from '@/hooks/usePullToRefresh'
+import { Search, X } from 'lucide-react'
 
 type Filter = 'All' | 'Expenses' | 'Income'
 
 export default function MoneyPage() {
   const [filter,    setFilter]    = useState<Filter>('All')
+  const [search,    setSearch]    = useState('')
   const cachedTx = pageCache.get<SeedTx[]>('money')
   const [txList,    setTxList]    = useState<SeedTx[]>(cachedTx ?? [])
   const [loading,   setLoading]   = useState(!cachedTx)
@@ -71,6 +75,9 @@ export default function MoneyPage() {
   }, [supabase])
 
   useEffect(() => { loadData(); return () => { loadGen.current++ } }, [loadData])
+
+  const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } =
+    usePullToRefresh(loadData)
 
   // Load wallet data once on mount — cards/banks change only in Wallet tab
   useEffect(() => {
@@ -211,12 +218,17 @@ export default function MoneyPage() {
   )
 
   // Filtered + grouped list
-  const filtered = useMemo(
+  const typeFiltered = useMemo(
     () => filter === 'All'
       ? sorted
       : sorted.filter(t => t.type === (filter === 'Expenses' ? 'Expense' : 'Income')),
     [sorted, filter],
   )
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return q === '' ? typeFiltered : typeFiltered.filter(t => t.name.toLowerCase().includes(q))
+  }, [typeFiltered, search])
 
   const groups = useMemo(
     () => groupByMonth(filtered).map(g => ({
@@ -230,6 +242,8 @@ export default function MoneyPage() {
   return (
   <>
     <div className="min-h-screen bg-bg-base tab-enter">
+
+      <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
 
       {/* ── Header ───────────────────────────────────────────────────────── */}
       <div className="px-5 pt-14 pb-0 flex items-start justify-between">
@@ -290,8 +304,25 @@ export default function MoneyPage() {
         </div>
       )}
 
+      {/* ── Search ───────────────────────────────────────────────────────── */}
+      <div className="mx-4 mt-4 relative">
+        <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-faint pointer-events-none" />
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search transactions…"
+          className="w-full bg-bg-surface border border-white/[0.06] rounded-[14px] pl-9 pr-8 py-2.5 text-[13px] text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold/30"
+        />
+        {search && (
+          <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-faint">
+            <X size={14} />
+          </button>
+        )}
+      </div>
+
       {/* ── Filter pills ─────────────────────────────────────────────────── */}
-      <div className="mx-4 mt-4">
+      <div className="mx-4 mt-3">
         <PillGroup
           options={['All', 'Expenses', 'Income'] as Filter[]}
           value={filter}

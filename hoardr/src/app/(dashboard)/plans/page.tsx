@@ -12,6 +12,8 @@ import { daysUntilLabel, $fc, $fk, cn, calcSubCosts, localToday, nextRenewalDate
 import { createCalEvent, updateCalEvent, deleteCalEvent, allDayEvent } from '@/lib/calendar'
 import { pageCache } from '@/lib/page-cache'
 import { RefreshCw, CreditCard } from 'lucide-react'
+import { PullIndicator } from '@/components/ui/PullIndicator'
+import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import type { CardOption } from '@/components/money/AddTransactionSheet'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
@@ -127,6 +129,9 @@ function PlansPageInner() {
   }, [supabase])
 
   useEffect(() => { loadData(); return () => { loadGen.current++ } }, [loadData])
+
+  const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } =
+    usePullToRefresh(loadData)
 
   useEffect(() => {
     async function loadCards() {
@@ -357,6 +362,8 @@ function PlansPageInner() {
   return (
   <>
     <div className="min-h-screen bg-bg-base tab-enter">
+
+      <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
 
       {/* ── Header ───────────────────────────────────────────────────────── */}
       <div className="px-5 pt-14 pb-0 flex items-start justify-between">

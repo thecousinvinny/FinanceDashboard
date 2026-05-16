@@ -8,6 +8,8 @@ import { createCalEvent, allDayEvent } from '@/lib/calendar'
 import type { CommissionStatus } from '@/types'
 import { AddCommissionSheet, type NewCommission } from '@/components/studio/AddCommissionSheet'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
+import { PullIndicator } from '@/components/ui/PullIndicator'
+import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 
 type Filter = 'All' | 'Pending' | 'Approved' | 'In Progress'
 
@@ -64,6 +66,9 @@ export default function StudioPage() {
   }, [supabase])
 
   useEffect(() => { loadData(); return () => { loadGen.current++ } }, [loadData])
+
+  const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } =
+    usePullToRefresh(loadData)
 
   async function handleDelete(id: string) {
     setCommissions(prev => prev.filter(c => c.id !== id))
@@ -171,6 +176,8 @@ export default function StudioPage() {
   return (
     <>
     <div className="min-h-screen bg-bg-base tab-enter">
+
+      <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
 
       {/* ── Header ───────────────────────────────────────────────────────── */}
       <div className="px-5 pt-14 pb-0 flex items-start justify-between">
