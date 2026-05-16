@@ -266,15 +266,6 @@ export default function MoneyPage() {
         </div>
       </div>
 
-      {/* ── Filter pills ─────────────────────────────────────────────────── */}
-      <div className="mx-4 mt-4">
-        <PillGroup
-          options={['All', 'Expenses', 'Income'] as Filter[]}
-          value={filter}
-          onChange={setFilter}
-        />
-      </div>
-
       {/* ── Category breakdown ───────────────────────────────────────────── */}
       {!loading && filter !== 'Income' && catBreakdown.length > 0 && (
         <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card px-4 py-3">
@@ -298,6 +289,15 @@ export default function MoneyPage() {
           </div>
         </div>
       )}
+
+      {/* ── Filter pills ─────────────────────────────────────────────────── */}
+      <div className="mx-4 mt-4">
+        <PillGroup
+          options={['All', 'Expenses', 'Income'] as Filter[]}
+          value={filter}
+          onChange={setFilter}
+        />
+      </div>
 
       {/* ── Loading skeleton ─────────────────────────────────────────────── */}
       {loading && (
