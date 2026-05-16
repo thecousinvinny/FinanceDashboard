@@ -375,8 +375,28 @@ function PlansPageInner() {
         </button>
       </div>
 
+      {/* ── Stat tiles ───────────────────────────────────────────────────── */}
+      {!loading && (
+        <div className="mx-4 mt-5 flex gap-3">
+          <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Per Month</p>
+              <span className="text-[13px] text-gold">↻</span>
+            </div>
+            <p className="text-[26px] font-bold font-mono tracking-tight text-ink">{$fk(totals.monthly)}</p>
+          </div>
+          <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Per Year</p>
+              <span className="text-[13px] text-emerald">∞</span>
+            </div>
+            <p className="text-[26px] font-bold font-mono tracking-tight text-ink">{$fk(totals.annual)}</p>
+          </div>
+        </div>
+      )}
+
       {/* ── Tab toggle ───────────────────────────────────────────────────── */}
-      <div className="mx-4 mt-5">
+      <div className="mx-4 mt-4">
         <PillGroup
           options={['Subscriptions', 'Wishlist'] as Tab[]}
           value={tab}
@@ -396,24 +416,6 @@ function PlansPageInner() {
       {/* ── Subscriptions ────────────────────────────────────────────────── */}
       {!loading && tab === 'Subscriptions' && (
         <>
-          {/* Stat tiles */}
-          <div className="mx-4 mt-4 flex gap-3">
-            <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Per Month</p>
-                <span className="text-[13px] text-gold">↻</span>
-              </div>
-              <p className="text-[26px] font-bold font-mono tracking-tight text-ink">{$fk(totals.monthly)}</p>
-            </div>
-            <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Per Year</p>
-                <span className="text-[13px] text-emerald">∞</span>
-              </div>
-              <p className="text-[26px] font-bold font-mono tracking-tight text-ink">{$fk(totals.annual)}</p>
-            </div>
-          </div>
-
           {activeSubs.length === 0 ? (
             <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card py-12 text-center text-ink-faint text-[13px]">
               No active subscriptions — tap + to add one.
