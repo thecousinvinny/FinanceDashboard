@@ -192,6 +192,18 @@ export default function MoneyPage() {
     }
   }, [txList])
 
+  const catBreakdown = useMemo(() => {
+    const mo = new Date().toISOString().slice(0, 7)
+    const totals: Record<string, number> = {}
+    for (const t of txList) {
+      if (t.type !== 'Expense' || !t.date.startsWith(mo)) continue
+      totals[t.category] = (totals[t.category] ?? 0) + t.amount
+    }
+    const entries = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 5)
+    const top = entries[0]?.[1] ?? 1
+    return entries.map(([name, total]) => ({ name, total, pct: Math.round((total / top) * 100) }))
+  }, [txList])
+
   // Sort newest-first before any grouping
   const sorted = useMemo(
     () => [...txList].sort((a, b) => b.date.localeCompare(a.date)),
@@ -262,6 +274,30 @@ export default function MoneyPage() {
           onChange={setFilter}
         />
       </div>
+
+      {/* ── Category breakdown ───────────────────────────────────────────── */}
+      {!loading && filter !== 'Income' && catBreakdown.length > 0 && (
+        <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card px-4 py-3">
+          <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">This Month</p>
+          <div className="space-y-2.5">
+            {catBreakdown.map(cat => (
+              <div key={cat.name}>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <CategoryIcon category={cat.name} type="Expense" size={12}
+                      className={subNames.has(cat.name.toLowerCase()) ? 'text-white/60' : 'text-gold'} />
+                    <span className="text-[12px] font-medium text-ink truncate">{cat.name}</span>
+                  </div>
+                  <span className="text-[12px] font-semibold font-mono text-ink ml-3 flex-shrink-0">{$fc(cat.total)}</span>
+                </div>
+                <div className="h-[3px] rounded-full bg-bg-overlay overflow-hidden">
+                  <div className="h-full rounded-full bg-gold/50 transition-all duration-500" style={{ width: `${cat.pct}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Loading skeleton ─────────────────────────────────────────────── */}
       {loading && (

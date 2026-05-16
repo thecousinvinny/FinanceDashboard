@@ -42,14 +42,19 @@ export function localToday(tz = 'America/Los_Angeles'): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: tz })
 }
 
-/** "May 5" from "2026-05-05" */
+/** "Today" / "Yesterday" / "Mon" / "May 5" from "2026-05-05" */
 export function fmtDate(d: string | null | undefined): string {
   if (!d) return '—'
   const [y, m, day] = d.split('-').map(Number)
-  return new Date(y, m - 1, day).toLocaleDateString('en-US', {
-    month: 'short',
-    day:   'numeric',
-  })
+  const date  = new Date(y, m - 1, day)
+  const today = localToday()
+  const [ty, tm, td] = today.split('-').map(Number)
+  const todayDate = new Date(ty, tm - 1, td)
+  const diff = Math.round((todayDate.getTime() - date.getTime()) / 86_400_000)
+  if (diff === 0) return 'Today'
+  if (diff === 1) return 'Yesterday'
+  if (diff <= 6)  return date.toLocaleDateString('en-US', { weekday: 'short' })
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 /** "May 2026" from "2026-05-05" */
