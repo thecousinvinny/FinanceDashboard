@@ -20,7 +20,7 @@ interface CalEvent {
   location?:      string
   notes?:         string
   googleEventId?: string
-  color?:         string   // per-calendar color for google events
+  color?:         string
 }
 
 const DOT_COLOR: Record<EventType, string> = {
@@ -29,6 +29,15 @@ const DOT_COLOR: Record<EventType, string> = {
   sub:     '#F36369',
   custom:  '#a78bfa',
   google:  '#4285F4',
+}
+
+// Timepage detail-mode dot palette
+const DETAIL_DOT: Record<EventType, string> = {
+  expense: '#D4AF37',   // gold
+  income:  '#22c55e',   // emerald
+  sub:     '#f97316',   // orange
+  custom:  '#a78bfa',   // violet
+  google:  '#ffffff',   // white
 }
 
 const EVENT_COLOR: Record<EventType, string> = {
@@ -44,7 +53,123 @@ const DEFAULT_PREFS: CalPrefs = {
   googleCalendarIds: [],
 }
 
-function EventRow({ ev, onDelete, compact = false }: { ev: CalEvent; onDelete: (ev: CalEvent) => Promise<void>; compact?: boolean }) {
+// ── Event detail bottom sheet ─────────────────────────────────────────────────
+function EventDetailSheet({ event, onClose, onDelete }: {
+  event: CalEvent | null
+  onClose: () => void
+  onDelete: (ev: CalEvent) => Promise<void>
+}) {
+  const [deleting, setDeleting] = useState(false)
+  const open = event !== null
+
+  useEffect(() => {
+    if (!open) {
+      const t = setTimeout(() => setDeleting(false), 300)
+      return () => clearTimeout(t)
+    }
+  }, [open])
+
+  async function handleDelete() {
+    if (!event) return
+    setDeleting(true)
+    await onDelete(event)
+    onClose()
+  }
+
+  const isTimeEv   = event?.type === 'custom' || event?.type === 'google'
+  const timeLabel  = isTimeEv ? event?.amount : null
+  const amtLabel   = !isTimeEv ? event?.amount : null
+  const dotColor   = event ? (event.color ?? DETAIL_DOT[event.type]) : '#fff'
+
+  return (
+    <>
+      {open && (
+        <div
+          className="fixed inset-0 z-40"
+          style={{ background: 'rgba(0,0,0,0.65)' }}
+          onClick={onClose}
+        />
+      )}
+      <div
+        className="fixed bottom-0 left-0 right-0 z-50 transition-transform duration-300"
+        style={{
+          transform: open ? 'translateY(0)' : 'translateY(100%)',
+          background: '#111118',
+          borderRadius: '20px 20px 0 0',
+          willChange: 'transform',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        }}
+      >
+        {/* Handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.18)' }} />
+        </div>
+
+        {event && (
+          <div style={{ padding: '16px 24px 28px' }}>
+            {/* Title row */}
+            <div className="flex items-start gap-3 mb-5">
+              <span
+                style={{ width: 9, height: 9, borderRadius: '50%', background: dotColor, flexShrink: 0, marginTop: 7 }}
+              />
+              <h2 style={{ fontSize: 22, fontWeight: 600, color: '#f0f0f8', lineHeight: 1.3, margin: 0 }}>
+                {event.title}
+              </h2>
+            </div>
+
+            {/* Detail rows */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginLeft: 21 }}>
+              {timeLabel && timeLabel !== '' && (
+                <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', fontFamily: 'monospace', margin: 0 }}>
+                  🕐 {timeLabel}
+                </p>
+              )}
+              {amtLabel && (
+                <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)', fontFamily: 'monospace', fontWeight: 600, margin: 0 }}>
+                  {amtLabel}
+                </p>
+              )}
+              {event.location && (
+                <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', margin: 0 }}>
+                  📍 {event.location}
+                </p>
+              )}
+              {event.notes && (
+                <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', lineHeight: 1.55, margin: 0 }}>
+                  {event.notes}
+                </p>
+              )}
+            </div>
+
+            {event.type === 'custom' && (
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                style={{
+                  marginTop: 28, marginLeft: 21,
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  color: '#ef4444', fontSize: 14, fontWeight: 500,
+                  background: 'none', border: 'none', padding: '8px 0',
+                  opacity: deleting ? 0.5 : 1, cursor: 'pointer',
+                }}
+              >
+                <Trash2 size={14} />
+                {deleting ? 'Deleting…' : 'Delete event'}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
+
+// ── Grid-mode event row ───────────────────────────────────────────────────────
+function EventRow({ ev, onDelete, compact = false }: {
+  ev: CalEvent
+  onDelete: (ev: CalEvent) => Promise<void>
+  compact?: boolean
+}) {
   return (
     <div className={cn('flex items-start gap-3 px-4', compact ? 'py-2.5' : 'py-3.5')}>
       <span
@@ -75,6 +200,8 @@ function EventRow({ ev, onDelete, compact = false }: { ev: CalEvent; onDelete: (
   )
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function CalendarPage() {
   const today = useMemo(() => new Date(), [])
   const [year,          setYear]         = useState(today.getFullYear())
@@ -88,12 +215,16 @@ export default function CalendarPage() {
   const [addOpen,       setAddOpen]      = useState(false)
   const [settingsOpen,  setSettingsOpen] = useState(false)
   const [viewMode,      setViewMode]     = useState<'grid' | 'detail'>('grid')
+  const [detailEvent,   setDetailEvent]  = useState<CalEvent | null>(null)
 
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const todayStr    = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
 
-  const supabase   = useMemo(() => createClient(), [])
-  const loadGen    = useRef(0)
-  const gEvLoadGen = useRef(0)
+  const supabase    = useMemo(() => createClient(), [])
+  const loadGen     = useRef(0)
+  const gEvLoadGen  = useRef(0)
+  const dayElRefs   = useRef(new Map<string, HTMLElement>())
+  const lastHapticDay = useRef<string | null>(null)
 
   // ── Load Supabase events + saved prefs ────────────────────────────────────
   const loadData = useCallback(async () => {
@@ -114,9 +245,7 @@ export default function CalendarPage() {
 
     if (gen !== loadGen.current) return
 
-    if (profile?.calendar_prefs) {
-      setPrefs(profile.calendar_prefs as CalPrefs)
-    }
+    if (profile?.calendar_prefs) setPrefs(profile.calendar_prefs as CalPrefs)
 
     const map: Record<string, CalEvent[]> = {}
     function push(date: string, ev: CalEvent) {
@@ -124,16 +253,13 @@ export default function CalendarPage() {
       map[date].push(ev)
     }
 
-    for (const e of expenses ?? []) {
+    for (const e of expenses ?? [])
       push(String(e.date), { title: String(e.name), type: 'expense', amount: `−$${Number(e.cost).toFixed(2)}` })
-    }
-    for (const i of income ?? []) {
+    for (const i of income ?? [])
       push(String(i.date), { title: String(i.name), type: 'income', amount: `+$${Number(i.amount).toFixed(2)}` })
-    }
     for (const s of subs ?? []) {
-      if (s.next_renewal) {
+      if (s.next_renewal)
         push(String(s.next_renewal), { title: String(s.name), type: 'sub', amount: `$${Number(s.cost).toFixed(2)}` })
-      }
     }
     for (const c of customEvents ?? []) {
       const label = c.start_time ? `${c.start_time}${c.end_time ? ` – ${c.end_time}` : ''}` : ''
@@ -156,29 +282,25 @@ export default function CalendarPage() {
   const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } =
     usePullToRefresh(loadData)
 
-  // ── Load Google Calendar list when settings or add sheet opens ───────────
+  // ── Google Calendar list ──────────────────────────────────────────────────
   useEffect(() => {
     if ((!settingsOpen && !addOpen) || googleCals.length > 0) return
     setCalsLoading(true)
     fetch('/api/calendar?action=calendars')
       .then(r => r.json())
-      .then((data: { items?: GCalendar[] }) => {
-        setGoogleCals(data.items ?? [])
-      })
+      .then((data: { items?: GCalendar[] }) => setGoogleCals(data.items ?? []))
       .catch(() => {})
       .finally(() => setCalsLoading(false))
   }, [settingsOpen, addOpen, googleCals.length])
 
-  // ── Fetch Google Calendar events when month or selected calendars change ───
+  // ── Google Calendar events for current month ──────────────────────────────
   useEffect(() => {
     const calIds = prefs.googleCalendarIds
     if (calIds.length === 0) { setGoogleEvMap({}); return }
 
-    const gen    = ++gEvLoadGen.current
-    const tMin   = new Date(year, month, 1).toISOString()
-    const tMax   = new Date(year, month + 1, 0, 23, 59, 59).toISOString()
-
-    // Build a color lookup from already-fetched calendar list
+    const gen   = ++gEvLoadGen.current
+    const tMin  = new Date(year, month, 1).toISOString()
+    const tMax  = new Date(year, month + 1, 0, 23, 59, 59).toISOString()
     const colorMap: Record<string, string> = {}
     for (const cal of googleCals) colorMap[cal.id] = cal.backgroundColor
 
@@ -199,20 +321,13 @@ export default function CalendarPage() {
       for (const { calId, items } of results) {
         const color = colorMap[calId] ?? '#4285F4'
         for (const ev of items) {
-          const date = ev.start.date ?? ev.start.dateTime?.slice(0, 10)
+          const date  = ev.start.date ?? ev.start.dateTime?.slice(0, 10)
           if (!date) continue
           const startT = ev.start.dateTime ? ev.start.dateTime.slice(11, 16) : null
           const endT   = ev.end.dateTime   ? ev.end.dateTime.slice(11, 16)   : null
           const label  = startT ? `${startT}${endT ? ` – ${endT}` : ''}` : ''
           if (!map[date]) map[date] = []
-          map[date].push({
-            id:       ev.id,
-            title:    ev.summary ?? '(no title)',
-            type:     'google',
-            amount:   label,
-            location: ev.location,
-            color,
-          })
+          map[date].push({ id: ev.id, title: ev.summary ?? '(no title)', type: 'google', amount: label, location: ev.location, color })
         }
       }
       setGoogleEvMap(map)
@@ -221,7 +336,44 @@ export default function CalendarPage() {
     return () => { gEvLoadGen.current++ }
   }, [prefs.googleCalendarIds, year, month, googleCals])
 
-  // ── Save prefs to Supabase ─────────────────────────────────────────────────
+  // ── Scroll to today when entering detail mode ─────────────────────────────
+  useEffect(() => {
+    if (viewMode !== 'detail') return
+    const t = setTimeout(() => {
+      const el = dayElRefs.current.get(todayStr)
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 80)
+    return () => clearTimeout(t)
+  }, [viewMode, year, month, todayStr])
+
+  // ── Haptic feedback: 8ms pulse when a new day section enters view ─────────
+  useEffect(() => {
+    if (viewMode !== 'detail') return
+    lastHapticDay.current = null
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const dayKey = (entry.target as HTMLElement).dataset.day
+            if (dayKey && dayKey !== lastHapticDay.current) {
+              lastHapticDay.current = dayKey
+              navigator.vibrate?.(8)
+            }
+            break
+          }
+        }
+      },
+      { rootMargin: '-12% 0px -82% 0px', threshold: 0 },
+    )
+
+    dayElRefs.current.forEach(el => observer.observe(el))
+    return () => observer.disconnect()
+  // Re-run when month/year change so new refs get observed
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewMode, year, month, daysInMonth])
+
+  // ── Save prefs ────────────────────────────────────────────────────────────
   async function savePrefs(newPrefs: CalPrefs) {
     setPrefs(newPrefs)
     await supabase.from('profiles').update({ calendar_prefs: newPrefs }).eq(
@@ -230,7 +382,7 @@ export default function CalendarPage() {
     )
   }
 
-  // ── Custom event handlers ──────────────────────────────────────────────────
+  // ── Custom event handlers ─────────────────────────────────────────────────
   async function handleAddEvent(ev: NewCalEvent) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -259,7 +411,7 @@ export default function CalendarPage() {
     await loadData()
   }
 
-  // ── Merged + filtered event map ────────────────────────────────────────────
+  // ── Merged + filtered event map ───────────────────────────────────────────
   const visibleMap = useMemo(() => {
     const m: Record<string, CalEvent[]> = {}
     for (const [date, evs] of Object.entries(eventMap)) {
@@ -275,9 +427,8 @@ export default function CalendarPage() {
     return m
   }, [eventMap, googleEvMap, prefs.visibleTypes])
 
-  // ── Grid helpers ───────────────────────────────────────────────────────────
-  const firstDay    = new Date(year, month, 1).getDay()
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  // ── Grid helpers ──────────────────────────────────────────────────────────
+  const firstDay = new Date(year, month, 1).getDay()
   const cells: (number | null)[] = [
     ...Array(firstDay).fill(null),
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
@@ -300,63 +451,71 @@ export default function CalendarPage() {
 
   return (
     <>
-    <div className="min-h-screen bg-bg-base tab-enter flex flex-col">
+    <div
+      className="min-h-screen tab-enter flex flex-col"
+      style={{ background: viewMode === 'detail' ? '#0a0a0a' : undefined }}
+      // bg-bg-base applied via className when in grid mode
+    >
+      <div className={viewMode === 'grid' ? 'bg-bg-base' : ''}>
 
-      <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
+        <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
 
-      {/* ── Header ─────────────────────────────────────────────────── */}
-      <div className="px-5 pt-14 pb-4">
-        <p className="text-[10px] font-medium tracking-[0.14em] uppercase text-gold mb-1">Schedule</p>
-        <div className="flex items-center justify-between">
-          <h1 className="text-[32px] font-bold tracking-[-0.04em] text-ink">Calendar</h1>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setViewMode(v => v === 'grid' ? 'detail' : 'grid')}
-              className="w-9 h-9 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center select-none"
-              aria-label="Toggle view"
-            >
-              {viewMode === 'grid'
-                ? <AlignJustify size={15} className="text-ink-muted" />
-                : <LayoutGrid   size={15} className="text-gold" />
-              }
-            </button>
-            <button
-              onClick={() => setSettingsOpen(true)}
-              className="w-9 h-9 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center select-none"
-              aria-label="Calendar filters"
-            >
-              <SlidersHorizontal size={15} className="text-ink-muted" />
-            </button>
-            <button
-              onClick={() => setAddOpen(true)}
-              className="w-9 h-9 rounded-full gradient-gold flex items-center justify-center select-none"
-              aria-label="Add event"
-            >
-              <Plus size={18} className="text-white" />
-            </button>
-            <button onClick={goToPrev} className="w-8 h-8 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center text-ink-muted text-[14px] select-none">‹</button>
-            <button onClick={goToNext} className="w-8 h-8 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center text-ink-muted text-[14px] select-none">›</button>
+        {/* ── Header ───────────────────────────────────────────────── */}
+        <div className="px-5 pt-14 pb-4">
+          <p className="text-[10px] font-medium tracking-[0.14em] uppercase text-gold mb-1">Schedule</p>
+          <div className="flex items-center justify-between">
+            <h1 className="text-[32px] font-bold tracking-[-0.04em] text-ink">Calendar</h1>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setViewMode(v => v === 'grid' ? 'detail' : 'grid')}
+                className="w-9 h-9 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center select-none"
+                aria-label="Toggle view"
+              >
+                {viewMode === 'grid'
+                  ? <AlignJustify size={15} className="text-ink-muted" />
+                  : <LayoutGrid   size={15} className="text-gold" />
+                }
+              </button>
+              <button
+                onClick={() => setSettingsOpen(true)}
+                className="w-9 h-9 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center select-none"
+                aria-label="Calendar filters"
+              >
+                <SlidersHorizontal size={15} className="text-ink-muted" />
+              </button>
+              <button
+                onClick={() => setAddOpen(true)}
+                className="w-9 h-9 rounded-full gradient-gold flex items-center justify-center select-none"
+                aria-label="Add event"
+              >
+                <Plus size={18} className="text-white" />
+              </button>
+              <button onClick={goToPrev} className="w-8 h-8 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center text-ink-muted text-[14px] select-none">‹</button>
+              <button onClick={goToNext} className="w-8 h-8 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center text-ink-muted text-[14px] select-none">›</button>
+            </div>
+          </div>
+          <div className="flex items-center justify-between mt-1">
+            <p className="text-[18px] font-semibold text-ink">{monthLabel}</p>
+            <button onClick={goToToday} className="text-[11px] font-medium text-gold select-none">Today</button>
           </div>
         </div>
-        <div className="flex items-center justify-between mt-1">
-          <p className="text-[18px] font-semibold text-ink">{monthLabel}</p>
-          <button onClick={goToToday} className="text-[11px] font-medium text-gold select-none">Today</button>
-        </div>
-      </div>
 
-      {/* ── Day-of-week headers (both modes) ────────────────────────── */}
-      <div className="grid grid-cols-7 px-3 mb-1">
-        {['S','M','T','W','T','F','S'].map((d, i) => (
-          <div key={i} className="text-center text-[10px] font-medium tracking-[0.08em] uppercase text-ink-faint py-1">{d}</div>
-        ))}
-      </div>
+      </div>{/* end grid-mode background wrapper */}
 
       {/* ══ GRID MODE ════════════════════════════════════════════════ */}
       {viewMode === 'grid' && (
-        <>
+        <div className="bg-bg-base">
+          {/* Day-of-week headers */}
+          <div className="grid grid-cols-7 px-3 mb-1">
+            {['S','M','T','W','T','F','S'].map((d, i) => (
+              <div key={i} className="text-center text-[10px] font-medium tracking-[0.08em] uppercase text-ink-faint py-1">{d}</div>
+            ))}
+          </div>
+
+          {/* Month grid */}
           <div className="grid grid-cols-7 px-3 gap-y-0.5">
             {cells.map((day, i) => {
-              if (day === null) return <div key={i} className="h-12"/>
+              if (day === null) return <div key={i} className="h-12" />
               const ds        = dateStr(day)
               const dayEvents = visibleMap[ds] ?? []
               const isSel     = selected === ds
@@ -397,7 +556,6 @@ export default function CalendarPage() {
                 <button
                   onClick={() => setAddOpen(true)}
                   className="w-7 h-7 rounded-full gradient-gold flex items-center justify-center select-none"
-                  aria-label="Add event on this day"
                 >
                   <Plus size={13} className="text-white" />
                 </button>
@@ -419,132 +577,165 @@ export default function CalendarPage() {
               Tap a day to see events.
             </div>
           )}
-        </>
+        </div>
       )}
 
-      {/* ══ DETAIL MODE ══════════════════════════════════════════════ */}
+      {/* ══ DETAIL MODE — Timepage scroll view ═══════════════════════ */}
       {viewMode === 'detail' && (
-        <>
-          {/* ── Desktop / iPad: expanded month grid with event titles ── */}
-          <div className="hidden md:grid grid-cols-7 px-3 border-l border-t border-white/[0.06]">
-            {cells.map((day, i) => {
-              if (day === null) return (
-                <div key={i} className="h-[100px] border-r border-b border-white/[0.06] bg-bg-base/40" />
-              )
-              const ds        = dateStr(day)
-              const dayEvents = visibleMap[ds] ?? []
-              const isTod     = ds === todayStr
-              const isSel     = selected === ds
-              return (
-                <button
-                  key={i}
-                  onClick={() => setSelected(isSel ? null : ds)}
-                  className={cn(
-                    'h-[100px] border-r border-b border-white/[0.06] p-1.5 flex flex-col text-left overflow-hidden select-none transition-colors',
-                    isSel ? 'bg-bg-surface/80' : 'bg-transparent hover:bg-bg-surface/30',
-                  )}
-                >
-                  <span className={cn(
-                    'w-6 h-6 flex items-center justify-center rounded-lg text-[12px] font-medium mb-1 flex-shrink-0',
-                    isTod ? 'gradient-gold text-white font-bold' : 'text-ink-muted',
-                  )}>{day}</span>
-                  <div className="flex-1 w-full space-y-[2px] overflow-hidden">
-                    {dayEvents.slice(0, 3).map((ev, j) => (
-                      <div key={j} className="flex items-center gap-1 w-full">
-                        <span
-                          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                          style={{ background: ev.color ?? DOT_COLOR[ev.type] }}
-                        />
-                        <span className="text-[10px] text-ink truncate leading-tight">{ev.title}</span>
-                      </div>
-                    ))}
-                    {dayEvents.length > 3 && (
-                      <p className="text-[9px] text-ink-faint pl-2.5">+{dayEvents.length - 3} more</p>
-                    )}
-                  </div>
-                </button>
-              )
-            })}
-          </div>
+        <div>
+          {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
+            const ds        = dateStr(day)
+            const dayEvents = visibleMap[ds] ?? []
+            const isTod     = ds === todayStr
+            const date      = new Date(year, month, day)
+            const dayAbbr   = date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()
 
-          {/* Desktop selected-day panel */}
-          {selectedLabel && (
-            <div className="hidden md:block mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden mb-4">
-              <div className="px-4 pt-4 pb-3 border-b border-white/[0.04] flex items-center justify-between">
-                <p className="text-[18px] font-semibold text-ink">{selectedLabel}</p>
-                <button
-                  onClick={() => setAddOpen(true)}
-                  className="w-7 h-7 rounded-full gradient-gold flex items-center justify-center select-none"
-                  aria-label="Add event on this day"
-                >
-                  <Plus size={13} className="text-white" />
-                </button>
-              </div>
-              {selectedEvents.length === 0 ? (
-                <div className="py-8 text-center text-ink-faint text-[13px]">Nothing on this day.</div>
-              ) : (
-                <div className="divide-y divide-white/[0.04]">
-                  {selectedEvents.map((ev, idx) => (
-                    <EventRow key={idx} ev={ev} onDelete={handleDeleteCustomEvent} />
-                  ))}
+            return (
+              <div
+                key={day}
+                ref={el => { if (el) dayElRefs.current.set(ds, el); else dayElRefs.current.delete(ds) }}
+                data-day={ds}
+                className="flex"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', minHeight: 72 }}
+              >
+                {/* Left: rotated day label */}
+                <div style={{
+                  width: 52,
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'center',
+                  paddingTop: 20,
+                  paddingBottom: 16,
+                }}>
+                  <span style={{
+                    writingMode: 'vertical-rl',
+                    transform: 'rotate(180deg)',
+                    fontSize: 11,
+                    letterSpacing: '0.1em',
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    color: isTod ? '#c9a84c' : 'rgba(255,255,255,0.28)',
+                    lineHeight: 1.2,
+                    userSelect: 'none',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {dayAbbr}&thinsp;{day}
+                  </span>
                 </div>
-              )}
-            </div>
-          )}
 
-          {/* ── Mobile: scrollable day-by-day list ─────────────────── */}
-          <div className="md:hidden px-4 pb-6 space-y-0">
-            {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
-              const ds        = dateStr(day)
-              const dayEvents = visibleMap[ds] ?? []
-              const isTod     = ds === todayStr
-              const weekday   = new Date(year, month, day).toLocaleDateString('en-US', { weekday: 'short' })
-              return (
-                <div key={day} className="py-2">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className={cn(
-                      'w-7 h-7 flex items-center justify-center rounded-lg text-[13px] font-medium flex-shrink-0',
-                      isTod ? 'gradient-gold text-white font-bold' : 'text-ink-muted',
-                    )}>{day}</span>
-                    <span className="text-[11px] text-ink-faint uppercase tracking-wide">{weekday}</span>
-                    {dayEvents.length > 0 && (
-                      <div className="flex gap-[3px] ml-1">
-                        {dayEvents.slice(0, 4).map((ev, j) => (
-                          <span
-                            key={j}
-                            className="w-[4px] h-[4px] rounded-full flex-shrink-0"
-                            style={{ background: ev.color ?? DOT_COLOR[ev.type] }}
-                          />
-                        ))}
-                      </div>
-                    )}
-                    <button
-                      onClick={() => setAddOpen(true)}
-                      className="ml-auto w-6 h-6 rounded-full bg-bg-overlay border border-white/[0.06] flex items-center justify-center select-none opacity-50"
-                      aria-label="Add event"
-                    >
-                      <Plus size={11} className="text-ink-muted" />
-                    </button>
-                  </div>
+                {/* Vertical rule */}
+                <div style={{
+                  width: 1,
+                  flexShrink: 0,
+                  background: isTod ? 'rgba(201,168,76,0.35)' : 'rgba(255,255,255,0.05)',
+                }} />
 
-                  {dayEvents.length > 0 && (
-                    <div className="ml-9 bg-bg-surface border border-white/[0.06] rounded-xl overflow-hidden divide-y divide-white/[0.04]">
-                      {dayEvents.map((ev, idx) => (
-                        <EventRow key={idx} ev={ev} onDelete={handleDeleteCustomEvent} compact />
-                      ))}
-                    </div>
-                  )}
-
+                {/* Right: event list */}
+                <div style={{
+                  flex: 1,
+                  paddingLeft: 18,
+                  paddingRight: 20,
+                  paddingTop: 16,
+                  paddingBottom: 16,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 16,
+                }}>
                   {dayEvents.length === 0 && (
-                    <div className="ml-9 h-[1px] bg-white/[0.03]" />
+                    <div style={{ height: 40 }} />
                   )}
+
+                  {dayEvents.map((ev, idx) => {
+                    const isTimeEv  = ev.type === 'custom' || ev.type === 'google'
+                    const timeLabel = isTimeEv && ev.amount ? ev.amount : null
+                    const amtLabel  = !isTimeEv ? ev.amount : null
+                    const dot       = ev.color ?? DETAIL_DOT[ev.type]
+
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => { setDetailEvent(ev); navigator.vibrate?.(6) }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: 11,
+                          textAlign: 'left',
+                          width: '100%',
+                          background: 'none',
+                          border: 'none',
+                          padding: 0,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {/* Dot */}
+                        <span style={{
+                          width: 7,
+                          height: 7,
+                          borderRadius: '50%',
+                          background: dot,
+                          flexShrink: 0,
+                          marginTop: 7,
+                        }} />
+
+                        {/* Text */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          {timeLabel && (
+                            <p style={{
+                              fontSize: 10,
+                              color: 'rgba(255,255,255,0.38)',
+                              fontFamily: 'var(--font-dm-mono, monospace)',
+                              letterSpacing: '0.05em',
+                              margin: '0 0 3px',
+                            }}>
+                              {timeLabel}
+                            </p>
+                          )}
+                          <p style={{
+                            fontSize: 16,
+                            fontWeight: 400,
+                            color: 'rgba(255,255,255,0.88)',
+                            lineHeight: 1.35,
+                            margin: 0,
+                          }}>
+                            {ev.title}
+                          </p>
+                          {amtLabel && (
+                            <p style={{
+                              fontSize: 10,
+                              color: 'rgba(255,255,255,0.35)',
+                              fontFamily: 'var(--font-dm-mono, monospace)',
+                              letterSpacing: '0.04em',
+                              margin: '3px 0 0',
+                            }}>
+                              {amtLabel}
+                            </p>
+                          )}
+                          {ev.location && (
+                            <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', margin: '3px 0 0' }}>
+                              📍 {ev.location}
+                            </p>
+                          )}
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
-              )
-            })}
-          </div>
-        </>
+              </div>
+            )
+          })}
+
+          {/* Bottom padding clears the nav bar */}
+          <div style={{ height: 110 }} />
+        </div>
       )}
     </div>
+
+    <EventDetailSheet
+      event={detailEvent}
+      onClose={() => setDetailEvent(null)}
+      onDelete={handleDeleteCustomEvent}
+    />
 
     <AddEventSheet
       open={addOpen}
