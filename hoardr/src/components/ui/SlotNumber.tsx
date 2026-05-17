@@ -1,35 +1,93 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 
-interface Props {
-  value:     number
-  format:    (n: number) => string
-  className?: string
-  duration?:  number  // ms, default 900
+// ── Single drum column for one digit ─────────────────────────────────────────
+interface DrumProps {
+  digit:          number  // 0-9, the target digit to land on
+  placeFromRight: number  // 0 = ones, 1 = tens, 2 = hundreds, …
+  totalDigits:    number  // total digit count in the formatted number
 }
 
-export function SlotNumber({ value, format, className, duration = 900 }: Props) {
-  const [display, setDisplay] = useState(0)
-  const rafRef   = useRef<number>(0)
-  const startRef = useRef<number>(0)
+function Drum({ digit, placeFromRight, totalDigits }: DrumProps) {
+  const trackRef = useRef<HTMLSpanElement>(null)
+  const cellRef  = useRef<HTMLSpanElement>(null)
+
+  // Higher-place digits get 2 extra full rotations each so they settle last
+  const totalRotations = 2 + placeFromRight * 2
+  // Stack: N full 0-9 cycles, then the exact target digit at the end
+  const stack = Array.from({ length: totalRotations * 10 }, (_, i) => i % 10).concat(digit)
 
   useEffect(() => {
-    cancelAnimationFrame(rafRef.current)
-    startRef.current = 0
+    const track = trackRef.current
+    const cell  = cellRef.current
+    if (!track || !cell) return
 
-    function tick(ts: number) {
-      if (!startRef.current) startRef.current = ts
-      const t = Math.min((ts - startRef.current) / duration, 1)
-      // ease-out expo
-      const eased = t >= 1 ? 1 : 1 - Math.pow(2, -10 * t)
-      setDisplay(value * eased)
-      if (t < 1) rafRef.current = requestAnimationFrame(tick)
-    }
+    // Measure actual rendered pixel height of one cell (handles any font-size)
+    const h = cell.getBoundingClientRect().height
+    if (!h) return
 
-    rafRef.current = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(rafRef.current)
-  }, [value, duration])
+    const stackLen = totalRotations * 10 + 1
+    const targetY  = -(stackLen - 1) * h
 
-  return <span className={className}>{format(display)}</span>
+    // Duration increases 120ms per place to the left (ones fastest)
+    const dur = 900 + placeFromRight * 120
+    // Stagger start: left-to-right, 60ms per digit from left
+    const del = (totalDigits - 1 - placeFromRight) * 60
+
+    // Reset to top without transition, force reflow, then animate
+    track.style.transition = 'none'
+    track.style.transform  = 'translateY(0)'
+    void track.offsetHeight
+    track.style.transition = `transform ${dur}ms cubic-bezier(0.22,1,0.36,1) ${del}ms`
+    track.style.transform  = `translateY(${targetY}px)`
+  }, [digit, placeFromRight, totalDigits, totalRotations])
+
+  return (
+    <span style={{ display: 'inline-block', overflow: 'hidden', height: '1em', verticalAlign: 'top' }}>
+      <span ref={trackRef} style={{ display: 'block' }}>
+        {stack.map((d, i) => (
+          <span
+            key={i}
+            ref={i === 0 ? cellRef : undefined}
+            style={{ display: 'block', height: '1em', lineHeight: '1' }}
+          >
+            {d}
+          </span>
+        ))}
+      </span>
+    </span>
+  )
+}
+
+// ── Public component ──────────────────────────────────────────────────────────
+interface Props {
+  value:      number
+  format:     (n: number) => string
+  className?: string
+}
+
+export function SlotNumber({ value, format, className }: Props) {
+  const str    = format(value)
+  const tokens = str.split('').map(c => ({ char: c, isDigit: /\d/.test(c) }))
+  const total  = tokens.filter(t => t.isDigit).length
+
+  let di = 0
+  return (
+    <span className={className}>
+      {tokens.map((tok, i) => {
+        if (!tok.isDigit) return <span key={i}>{tok.char}</span>
+        const digitIdx      = di++
+        const placeFromRight = total - 1 - digitIdx
+        return (
+          <Drum
+            key={`${total}-${digitIdx}`}
+            digit={parseInt(tok.char)}
+            placeFromRight={placeFromRight}
+            totalDigits={total}
+          />
+        )
+      })}
+    </span>
+  )
 }
