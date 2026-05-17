@@ -190,10 +190,10 @@ export default function CalendarPage() {
   const monthsRef     = useRef(months)
 
   // Swipe gesture refs
-  const v1Swipe   = useRef<{ x: number; y: number } | null>(null)
-  const edgeSwipe = useRef<{ x: number; y: number } | null>(null)
-  const rowSwipe  = useRef<{ x: number; y: number; ds: string } | null>(null)
-  const v3Swipe   = useRef<{ x: number; y: number } | null>(null)
+  const v1Swipe  = useRef<{ x: number; y: number } | null>(null)
+  const v2Swipe  = useRef<{ x: number; y: number } | null>(null)
+  const v3Swipe  = useRef<{ x: number; y: number } | null>(null)
+  const rowSwipe = useRef<{ x: number; y: number; ds: string } | null>(null)
 
   useEffect(() => { monthsRef.current = months }, [months])
 
@@ -419,16 +419,14 @@ export default function CalendarPage() {
     if (dx < -60 && Math.abs(dx) > Math.abs(dy) * 1.5) setViewIndex(1)
   }, [])
 
-  // Views 2 & 3 → back: swipe right starting from left edge (x < 44)
-  const edgeStart = useCallback((e: React.TouchEvent) => {
-    const t = e.touches[0]
-    edgeSwipe.current = t.clientX < 44 ? { x: t.clientX, y: t.clientY } : null
+  // View 2 → View 1: any right swipe (strict diagonal so vertical scroll still works)
+  const v2Start = useCallback((e: React.TouchEvent) => {
+    const t = e.touches[0]; v2Swipe.current = { x: t.clientX, y: t.clientY }
   }, [])
-  const edgeEnd = useCallback((e: React.TouchEvent) => {
-    const s = edgeSwipe.current; edgeSwipe.current = null; if (!s) return
+  const v2End = useCallback((e: React.TouchEvent) => {
+    const s = v2Swipe.current; v2Swipe.current = null; if (!s) return
     const t = e.changedTouches[0], dx = t.clientX - s.x, dy = t.clientY - s.y
-    if (dx > 60 && Math.abs(dx) > Math.abs(dy) * 1.5)
-      setViewIndex(prev => (prev > 0 ? prev - 1 : 0) as 0 | 1 | 2)
+    if (dx > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) setViewIndex(0)
   }, [])
 
   // View 2 row → View 3: swipe left on a day row
@@ -550,10 +548,11 @@ export default function CalendarPage() {
 
         {/* ═══════════════════════════════════════════════════════════════
             VIEW 2 — Infinite Scroll List
-            Edge swipe right → View 1
-            Row swipe left  → View 3
+            Right swipe anywhere → View 1
+            Row swipe left       → View 3
         ═══════════════════════════════════════════════════════════════ */}
-        <div style={{ width: '100vw', height: '100%', flex: 'none', background: '#0a0a0a', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ width: '100vw', height: '100%', flex: 'none', background: '#0a0a0a', display: 'flex', flexDirection: 'column', touchAction: 'pan-y' }}
+          onTouchStart={v2Start} onTouchEnd={v2End}>
 
           {/* Compact header */}
           <div style={{ flexShrink: 0, display: 'flex', alignItems: 'flex-end', paddingTop: SAFE_TOP, paddingBottom: 10, paddingLeft: 28, paddingRight: 14, gap: 6, background: '#0a0a0a', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
@@ -570,8 +569,7 @@ export default function CalendarPage() {
             </button>
           </div>
 
-          {/* Scroll container — edge swipe (touchStart x<44 → swipe right back to View 1) */}
-          <div ref={scrollRef} onScroll={handleDetailScroll} onTouchStart={edgeStart} onTouchEnd={edgeEnd}
+          <div ref={scrollRef} onScroll={handleDetailScroll}
             style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', position: 'relative' }}>
             <div ref={topSentRef} style={{ height: 1 }} />
 
@@ -590,8 +588,8 @@ export default function CalendarPage() {
                     key={ds}
                     ref={el => { if (el) dayRefs.current.set(ds, el); else dayRefs.current.delete(ds) }}
                     data-day={ds}
-                    onTouchStart={e => { rowStart(e, ds); edgeStart(e) }}
-                    onTouchEnd={e => { rowEnd(e); edgeEnd(e) }}
+                    onTouchStart={e => rowStart(e, ds)}
+                    onTouchEnd={rowEnd}
                     style={{ display: 'flex', alignItems: 'stretch', paddingLeft: 20, background: stripe ? '#141414' : '#1a1a1a' }}
                   >
                     {/* Day label — centered vertically, abbr white, number grey */}
