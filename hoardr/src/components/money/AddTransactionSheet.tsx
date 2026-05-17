@@ -25,13 +25,14 @@ interface Props {
 }
 
 export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = [], defaultCardId }: Props) {
-  const [type,     setType]     = useState<TxType>('Expense')
-  const [amount,   setAmount]   = useState('')
-  const [name,     setName]     = useState('')
-  const [category, setCategory] = useState<string | null>(null)
-  const [date,     setDate]     = useState(localToday())
-  const [cardId,   setCardId]   = useState<string | null>(null)
-  const [bankId,   setBankId]   = useState<string | null>(null)
+  const [type,        setType]        = useState<TxType>('Expense')
+  const [amount,      setAmount]      = useState('')
+  const [name,        setName]        = useState('')
+  const [description, setDescription] = useState('')
+  const [category,    setCategory]    = useState<string | null>(null)
+  const [date,        setDate]        = useState(localToday())
+  const [cardId,      setCardId]      = useState<string | null>(null)
+  const [bankId,      setBankId]      = useState<string | null>(null)
 
   const categories = type === 'Expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES
 
@@ -50,6 +51,7 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
         setType('Expense')
         setAmount('')
         setName('')
+        setDescription('')
         setCategory(null)
         setDate(localToday())
         setCardId(defaultCardId ?? null)
@@ -68,14 +70,15 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
     const parsed = parseFloat(amount)
     if (!parsed || !name.trim() || !category) return
     onAdd({
-      id:       `t${Date.now()}`,
+      id:          `t${Date.now()}`,
       type,
-      name:     name.trim(),
+      name:        name.trim(),
+      description: description.trim() || null,
       category,
       date,
-      amount:   parsed,
-      card_id:  type === 'Expense' ? cardId : undefined,
-      bank_id:  type === 'Income'  ? bankId : undefined,
+      amount:      parsed,
+      card_id:     type === 'Expense' ? cardId : undefined,
+      bank_id:     type === 'Income'  ? bankId : undefined,
     })
     onClose()
   }
@@ -133,6 +136,17 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
               type="text" placeholder={type === 'Expense' ? 'e.g. Blue Bottle' : 'e.g. Studio Co'}
               value={name} onChange={e => setName(e.target.value)}
               className="w-full bg-bg-overlay rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none"
+            />
+          </div>
+
+          <div>
+            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Description</p>
+            <textarea
+              placeholder="Optional note"
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              rows={2}
+              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none resize-none"
             />
           </div>
 

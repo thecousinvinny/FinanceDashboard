@@ -1,12 +1,13 @@
 export interface SeedTx {
-  id:       string
-  type:     'Expense' | 'Income'
-  name:     string
-  category: string
-  date:     string  // YYYY-MM-DD
-  amount:   number  // always positive
-  card_id?: string | null  // expenses only
-  bank_id?: string | null  // income only
+  id:           string
+  type:         'Expense' | 'Income'
+  name:         string
+  category:     string
+  date:         string           // YYYY-MM-DD
+  amount:       number           // always positive
+  description?: string | null
+  card_id?:     string | null    // expenses only
+  bank_id?:     string | null    // income only
 }
 
 export interface TxCategory {

@@ -11,12 +11,13 @@ import { cn } from '@/lib/utils'
 import type { CardOption, BankOption } from './AddTransactionSheet'
 
 export interface TxEdits {
-  name:     string
-  amount:   number
-  category: string
-  date:     string
-  card_id:  string | null
-  bank_id:  string | null
+  name:        string
+  amount:      number
+  category:    string
+  date:        string
+  description: string | null
+  card_id:     string | null
+  bank_id:     string | null
 }
 
 interface Props {
@@ -29,17 +30,19 @@ interface Props {
 }
 
 export function EditTransactionSheet({ tx, open, onClose, onSave, cards = [], banks = [] }: Props) {
-  const [amount,   setAmount]   = useState('')
-  const [name,     setName]     = useState('')
-  const [category, setCategory] = useState<string | null>(null)
-  const [date,     setDate]     = useState('')
-  const [cardId,   setCardId]   = useState<string | null>(null)
-  const [bankId,   setBankId]   = useState<string | null>(null)
+  const [amount,      setAmount]      = useState('')
+  const [name,        setName]        = useState('')
+  const [description, setDescription] = useState('')
+  const [category,    setCategory]    = useState<string | null>(null)
+  const [date,        setDate]        = useState('')
+  const [cardId,      setCardId]      = useState<string | null>(null)
+  const [bankId,      setBankId]      = useState<string | null>(null)
 
   useEffect(() => {
     if (tx) {
       setAmount(String(tx.amount))
       setName(tx.name)
+      setDescription(tx.description ?? '')
       setCategory(tx.category)
       setDate(tx.date)
       setCardId(tx.card_id ?? null)
@@ -55,7 +58,7 @@ export function EditTransactionSheet({ tx, open, onClose, onSave, cards = [], ba
   useEffect(() => {
     if (!open) {
       const t = setTimeout(() => {
-        setAmount(''); setName(''); setCategory(null); setDate('')
+        setAmount(''); setName(''); setDescription(''); setCategory(null); setDate('')
         setCardId(null); setBankId(null)
       }, 300)
       return () => clearTimeout(t)
@@ -71,6 +74,7 @@ export function EditTransactionSheet({ tx, open, onClose, onSave, cards = [], ba
     if (!parsed || !name.trim() || !category || !tx) return
     onSave(tx.id, {
       name: name.trim(), amount: parsed, category, date,
+      description: description.trim() || null,
       card_id: tx.type === 'Expense' ? cardId : null,
       bank_id: tx.type === 'Income'  ? bankId : null,
     })
@@ -138,6 +142,17 @@ export function EditTransactionSheet({ tx, open, onClose, onSave, cards = [], ba
             <input
               type="text" value={name} onChange={e => setName(e.target.value)}
               className="w-full bg-bg-overlay rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none"
+            />
+          </div>
+
+          <div>
+            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Description</p>
+            <textarea
+              placeholder="Optional note"
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              rows={2}
+              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none resize-none"
             />
           </div>
 

@@ -36,34 +36,36 @@ export default function MoneyPage() {
     const [{ data: expenses }, { data: income }] = await Promise.all([
       supabase
         .from('expenses')
-        .select('id, name, cost, date, card_id, categories(name)')
+        .select('id, name, cost, date, description, card_id, categories(name)')
         .order('date', { ascending: false })
         .order('created_at', { ascending: false }),
       supabase
         .from('income')
-        .select('id, name, amount, date, source, bank_id')
+        .select('id, name, amount, date, description, source, bank_id')
         .order('date', { ascending: false })
         .order('created_at', { ascending: false }),
     ])
 
     const rows: SeedTx[] = [
       ...(expenses ?? []).map(e => ({
-        id:       String(e.id),
-        type:     'Expense' as const,
-        name:     String(e.name),
-        category: (e.categories as unknown as { name: string } | null)?.name ?? 'Other',
-        date:     String(e.date),
-        amount:   Number(e.cost),
-        card_id:  e.card_id ? String(e.card_id) : null,
+        id:          String(e.id),
+        type:        'Expense' as const,
+        name:        String(e.name),
+        category:    (e.categories as unknown as { name: string } | null)?.name ?? 'Other',
+        date:        String(e.date),
+        amount:      Number(e.cost),
+        description: e.description ? String(e.description) : null,
+        card_id:     e.card_id ? String(e.card_id) : null,
       })),
       ...(income ?? []).map(i => ({
-        id:       String(i.id),
-        type:     'Income' as const,
-        name:     String(i.name),
-        category: String(i.source ?? 'Other'),
-        date:     String(i.date),
-        amount:   Number(i.amount),
-        bank_id:  i.bank_id ? String(i.bank_id) : null,
+        id:          String(i.id),
+        type:        'Income' as const,
+        name:        String(i.name),
+        category:    String(i.source ?? 'Other'),
+        date:        String(i.date),
+        amount:      Number(i.amount),
+        description: i.description ? String(i.description) : null,
+        bank_id:     i.bank_id ? String(i.bank_id) : null,
       })),
     ]
 
@@ -134,6 +136,7 @@ export default function MoneyPage() {
         name:        tx.name,
         cost:        tx.amount,
         date:        tx.date,
+        description: tx.description ?? null,
         category_id: categoryId,
         status:      'Procured',
         card_id:     tx.card_id ?? null,
@@ -141,12 +144,13 @@ export default function MoneyPage() {
       if (expErr) console.error('expense insert error:', JSON.stringify(expErr))
     } else {
       const { error: incErr } = await supabase.from('income').insert({
-        user_id: user.id,
-        name:    tx.name,
-        amount:  tx.amount,
-        date:    tx.date,
-        source:  tx.category,
-        bank_id: tx.bank_id ?? null,
+        user_id:     user.id,
+        name:        tx.name,
+        amount:      tx.amount,
+        date:        tx.date,
+        description: tx.description ?? null,
+        source:      tx.category,
+        bank_id:     tx.bank_id ?? null,
       })
       if (incErr) console.error('income insert error:', JSON.stringify(incErr))
     }
@@ -159,7 +163,7 @@ export default function MoneyPage() {
     if (!tx) return
 
     setTxList(prev => prev.map(t => t.id === id
-      ? { ...t, name: updates.name, amount: updates.amount, category: updates.category, date: updates.date, card_id: updates.card_id, bank_id: updates.bank_id }
+      ? { ...t, name: updates.name, amount: updates.amount, category: updates.category, date: updates.date, description: updates.description, card_id: updates.card_id, bank_id: updates.bank_id }
       : t))
 
     if (tx.type === 'Expense') {
@@ -178,13 +182,13 @@ export default function MoneyPage() {
 
       const { error } = await supabase
         .from('expenses')
-        .update({ name: updates.name, cost: updates.amount, date: updates.date, category_id: categoryId, card_id: updates.card_id })
+        .update({ name: updates.name, cost: updates.amount, date: updates.date, description: updates.description, category_id: categoryId, card_id: updates.card_id })
         .eq('id', id)
       if (error) { console.error('edit expense error:', JSON.stringify(error)); await loadData() }
     } else {
       const { error } = await supabase
         .from('income')
-        .update({ name: updates.name, amount: updates.amount, date: updates.date, source: updates.category, bank_id: updates.bank_id })
+        .update({ name: updates.name, amount: updates.amount, date: updates.date, description: updates.description, source: updates.category, bank_id: updates.bank_id })
         .eq('id', id)
       if (error) { console.error('edit income error:', JSON.stringify(error)); await loadData() }
     }
