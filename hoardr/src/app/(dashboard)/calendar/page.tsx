@@ -152,7 +152,10 @@ export default function CalendarPage() {
   // Grid state
   const [gridYear,  setGridYear]  = useState(today.getFullYear())
   const [gridMonth, setGridMonth] = useState(today.getMonth())
-  const [gridSel,   setGridSel]   = useState<string | null>(null)
+  const [gridSel,   setGridSel]   = useState<string | null>(() => {
+    const t = new Date()
+    return toDateStr(t.getFullYear(), t.getMonth(), t.getDate())
+  })
 
   // Data
   const [eventMap,    setEventMap]    = useState<Record<string, CalEvent[]>>({})
@@ -190,6 +193,7 @@ export default function CalendarPage() {
   const v1Swipe   = useRef<{ x: number; y: number } | null>(null)
   const edgeSwipe = useRef<{ x: number; y: number } | null>(null)
   const rowSwipe  = useRef<{ x: number; y: number; ds: string } | null>(null)
+  const v3Swipe   = useRef<{ x: number; y: number } | null>(null)
 
   useEffect(() => { monthsRef.current = months }, [months])
 
@@ -439,6 +443,16 @@ export default function CalendarPage() {
     }
   }, [])
 
+  // View 3 → View 2: any right swipe (no edge restriction — touch-action:pan-y handles browser)
+  const v3Start = useCallback((e: React.TouchEvent) => {
+    const t = e.touches[0]; v3Swipe.current = { x: t.clientX, y: t.clientY }
+  }, [])
+  const v3End = useCallback((e: React.TouchEvent) => {
+    const s = v3Swipe.current; v3Swipe.current = null; if (!s) return
+    const t = e.changedTouches[0], dx = t.clientX - s.x, dy = t.clientY - s.y
+    if (dx > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) setViewIndex(1)
+  }, [])
+
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <>
@@ -580,10 +594,11 @@ export default function CalendarPage() {
                     onTouchEnd={e => { rowEnd(e); edgeEnd(e) }}
                     style={{ display: 'flex', alignItems: 'stretch', paddingLeft: 20, background: stripe ? '#141414' : '#1a1a1a' }}
                   >
-                    {/* Day label */}
-                    <div style={{ width: 44, flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 11, paddingBottom: 8 }}>
-                      <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 9, letterSpacing: '0.09em', fontWeight: 600, textTransform: 'uppercase', color: isTod ? '#c9a84c' : 'rgba(255,255,255,0.18)', lineHeight: 1.1, userSelect: 'none', whiteSpace: 'nowrap' }}>
-                        {abbr}&thinsp;{day}
+                    {/* Day label — centered vertically, abbr white, number grey */}
+                    <div style={{ width: 44, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 9, letterSpacing: '0.09em', textTransform: 'uppercase', lineHeight: 1.2, userSelect: 'none', whiteSpace: 'nowrap' }}>
+                        <span style={{ color: isTod ? '#D4AF37' : 'rgba(255,255,255,0.75)', fontWeight: 700 }}>{abbr}</span>
+                        <span style={{ color: isTod ? '#c9a84c' : 'rgba(255,255,255,0.25)', fontWeight: 500 }}>{' '}{day}</span>
                       </span>
                     </div>
 
@@ -624,8 +639,8 @@ export default function CalendarPage() {
             VIEW 3 — Daily Summary
             Edge swipe right → View 2
         ═══════════════════════════════════════════════════════════════ */}
-        <div style={{ width: '100vw', height: '100%', flex: 'none', background: '#0a0a0a', display: 'flex', flexDirection: 'column' }}
-          onTouchStart={edgeStart} onTouchEnd={edgeEnd}>
+        <div style={{ width: '100vw', height: '100%', flex: 'none', background: '#0a0a0a', display: 'flex', flexDirection: 'column', touchAction: 'pan-y' }}
+          onTouchStart={v3Start} onTouchEnd={v3End}>
 
           {/* Day header */}
           <div style={{ flexShrink: 0, paddingTop: SAFE_TOP, paddingBottom: 20, textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', background: '#0a0a0a' }}>
@@ -675,7 +690,7 @@ export default function CalendarPage() {
     </div>{/* end root */}
 
     <EventDetailSheet event={detailEvent} onClose={() => setDetailEvent(null)} onDelete={handleDeleteCustomEvent} />
-    <AddEventSheet open={addOpen} defaultDate={selectedDay ?? gridSel ?? undefined} googleCals={googleCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => setAddOpen(false)} onAdd={handleAddEvent} />
+    <AddEventSheet open={addOpen} defaultDate={selectedDay ?? gridSel ?? undefined} defaultCalendarId={prefs.defaultCalendarId} googleCals={googleCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => setAddOpen(false)} onAdd={handleAddEvent} />
     <CalendarSettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} prefs={prefs} googleCals={googleCals} calsLoading={calsLoading} onSave={savePrefs} />
     </>
   )

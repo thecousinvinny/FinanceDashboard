@@ -17,11 +17,12 @@ export interface NewCalEvent {
 }
 
 interface Props {
-  open:         boolean
-  defaultDate?: string
-  googleCals?:  GCalendar[]
-  onClose:      () => void
-  onAdd:        (ev: NewCalEvent) => Promise<void>
+  open:               boolean
+  defaultDate?:       string
+  defaultCalendarId?: string
+  googleCals?:        GCalendar[]
+  onClose:            () => void
+  onAdd:              (ev: NewCalEvent) => Promise<void>
 }
 
 const EMPTY: NewCalEvent = {
@@ -30,7 +31,7 @@ const EMPTY: NewCalEvent = {
   location: '', notes: '', calendarId: 'primary',
 }
 
-export function AddEventSheet({ open, defaultDate, googleCals = [], onClose, onAdd }: Props) {
+export function AddEventSheet({ open, defaultDate, defaultCalendarId, googleCals = [], onClose, onAdd }: Props) {
   const [form,   setForm]   = useState<NewCalEvent>(EMPTY)
   const [saving, setSaving] = useState(false)
   const locationRef = useRef<HTMLInputElement>(null)
@@ -38,11 +39,11 @@ export function AddEventSheet({ open, defaultDate, googleCals = [], onClose, onA
 
   useEffect(() => {
     if (open) {
-      setForm({ ...EMPTY, date: defaultDate ?? '' })
+      setForm({ ...EMPTY, date: defaultDate ?? '', calendarId: defaultCalendarId ?? 'primary' })
     } else {
       setTimeout(() => { setForm(EMPTY); setSaving(false) }, 300)
     }
-  }, [open, defaultDate])
+  }, [open, defaultDate, defaultCalendarId])
 
   // Google Places Autocomplete — loads the Maps JS API on demand
   useEffect(() => {
