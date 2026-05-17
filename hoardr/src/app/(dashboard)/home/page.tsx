@@ -158,7 +158,7 @@ export default async function HomePage() {
           <div className="bg-bg-surface border border-white/[0.06] rounded-card p-4 flex flex-col gap-3 active:scale-[0.97] transition-transform">
             <div className="w-8 h-8 rounded-[10px] bg-gold/10 flex items-center justify-center text-gold text-sm">↻</div>
             <div>
-              <p className="text-[22px] font-bold font-mono tracking-tight text-ink">{$fc(monthlySubs)}</p>
+              <p className="text-[22px] font-bold tracking-tight text-ink" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>{$fc(monthlySubs)}</p>
               <p className="text-[11px] text-ink-muted mt-0.5">Monthly Subs</p>
             </div>
           </div>
@@ -167,7 +167,7 @@ export default async function HomePage() {
           <div className="bg-bg-surface border border-white/[0.06] rounded-card p-4 flex flex-col gap-3 active:scale-[0.97] transition-transform">
             <div className="w-8 h-8 rounded-[10px] bg-emerald/10 flex items-center justify-center text-emerald text-sm">✦</div>
             <div>
-              <p className="text-[22px] font-bold font-mono tracking-tight text-ink">{$fc(wishlistTotal)}</p>
+              <p className="text-[22px] font-bold tracking-tight text-ink" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>{$fc(wishlistTotal)}</p>
               <p className="text-[11px] text-ink-muted mt-0.5">Wishlist</p>
             </div>
           </div>
