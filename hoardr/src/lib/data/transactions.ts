@@ -5,6 +5,7 @@ export interface SeedTx {
   category:     string
   date:         string           // YYYY-MM-DD
   amount:       number           // always positive
+  savings?:     number | null    // expenses only — generated col: original_cost - cost
   description?: string | null
   card_id?:     string | null    // expenses only
   bank_id?:     string | null    // income only

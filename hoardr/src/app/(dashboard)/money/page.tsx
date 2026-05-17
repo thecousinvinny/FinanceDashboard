@@ -36,7 +36,7 @@ export default function MoneyPage() {
     const [{ data: expenses }, { data: income }] = await Promise.all([
       supabase
         .from('expenses')
-        .select('id, name, cost, date, description, card_id, categories(name)')
+        .select('id, name, cost, date, description, card_id, savings, categories(name)')
         .order('date', { ascending: false })
         .order('created_at', { ascending: false }),
       supabase
@@ -54,6 +54,7 @@ export default function MoneyPage() {
         category:    (e.categories as unknown as { name: string } | null)?.name ?? 'Other',
         date:        String(e.date),
         amount:      Number(e.cost),
+        savings:     e.savings != null ? Number(e.savings) : 0,
         description: e.description ? String(e.description) : null,
         card_id:     e.card_id ? String(e.card_id) : null,
       })),
@@ -194,11 +195,13 @@ export default function MoneyPage() {
     }
   }
 
-  const { monthSpent, monthEarned } = useMemo(() => {
+  const { monthSpent, monthEarned, monthSaved } = useMemo(() => {
     const mo = localToday().slice(0, 7)
+    const exp = txList.filter(t => t.type === 'Expense' && t.date.startsWith(mo))
     return {
-      monthSpent:  txList.filter(t => t.type === 'Expense' && t.date.startsWith(mo)).reduce((s, t) => s + t.amount, 0),
-      monthEarned: txList.filter(t => t.type === 'Income'  && t.date.startsWith(mo)).reduce((s, t) => s + t.amount, 0),
+      monthSpent:  exp.reduce((s, t) => s + t.amount, 0),
+      monthEarned: txList.filter(t => t.type === 'Income' && t.date.startsWith(mo)).reduce((s, t) => s + t.amount, 0),
+      monthSaved:  exp.reduce((s, t) => s + (t.savings ?? 0), 0),
     }
   }, [txList])
 
@@ -261,20 +264,27 @@ export default function MoneyPage() {
       </div>
 
       {/* ── Summary tiles ────────────────────────────────────────────────── */}
-      <div className="mx-4 mt-5 flex gap-3">
-        <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Spent</p>
-            <span className="text-[12px] text-gold">↑</span>
+      <div className="mx-4 mt-5 flex gap-2">
+        <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-3">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[9px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Spent</p>
+            <span className="text-[11px] text-gold">↑</span>
           </div>
-          <p className="text-[26px] font-bold font-mono tracking-tight text-ink"><SlotNumber value={monthSpent} format={$fk} /></p>
+          <p className="text-[22px] font-bold font-mono tracking-tight text-ink"><SlotNumber value={monthSpent} format={$fc} /></p>
         </div>
-        <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Earned</p>
-            <span className="text-[12px] text-emerald">↓</span>
+        <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-3">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[9px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Saved</p>
+            <span className="text-[11px] text-emerald">✦</span>
           </div>
-          <p className="text-[26px] font-bold font-mono tracking-tight text-ink"><SlotNumber value={monthEarned} format={$fk} /></p>
+          <p className="text-[22px] font-bold font-mono tracking-tight text-emerald"><SlotNumber value={monthSaved} format={$fc} /></p>
+        </div>
+        <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-3">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[9px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Earned</p>
+            <span className="text-[11px] text-emerald">↓</span>
+          </div>
+          <p className="text-[22px] font-bold font-mono tracking-tight text-ink"><SlotNumber value={monthEarned} format={$fc} /></p>
         </div>
       </div>
 
