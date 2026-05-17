@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -276,21 +276,21 @@ export default function MoneyPage() {
             <p className="text-[9px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Spent</p>
             <span className="text-[11px] text-gold">↑</span>
           </div>
-          <p className="text-[22px] font-bold tracking-tight text-ink" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}><SlotNumber value={monthSpent} format={$fc} /></p>
+          <p className="text-[22px] font-bold tracking-tight text-ink" style={{ fontFamily: "var(--font-big-shoulders)" }}><SlotNumber value={monthSpent} format={$fc} /></p>
         </div>
         <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-3">
           <div className="flex items-center justify-between mb-2">
             <p className="text-[9px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Saved</p>
             <span className="text-[11px] text-emerald">✦</span>
           </div>
-          <p className="text-[22px] font-bold tracking-tight text-emerald" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}><SlotNumber value={monthSaved} format={$fc} /></p>
+          <p className="text-[22px] font-bold tracking-tight text-emerald" style={{ fontFamily: "var(--font-big-shoulders)" }}><SlotNumber value={monthSaved} format={$fc} /></p>
         </div>
         <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-3">
           <div className="flex items-center justify-between mb-2">
             <p className="text-[9px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Earned</p>
             <span className="text-[11px] text-emerald">↓</span>
           </div>
-          <p className="text-[22px] font-bold tracking-tight text-ink" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}><SlotNumber value={monthEarned} format={$fc} /></p>
+          <p className="text-[22px] font-bold tracking-tight text-ink" style={{ fontFamily: "var(--font-big-shoulders)" }}><SlotNumber value={monthEarned} format={$fc} /></p>
         </div>
       </div>
 
@@ -307,7 +307,7 @@ export default function MoneyPage() {
                       className={subNames.has(cat.name.toLowerCase()) ? 'text-white/60' : 'text-gold'} />
                     <span className="text-[12px] font-medium text-ink truncate">{cat.name}</span>
                   </div>
-                  <span className="text-[12px] font-semibold text-ink ml-3 flex-shrink-0" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>{$fd(cat.total)}</span>
+                  <span className="text-[12px] font-semibold text-ink ml-3 flex-shrink-0" style={{ fontFamily: "var(--font-big-shoulders)" }}>{$fd(cat.total)}</span>
                 </div>
                 <div className="h-[3px] rounded-full bg-bg-overlay overflow-hidden">
                   <div className="h-full rounded-full bg-gold/50 transition-all duration-500" style={{ width: `${cat.pct}%` }} />

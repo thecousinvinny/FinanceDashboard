@@ -1,5 +1,20 @@
 import type { Metadata, Viewport } from 'next'
+import { Montserrat, Big_Shoulders } from 'next/font/google'
 import './globals.css'
+
+const montserrat = Montserrat({
+  subsets:  ['latin'],
+  weight:   ['300', '400', '500', '600', '700'],
+  variable: '--font-montserrat',
+  display:  'swap',
+})
+
+const bigShoulders = Big_Shoulders({
+  subsets:  ['latin'],
+  weight:   ['700', '800'],
+  variable: '--font-big-shoulders',
+  display:  'swap',
+})
 
 export const metadata: Metadata = {
   title:       'Hoardr',
@@ -25,12 +40,9 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${montserrat.variable} ${bigShoulders.variable}`}>
       {/* Restore theme before first paint to prevent flash */}
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet" />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){var t=localStorage.getItem('theme');if(t==='light')document.documentElement.classList.add('light')})()`,

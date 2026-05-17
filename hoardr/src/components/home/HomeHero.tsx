@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { SparkChart, type DayPoint } from './SparkChart'
 import { SlotNumber } from '@/components/ui/SlotNumber'
@@ -32,7 +32,7 @@ export function HomeHero({ spent, saved, netPositive, hasData, points }: Props) 
         )}
       </div>
 
-      <div className="flex items-start mb-5" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>
+      <div className="flex items-start mb-5" style={{ fontFamily: "var(--font-big-shoulders)" }}>
         <span className="text-[22px] font-light text-ink-muted mt-[7px] mr-0.5">$</span>
         <span className="text-[52px] font-bold leading-none tracking-[-0.04em] text-ink">
           <SlotNumber value={Math.floor(spent)} format={fmtInt} />
