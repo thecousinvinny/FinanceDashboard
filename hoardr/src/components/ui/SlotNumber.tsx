@@ -44,7 +44,7 @@ function Drum({ digit, placeFromRight, totalDigits }: DrumProps) {
   }, [digit, placeFromRight, totalDigits, totalRotations])
 
   return (
-    <span style={{ display: 'inline-block', overflow: 'hidden', height: '1em' }}>
+    <span style={{ display: 'inline-block', overflow: 'hidden', height: '1em', fontFamily: "'Big Shoulders Display', sans-serif" }}>
       <span ref={trackRef} style={{ display: 'block' }}>
         {stack.map((d, i) => (
           <span

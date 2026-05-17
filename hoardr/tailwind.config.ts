@@ -34,8 +34,8 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ['var(--font-inter)', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
-        mono: ['var(--font-dm-mono)', 'SF Mono', 'Courier New', 'monospace'],
+        sans: ['Montserrat', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        mono: ['Montserrat', 'SF Mono', 'Courier New', 'monospace'],
       },
       borderRadius: {
         card:  '20px',

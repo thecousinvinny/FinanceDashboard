@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700&family=Montserrat:wght@300;400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -117,7 +119,7 @@ html, body {
 
   /* Editorial baseline-shifted dollar sign */
   .dollar-prefix {
-    font-family: var(--font-dm-mono);
+    font-family: 'Montserrat', sans-serif;
     font-size: 0.45em;
     vertical-align: super;
     margin-right: 1px;
