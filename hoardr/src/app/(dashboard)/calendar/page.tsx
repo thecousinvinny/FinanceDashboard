@@ -94,28 +94,32 @@ function EventDetailSheet({ event, onClose, onDelete }: {
     <>
       {open && <div className="fixed inset-0 z-40" style={{ background: 'rgba(0,0,0,0.65)' }} onClick={onClose} />}
       <div className="fixed bottom-0 left-0 right-0 z-50 transition-transform duration-300"
-        style={{ transform: open ? 'translateY(0)' : 'translateY(100%)', background: '#111118', borderRadius: '20px 20px 0 0', willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-        <div className="flex justify-center pt-3 pb-1">
+        style={{ transform: open ? 'translateY(0)' : 'translateY(100%)', background: '#111118', borderRadius: '20px 20px 0 0', willChange: 'transform', maxHeight: '85dvh', display: 'flex', flexDirection: 'column' }}>
+        {/* Fixed handle */}
+        <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
           <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.18)' }} />
         </div>
+        {/* Scrollable content */}
         {event && (
-          <div style={{ padding: '16px 24px 28px' }}>
-            <div className="flex items-start gap-3 mb-5">
-              <span style={{ width: 9, height: 9, borderRadius: '50%', background: dot, flexShrink: 0, marginTop: 7 }} />
-              <h2 style={{ fontSize: 22, fontWeight: 600, color: '#f0f0f8', lineHeight: 1.3, margin: 0 }}>{event.title}</h2>
+          <div style={{ overflowY: 'auto', flex: 1, paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 20px)' }}>
+            <div style={{ padding: '16px 24px 28px' }}>
+              <div className="flex items-start gap-3 mb-5">
+                <span style={{ width: 9, height: 9, borderRadius: '50%', background: dot, flexShrink: 0, marginTop: 7 }} />
+                <h2 style={{ fontSize: 22, fontWeight: 600, color: '#f0f0f8', lineHeight: 1.3, margin: 0 }}>{event.title}</h2>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginLeft: 21 }}>
+                {timeLabel  && <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', fontFamily: 'monospace', margin: 0 }}>🕐 {timeLabel}</p>}
+                {amtLabel   && <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)', fontFamily: 'monospace', fontWeight: 600, margin: 0 }}>{amtLabel}</p>}
+                {event.location && <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', margin: 0 }}>📍 {event.location}</p>}
+                {event.notes    && <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', lineHeight: 1.55, margin: 0 }}>{event.notes}</p>}
+              </div>
+              {event.type === 'custom' && (
+                <button onClick={async () => { setDeleting(true); await onDelete(event); onClose() }} disabled={deleting}
+                  style={{ marginTop: 28, marginLeft: 21, display: 'flex', alignItems: 'center', gap: 6, color: '#ef4444', fontSize: 14, fontWeight: 500, background: 'none', border: 'none', padding: '8px 0', opacity: deleting ? 0.5 : 1, cursor: 'pointer' }}>
+                  <Trash2 size={14} />{deleting ? 'Deleting…' : 'Delete event'}
+                </button>
+              )}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginLeft: 21 }}>
-              {timeLabel  && <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', fontFamily: 'monospace', margin: 0 }}>🕐 {timeLabel}</p>}
-              {amtLabel   && <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)', fontFamily: 'monospace', fontWeight: 600, margin: 0 }}>{amtLabel}</p>}
-              {event.location && <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', margin: 0 }}>📍 {event.location}</p>}
-              {event.notes    && <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', lineHeight: 1.55, margin: 0 }}>{event.notes}</p>}
-            </div>
-            {event.type === 'custom' && (
-              <button onClick={async () => { setDeleting(true); await onDelete(event); onClose() }} disabled={deleting}
-                style={{ marginTop: 28, marginLeft: 21, display: 'flex', alignItems: 'center', gap: 6, color: '#ef4444', fontSize: 14, fontWeight: 500, background: 'none', border: 'none', padding: '8px 0', opacity: deleting ? 0.5 : 1, cursor: 'pointer' }}>
-                <Trash2 size={14} />{deleting ? 'Deleting…' : 'Delete event'}
-              </button>
-            )}
           </div>
         )}
       </div>
@@ -192,6 +196,45 @@ export default function CalendarPage() {
   const topSentRef    = useRef<HTMLDivElement>(null)
   const botSentRef    = useRef<HTMLDivElement>(null)
   const loadingMore   = useRef(false)
+  // Keep a ref copy of months so the stable scroll handler can read latest value
+  const monthsRef     = useRef(months)
+
+  // Keep monthsRef in sync so the scroll handler always sees the latest list
+  useEffect(() => { monthsRef.current = months }, [months])
+
+  // ── Scroll-based haptic + month label ─────────────────────────────────────
+  // Mirrors UIScrollViewDelegate scrollViewDidScroll: finds which day row sits
+  // at a fixed Y threshold (120px from the top of the scroll container) using
+  // offsetTop (no layout-forcing getBoundingClientRect on the hot path).
+  // Fires navigator.vibrate(8) exactly once per new day boundary crossed.
+  const handleDetailScroll = useCallback(() => {
+    const sc = scrollRef.current
+    if (!sc) return
+    const threshold = sc.scrollTop + 120   // 120px trigger line from container top
+
+    let found: string | null = null
+    outer: for (const { year: y, month: m } of monthsRef.current) {
+      const dim = getDaysInMonth(y, m)
+      for (let d = 1; d <= dim; d++) {
+        const ds = toDateStr(y, m, d)
+        const el = dayRefs.current.get(ds)
+        if (!el) continue
+        const top = el.offsetTop
+        if (top > threshold) break outer          // scrolled past trigger — stop
+        if (top + el.offsetHeight > threshold) {  // straddles the trigger line
+          found = ds
+          break outer
+        }
+      }
+    }
+
+    if (found && found !== lastHapticDay.current) {
+      lastHapticDay.current = found
+      navigator.vibrate?.(8)
+      const [ys, ms] = found.split('-')
+      setSideLbl(monthLabel(parseInt(ys), parseInt(ms) - 1))
+    }
+  }, []) // stable — reads only refs
 
   // ── Supabase load ─────────────────────────────────────────────────────────
   const loadData = useCallback(async () => {
@@ -346,41 +389,6 @@ export default function CalendarPage() {
     return () => clearTimeout(t)
   }, [viewMode, todayStr])
 
-  // ── Haptic + month label via IntersectionObserver ─────────────────────────
-  useEffect(() => {
-    if (viewMode !== 'detail') return
-    const sc = scrollRef.current
-    if (!sc) return
-    lastHapticDay.current = null
-
-    const obs = new IntersectionObserver((entries) => {
-      // Walk entries sorted by y-position to find the topmost entering element
-      const entering = entries
-        .filter(e => e.isIntersecting)
-        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
-
-      if (!entering.length) return
-      const entry = entering[0]
-      const key = (entry.target as HTMLElement).dataset.day
-      if (!key || key === lastHapticDay.current) return
-
-      lastHapticDay.current = key
-      navigator.vibrate?.(8)
-
-      // Update side label from the day key "YYYY-MM-DD"
-      const [ys, ms] = key.split('-')
-      setSideLbl(monthLabel(parseInt(ys), parseInt(ms) - 1))
-    }, {
-      root: sc,
-      // Band from 28% to 36% down the scroll container — fires once as each row crosses this line
-      rootMargin: '-28% 0px -64% 0px',
-      threshold: 0,
-    })
-
-    dayRefs.current.forEach(el => obs.observe(el))
-    return () => obs.disconnect()
-  }, [viewMode, months]) // re-attach when month list grows
-
   // ── Infinite scroll: append at bottom ────────────────────────────────────
   useEffect(() => {
     if (viewMode !== 'detail') return
@@ -437,7 +445,7 @@ export default function CalendarPage() {
     <div className="min-h-screen bg-bg-base tab-enter flex flex-col">
       <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
 
-      <div className="px-5 pt-14 pb-4">
+      <div className="px-5 pb-4" style={{ paddingTop: 'calc(max(env(safe-area-inset-top, 0px), 44px) + 12px)' }}>
         <p className="text-[10px] font-medium tracking-[0.14em] uppercase text-gold mb-1">Schedule</p>
         <div className="flex items-center justify-between">
           <h1 className="text-[32px] font-bold tracking-[-0.04em] text-ink">Calendar</h1>
@@ -514,8 +522,8 @@ export default function CalendarPage() {
   return (
     <>
     {/* Fixed left-edge month label */}
-    <div style={{ position: 'fixed', left: 0, top: 0, bottom: 72, width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20, pointerEvents: 'none' }}>
-      <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 8, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700, color: 'rgba(255,255,255,0.14)', userSelect: 'none', whiteSpace: 'nowrap' }}>
+    <div style={{ position: 'fixed', left: 0, top: 'env(safe-area-inset-top, 0px)', bottom: 72, width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20, pointerEvents: 'none' }}>
+      <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 8, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700, color: 'rgba(212,175,55,0.55)', userSelect: 'none', whiteSpace: 'nowrap' }}>
         {sideLbl}
       </span>
     </div>
@@ -523,7 +531,7 @@ export default function CalendarPage() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: '#0a0a0a' }}>
 
       {/* Compact header */}
-      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'flex-end', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 10px)', paddingBottom: 10, paddingLeft: 28, paddingRight: 14, gap: 6, background: '#0a0a0a', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'flex-end', paddingTop: 'calc(max(env(safe-area-inset-top, 0px), 44px) + 12px)', paddingBottom: 10, paddingLeft: 28, paddingRight: 14, gap: 6, background: '#0a0a0a', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, color: '#f0f0f8', flex: 1, letterSpacing: '-0.03em', margin: 0 }}>Calendar</h1>
         <button onClick={() => { const el = dayRefs.current.get(todayStr); const sc = scrollRef.current; if (el && sc) { const cr = sc.getBoundingClientRect(); const er = el.getBoundingClientRect(); sc.scrollTo({ top: sc.scrollTop + er.top - cr.top - 56, behavior: 'smooth' }) } }}
           style={{ height: 30, padding: '0 10px', borderRadius: 15, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.07)', fontSize: 11, color: '#D4AF37', fontWeight: 600, flexShrink: 0, cursor: 'pointer' }}>
@@ -540,8 +548,8 @@ export default function CalendarPage() {
         </button>
       </div>
 
-      {/* Scroll container */}
-      <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', position: 'relative' }}>
+      {/* Scroll container — position:relative makes it the offsetParent for offsetTop reads */}
+      <div ref={scrollRef} onScroll={handleDetailScroll} style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', position: 'relative' }}>
         <div ref={topSentRef} style={{ height: 1 }} />
 
         {months.map(({ year: y, month: m }) => {
@@ -553,12 +561,15 @@ export default function CalendarPage() {
             const events = visibleMap[ds] ?? []
             const abbr   = new Date(y, m, day).toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()
 
+            // Stable alternating stripe: days since Unix epoch mod 2
+            const stripe = Math.floor(new Date(y, m, day).getTime() / 86400000) % 2 === 0
+
             return (
               <div
                 key={ds}
                 ref={el => { if (el) dayRefs.current.set(ds, el); else dayRefs.current.delete(ds) }}
                 data-day={ds}
-                style={{ display: 'flex', alignItems: 'stretch', paddingLeft: 20 }}
+                style={{ display: 'flex', alignItems: 'stretch', paddingLeft: 20, background: stripe ? '#141414' : '#1a1a1a' }}
               >
                 {/* Day label column */}
                 <div style={{ width: 44, flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 11, paddingBottom: 8 }}>
