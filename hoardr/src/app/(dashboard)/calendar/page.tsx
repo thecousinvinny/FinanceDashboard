@@ -605,11 +605,9 @@ export default function CalendarPage() {
                     {/* Vertical rule */}
                     <div style={{ width: 1, flexShrink: 0, background: isTod ? 'rgba(201,168,76,0.35)' : 'rgba(255,255,255,0.04)', marginTop: 8, marginBottom: 8 }} />
 
-                    {/* Events */}
-                    <div style={{ flex: 1, paddingLeft: 12, paddingRight: 16, paddingTop: 9, paddingBottom: 9, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {events.length === 0
-                        ? <div style={{ height: 24 }} />
-                        : events.map((ev, idx) => {
+                    {/* Events — min height = 2 events tall (52px content + 18px padding = 70px row) */}
+                    <div style={{ flex: 1, paddingLeft: 12, paddingRight: 16, paddingTop: 9, paddingBottom: 9, display: 'flex', flexDirection: 'column', gap: 8, minHeight: 52 }}>
+                      {events.map((ev, idx) => {
                             const tl  = getTimeLabel(ev)
                             const amt = ev.type !== 'custom' && ev.type !== 'google' ? ev.amount : null
                             const dot = ev.color ?? DETAIL_DOT[ev.type]
