@@ -8,7 +8,7 @@ import { AddSubscriptionSheet, type NewSub } from '@/components/plans/AddSubscri
 import { AddWishlistSheet, type NewWishItem } from '@/components/plans/AddWishlistSheet'
 import { EditSubscriptionSheet, type SubEdits } from '@/components/plans/EditSubscriptionSheet'
 import { EditWishlistSheet, type WishEdits } from '@/components/plans/EditWishlistSheet'
-import { daysUntilLabel, $fc, $fk, cn, calcSubCosts, localToday, nextRenewalDate } from '@/lib/utils'
+import { daysUntilLabel, $fc, $fd, $fk, cn, calcSubCosts, localToday, nextRenewalDate } from '@/lib/utils'
 import { SlotNumber } from '@/components/ui/SlotNumber'
 import { createCalEvent, updateCalEvent, deleteCalEvent, allDayEvent } from '@/lib/calendar'
 import { pageCache } from '@/lib/page-cache'
@@ -464,7 +464,7 @@ function PlansPageInner() {
                         </div>
                         <div className="text-right flex-shrink-0">
                           <p className="text-[15px] font-semibold font-mono text-ink">
-                            {$fc(sub.cost)}
+                            {$fd(sub.cost)}
                           </p>
                           <p className="text-[10px] text-ink-faint">
                             {billingShort(sub.billing)}
@@ -541,7 +541,7 @@ function PlansPageInner() {
                   <div className="flex-1 min-w-0">
                     <p className="text-[14px] font-semibold text-ink truncate">{item.name}</p>
                     {item.original_cost != null && (
-                      <p className="text-[13px] font-mono text-ink-muted mt-0.5">{$fc(item.original_cost)}</p>
+                      <p className="text-[13px] font-mono text-ink-muted mt-0.5">{$fd(item.original_cost)}</p>
                     )}
                     {(item.category || item.url) && (
                       <div className="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -566,7 +566,7 @@ function PlansPageInner() {
                     <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
                       <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-emerald/10 text-emerald">Bought</span>
                       {item.bought_cost != null && item.original_cost != null && item.original_cost > item.bought_cost && (
-                        <span className="text-[10px] font-semibold text-emerald font-mono">saved {$fc(item.original_cost - item.bought_cost)}</span>
+                        <span className="text-[10px] font-semibold text-emerald font-mono">saved {$fd(item.original_cost - item.bought_cost)}</span>
                       )}
                     </div>
                   )}
@@ -641,7 +641,7 @@ function PlansPageInner() {
         {buyItem?.original_cost != null && (
           <div className="flex items-center justify-between">
             <p className="text-[13px] text-ink-muted">List price</p>
-            <p className="text-[13px] font-mono text-ink-muted">{$fc(buyItem.original_cost)}</p>
+            <p className="text-[13px] font-mono text-ink-muted">{$fd(buyItem.original_cost)}</p>
           </div>
         )}
         <div>
@@ -656,7 +656,7 @@ function PlansPageInner() {
           </div>
           {buyItem?.original_cost != null && parseFloat(buyAmount) > 0 && buyItem.original_cost > parseFloat(buyAmount) && (
             <p className="text-[11px] text-emerald font-mono mt-2">
-              You saved {$fc(buyItem.original_cost - parseFloat(buyAmount))}
+              You saved {$fd(buyItem.original_cost - parseFloat(buyAmount))}
             </p>
           )}
         </div>

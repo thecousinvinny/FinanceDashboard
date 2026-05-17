@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { localToday, $fk, $fc, fmtDate } from '@/lib/utils'
+import { localToday, $fk, $fc, $fd, fmtDate } from '@/lib/utils'
 import Link from 'next/link'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import { HomeHero } from '@/components/home/HomeHero'
@@ -208,7 +208,7 @@ export default async function HomePage() {
                   <p className="text-[11px] text-ink-muted">{fmtDate(row.date)}</p>
                 </div>
                 <p className={`text-[15px] font-semibold font-mono flex-shrink-0 ${row.amount > 0 ? 'text-emerald' : 'text-ink'}`}>
-                  {row.amount > 0 ? '+' : '−'}{$fc(Math.abs(row.amount))}
+                  {row.amount > 0 ? '+' : '−'}{$fd(Math.abs(row.amount))}
                 </p>
               </div>
             ))}

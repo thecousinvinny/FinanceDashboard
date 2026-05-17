@@ -7,7 +7,7 @@ import { AddTransactionSheet, type CardOption, type BankOption } from '@/compone
 import { EditTransactionSheet, type TxEdits } from '@/components/money/EditTransactionSheet'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import { type SeedTx } from '@/lib/data/transactions'
-import { groupByMonth, fmtDate, localToday, $fk, $fc, cn } from '@/lib/utils'
+import { groupByMonth, fmtDate, localToday, $fk, $fc, $fd, cn } from '@/lib/utils'
 import { SlotNumber } from '@/components/ui/SlotNumber'
 import { pageCache } from '@/lib/page-cache'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
@@ -307,7 +307,7 @@ export default function MoneyPage() {
                       className={subNames.has(cat.name.toLowerCase()) ? 'text-white/60' : 'text-gold'} />
                     <span className="text-[12px] font-medium text-ink truncate">{cat.name}</span>
                   </div>
-                  <span className="text-[12px] font-semibold font-mono text-ink ml-3 flex-shrink-0">{$fc(cat.total)}</span>
+                  <span className="text-[12px] font-semibold font-mono text-ink ml-3 flex-shrink-0">{$fd(cat.total)}</span>
                 </div>
                 <div className="h-[3px] rounded-full bg-bg-overlay overflow-hidden">
                   <div className="h-full rounded-full bg-gold/50 transition-all duration-500" style={{ width: `${cat.pct}%` }} />
@@ -395,7 +395,7 @@ export default function MoneyPage() {
                             'text-[15px] font-semibold font-mono flex-shrink-0',
                             tx.type === 'Income' ? 'text-emerald' : 'text-ink',
                           )}>
-                            {tx.type === 'Income' ? '+' : '−'}{$fc(tx.amount)}
+                            {tx.type === 'Income' ? '+' : '−'}{$fd(tx.amount)}
                           </p>
                         </div>
                       </SwipeToDelete>

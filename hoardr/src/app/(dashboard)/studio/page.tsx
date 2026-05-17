@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { NEXT_STATUS, STATUS_LABEL, STATUS_COLORS, STATUS_PROGRESS } from '@/lib/data/studio'
-import { fmtDate, daysUntilLabel, $fc, cn } from '@/lib/utils'
+import { fmtDate, daysUntilLabel, $fd, cn } from '@/lib/utils'
 import { createCalEvent, allDayEvent } from '@/lib/calendar'
 import type { CommissionStatus } from '@/types'
 import { AddCommissionSheet, type NewCommission } from '@/components/studio/AddCommissionSheet'
@@ -225,7 +225,7 @@ export default function StudioPage() {
           </div>
           <div className="text-right pb-1">
             <p className="text-[16px] font-semibold font-mono text-emerald">
-              {$fc(paidValue)}
+              {$fd(paidValue)}
             </p>
             <p className="text-[10px] text-ink-faint">paid</p>
           </div>
@@ -298,7 +298,7 @@ export default function StudioPage() {
                     <p className="text-[12px] text-ink-muted mt-0.5">{c.project_name}</p>
                   </div>
                   <p className="text-[17px] font-bold font-mono text-gold flex-shrink-0 ml-3">
-                    {$fc(c.value)}
+                    {$fd(c.value)}
                   </p>
                 </div>
 

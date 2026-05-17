@@ -11,7 +11,7 @@ import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 
 import type { Card, Bank } from '@/types'
-import { cn, $fc, $fk, fmtDate } from '@/lib/utils'
+import { cn, $fd, $fk, fmtDate } from '@/lib/utils'
 import { pageCache } from '@/lib/page-cache'
 import { PullIndicator } from '@/components/ui/PullIndicator'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
@@ -468,7 +468,7 @@ export default function WalletPage() {
                         <p className="text-[11px] text-ink-muted">{fmtDate(exp.date)}</p>
                       </div>
                       <p className="text-[15px] font-semibold font-mono flex-shrink-0 text-ink">
-                        −{$fc(exp.cost)}
+                        −{$fd(exp.cost)}
                       </p>
                     </div>
                   )

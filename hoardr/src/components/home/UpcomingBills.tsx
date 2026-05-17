@@ -7,7 +7,7 @@ import { RefreshCw, CheckCircle, XCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { getCategoryIcon } from '@/components/ui/CategoryIcon'
-import { daysUntilLabel, $fc, localToday, nextRenewalDate } from '@/lib/utils'
+import { daysUntilLabel, $fd, localToday, nextRenewalDate } from '@/lib/utils'
 import type { BillingCycle } from '@/types'
 
 export interface UpcomingSub {
@@ -103,7 +103,7 @@ export function UpcomingBills({ initial }: { initial: UpcomingSub[] }) {
                   <p className="text-[11px] text-ink-muted">{daysUntilLabel(sub.next_renewal)}</p>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="text-[15px] font-semibold font-mono text-ink">{$fc(sub.cost)}</p>
+                  <p className="text-[15px] font-semibold font-mono text-ink">{$fd(sub.cost)}</p>
                   <p className="text-[10px] text-ink-faint">{billingShort(sub.billing)}</p>
                 </div>
               </div>

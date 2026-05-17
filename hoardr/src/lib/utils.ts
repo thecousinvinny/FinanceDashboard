@@ -14,6 +14,12 @@ export function $f(n: number | string | null | undefined): string {
   )
 }
 
+/** "$1,234" when whole dollars, "$1,234.50" when cents are non-zero */
+export function $fd(n: number | string | null | undefined): string {
+  const v = parseFloat(String(n ?? 0)) || 0
+  return Math.round(Math.abs(v) * 100) % 100 === 0 ? $f(v) : $fc(v)
+}
+
 /** "$12.50" — keeps cents */
 export function $fc(n: number | string | null | undefined): string {
   const v = parseFloat(String(n ?? 0)) || 0
