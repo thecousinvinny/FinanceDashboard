@@ -32,9 +32,9 @@ export function HomeHero({ spent, saved, netPositive, hasData, points }: Props) 
         )}
       </div>
 
-      <div className="flex items-start mb-5">
-        <span className="font-mono text-[22px] font-light text-ink-muted mt-[7px] mr-0.5">$</span>
-        <span className="font-mono text-[52px] font-bold leading-none tracking-[-0.04em] text-ink">
+      <div className="flex items-start mb-5" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>
+        <span className="text-[22px] font-light text-ink-muted mt-[7px] mr-0.5">$</span>
+        <span className="text-[52px] font-bold leading-none tracking-[-0.04em] text-ink">
           <SlotNumber value={Math.floor(spent)} format={fmtInt} />
           <span className="text-[32px] text-ink-muted font-light">
             .{fmtCents(spent)}

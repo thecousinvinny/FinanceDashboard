@@ -62,16 +62,16 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
           {hovered ? hovered.label : '14 days'}
         </p>
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1 text-[10px] font-medium font-mono text-emerald">
+          <span className="flex items-center gap-1 text-[10px] font-medium text-emerald" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>
             <span className="w-1.5 h-1.5 rounded-full bg-emerald inline-block" />
             {hovered ? $fc(hovered.inc) : $fk(totalInc)}
           </span>
-          <span className="flex items-center gap-1 text-[10px] font-medium font-mono text-gold">
+          <span className="flex items-center gap-1 text-[10px] font-medium text-gold" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>
             <span className="w-1.5 h-1.5 rounded-full bg-gold inline-block" />
             {hovered ? $fc(hovered.exp) : $fk(totalExp)}
           </span>
           {totalSub > 0 && (
-            <span className="flex items-center gap-1 text-[10px] font-medium font-mono text-white/60">
+            <span className="flex items-center gap-1 text-[10px] font-medium text-white/60" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>
               <span className="w-1.5 h-1.5 rounded-full bg-white/60 inline-block" />
               {hovered ? $fc(hovered.sub) : $fk(totalSub)}
             </span>
@@ -135,6 +135,7 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
             className={`text-[8px] font-medium leading-none transition-colors ${
               i === hoverIdx ? 'text-ink' : i === n - 1 ? 'text-gold' : 'text-ink-faint'
             }`}
+            style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}
           >
             {p.day}
           </span>

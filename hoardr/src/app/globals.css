@@ -117,7 +117,7 @@ html, body {
 
   /* Editorial baseline-shifted dollar sign */
   .dollar-prefix {
-    font-family: 'Big Shoulders Display', sans-serif;
+    font-family: 'Montserrat', sans-serif;
     font-size: 0.45em;
     vertical-align: super;
     margin-right: 1px;

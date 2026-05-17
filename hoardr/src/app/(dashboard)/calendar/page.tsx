@@ -620,10 +620,10 @@ export default function CalendarPage() {
                             return (
                               <button key={idx} onClick={() => { setDetailEvent(ev); navigator.vibrate?.(6) }}
                                 style={{ display: 'flex', alignItems: 'center', width: '100%', background: 'none', border: 'none', padding: 0, cursor: 'pointer', minHeight: 22, textAlign: 'left' }}>
-                                {tl && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: "'Big Shoulders Display', sans-serif", letterSpacing: '0.02em', flexShrink: 0, marginRight: 7, whiteSpace: 'nowrap' }}>{tl}</span>}
+                                {tl && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: "'Montserrat', sans-serif", letterSpacing: '0.02em', flexShrink: 0, marginRight: 7, whiteSpace: 'nowrap' }}>{tl}</span>}
                                 <span style={{ width: 5, height: 5, borderRadius: '50%', background: dot, flexShrink: 0, marginRight: 7 }} />
                                 <span style={{ fontSize: 14, fontWeight: 400, color: isTod ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.78)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
-                                {amt && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', fontFamily: "'Big Shoulders Display', sans-serif", flexShrink: 0, marginLeft: 8 }}>{amt}</span>}
+                                {amt && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', fontFamily: "'Montserrat', sans-serif", flexShrink: 0, marginLeft: 8 }}>{amt}</span>}
                               </button>
                             )
                           })
@@ -674,14 +674,14 @@ export default function CalendarPage() {
                   <button key={idx} onClick={() => { setDetailEvent(ev); navigator.vibrate?.(6) }}
                     style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '16px 20px', background: 'none', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.04)', cursor: 'pointer', textAlign: 'left', gap: 14 }}>
                     {/* Time column — fixed width so dots align */}
-                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.32)', fontFamily: "'Big Shoulders Display', sans-serif", width: 58, flexShrink: 0, textAlign: 'right' }}>
+                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.32)', fontFamily: "'Montserrat', sans-serif", width: 58, flexShrink: 0, textAlign: 'right' }}>
                       {tl ?? ''}
                     </span>
                     <span style={{ width: 7, height: 7, borderRadius: '50%', background: dot, flexShrink: 0 }} />
                     <span style={{ fontSize: 17, fontWeight: 400, color: 'rgba(255,255,255,0.88)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {ev.title}
                     </span>
-                    {amt && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)', fontFamily: "'Big Shoulders Display', sans-serif", flexShrink: 0 }}>{amt}</span>}
+                    {amt && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)', fontFamily: "'Montserrat', sans-serif", flexShrink: 0 }}>{amt}</span>}
                   </button>
                 )
               })

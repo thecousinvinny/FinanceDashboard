@@ -276,21 +276,21 @@ export default function MoneyPage() {
             <p className="text-[9px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Spent</p>
             <span className="text-[11px] text-gold">↑</span>
           </div>
-          <p className="text-[22px] font-bold font-mono tracking-tight text-ink"><SlotNumber value={monthSpent} format={$fc} /></p>
+          <p className="text-[22px] font-bold tracking-tight text-ink" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}><SlotNumber value={monthSpent} format={$fc} /></p>
         </div>
         <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-3">
           <div className="flex items-center justify-between mb-2">
             <p className="text-[9px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Saved</p>
             <span className="text-[11px] text-emerald">✦</span>
           </div>
-          <p className="text-[22px] font-bold font-mono tracking-tight text-emerald"><SlotNumber value={monthSaved} format={$fc} /></p>
+          <p className="text-[22px] font-bold tracking-tight text-emerald" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}><SlotNumber value={monthSaved} format={$fc} /></p>
         </div>
         <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-3">
           <div className="flex items-center justify-between mb-2">
             <p className="text-[9px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Earned</p>
             <span className="text-[11px] text-emerald">↓</span>
           </div>
-          <p className="text-[22px] font-bold font-mono tracking-tight text-ink"><SlotNumber value={monthEarned} format={$fc} /></p>
+          <p className="text-[22px] font-bold tracking-tight text-ink" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}><SlotNumber value={monthEarned} format={$fc} /></p>
         </div>
       </div>
 
