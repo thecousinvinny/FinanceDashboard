@@ -8,6 +8,7 @@ import { EditTransactionSheet, type TxEdits } from '@/components/money/EditTrans
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import { type SeedTx } from '@/lib/data/transactions'
 import { groupByMonth, fmtDate, $fk, $fc, cn } from '@/lib/utils'
+import { SlotNumber } from '@/components/ui/SlotNumber'
 import { pageCache } from '@/lib/page-cache'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { PullIndicator } from '@/components/ui/PullIndicator'
@@ -262,14 +263,14 @@ export default function MoneyPage() {
             <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Spent</p>
             <span className="text-[12px] text-gold">↑</span>
           </div>
-          <p className="text-[26px] font-bold font-mono tracking-tight text-ink">{$fk(monthSpent)}</p>
+          <p className="text-[26px] font-bold font-mono tracking-tight text-ink"><SlotNumber value={monthSpent} format={$fk} /></p>
         </div>
         <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
           <div className="flex items-center justify-between mb-3">
             <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Earned</p>
             <span className="text-[12px] text-emerald">↓</span>
           </div>
-          <p className="text-[26px] font-bold font-mono tracking-tight text-ink">{$fk(monthEarned)}</p>
+          <p className="text-[26px] font-bold font-mono tracking-tight text-ink"><SlotNumber value={monthEarned} format={$fk} /></p>
         </div>
       </div>
 

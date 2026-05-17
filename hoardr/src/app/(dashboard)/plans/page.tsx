@@ -9,6 +9,7 @@ import { AddWishlistSheet, type NewWishItem } from '@/components/plans/AddWishli
 import { EditSubscriptionSheet, type SubEdits } from '@/components/plans/EditSubscriptionSheet'
 import { EditWishlistSheet, type WishEdits } from '@/components/plans/EditWishlistSheet'
 import { daysUntilLabel, $fc, $fk, cn, calcSubCosts, localToday, nextRenewalDate } from '@/lib/utils'
+import { SlotNumber } from '@/components/ui/SlotNumber'
 import { createCalEvent, updateCalEvent, deleteCalEvent, allDayEvent } from '@/lib/calendar'
 import { pageCache } from '@/lib/page-cache'
 import { RefreshCw, CreditCard } from 'lucide-react'
@@ -390,14 +391,14 @@ function PlansPageInner() {
               <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Per Month</p>
               <span className="text-[13px] text-gold">↻</span>
             </div>
-            <p className="text-[26px] font-bold font-mono tracking-tight text-ink">{$fk(totals.monthly)}</p>
+            <p className="text-[26px] font-bold font-mono tracking-tight text-ink"><SlotNumber value={totals.monthly} format={$fk} /></p>
           </div>
           <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
             <div className="flex items-center justify-between mb-3">
               <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Per Year</p>
               <span className="text-[13px] text-emerald">∞</span>
             </div>
-            <p className="text-[26px] font-bold font-mono tracking-tight text-ink">{$fk(totals.annual)}</p>
+            <p className="text-[26px] font-bold font-mono tracking-tight text-ink"><SlotNumber value={totals.annual} format={$fk} /></p>
           </div>
         </div>
       )}
