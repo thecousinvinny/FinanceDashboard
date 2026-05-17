@@ -455,8 +455,8 @@ export default function CalendarPage() {
   return (
     <>
     {/* Gold month label pinned to left viewport edge — shown only in View 2 */}
-    <div style={{ position: 'fixed', left: 0, top: 'env(safe-area-inset-top, 0px)', bottom: 72, width: 20, zIndex: 30, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: viewIndex === 1 ? 1 : 0, transition: 'opacity 0.25s ease' }}>
-      <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 8, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700, color: 'rgba(212,175,55,0.55)', userSelect: 'none', whiteSpace: 'nowrap' }}>
+    <div style={{ position: 'fixed', left: 6, top: 'env(safe-area-inset-top, 0px)', bottom: 72, width: 20, zIndex: 30, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: viewIndex === 1 ? 1 : 0, transition: 'opacity 0.25s ease' }}>
+      <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 8, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 800, color: 'rgba(212,175,55,0.65)', userSelect: 'none', whiteSpace: 'nowrap' }}>
         {sideLbl}
       </span>
     </div>
@@ -590,10 +590,10 @@ export default function CalendarPage() {
                     data-day={ds}
                     onTouchStart={e => rowStart(e, ds)}
                     onTouchEnd={rowEnd}
-                    style={{ display: 'flex', alignItems: 'stretch', paddingLeft: 20, background: stripe ? '#141414' : '#1a1a1a' }}
+                    style={{ display: 'flex', alignItems: 'stretch', paddingLeft: 20, background: '#111111' }}
                   >
                     {/* Day label — centered vertically, abbr white, number grey */}
-                    <div style={{ width: 44, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 44, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#111111' }}>
                       <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 9, letterSpacing: '0.09em', textTransform: 'uppercase', lineHeight: 1.2, userSelect: 'none', whiteSpace: 'nowrap' }}>
                         <span style={{ color: isTod ? '#D4AF37' : 'rgba(255,255,255,0.75)', fontWeight: 700 }}>{abbr}</span>
                         <span style={{ color: isTod ? '#c9a84c' : 'rgba(255,255,255,0.25)', fontWeight: 500 }}>{' '}{day}</span>
@@ -603,8 +603,8 @@ export default function CalendarPage() {
                     {/* Vertical rule */}
                     <div style={{ width: 1, flexShrink: 0, background: isTod ? 'rgba(201,168,76,0.35)' : 'rgba(255,255,255,0.04)', marginTop: 8, marginBottom: 8 }} />
 
-                    {/* Events — min height = 2 events tall (52px content + 18px padding = 70px row) */}
-                    <div style={{ flex: 1, paddingLeft: 12, paddingRight: 16, paddingTop: 9, paddingBottom: 9, display: 'flex', flexDirection: 'column', gap: 8, minHeight: 112 }}>
+                    {/* Events — min height = 4 events + padding */}
+                    <div style={{ flex: 1, paddingLeft: 12, paddingRight: 16, paddingTop: 9, paddingBottom: 9, display: 'flex', flexDirection: 'column', gap: 8, minHeight: 112, background: stripe ? '#171717' : '#1e1e1e' }}>
                       {events.map((ev, idx) => {
                             const tl  = getTimeLabel(ev)
                             const amt = ev.type !== 'custom' && ev.type !== 'google' ? ev.amount : null
