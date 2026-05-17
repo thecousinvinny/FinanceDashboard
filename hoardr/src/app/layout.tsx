@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     title:           'Hoardr',
   },
   icons: {
-    apple: '/apple-touch-icon.png',
+    apple: '/DARKICON.png',
   },
 }
 
