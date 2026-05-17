@@ -44,7 +44,7 @@ function Drum({ digit, placeFromRight, totalDigits }: DrumProps) {
   }, [digit, placeFromRight, totalDigits, totalRotations])
 
   return (
-    <span style={{ display: 'inline-block', overflow: 'hidden', height: '1em', verticalAlign: 'top' }}>
+    <span style={{ display: 'inline-block', overflow: 'hidden', height: '1em' }}>
       <span ref={trackRef} style={{ display: 'block' }}>
         {stack.map((d, i) => (
           <span
@@ -74,9 +74,9 @@ export function SlotNumber({ value, format, className }: Props) {
 
   let di = 0
   return (
-    <span className={className}>
+    <span className={className} style={{ display: 'inline-flex', alignItems: 'center' }}>
       {tokens.map((tok, i) => {
-        if (!tok.isDigit) return <span key={i}>{tok.char}</span>
+        if (!tok.isDigit) return <span key={i} style={{ lineHeight: 1 }}>{tok.char}</span>
         const digitIdx      = di++
         const placeFromRight = total - 1 - digitIdx
         return (
