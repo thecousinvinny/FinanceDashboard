@@ -119,6 +119,10 @@ function EventDetailSheet({ event, onClose, onDelete }: {
 
 // ── Grid event row ─────────────────────────────────────────────────────────────
 function EventRow({ ev, onDelete }: { ev: CalEvent; onDelete: (ev: CalEvent) => Promise<void> }) {
+  // For custom/google events, ev.amount holds raw "HH:MM – HH:MM" — convert to AM/PM
+  const displayAmt = ev.amount && (ev.type === 'custom' || ev.type === 'google')
+    ? ev.amount.split(' – ').map(t => /^\d{2}:\d{2}$/.test(t.trim()) ? fmt12(t.trim()) : t).join(' – ')
+    : ev.amount
   return (
     <div className="flex items-start gap-3 px-4 py-3.5">
       <span className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5" style={{ background: ev.color ?? DOT_COLOR[ev.type] }} />
@@ -128,7 +132,7 @@ function EventRow({ ev, onDelete }: { ev: CalEvent; onDelete: (ev: CalEvent) => 
         {ev.notes    && <p className="text-[11px] text-ink-faint mt-0.5 line-clamp-2">{ev.notes}</p>}
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
-        {ev.amount && <span className={cn('text-[11px] font-semibold font-mono px-2 py-0.5 rounded-md', EVENT_COLOR[ev.type])}>{ev.amount}</span>}
+        {displayAmt && <span className={cn('text-[11px] font-semibold font-mono px-2 py-0.5 rounded-md', EVENT_COLOR[ev.type])}>{displayAmt}</span>}
         {ev.type === 'custom' && (
           <button onClick={() => onDelete(ev)} className="w-7 h-7 rounded-full bg-bg-overlay flex items-center justify-center">
             <Trash2 size={12} className="text-ruby" />

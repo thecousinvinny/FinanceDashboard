@@ -7,7 +7,7 @@ import { AddTransactionSheet, type CardOption, type BankOption } from '@/compone
 import { EditTransactionSheet, type TxEdits } from '@/components/money/EditTransactionSheet'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import { type SeedTx } from '@/lib/data/transactions'
-import { groupByMonth, fmtDate, $fk, $fc, cn } from '@/lib/utils'
+import { groupByMonth, fmtDate, localToday, $fk, $fc, cn } from '@/lib/utils'
 import { SlotNumber } from '@/components/ui/SlotNumber'
 import { pageCache } from '@/lib/page-cache'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
@@ -195,7 +195,7 @@ export default function MoneyPage() {
   }
 
   const { monthSpent, monthEarned } = useMemo(() => {
-    const mo = new Date().toISOString().slice(0, 7)
+    const mo = localToday().slice(0, 7)
     return {
       monthSpent:  txList.filter(t => t.type === 'Expense' && t.date.startsWith(mo)).reduce((s, t) => s + t.amount, 0),
       monthEarned: txList.filter(t => t.type === 'Income'  && t.date.startsWith(mo)).reduce((s, t) => s + t.amount, 0),
@@ -203,7 +203,7 @@ export default function MoneyPage() {
   }, [txList])
 
   const catBreakdown = useMemo(() => {
-    const mo = new Date().toISOString().slice(0, 7)
+    const mo = localToday().slice(0, 7)
     const totals: Record<string, number> = {}
     for (const t of txList) {
       if (t.type !== 'Expense' || !t.date.startsWith(mo)) continue
