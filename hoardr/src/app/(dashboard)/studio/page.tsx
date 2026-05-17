@@ -10,6 +10,7 @@ import { AddCommissionSheet, type NewCommission } from '@/components/studio/AddC
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { PullIndicator } from '@/components/ui/PullIndicator'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
+import { pageCache } from '@/lib/page-cache'
 
 type Filter = 'All' | 'Pending' | 'Approved' | 'In Progress'
 
@@ -32,22 +33,27 @@ interface Commission {
 
 export default function StudioPage() {
   const [filter,      setFilter]      = useState<Filter>('All')
-  const [commissions, setCommissions] = useState<Commission[]>([])
-  const [loading,     setLoading]     = useState(true)
+  const [commissions, setCommissions] = useState<Commission[]>(pageCache.get<Commission[]>('studio') ?? [])
+  const [loading,     setLoading]     = useState(!pageCache.get('studio'))
   const [sheetOpen,   setSheetOpen]   = useState(false)
 
   const supabase = useMemo(() => createClient(), [])
   const loadGen  = useRef(0)
+  const abortRef = useRef<AbortController | null>(null)
 
   const loadData = useCallback(async () => {
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
     const gen = ++loadGen.current
     const { data } = await supabase
       .from('commissions')
       .select('id, client_name, project_name, project_type, value, deposit, deadline, status, notes, paid_at, income_id, cal_event_id')
       .order('created_at', { ascending: false })
+      .abortSignal(controller.signal)
 
     if (gen !== loadGen.current) return
-    setCommissions((data ?? []).map(c => ({
+    const mapped: Commission[] = (data ?? []).map(c => ({
       id:           String(c.id),
       client_name:  String(c.client_name),
       project_name: String(c.project_name),
@@ -60,12 +66,14 @@ export default function StudioPage() {
       paid_at:      c.paid_at    ? String(c.paid_at)    : null,
       income_id:    c.income_id  ? String(c.income_id)  : null,
       cal_event_id: c.cal_event_id ? String(c.cal_event_id) : null,
-    })))
+    }))
+    pageCache.set('studio', mapped)
+    setCommissions(mapped)
 
     setLoading(false)
   }, [supabase])
 
-  useEffect(() => { loadData(); return () => { loadGen.current++ } }, [loadData])
+  useEffect(() => { loadData(); return () => { loadGen.current++; abortRef.current?.abort() } }, [loadData])
 
   const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } =
     usePullToRefresh(loadData)

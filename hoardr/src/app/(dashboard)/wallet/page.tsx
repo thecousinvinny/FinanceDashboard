@@ -52,11 +52,16 @@ export default function WalletPage() {
   const [expLoading,      setExpLoading]    = useState(false)
   const [reorderMode,     setReorderMode]   = useState(false)
 
-  const supabase    = useMemo(() => createClient(), [])
-  const loadGen     = useRef(0)
-  const detailGen   = useRef(0)
+  const supabase        = useMemo(() => createClient(), [])
+  const loadGen         = useRef(0)
+  const abortRef        = useRef<AbortController | null>(null)
+  const detailGen       = useRef(0)
+  const detailAbortRef  = useRef<AbortController | null>(null)
 
   const loadData = useCallback(async () => {
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
     const gen = ++loadGen.current
     const [{ data: cardsData }, { data: banksData }] = await Promise.all([
       supabase
@@ -64,11 +69,13 @@ export default function WalletPage() {
         .select('*, bank:banks(id, name, type, last4)')
         .order('sort_order',  { ascending: true,  nullsFirst: false })
         .order('is_default',  { ascending: false })
-        .order('created_at',  { ascending: false }),
+        .order('created_at',  { ascending: false })
+        .abortSignal(controller.signal),
       supabase
         .from('banks')
         .select('*')
-        .order('created_at', { ascending: false }),
+        .order('created_at', { ascending: false })
+        .abortSignal(controller.signal),
     ])
     const newCards = (cardsData ?? []) as Card[]
     const newBanks = (banksData  ?? []) as Bank[]
@@ -79,7 +86,7 @@ export default function WalletPage() {
     setLoading(false)
   }, [supabase])
 
-  useEffect(() => { loadData(); return () => { loadGen.current++ } }, [loadData])
+  useEffect(() => { loadData(); return () => { loadGen.current++; abortRef.current?.abort() } }, [loadData])
 
   const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } =
     usePullToRefresh(loadData)
@@ -87,6 +94,9 @@ export default function WalletPage() {
   useEffect(() => {
     if (!selectedCard) { setCardExpenses([]); setCardSubs([]); return }
     const gen = ++detailGen.current
+    detailAbortRef.current?.abort()
+    const detailController = new AbortController()
+    detailAbortRef.current = detailController
     setExpLoading(true)
     async function loadDetail() {
       const [{ data: expData }, { data: subData }] = await Promise.all([
@@ -95,12 +105,14 @@ export default function WalletPage() {
           .select('id, name, cost, date, categories(name)')
           .eq('card_id', selectedCard!.id)
           .order('date', { ascending: false })
-          .order('created_at', { ascending: false }),
+          .order('created_at', { ascending: false })
+          .abortSignal(detailController.signal),
         supabase
           .from('subscriptions')
           .select('id, name, cost, billing, monthly_cost, next_renewal, category')
           .eq('card_id', selectedCard!.id)
-          .order('next_renewal', { ascending: true }),
+          .order('next_renewal', { ascending: true })
+          .abortSignal(detailController.signal),
       ])
       if (gen !== detailGen.current) return
       setCardExpenses((expData ?? []) as unknown as CardExpense[])
@@ -116,7 +128,7 @@ export default function WalletPage() {
       setExpLoading(false)
     }
     loadDetail()
-    return () => { detailGen.current++ }
+    return () => { detailGen.current++; detailAbortRef.current?.abort() }
   }, [selectedCard, supabase])
 
   async function handleDeleteCard(id: string) {

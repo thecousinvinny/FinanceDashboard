@@ -85,19 +85,25 @@ function PlansPageInner() {
 
   const supabase = useMemo(() => createClient(), [])
   const loadGen  = useRef(0)
+  const abortRef = useRef<AbortController | null>(null)
 
   const loadData = useCallback(async () => {
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
     const gen = ++loadGen.current
     const [{ data: subsData }, { data: wishData }] = await Promise.all([
       supabase
         .from('subscriptions')
         .select('id, name, cost, billing, status, next_renewal, monthly_cost, annual_cost, card_id, category, cal_event_id')
-        .order('next_renewal', { ascending: true }),
+        .order('next_renewal', { ascending: true })
+        .abortSignal(controller.signal),
       supabase
         .from('wishlist')
         .select('id, name, original_cost, category, url, bought_cost, status')
         .eq('status', 'Interested')
-        .order('created_at', { ascending: false }),
+        .order('created_at', { ascending: false })
+        .abortSignal(controller.signal),
     ])
 
     const newSubs: Sub[] = (subsData ?? []).map(s => ({
@@ -129,7 +135,7 @@ function PlansPageInner() {
     setLoading(false)
   }, [supabase])
 
-  useEffect(() => { loadData(); return () => { loadGen.current++ } }, [loadData])
+  useEffect(() => { loadData(); return () => { loadGen.current++; abortRef.current?.abort() } }, [loadData])
 
   const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } =
     usePullToRefresh(loadData)

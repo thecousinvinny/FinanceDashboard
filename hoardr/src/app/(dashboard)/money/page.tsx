@@ -30,20 +30,26 @@ export default function MoneyPage() {
 
   const supabase = useMemo(() => createClient(), [])
   const loadGen  = useRef(0)
+  const abortRef = useRef<AbortController | null>(null)
 
   const loadData = useCallback(async () => {
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
     const gen = ++loadGen.current
     const [{ data: expenses }, { data: income }] = await Promise.all([
       supabase
         .from('expenses')
         .select('id, name, cost, date, description, card_id, savings, categories(name)')
         .order('date', { ascending: false })
-        .order('created_at', { ascending: false }),
+        .order('created_at', { ascending: false })
+        .abortSignal(controller.signal),
       supabase
         .from('income')
         .select('id, name, amount, date, description, source, bank_id')
         .order('date', { ascending: false })
-        .order('created_at', { ascending: false }),
+        .order('created_at', { ascending: false })
+        .abortSignal(controller.signal),
     ])
 
     const rows: SeedTx[] = [
@@ -76,7 +82,7 @@ export default function MoneyPage() {
     setLoading(false)
   }, [supabase])
 
-  useEffect(() => { loadData(); return () => { loadGen.current++ } }, [loadData])
+  useEffect(() => { loadData(); return () => { loadGen.current++; abortRef.current?.abort() } }, [loadData])
 
   const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } =
     usePullToRefresh(loadData)

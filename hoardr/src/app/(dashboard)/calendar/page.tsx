@@ -184,6 +184,7 @@ export default function CalendarPage() {
 
   const supabase      = useMemo(() => createClient(), [])
   const loadGen       = useRef(0)
+  const abortRef      = useRef<AbortController | null>(null)
   const gEvGen        = useRef(0)
   const dayRefs       = useRef(new Map<string, HTMLElement>())
   const lastHapticDay = useRef<string | null>(null)
@@ -228,14 +229,17 @@ export default function CalendarPage() {
 
   // ── Data loading ──────────────────────────────────────────────────────────
   const loadData = useCallback(async () => {
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
     const gen = ++loadGen.current
     const [{ data: exp }, { data: inc }, { data: subs }, { data: cevs }, { data: profile }] =
       await Promise.all([
-        supabase.from('expenses').select('name, cost, date'),
-        supabase.from('income').select('name, amount, date'),
-        supabase.from('subscriptions').select('name, cost, next_renewal').eq('status', 'Active'),
-        supabase.from('cal_events').select('id, title, date, start_time, end_time, location, notes, google_event_id').order('created_at'),
-        supabase.from('profiles').select('calendar_prefs').single(),
+        supabase.from('expenses').select('name, cost, date').abortSignal(controller.signal),
+        supabase.from('income').select('name, amount, date').abortSignal(controller.signal),
+        supabase.from('subscriptions').select('name, cost, next_renewal').eq('status', 'Active').abortSignal(controller.signal),
+        supabase.from('cal_events').select('id, title, date, start_time, end_time, location, notes, google_event_id').order('created_at').abortSignal(controller.signal),
+        supabase.from('profiles').select('calendar_prefs').abortSignal(controller.signal).single(),
       ])
     if (gen !== loadGen.current) return
     if (profile?.calendar_prefs) setPrefs(profile.calendar_prefs as CalPrefs)
@@ -259,7 +263,7 @@ export default function CalendarPage() {
     setEventMap(map)
   }, [supabase])
 
-  useEffect(() => { loadData(); return () => { loadGen.current++ } }, [loadData])
+  useEffect(() => { loadData(); return () => { loadGen.current++; abortRef.current?.abort() } }, [loadData])
 
   useEffect(() => {
     if ((!settingsOpen && !addOpen) || googleCals.length > 0) return
