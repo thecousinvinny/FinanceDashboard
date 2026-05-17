@@ -307,7 +307,7 @@ export default function MoneyPage() {
                       className={subNames.has(cat.name.toLowerCase()) ? 'text-white/60' : 'text-gold'} />
                     <span className="text-[12px] font-medium text-ink truncate">{cat.name}</span>
                   </div>
-                  <span className="text-[12px] font-semibold font-mono text-ink ml-3 flex-shrink-0">{$fd(cat.total)}</span>
+                  <span className="text-[12px] font-semibold text-ink ml-3 flex-shrink-0" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>{$fd(cat.total)}</span>
                 </div>
                 <div className="h-[3px] rounded-full bg-bg-overlay overflow-hidden">
                   <div className="h-full rounded-full bg-gold/50 transition-all duration-500" style={{ width: `${cat.pct}%` }} />
