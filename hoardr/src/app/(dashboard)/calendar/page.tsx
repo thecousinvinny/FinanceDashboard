@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
-import { Plus, Trash2, SlidersHorizontal } from 'lucide-react'
+import { Plus, Trash2, SlidersHorizontal, LayoutGrid, AlignJustify } from 'lucide-react'
 import { PullIndicator } from '@/components/ui/PullIndicator'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { AddEventSheet, type NewCalEvent } from '@/components/calendar/AddEventSheet'
@@ -44,6 +44,37 @@ const DEFAULT_PREFS: CalPrefs = {
   googleCalendarIds: [],
 }
 
+function EventRow({ ev, onDelete, compact = false }: { ev: CalEvent; onDelete: (ev: CalEvent) => Promise<void>; compact?: boolean }) {
+  return (
+    <div className={cn('flex items-start gap-3 px-4', compact ? 'py-2.5' : 'py-3.5')}>
+      <span
+        className={cn('rounded-full flex-shrink-0 mt-1.5', compact ? 'w-1.5 h-1.5' : 'w-2 h-2')}
+        style={{ background: ev.color ?? DOT_COLOR[ev.type] }}
+      />
+      <div className="flex-1 min-w-0">
+        <p className={cn('font-medium text-ink', compact ? 'text-[13px]' : 'text-[14px]')}>{ev.title}</p>
+        {ev.location && <p className="text-[11px] text-ink-muted mt-0.5 truncate">📍 {ev.location}</p>}
+        {ev.notes    && <p className="text-[11px] text-ink-faint mt-0.5 line-clamp-2">{ev.notes}</p>}
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {ev.amount && (
+          <span className={cn('font-semibold font-mono px-2 py-0.5 rounded-md', compact ? 'text-[10px]' : 'text-[11px]', EVENT_COLOR[ev.type])}>
+            {ev.amount}
+          </span>
+        )}
+        {ev.type === 'custom' && (
+          <button
+            onClick={() => onDelete(ev)}
+            className={cn('rounded-full bg-bg-overlay flex items-center justify-center', compact ? 'w-6 h-6' : 'w-7 h-7')}
+          >
+            <Trash2 size={compact ? 10 : 12} className="text-ruby" />
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function CalendarPage() {
   const today = useMemo(() => new Date(), [])
   const [year,          setYear]         = useState(today.getFullYear())
@@ -56,6 +87,7 @@ export default function CalendarPage() {
   const [calsLoading,   setCalsLoading]  = useState(false)
   const [addOpen,       setAddOpen]      = useState(false)
   const [settingsOpen,  setSettingsOpen] = useState(false)
+  const [viewMode,      setViewMode]     = useState<'grid' | 'detail'>('grid')
 
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
@@ -279,6 +311,16 @@ export default function CalendarPage() {
           <h1 className="text-[32px] font-bold tracking-[-0.04em] text-ink">Calendar</h1>
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setViewMode(v => v === 'grid' ? 'detail' : 'grid')}
+              className="w-9 h-9 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center select-none"
+              aria-label="Toggle view"
+            >
+              {viewMode === 'grid'
+                ? <AlignJustify size={15} className="text-ink-muted" />
+                : <LayoutGrid   size={15} className="text-gold" />
+              }
+            </button>
+            <button
               onClick={() => setSettingsOpen(true)}
               className="w-9 h-9 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center select-none"
               aria-label="Calendar filters"
@@ -302,104 +344,205 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* ── Day headers ─────────────────────────────────────────────── */}
+      {/* ── Day-of-week headers (both modes) ────────────────────────── */}
       <div className="grid grid-cols-7 px-3 mb-1">
         {['S','M','T','W','T','F','S'].map((d, i) => (
           <div key={i} className="text-center text-[10px] font-medium tracking-[0.08em] uppercase text-ink-faint py-1">{d}</div>
         ))}
       </div>
 
-      {/* ── Month grid ──────────────────────────────────────────────── */}
-      <div className="grid grid-cols-7 px-3 gap-y-0.5">
-        {cells.map((day, i) => {
-          if (day === null) return <div key={i} className="h-12"/>
-          const ds        = dateStr(day)
-          const dayEvents = visibleMap[ds] ?? []
-          const isSel     = selected === ds
-          const isTod     = ds === todayStr
-          return (
-            <button
-              key={i}
-              onClick={() => setSelected(isSel ? null : ds)}
-              className="flex flex-col items-center py-1 gap-1 h-12 select-none"
-            >
-              <span className={cn(
-                'w-8 h-8 flex items-center justify-center rounded-xl text-[13px] font-medium transition-all',
-                isTod           ? 'gradient-gold text-white font-bold'             : '',
-                isSel && !isTod ? 'bg-bg-surface border border-white/10 text-ink'  : '',
-                !isTod && !isSel ? 'text-ink-muted'                                : '',
-              )}>
-                {day}
-              </span>
-              <div className="flex gap-[3px]">
-                {dayEvents.slice(0, 3).map((ev, j) => (
-                  <span
-                    key={j}
-                    className="w-[5px] h-[5px] rounded-full flex-shrink-0"
-                    style={{ background: ev.color ?? DOT_COLOR[ev.type] }}
-                  />
-                ))}
-              </div>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* ── Selected day panel ──────────────────────────────────────── */}
-      {selectedLabel && (
-        <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden mb-4">
-          <div className="px-4 pt-4 pb-3 border-b border-white/[0.04] flex items-center justify-between">
-            <p className="text-[18px] font-semibold text-ink">{selectedLabel}</p>
-            <button
-              onClick={() => setAddOpen(true)}
-              className="w-7 h-7 rounded-full gradient-gold flex items-center justify-center select-none"
-              aria-label="Add event on this day"
-            >
-              <Plus size={13} className="text-white" />
-            </button>
+      {/* ══ GRID MODE ════════════════════════════════════════════════ */}
+      {viewMode === 'grid' && (
+        <>
+          <div className="grid grid-cols-7 px-3 gap-y-0.5">
+            {cells.map((day, i) => {
+              if (day === null) return <div key={i} className="h-12"/>
+              const ds        = dateStr(day)
+              const dayEvents = visibleMap[ds] ?? []
+              const isSel     = selected === ds
+              const isTod     = ds === todayStr
+              return (
+                <button
+                  key={i}
+                  onClick={() => setSelected(isSel ? null : ds)}
+                  className="flex flex-col items-center py-1 gap-1 h-12 select-none"
+                >
+                  <span className={cn(
+                    'w-8 h-8 flex items-center justify-center rounded-xl text-[13px] font-medium transition-all',
+                    isTod            ? 'gradient-gold text-white font-bold'            : '',
+                    isSel && !isTod  ? 'bg-bg-surface border border-white/10 text-ink' : '',
+                    !isTod && !isSel ? 'text-ink-muted'                                : '',
+                  )}>
+                    {day}
+                  </span>
+                  <div className="flex gap-[3px]">
+                    {dayEvents.slice(0, 3).map((ev, j) => (
+                      <span
+                        key={j}
+                        className="w-[5px] h-[5px] rounded-full flex-shrink-0"
+                        style={{ background: ev.color ?? DOT_COLOR[ev.type] }}
+                      />
+                    ))}
+                  </div>
+                </button>
+              )
+            })}
           </div>
 
-          {selectedEvents.length === 0 ? (
-            <div className="py-8 text-center text-ink-faint text-[13px]">Nothing on this day.</div>
-          ) : (
-            <div className="divide-y divide-white/[0.04]">
-              {selectedEvents.map((ev, idx) => (
-                <div key={idx} className="flex items-start gap-3 px-4 py-3.5">
-                  <span
-                    className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5"
-                    style={{ background: ev.color ?? DOT_COLOR[ev.type] }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[14px] font-medium text-ink">{ev.title}</p>
-                    {ev.location && <p className="text-[11px] text-ink-muted mt-0.5 truncate">📍 {ev.location}</p>}
-                    {ev.notes    && <p className="text-[11px] text-ink-faint mt-0.5 line-clamp-2">{ev.notes}</p>}
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {ev.amount && (
-                      <span className={cn('text-[11px] font-semibold font-mono px-2 py-0.5 rounded-md', EVENT_COLOR[ev.type])}>
-                        {ev.amount}
-                      </span>
-                    )}
-                    {ev.type === 'custom' && (
-                      <button
-                        onClick={() => handleDeleteCustomEvent(ev)}
-                        className="w-7 h-7 rounded-full bg-bg-overlay flex items-center justify-center"
-                      >
-                        <Trash2 size={12} className="text-ruby" />
-                      </button>
-                    )}
-                  </div>
+          {/* Selected day panel */}
+          {selectedLabel && (
+            <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden mb-4">
+              <div className="px-4 pt-4 pb-3 border-b border-white/[0.04] flex items-center justify-between">
+                <p className="text-[18px] font-semibold text-ink">{selectedLabel}</p>
+                <button
+                  onClick={() => setAddOpen(true)}
+                  className="w-7 h-7 rounded-full gradient-gold flex items-center justify-center select-none"
+                  aria-label="Add event on this day"
+                >
+                  <Plus size={13} className="text-white" />
+                </button>
+              </div>
+              {selectedEvents.length === 0 ? (
+                <div className="py-8 text-center text-ink-faint text-[13px]">Nothing on this day.</div>
+              ) : (
+                <div className="divide-y divide-white/[0.04]">
+                  {selectedEvents.map((ev, idx) => (
+                    <EventRow key={idx} ev={ev} onDelete={handleDeleteCustomEvent} />
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           )}
-        </div>
+
+          {!selectedLabel && (
+            <div className="mx-4 mt-4 mb-4 bg-bg-surface border border-white/[0.06] rounded-card py-8 text-center text-ink-faint text-[13px]">
+              Tap a day to see events.
+            </div>
+          )}
+        </>
       )}
 
-      {!selectedLabel && (
-        <div className="mx-4 mt-4 mb-4 bg-bg-surface border border-white/[0.06] rounded-card py-8 text-center text-ink-faint text-[13px]">
-          Tap a day to see events.
-        </div>
+      {/* ══ DETAIL MODE ══════════════════════════════════════════════ */}
+      {viewMode === 'detail' && (
+        <>
+          {/* ── Desktop / iPad: expanded month grid with event titles ── */}
+          <div className="hidden md:grid grid-cols-7 px-3 border-l border-t border-white/[0.06]">
+            {cells.map((day, i) => {
+              if (day === null) return (
+                <div key={i} className="h-[100px] border-r border-b border-white/[0.06] bg-bg-base/40" />
+              )
+              const ds        = dateStr(day)
+              const dayEvents = visibleMap[ds] ?? []
+              const isTod     = ds === todayStr
+              const isSel     = selected === ds
+              return (
+                <button
+                  key={i}
+                  onClick={() => setSelected(isSel ? null : ds)}
+                  className={cn(
+                    'h-[100px] border-r border-b border-white/[0.06] p-1.5 flex flex-col text-left overflow-hidden select-none transition-colors',
+                    isSel ? 'bg-bg-surface/80' : 'bg-transparent hover:bg-bg-surface/30',
+                  )}
+                >
+                  <span className={cn(
+                    'w-6 h-6 flex items-center justify-center rounded-lg text-[12px] font-medium mb-1 flex-shrink-0',
+                    isTod ? 'gradient-gold text-white font-bold' : 'text-ink-muted',
+                  )}>{day}</span>
+                  <div className="flex-1 w-full space-y-[2px] overflow-hidden">
+                    {dayEvents.slice(0, 3).map((ev, j) => (
+                      <div key={j} className="flex items-center gap-1 w-full">
+                        <span
+                          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                          style={{ background: ev.color ?? DOT_COLOR[ev.type] }}
+                        />
+                        <span className="text-[10px] text-ink truncate leading-tight">{ev.title}</span>
+                      </div>
+                    ))}
+                    {dayEvents.length > 3 && (
+                      <p className="text-[9px] text-ink-faint pl-2.5">+{dayEvents.length - 3} more</p>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Desktop selected-day panel */}
+          {selectedLabel && (
+            <div className="hidden md:block mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden mb-4">
+              <div className="px-4 pt-4 pb-3 border-b border-white/[0.04] flex items-center justify-between">
+                <p className="text-[18px] font-semibold text-ink">{selectedLabel}</p>
+                <button
+                  onClick={() => setAddOpen(true)}
+                  className="w-7 h-7 rounded-full gradient-gold flex items-center justify-center select-none"
+                  aria-label="Add event on this day"
+                >
+                  <Plus size={13} className="text-white" />
+                </button>
+              </div>
+              {selectedEvents.length === 0 ? (
+                <div className="py-8 text-center text-ink-faint text-[13px]">Nothing on this day.</div>
+              ) : (
+                <div className="divide-y divide-white/[0.04]">
+                  {selectedEvents.map((ev, idx) => (
+                    <EventRow key={idx} ev={ev} onDelete={handleDeleteCustomEvent} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Mobile: scrollable day-by-day list ─────────────────── */}
+          <div className="md:hidden px-4 pb-6 space-y-0">
+            {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
+              const ds        = dateStr(day)
+              const dayEvents = visibleMap[ds] ?? []
+              const isTod     = ds === todayStr
+              const weekday   = new Date(year, month, day).toLocaleDateString('en-US', { weekday: 'short' })
+              return (
+                <div key={day} className="py-2">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className={cn(
+                      'w-7 h-7 flex items-center justify-center rounded-lg text-[13px] font-medium flex-shrink-0',
+                      isTod ? 'gradient-gold text-white font-bold' : 'text-ink-muted',
+                    )}>{day}</span>
+                    <span className="text-[11px] text-ink-faint uppercase tracking-wide">{weekday}</span>
+                    {dayEvents.length > 0 && (
+                      <div className="flex gap-[3px] ml-1">
+                        {dayEvents.slice(0, 4).map((ev, j) => (
+                          <span
+                            key={j}
+                            className="w-[4px] h-[4px] rounded-full flex-shrink-0"
+                            style={{ background: ev.color ?? DOT_COLOR[ev.type] }}
+                          />
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      onClick={() => setAddOpen(true)}
+                      className="ml-auto w-6 h-6 rounded-full bg-bg-overlay border border-white/[0.06] flex items-center justify-center select-none opacity-50"
+                      aria-label="Add event"
+                    >
+                      <Plus size={11} className="text-ink-muted" />
+                    </button>
+                  </div>
+
+                  {dayEvents.length > 0 && (
+                    <div className="ml-9 bg-bg-surface border border-white/[0.06] rounded-xl overflow-hidden divide-y divide-white/[0.04]">
+                      {dayEvents.map((ev, idx) => (
+                        <EventRow key={idx} ev={ev} onDelete={handleDeleteCustomEvent} compact />
+                      ))}
+                    </div>
+                  )}
+
+                  {dayEvents.length === 0 && (
+                    <div className="ml-9 h-[1px] bg-white/[0.03]" />
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </>
       )}
     </div>
 
