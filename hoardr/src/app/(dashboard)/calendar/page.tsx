@@ -122,27 +122,25 @@ function DayEventCard({ ev, dot, timeRange, amt, onDelete }: {
   const [deleting, setDeleting] = useState(false)
   const M = 'var(--font-montserrat)'
   return (
-    <div style={{ paddingTop: 24, paddingBottom: 24, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-      {/* Title + dot */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 11 }}>
-        <span style={{ width: 7, height: 7, borderRadius: '50%', background: dot, flexShrink: 0, marginTop: 6 }} />
-        <span style={{ fontSize: 18, fontWeight: 500, color: 'rgba(255,255,255,0.9)', flex: 1, fontFamily: M, lineHeight: 1.3 }}>{ev.title}</span>
+    <div style={{ paddingTop: 24, paddingBottom: 24, borderBottom: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
+      {/* Title + dot — centered as a group */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, marginBottom: 6 }}>
+        <span style={{ width: 7, height: 7, borderRadius: '50%', background: dot, flexShrink: 0 }} />
+        <span style={{ fontSize: 18, fontWeight: 500, color: 'rgba(255,255,255,0.9)', fontFamily: M, lineHeight: 1.3 }}>{ev.title}</span>
         {ev.type === 'custom' && (
           <button onClick={async () => { setDeleting(true); await onDelete(ev) }} disabled={deleting}
-            style={{ background: 'none', border: 'none', padding: '0 2px', cursor: 'pointer', opacity: deleting ? 0.3 : 0.4, flexShrink: 0, paddingTop: 2 }}>
+            style={{ background: 'none', border: 'none', padding: '2px 4px', cursor: 'pointer', opacity: deleting ? 0.3 : 0.4, flexShrink: 0 }}>
             <Trash2 size={13} color="#ef4444" />
           </button>
         )}
       </div>
-      {/* Sub-info */}
-      {(timeRange || amt || ev.location || ev.notes) && (
-        <div style={{ paddingLeft: 18, marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {timeRange  && <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.36)', fontFamily: M }}>{timeRange}</span>}
-          {amt        && <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.36)', fontFamily: M }}>{amt}</span>}
-          {ev.location && <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.28)', fontFamily: M }}>{ev.location}</span>}
-          {ev.notes   && <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.22)', fontFamily: M, lineHeight: 1.55, marginTop: 2 }}>{ev.notes}</span>}
-        </div>
-      )}
+      {/* Sub-info — centered below */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {timeRange   && <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.36)', fontFamily: M }}>{timeRange}</span>}
+        {amt         && <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.36)', fontFamily: M }}>{amt}</span>}
+        {ev.location && <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.28)', fontFamily: M }}>{ev.location}</span>}
+        {ev.notes    && <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.22)', fontFamily: M, lineHeight: 1.55 }}>{ev.notes}</span>}
+      </div>
     </div>
   )
 }
@@ -200,10 +198,11 @@ export default function CalendarPage() {
   const monthsRef     = useRef(months)
 
   // Swipe gesture refs
-  const v1Swipe  = useRef<{ x: number; y: number } | null>(null)
-  const v2Swipe  = useRef<{ x: number; y: number } | null>(null)
-  const v3Swipe  = useRef<{ x: number; y: number } | null>(null)
-  const rowSwipe = useRef<{ x: number; y: number; ds: string } | null>(null)
+  const v1Swipe        = useRef<{ x: number; y: number } | null>(null)
+  const v2Swipe        = useRef<{ x: number; y: number } | null>(null)
+  const v3Swipe        = useRef<{ x: number; y: number } | null>(null)
+  const rowSwipe       = useRef<{ x: number; y: number; ds: string } | null>(null)
+  const scrollToToday  = useRef(false)  // only center today when entering from View 1
 
   useEffect(() => { monthsRef.current = months }, [months])
 
@@ -378,14 +377,19 @@ export default function CalendarPage() {
     await loadData()
   }
 
-  // ── Scroll to today when entering View 2 ──────────────────────────────────
+  // ── Scroll to today when entering View 2 from View 1 only ───────────────
   useEffect(() => {
-    if (viewIndex !== 1) return
+    if (viewIndex !== 1 || !scrollToToday.current) return
+    scrollToToday.current = false
     const t = setTimeout(() => {
       const el = dayRefs.current.get(todayStr)
       const sc = scrollRef.current
-      if (el && sc) sc.scrollTop = Math.max(0, el.offsetTop - sc.clientHeight / 2 + el.offsetHeight / 2)
-    }, 100)
+      if (!el || !sc) return
+      // Align today's visual center with the viewport center (where the MAY 2026 side label sits)
+      const scRect = sc.getBoundingClientRect()
+      const viewportCenter = window.innerHeight / 2
+      sc.scrollTop = Math.max(0, scRect.top + el.offsetTop + el.offsetHeight / 2 - viewportCenter)
+    }, 120)
     return () => clearTimeout(t)
   }, [viewIndex, todayStr])
 
@@ -457,7 +461,7 @@ export default function CalendarPage() {
   const v1End = useCallback((e: React.TouchEvent) => {
     const s = v1Swipe.current; v1Swipe.current = null; if (!s) return
     const t = e.changedTouches[0], dx = t.clientX - s.x, dy = t.clientY - s.y
-    if (dx < -60 && Math.abs(dx) > Math.abs(dy) * 1.5) setViewIndex(1)
+    if (dx < -60 && Math.abs(dx) > Math.abs(dy) * 1.5) { scrollToToday.current = true; setViewIndex(1) }
   }, [])
 
   // View 2 → View 1: any right swipe (strict diagonal so vertical scroll still works)
@@ -593,7 +597,7 @@ export default function CalendarPage() {
 
           {/* Compact header */}
           <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingTop: SAFE_TOP, paddingBottom: 10, paddingLeft: 14, paddingRight: 14, gap: 6, background: '#0a0a0a', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-            <button onClick={() => { const el = dayRefs.current.get(todayStr); const sc = scrollRef.current; if (el && sc) sc.scrollTo({ top: Math.max(0, el.offsetTop - sc.clientHeight / 2 + el.offsetHeight / 2), behavior: 'smooth' }) }}
+            <button onClick={() => { const el = dayRefs.current.get(todayStr); const sc = scrollRef.current; if (el && sc) { const r = sc.getBoundingClientRect(); sc.scrollTo({ top: Math.max(0, r.top + el.offsetTop + el.offsetHeight / 2 - window.innerHeight / 2), behavior: 'smooth' }) } }}
               style={{ height: 30, padding: '0 10px', borderRadius: 15, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.07)', fontSize: 11, color: '#D4AF37', fontWeight: 600, flexShrink: 0, cursor: 'pointer' }}>
               Today
             </button>
