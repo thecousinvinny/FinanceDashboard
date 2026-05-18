@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
-import { Plus, Trash2, SlidersHorizontal } from 'lucide-react'
+import { Plus, Trash2, SlidersHorizontal, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning, type LucideIcon } from 'lucide-react'
 import { AddEventSheet, type NewCalEvent } from '@/components/calendar/AddEventSheet'
 import { CalendarSettingsSheet, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
 import { createCalEvent, deleteCalEvent, allDayEvent, timedEvent } from '@/lib/calendar'
@@ -71,16 +71,16 @@ function getTimeRange(ev: CalEvent): string | null {
 }
 
 interface DayWeather { high: number; low: number; code: number; precipProb: number; wind: number }
-function getWeatherInfo(code: number): { icon: string; desc: string } {
-  if (code === 0)  return { icon: '☀️', desc: 'Clear' }
-  if (code <= 2)   return { icon: '🌤', desc: 'Partly cloudy' }
-  if (code === 3)  return { icon: '☁️', desc: 'Overcast' }
-  if (code <= 48)  return { icon: '🌫', desc: 'Foggy' }
-  if (code <= 55)  return { icon: '🌦', desc: 'Drizzle' }
-  if (code <= 65)  return { icon: '🌧', desc: 'Rain' }
-  if (code <= 77)  return { icon: '❄️', desc: 'Snow' }
-  if (code <= 82)  return { icon: '🌦', desc: 'Showers' }
-  return { icon: '⛈', desc: 'Thunderstorm' }
+function getWeatherInfo(code: number): { Icon: LucideIcon; desc: string } {
+  if (code === 0)  return { Icon: Sun,            desc: 'Clear' }
+  if (code <= 2)   return { Icon: CloudSun,        desc: 'Partly cloudy' }
+  if (code === 3)  return { Icon: Cloud,            desc: 'Overcast' }
+  if (code <= 48)  return { Icon: CloudFog,         desc: 'Foggy' }
+  if (code <= 55)  return { Icon: CloudDrizzle,     desc: 'Drizzle' }
+  if (code <= 65)  return { Icon: CloudRain,        desc: 'Rain' }
+  if (code <= 77)  return { Icon: CloudSnow,        desc: 'Snow' }
+  if (code <= 82)  return { Icon: CloudRain,        desc: 'Showers' }
+  return           { Icon: CloudLightning,   desc: 'Thunderstorm' }
 }
 function monthLabel(y: number, m: number) {
   return new Date(y, m, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()
@@ -384,7 +384,7 @@ export default function CalendarPage() {
     const t = setTimeout(() => {
       const el = dayRefs.current.get(todayStr)
       const sc = scrollRef.current
-      if (el && sc) sc.scrollTop = el.offsetTop - 60
+      if (el && sc) sc.scrollTop = Math.max(0, el.offsetTop - sc.clientHeight / 2 + el.offsetHeight / 2)
     }, 100)
     return () => clearTimeout(t)
   }, [viewIndex, todayStr])
@@ -593,7 +593,7 @@ export default function CalendarPage() {
 
           {/* Compact header */}
           <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingTop: SAFE_TOP, paddingBottom: 10, paddingLeft: 14, paddingRight: 14, gap: 6, background: '#0a0a0a', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-            <button onClick={() => { const el = dayRefs.current.get(todayStr); const sc = scrollRef.current; if (el && sc) sc.scrollTo({ top: el.offsetTop - 60, behavior: 'smooth' }) }}
+            <button onClick={() => { const el = dayRefs.current.get(todayStr); const sc = scrollRef.current; if (el && sc) sc.scrollTo({ top: Math.max(0, el.offsetTop - sc.clientHeight / 2 + el.offsetHeight / 2), behavior: 'smooth' }) }}
               style={{ height: 30, padding: '0 10px', borderRadius: 15, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.07)', fontSize: 11, color: '#D4AF37', fontWeight: 600, flexShrink: 0, cursor: 'pointer' }}>
               Today
             </button>
@@ -711,10 +711,10 @@ export default function CalendarPage() {
           {/* ── Weather — pinned bottom, day-specific from 14-day forecast ── */}
           {selectedDay && weatherMap[selectedDay] && (() => {
             const w = weatherMap[selectedDay]!
-            const { icon, desc } = getWeatherInfo(w.code)
+            const { Icon: WeatherIcon, desc } = getWeatherInfo(w.code)
             return (
               <div style={{ flexShrink: 0, textAlign: 'center', paddingTop: 18, paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 88px)', borderTop: '1px solid rgba(255,255,255,0.05)', background: '#080810' }}>
-                <div style={{ fontSize: 26, lineHeight: 1, marginBottom: 6 }}>{icon}</div>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}><WeatherIcon size={26} strokeWidth={1.25} color="rgba(255,255,255,0.45)" /></div>
                 <p style={{ fontSize: 30, fontWeight: 600, color: 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-montserrat)', margin: '0 0 5px', letterSpacing: '-0.01em' }}>
                   {w.high}° / {w.low}°
                 </p>
