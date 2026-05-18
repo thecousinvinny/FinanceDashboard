@@ -70,7 +70,7 @@ function getTimeRange(ev: CalEvent): string | null {
   return parts.length ? parts.join(' – ') : null
 }
 
-interface WeatherData { temp: number; code: number; humidity: number; wind: number }
+interface DayWeather { high: number; low: number; code: number; precipProb: number; wind: number }
 function getWeatherInfo(code: number): { icon: string; desc: string } {
   if (code === 0)  return { icon: '☀️', desc: 'Clear' }
   if (code <= 2)   return { icon: '🌤', desc: 'Partly cloudy' }
@@ -174,7 +174,7 @@ export default function CalendarPage() {
   const [addOpen,      setAddOpen]      = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [addDate,      setAddDate]      = useState<string | undefined>()
-  const [weather,      setWeather]      = useState<WeatherData | null>(null)
+  const [weatherMap,   setWeatherMap]   = useState<Record<string, DayWeather>>({})
 
   // Infinite scroll
   const [months, setMonths] = useState<MonthKey[]>(() =>
@@ -279,11 +279,20 @@ export default function CalendarPage() {
     if (!('geolocation' in navigator)) return
     navigator.geolocation.getCurrentPosition(pos => {
       const { latitude: lat, longitude: lon } = pos.coords
-      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode,windspeed_10m,relative_humidity_2m&temperature_unit=fahrenheit&wind_speed_unit=mph`)
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_probability_max,windspeed_10m_max&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=14`)
         .then(r => r.json())
-        .then((d: { current: { temperature_2m: number; weathercode: number; windspeed_10m: number; relative_humidity_2m: number } }) => {
-          const c = d.current
-          setWeather({ temp: Math.round(c.temperature_2m), code: c.weathercode, humidity: Math.round(c.relative_humidity_2m), wind: Math.round(c.windspeed_10m) })
+        .then((d: { daily: { time: string[]; temperature_2m_max: number[]; temperature_2m_min: number[]; weathercode: number[]; precipitation_probability_max: number[]; windspeed_10m_max: number[] } }) => {
+          const map: Record<string, DayWeather> = {}
+          d.daily.time.forEach((date, i) => {
+            map[date] = {
+              high:      Math.round(d.daily.temperature_2m_max[i]),
+              low:       Math.round(d.daily.temperature_2m_min[i]),
+              code:      d.daily.weathercode[i],
+              precipProb: Math.round(d.daily.precipitation_probability_max[i] ?? 0),
+              wind:      Math.round(d.daily.windspeed_10m_max[i]),
+            }
+          })
+          setWeatherMap(map)
         })
         .catch(() => {})
     }, () => {})
@@ -699,15 +708,18 @@ export default function CalendarPage() {
             )}
           </div>
 
-          {/* ── Weather — pinned bottom, only when data available ── */}
-          {weather && (() => {
-            const { icon, desc } = getWeatherInfo(weather.code)
+          {/* ── Weather — pinned bottom, day-specific from 14-day forecast ── */}
+          {selectedDay && weatherMap[selectedDay] && (() => {
+            const w = weatherMap[selectedDay]!
+            const { icon, desc } = getWeatherInfo(w.code)
             return (
               <div style={{ flexShrink: 0, textAlign: 'center', paddingTop: 18, paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 88px)', borderTop: '1px solid rgba(255,255,255,0.05)', background: '#080810' }}>
                 <div style={{ fontSize: 26, lineHeight: 1, marginBottom: 6 }}>{icon}</div>
-                <p style={{ fontSize: 30, fontWeight: 600, color: 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-montserrat)', margin: '0 0 5px', letterSpacing: '-0.01em' }}>{weather.temp}°F</p>
+                <p style={{ fontSize: 30, fontWeight: 600, color: 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-montserrat)', margin: '0 0 5px', letterSpacing: '-0.01em' }}>
+                  {w.high}° / {w.low}°
+                </p>
                 <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.04em', margin: 0 }}>
-                  {desc} · {weather.humidity}% humidity · {weather.wind}mph wind
+                  {desc}{w.precipProb > 0 ? ` · ${w.precipProb}% rain` : ''} · {w.wind}mph wind
                 </p>
               </div>
             )
