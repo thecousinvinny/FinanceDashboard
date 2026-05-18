@@ -69,6 +69,19 @@ function getTimeRange(ev: CalEvent): string | null {
     .map(t => /^\d{2}:\d{2}$/.test(t) ? fmt12(t) : t)
   return parts.length ? parts.join(' – ') : null
 }
+
+interface WeatherData { temp: number; code: number; humidity: number; wind: number }
+function getWeatherInfo(code: number): { icon: string; desc: string } {
+  if (code === 0)  return { icon: '☀️', desc: 'Clear' }
+  if (code <= 2)   return { icon: '🌤', desc: 'Partly cloudy' }
+  if (code === 3)  return { icon: '☁️', desc: 'Overcast' }
+  if (code <= 48)  return { icon: '🌫', desc: 'Foggy' }
+  if (code <= 55)  return { icon: '🌦', desc: 'Drizzle' }
+  if (code <= 65)  return { icon: '🌧', desc: 'Rain' }
+  if (code <= 77)  return { icon: '❄️', desc: 'Snow' }
+  if (code <= 82)  return { icon: '🌦', desc: 'Showers' }
+  return { icon: '⛈', desc: 'Thunderstorm' }
+}
 function monthLabel(y: number, m: number) {
   return new Date(y, m, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()
 }
@@ -101,52 +114,35 @@ function EventRow({ ev, onDelete }: { ev: CalEvent; onDelete: (ev: CalEvent) => 
   )
 }
 
-// ── Expanded day event card (View 3) ──────────────────────────────────────────
+// ── Expanded day event card (View 3 — Timepage style, no cards) ──────────────
 function DayEventCard({ ev, dot, timeRange, amt, onDelete }: {
   ev: CalEvent; dot: string; timeRange: string | null; amt: string | null
   onDelete: (ev: CalEvent) => Promise<void>
 }) {
   const [deleting, setDeleting] = useState(false)
+  const M = 'var(--font-montserrat)'
   return (
-    <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 14, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {/* Title row */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-        <span style={{ width: 8, height: 8, borderRadius: '50%', background: dot, flexShrink: 0, marginTop: 5 }} />
-        <span style={{ fontSize: 17, fontWeight: 500, color: 'rgba(255,255,255,0.92)', flex: 1, lineHeight: 1.35 }}>{ev.title}</span>
+    <div style={{ paddingTop: 24, paddingBottom: 24, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      {/* Title + dot */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 11 }}>
+        <span style={{ width: 7, height: 7, borderRadius: '50%', background: dot, flexShrink: 0, marginTop: 6 }} />
+        <span style={{ fontSize: 18, fontWeight: 500, color: 'rgba(255,255,255,0.9)', flex: 1, fontFamily: M, lineHeight: 1.3 }}>{ev.title}</span>
         {ev.type === 'custom' && (
           <button onClick={async () => { setDeleting(true); await onDelete(ev) }} disabled={deleting}
-            style={{ background: 'none', border: 'none', padding: 4, cursor: 'pointer', opacity: deleting ? 0.4 : 1, flexShrink: 0 }}>
-            <Trash2 size={14} color="#ef4444" />
+            style={{ background: 'none', border: 'none', padding: '0 2px', cursor: 'pointer', opacity: deleting ? 0.3 : 0.4, flexShrink: 0, paddingTop: 2 }}>
+            <Trash2 size={13} color="#ef4444" />
           </button>
         )}
       </div>
-      {/* Details */}
-      <div style={{ paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 5 }}>
-        {timeRange && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', width: 14 }}>⏱</span>
-            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace' }}>{timeRange}</span>
-          </div>
-        )}
-        {amt && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', width: 14 }}>$</span>
-            <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', fontFamily: 'monospace', fontWeight: 600 }}>{amt}</span>
-          </div>
-        )}
-        {ev.location && (
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', width: 14, flexShrink: 0 }}>📍</span>
-            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 1.4 }}>{ev.location}</span>
-          </div>
-        )}
-        {ev.notes && (
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', width: 14, flexShrink: 0, marginTop: 1 }}>✎</span>
-            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', lineHeight: 1.55 }}>{ev.notes}</span>
-          </div>
-        )}
-      </div>
+      {/* Sub-info */}
+      {(timeRange || amt || ev.location || ev.notes) && (
+        <div style={{ paddingLeft: 18, marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {timeRange  && <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.36)', fontFamily: M }}>{timeRange}</span>}
+          {amt        && <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.36)', fontFamily: M }}>{amt}</span>}
+          {ev.location && <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.28)', fontFamily: M }}>{ev.location}</span>}
+          {ev.notes   && <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.22)', fontFamily: M, lineHeight: 1.55, marginTop: 2 }}>{ev.notes}</span>}
+        </div>
+      )}
     </div>
   )
 }
@@ -178,6 +174,7 @@ export default function CalendarPage() {
   const [addOpen,      setAddOpen]      = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [addDate,      setAddDate]      = useState<string | undefined>()
+  const [weather,      setWeather]      = useState<WeatherData | null>(null)
 
   // Infinite scroll
   const [months, setMonths] = useState<MonthKey[]>(() =>
@@ -277,6 +274,20 @@ export default function CalendarPage() {
   }, [supabase])
 
   useEffect(() => { loadData(); return () => { loadGen.current++; abortRef.current?.abort() } }, [loadData])
+
+  useEffect(() => {
+    if (!('geolocation' in navigator)) return
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude: lat, longitude: lon } = pos.coords
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode,windspeed_10m,relative_humidity_2m&temperature_unit=fahrenheit&wind_speed_unit=mph`)
+        .then(r => r.json())
+        .then((d: { current: { temperature_2m: number; weathercode: number; windspeed_10m: number; relative_humidity_2m: number } }) => {
+          const c = d.current
+          setWeather({ temp: Math.round(c.temperature_2m), code: c.weathercode, humidity: Math.round(c.relative_humidity_2m), wind: Math.round(c.windspeed_10m) })
+        })
+        .catch(() => {})
+    }, () => {})
+  }, [])
 
   useEffect(() => {
     if ((!settingsOpen && !addOpen) || googleCals.length > 0) return
@@ -649,33 +660,33 @@ export default function CalendarPage() {
         </div>
 
         {/* ═══════════════════════════════════════════════════════════════
-            VIEW 3 — Daily Summary
+            VIEW 3 — Daily Summary (Timepage style)
             Edge swipe right → View 2
         ═══════════════════════════════════════════════════════════════ */}
-        <div style={{ width: '100vw', height: '100%', flex: 'none', background: '#0a0a0a', display: 'flex', flexDirection: 'column', touchAction: 'pan-y' }}
+        <div style={{ width: '100vw', height: '100%', flex: 'none', background: '#080810', display: 'flex', flexDirection: 'column', touchAction: 'pan-y' }}
           onTouchStart={v3Start} onTouchEnd={v3End}>
 
-          {/* Day header */}
-          <div style={{ flexShrink: 0, paddingTop: SAFE_TOP, paddingBottom: 20, textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', background: '#0a0a0a' }}>
-            <p style={{ fontSize: 11, letterSpacing: '0.2em', fontWeight: 700, textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', margin: '0 0 6px' }}>
+          {/* ── Centered date header ── */}
+          <div style={{ flexShrink: 0, paddingTop: SAFE_TOP, paddingBottom: 28, textAlign: 'center', background: '#080810' }}>
+            <p style={{ fontSize: 10, letterSpacing: '0.26em', fontWeight: 700, textTransform: 'uppercase', color: 'rgba(212,175,55,0.65)', margin: '0 0 2px', fontFamily: 'var(--font-montserrat)' }}>
               {dayName}
             </p>
-            <p style={{ fontSize: 52, fontWeight: 700, color: '#f0f0f8', letterSpacing: '-0.03em', lineHeight: 1, margin: '0 0 6px' }}>
+            <p style={{ fontSize: 96, fontWeight: 800, color: 'rgba(255,255,255,0.95)', letterSpacing: '-0.02em', lineHeight: 0.95, margin: '0 0 8px', fontFamily: 'var(--font-big-shoulders)' }}>
               {dayNum}
             </p>
-            <p style={{ fontSize: 12, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', margin: 0 }}>
+            <p style={{ fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', margin: 0, fontFamily: 'var(--font-montserrat)' }}>
               {dayMonthYr}
             </p>
           </div>
 
-          {/* Event list — expanded inline, no detail sheet */}
+          {/* ── Airy event list ── */}
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {dayEvents.length === 0 ? (
-              <div style={{ paddingTop: 60, textAlign: 'center', color: 'rgba(255,255,255,0.2)', fontSize: 14 }}>
-                Nothing today
+              <div style={{ paddingTop: 52, textAlign: 'center', color: 'rgba(255,255,255,0.15)', fontSize: 13, fontFamily: 'var(--font-montserrat)', letterSpacing: '0.06em' }}>
+                Nothing scheduled
               </div>
             ) : (
-              <div style={{ padding: '12px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ padding: '0 32px' }}>
                 {dayEvents.map((ev, idx) => {
                   const timeRange = getTimeRange(ev)
                   const dot = ev.color ?? DETAIL_DOT[ev.type]
@@ -686,8 +697,21 @@ export default function CalendarPage() {
                 })}
               </div>
             )}
-            <div style={{ height: 88 }} />
           </div>
+
+          {/* ── Weather — pinned bottom, only when data available ── */}
+          {weather && (() => {
+            const { icon, desc } = getWeatherInfo(weather.code)
+            return (
+              <div style={{ flexShrink: 0, textAlign: 'center', paddingTop: 18, paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 88px)', borderTop: '1px solid rgba(255,255,255,0.05)', background: '#080810' }}>
+                <div style={{ fontSize: 26, lineHeight: 1, marginBottom: 6 }}>{icon}</div>
+                <p style={{ fontSize: 30, fontWeight: 600, color: 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-montserrat)', margin: '0 0 5px', letterSpacing: '-0.01em' }}>{weather.temp}°F</p>
+                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.04em', margin: 0 }}>
+                  {desc} · {weather.humidity}% humidity · {weather.wind}mph wind
+                </p>
+              </div>
+            )
+          })()}
         </div>
 
       </div>{/* end sliding rail */}
