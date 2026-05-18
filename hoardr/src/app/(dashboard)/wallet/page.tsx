@@ -12,6 +12,7 @@ import { CategoryIcon } from '@/components/ui/CategoryIcon'
 
 import type { Card, Bank } from '@/types'
 import { cn, $fd, $fk, fmtDate } from '@/lib/utils'
+import { showToast } from '@/lib/toast'
 import { pageCache } from '@/lib/page-cache'
 import { PullIndicator } from '@/components/ui/PullIndicator'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
@@ -141,16 +142,32 @@ export default function WalletPage() {
     return () => { detailGen.current++; detailAbortRef.current?.abort() }
   }, [selectedCard, supabase])
 
-  async function handleDeleteCard(id: string) {
+  function handleDeleteCard(id: string) {
+    const card = cards.find(c => c.id === id)
+    if (!card) return
+    const snapshot = cards.slice()
     setCards(prev => prev.filter(c => c.id !== id))
-    const { error } = await supabase.from('cards').delete().eq('id', id)
-    if (error) { console.error('delete card error:', JSON.stringify(error)); await loadData() }
+    showToast(`${card.name} deleted`, {
+      type: 'delete',
+      undo: {
+        onUndo:   () => setCards(snapshot),
+        onCommit: () => { supabase.from('cards').delete().eq('id', id) },
+      },
+    })
   }
 
-  async function handleDeleteBank(id: string) {
+  function handleDeleteBank(id: string) {
+    const bank = banks.find(b => b.id === id)
+    if (!bank) return
+    const snapshot = banks.slice()
     setBanks(prev => prev.filter(b => b.id !== id))
-    const { error } = await supabase.from('banks').delete().eq('id', id)
-    if (error) { console.error('delete bank error:', JSON.stringify(error)); await loadData() }
+    showToast(`${bank.name} deleted`, {
+      type: 'delete',
+      undo: {
+        onUndo:   () => setBanks(snapshot),
+        onCommit: () => { supabase.from('banks').delete().eq('id', id) },
+      },
+    })
   }
 
   async function handleAddCard(newCard: NewCard) {
@@ -166,6 +183,7 @@ export default function WalletPage() {
       is_default: false, created_at: new Date().toISOString(),
     }
     setCards(prev => [optimistic, ...prev])
+    showToast(`${newCard.name} added`, { type: 'add' })
 
     const { error } = await supabase.from('cards').insert({
       user_id: user.id, bank_id: newCard.bank_id, name: newCard.name,
@@ -219,6 +237,7 @@ export default function WalletPage() {
       created_at: new Date().toISOString(),
     }
     setBanks(prev => [optimistic, ...prev])
+    showToast(`${newBank.name} added`, { type: 'add' })
 
     const { error } = await supabase.from('banks').insert({
       user_id: user.id, name: newBank.name, type: newBank.type, last4: newBank.last4,

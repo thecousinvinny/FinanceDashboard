@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { getCategoryIcon } from '@/components/ui/CategoryIcon'
 import { daysUntilLabel, $fd, localToday, nextRenewalDate } from '@/lib/utils'
+import { showToast } from '@/lib/toast'
 import type { BillingCycle } from '@/types'
 
 export interface UpcomingSub {
@@ -41,6 +42,7 @@ export function UpcomingBills({ initial }: { initial: UpcomingSub[] }) {
     const today      = localToday()
     const newRenewal = nextRenewalDate(sub.next_renewal ?? today, sub.billing)
     setItems(prev => prev.map(s => s.id === id ? { ...s, next_renewal: newRenewal } : s))
+    showToast(`${sub.name} paid`, { type: 'payment' })
 
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -67,10 +69,22 @@ export function UpcomingBills({ initial }: { initial: UpcomingSub[] }) {
     router.refresh()
   }
 
-  async function handleCancel(id: string) {
+  function handleCancel(id: string) {
+    const sub = items.find(s => s.id === id)
     setItems(prev => prev.filter(s => s.id !== id))
     const supabase = createClient()
-    await supabase.from('subscriptions').update({ status: 'Cancelled' }).eq('id', id)
+    supabase.from('subscriptions').update({ status: 'Cancelled' }).eq('id', id)
+    if (!sub) return
+    showToast(`${sub.name} cancelled`, {
+      type: 'delete',
+      undo: {
+        onUndo: () => {
+          setItems(prev => [...prev, sub])
+          supabase.from('subscriptions').update({ status: 'Active' }).eq('id', id)
+        },
+        onCommit: () => {},
+      },
+    })
   }
 
   if (items.length === 0) return null

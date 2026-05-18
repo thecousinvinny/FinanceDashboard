@@ -9,6 +9,7 @@ import { AddWishlistSheet, type NewWishItem } from '@/components/plans/AddWishli
 import { EditSubscriptionSheet, type SubEdits } from '@/components/plans/EditSubscriptionSheet'
 import { EditWishlistSheet, type WishEdits } from '@/components/plans/EditWishlistSheet'
 import { daysUntilLabel, $fc, $fd, $fk, cn, calcSubCosts, localToday, nextRenewalDate } from '@/lib/utils'
+import { showToast } from '@/lib/toast'
 import { SlotNumber } from '@/components/ui/SlotNumber'
 import { createCalEvent, updateCalEvent, deleteCalEvent, allDayEvent } from '@/lib/calendar'
 import { pageCache } from '@/lib/page-cache'
@@ -172,6 +173,7 @@ function PlansPageInner() {
     if (!item) return
 
     setWishlist(prev => prev.map(w => w.id === id ? { ...w, status: 'Purchased', bought_cost: paidCost } : w))
+    showToast(`${item.name} purchased`, { type: 'payment' })
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { await loadData(); return }
@@ -218,6 +220,7 @@ function PlansPageInner() {
     const today = localToday()
     const newRenewal = nextRenewalDate(sub.next_renewal ?? today, sub.billing)
     setSubs(prev => prev.map(s => s.id === id ? { ...s, next_renewal: newRenewal } : s))
+    showToast(`${sub.name} paid`, { type: 'payment' })
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { await loadData(); return }
@@ -250,9 +253,21 @@ function PlansPageInner() {
   }
 
   async function handleCancelSub(id: string) {
+    const sub = subs.find(s => s.id === id)
     setSubs(prev => prev.map(s => s.id === id ? { ...s, status: 'Cancelled' } : s))
     const { error } = await supabase.from('subscriptions').update({ status: 'Cancelled' }).eq('id', id)
-    if (error) { console.error('cancel sub error:', JSON.stringify(error)); await loadData() }
+    if (error) { console.error('cancel sub error:', JSON.stringify(error)); await loadData(); return }
+    if (!sub) return
+    showToast(`${sub.name} cancelled`, {
+      type: 'delete',
+      undo: {
+        onUndo: () => {
+          setSubs(prev => prev.map(s => s.id === id ? { ...s, status: 'Active' } : s))
+          supabase.from('subscriptions').update({ status: 'Active' }).eq('id', id)
+        },
+        onCommit: () => {},
+      },
+    })
   }
 
   async function handleRestoreSub(id: string) {
@@ -261,18 +276,35 @@ function PlansPageInner() {
     if (error) { console.error('restore sub error:', JSON.stringify(error)); await loadData() }
   }
 
-  async function handleDeleteSub(id: string) {
+  function handleDeleteSub(id: string) {
     const sub = subs.find(s => s.id === id)
-    if (sub?.cal_event_id) await deleteCalEvent(sub.cal_event_id)
+    if (!sub) return
+    const snapshot = subs.slice()
     setSubs(prev => prev.filter(s => s.id !== id))
-    const { error } = await supabase.from('subscriptions').delete().eq('id', id)
-    if (error) { console.error('delete sub error:', JSON.stringify(error)); await loadData() }
+    showToast(`${sub.name} deleted`, {
+      type: 'delete',
+      undo: {
+        onUndo:   () => setSubs(snapshot),
+        onCommit: () => {
+          if (sub.cal_event_id) deleteCalEvent(sub.cal_event_id)
+          supabase.from('subscriptions').delete().eq('id', id)
+        },
+      },
+    })
   }
 
-  async function handleDeleteWish(id: string) {
+  function handleDeleteWish(id: string) {
+    const item = wishlist.find(w => w.id === id)
+    if (!item) return
+    const snapshot = wishlist.slice()
     setWishlist(prev => prev.filter(w => w.id !== id))
-    const { error } = await supabase.from('wishlist').delete().eq('id', id)
-    if (error) { console.error('delete wish error:', JSON.stringify(error)); await loadData() }
+    showToast(`${item.name} deleted`, {
+      type: 'delete',
+      undo: {
+        onUndo:   () => setWishlist(snapshot),
+        onCommit: () => { supabase.from('wishlist').delete().eq('id', id) },
+      },
+    })
   }
 
   async function handleAddSub(sub: NewSub) {
@@ -286,6 +318,7 @@ function PlansPageInner() {
       next_renewal: sub.next_renewal, status: 'Active', card_id: sub.card_id,
       category: sub.category ?? null, cal_event_id: null,
     }])
+    showToast(`${sub.name} added`, { type: 'add' })
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { await loadData(); return }
@@ -328,6 +361,7 @@ function PlansPageInner() {
       category: item.category, url: item.url,
       bought_cost: null, status: 'Interested',
     }, ...prev])
+    showToast(`${item.name} added`, { type: 'add' })
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { await loadData(); return }

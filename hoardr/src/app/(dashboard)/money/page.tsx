@@ -8,6 +8,7 @@ import { EditTransactionSheet, type TxEdits } from '@/components/money/EditTrans
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import { type SeedTx } from '@/lib/data/transactions'
 import { groupByMonth, fmtDate, localToday, $fk, $fc, $fd, cn } from '@/lib/utils'
+import { showToast } from '@/lib/toast'
 import { SlotNumber } from '@/components/ui/SlotNumber'
 import { pageCache } from '@/lib/page-cache'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
@@ -221,16 +222,25 @@ export default function MoneyPage() {
     return () => { mounted = false }
   }, [supabase])
 
-  async function handleDelete(tx: SeedTx) {
+  function handleDelete(tx: SeedTx) {
+    const snapshot = txListRef.current.slice()
     setTxList(prev => prev.filter(t => t.id !== tx.id))
-    const table = tx.type === 'Expense' ? 'expenses' : 'income'
-    const { error } = await supabase.from(table).delete().eq('id', tx.id)
-    if (error) { console.error('delete error:', JSON.stringify(error)); await loadData() }
+    showToast(`${tx.name} deleted`, {
+      type: 'delete',
+      undo: {
+        onUndo:   () => setTxList(snapshot),
+        onCommit: () => {
+          const table = tx.type === 'Expense' ? 'expenses' : 'income'
+          supabase.from(table).delete().eq('id', tx.id)
+        },
+      },
+    })
   }
 
   async function handleAdd(tx: SeedTx) {
     // Optimistic insert
     setTxList(prev => [tx, ...prev])
+    showToast(`${tx.name} added`, { type: 'add' })
 
     const { data: { user }, error: userErr } = await supabase.auth.getUser()
     if (userErr || !user) { console.error('handleAdd: no user', userErr); return }

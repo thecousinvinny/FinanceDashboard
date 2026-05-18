@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { NEXT_STATUS, STATUS_LABEL, STATUS_COLORS, STATUS_PROGRESS } from '@/lib/data/studio'
 import { fmtDate, daysUntilLabel, $fd, cn, localToday } from '@/lib/utils'
+import { showToast } from '@/lib/toast'
 import { createCalEvent, allDayEvent } from '@/lib/calendar'
 import type { CommissionStatus } from '@/types'
 import { AddCommissionSheet, type NewCommission } from '@/components/studio/AddCommissionSheet'
@@ -82,10 +83,18 @@ export default function StudioPage() {
   const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } =
     usePullToRefresh(loadData)
 
-  async function handleDelete(id: string) {
+  function handleDelete(id: string) {
+    const commission = commissions.find(c => c.id === id)
+    if (!commission) return
+    const snapshot = commissions.slice()
     setCommissions(prev => prev.filter(c => c.id !== id))
-    const { error } = await supabase.from('commissions').delete().eq('id', id)
-    if (error) { console.error('delete commission error:', JSON.stringify(error)); await loadData() }
+    showToast('Commission deleted', {
+      type: 'delete',
+      undo: {
+        onUndo:   () => setCommissions(snapshot),
+        onCommit: () => { supabase.from('commissions').delete().eq('id', id) },
+      },
+    })
   }
 
   async function handleAdd(newC: NewCommission) {
@@ -99,6 +108,7 @@ export default function StudioPage() {
       status: 'Pending', notes: newC.notes, paid_at: null, income_id: null, cal_event_id: null,
     }
     setCommissions(prev => [optimistic, ...prev])
+    showToast(`${newC.client_name} added`, { type: 'add' })
 
     const { error } = await supabase.from('commissions').insert({
       user_id:      user.id,
@@ -145,6 +155,7 @@ export default function StudioPage() {
           paid_at:   new Date().toISOString(),
           income_id: incomeRow?.id ?? null,
         }).eq('id', commission.id)
+        showToast(`${commission.client_name} paid`, { type: 'payment' })
       }
     } else {
       await supabase.from('commissions').update({ status: next }).eq('id', commission.id)

@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
+import { showToast } from '@/lib/toast'
 import { Plus, Trash2, SlidersHorizontal, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning, type LucideIcon } from 'lucide-react'
 import { AddEventSheet, type NewCalEvent } from '@/components/calendar/AddEventSheet'
 import { CalendarSettingsSheet, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
@@ -80,7 +81,7 @@ function monthLabel(y: number, m: number) {
 const SAFE_TOP = 'calc(max(env(safe-area-inset-top, 0px), 44px) + 12px)'
 
 // ── Grid event row ─────────────────────────────────────────────────────────────
-function EventRow({ ev, onDelete }: { ev: CalEvent; onDelete: (ev: CalEvent) => Promise<void> }) {
+function EventRow({ ev, onDelete }: { ev: CalEvent; onDelete: (ev: CalEvent) => void }) {
   // For custom/google events, ev.amount holds raw "HH:MM – HH:MM" — convert to AM/PM
   const displayAmt = ev.amount && (ev.type === 'custom' || ev.type === 'google')
     ? ev.amount.split(' – ').map(t => /^\d{2}:\d{2}$/.test(t.trim()) ? fmt12(t.trim()) : t).join(' – ')
@@ -96,7 +97,7 @@ function EventRow({ ev, onDelete }: { ev: CalEvent; onDelete: (ev: CalEvent) => 
       <div className="flex items-center gap-2 flex-shrink-0">
         {displayAmt && <span className={cn('text-[11px] font-semibold font-mono px-2 py-0.5 rounded-md', EVENT_COLOR[ev.type])}>{displayAmt}</span>}
         {ev.type === 'custom' && (
-          <button onClick={() => onDelete(ev)} className="w-7 h-7 rounded-full bg-bg-overlay flex items-center justify-center">
+          <button onClick={() => onDelete(ev)} className="w-7 h-7 rounded-full bg-bg-overlay flex items-center justify-center" aria-label="Delete event">
             <Trash2 size={12} className="text-ruby" />
           </button>
         )}
@@ -108,9 +109,8 @@ function EventRow({ ev, onDelete }: { ev: CalEvent; onDelete: (ev: CalEvent) => 
 // ── Expanded day event card (View 3 — Timepage style, no cards) ──────────────
 function DayEventCard({ ev, dot, timeRange, amt, onDelete }: {
   ev: CalEvent; dot: string; timeRange: string | null; amt: string | null
-  onDelete: (ev: CalEvent) => Promise<void>
+  onDelete: (ev: CalEvent) => void
 }) {
-  const [deleting, setDeleting] = useState(false)
   const M = 'var(--font-montserrat)'
   return (
     <div style={{ paddingTop: 24, paddingBottom: 24, borderBottom: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
@@ -119,8 +119,8 @@ function DayEventCard({ ev, dot, timeRange, amt, onDelete }: {
         <span style={{ width: 7, height: 7, borderRadius: '50%', background: dot, flexShrink: 0 }} />
         <span style={{ fontSize: 18, fontWeight: 500, color: 'rgba(255,255,255,0.9)', fontFamily: M, lineHeight: 1.3 }}>{ev.title}</span>
         {ev.type === 'custom' && (
-          <button onClick={async () => { setDeleting(true); await onDelete(ev) }} disabled={deleting}
-            style={{ background: 'none', border: 'none', padding: '2px 4px', cursor: 'pointer', opacity: deleting ? 0.3 : 0.4, flexShrink: 0 }}>
+          <button onClick={() => onDelete(ev)}
+            style={{ background: 'none', border: 'none', padding: '2px 4px', cursor: 'pointer', opacity: 0.4, flexShrink: 0 }}>
             <Trash2 size={13} color="#ef4444" />
           </button>
         )}
@@ -358,14 +358,30 @@ export default function CalendarPage() {
       start_time: ev.allDay ? null : ev.startTime, end_time: ev.allDay ? null : ev.endTime,
       location: ev.location || null, notes: ev.notes || null, google_event_id: gid,
     })
+    showToast(`${ev.title} added`, { type: 'add' })
     await loadData()
   }
 
-  async function handleDeleteCustomEvent(ev: CalEvent) {
+  function handleDeleteCustomEvent(ev: CalEvent) {
     if (!ev.id) return
-    if (ev.googleEventId) await deleteCalEvent(ev.googleEventId)
-    await supabase.from('cal_events').delete().eq('id', ev.id)
-    await loadData()
+    // Optimistic: remove from map so it disappears instantly
+    const dayKey = selectedDay
+    if (dayKey) {
+      setEventMap(prev => ({
+        ...prev,
+        [dayKey]: (prev[dayKey] ?? []).filter(e => e.id !== ev.id),
+      }))
+    }
+    showToast('Event deleted', {
+      type: 'delete',
+      undo: {
+        onUndo:   () => loadData(),  // DB unchanged — re-fetch restores it
+        onCommit: () => {
+          if (ev.googleEventId) deleteCalEvent(ev.googleEventId)
+          supabase.from('cal_events').delete().eq('id', ev.id!)
+        },
+      },
+    })
   }
 
   // ── Scroll to today when entering View 2 from View 1 only ───────────────
