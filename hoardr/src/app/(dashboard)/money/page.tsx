@@ -16,7 +16,7 @@ import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 
 type Filter = 'All' | 'Expenses' | 'Income'
 
-const LIMIT = 50
+const LIMIT = 100
 
 export default function MoneyPage() {
   const [filter,    setFilter]    = useState<Filter>('All')
@@ -32,9 +32,13 @@ export default function MoneyPage() {
   const [defaultCardId, setDefaultCardId] = useState<string | null>(null)
   const [subNames,      setSubNames]      = useState<Set<string>>(new Set())
 
-  const supabase = useMemo(() => createClient(), [])
-  const loadGen  = useRef(0)
-  const abortRef = useRef<AbortController | null>(null)
+  const supabase      = useMemo(() => createClient(), [])
+  const loadGen       = useRef(0)
+  const abortRef      = useRef<AbortController | null>(null)
+  const txListRef     = useRef<SeedTx[]>(cachedTx ?? [])
+  const hasMoreRef    = useRef(false)
+  const isLoadingMore = useRef(false)
+  const sentinelRef   = useRef<HTMLDivElement>(null)
 
   const loadData = useCallback(async () => {
     abortRef.current?.abort()
@@ -95,15 +99,18 @@ export default function MoneyPage() {
   }, [supabase])
 
   useEffect(() => { loadData(); return () => { loadGen.current++; abortRef.current?.abort() } }, [loadData])
+  useEffect(() => { txListRef.current = txList }, [txList])
+  useEffect(() => { hasMoreRef.current = hasMore }, [hasMore])
 
   const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } =
     usePullToRefresh(loadData)
 
-  async function loadMore() {
-    if (loadingMore || !hasMore) return
+  const loadMore = useCallback(async () => {
+    if (isLoadingMore.current || !hasMoreRef.current) return
+    isLoadingMore.current = true
     setLoadingMore(true)
-    const expOff = txList.filter(t => t.type === 'Expense').length
-    const incOff = txList.filter(t => t.type === 'Income').length
+    const expOff = txListRef.current.filter(t => t.type === 'Expense').length
+    const incOff = txListRef.current.filter(t => t.type === 'Income').length
     try {
       const [{ data: expenses }, { data: income }] = await Promise.all([
         supabase
@@ -143,13 +150,27 @@ export default function MoneyPage() {
         })),
       ]
       setTxList(prev => [...prev, ...newRows].sort((a, b) => b.date.localeCompare(a.date)))
-      setHasMore((expenses?.length ?? 0) === LIMIT || (income?.length ?? 0) === LIMIT)
+      const more = (expenses?.length ?? 0) === LIMIT || (income?.length ?? 0) === LIMIT
+      setHasMore(more)
+      hasMoreRef.current = more
     } catch (err) {
       console.error('loadMore error:', err)
     } finally {
+      isLoadingMore.current = false
       setLoadingMore(false)
     }
-  }
+  }, [supabase])
+
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) loadMore() },
+      { rootMargin: '200px 0px' },
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [loadMore])
 
   // Load wallet data once on mount — cards/banks change only in Wallet tab
   useEffect(() => {
@@ -473,17 +494,10 @@ export default function MoneyPage() {
         </div>
       )}
 
-      {/* ── Load older ───────────────────────────────────────────────────── */}
-      {!loading && hasMore && (
-        <div className="mx-4 mt-2 mb-2">
-          <button
-            onClick={loadMore}
-            disabled={loadingMore}
-            className="w-full py-3 rounded-[18px] bg-bg-surface border border-white/[0.06] text-[12px] font-medium text-ink-muted select-none disabled:opacity-50"
-          >
-            {loadingMore ? 'Loading…' : 'Load older'}
-          </button>
-        </div>
+      {/* Infinite scroll sentinel — IntersectionObserver fires loadMore when this enters view */}
+      <div ref={sentinelRef} className="h-px" />
+      {loadingMore && (
+        <p className="py-3 text-center text-[11px] text-ink-faint">Loading…</p>
       )}
 
       <div className="h-10" />
