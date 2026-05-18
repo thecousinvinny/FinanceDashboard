@@ -643,24 +643,40 @@ export default function CalendarPage() {
                     {/* Vertical rule */}
                     <div style={{ width: 1, flexShrink: 0, background: isTod ? 'rgba(201,168,76,0.35)' : 'rgba(255,255,255,0.04)', marginTop: 8, marginBottom: 8 }} />
 
-                    {/* Events — min height = 4 events + padding; tap blank area = add event */}
+                    {/* Events — min height keeps blank tap area; tap blank area = add event */}
                     <div onClick={e => { if ((e.target as Element).closest('button')) return; setAddDate(ds); setAddOpen(true) }}
-                      style={{ flex: 1, paddingLeft: 12, paddingRight: 16, paddingTop: 9, paddingBottom: 9, display: 'flex', flexDirection: 'column', gap: 8, minHeight: 112, background: stripe ? '#171717' : '#1e1e1e', cursor: 'text' }}>
+                      style={{ flex: 1, paddingLeft: 12, paddingRight: 14, paddingTop: 6, paddingBottom: 6, display: 'flex', flexDirection: 'column', gap: 2, minHeight: 112, background: stripe ? '#171717' : '#1e1e1e', cursor: 'text' }}>
                       {events.map((ev, idx) => {
-                            const tl  = getTimeLabel(ev)
-                            const amt = ev.type !== 'custom' && ev.type !== 'google' ? ev.amount : null
-                            const dot = ev.color ?? DETAIL_DOT[ev.type]
-                            return (
-                              <button key={idx} onClick={() => { setSelectedDay(ds); setViewIndex(2); navigator.vibrate?.(6) }}
-                                style={{ display: 'flex', alignItems: 'center', width: '100%', background: 'none', border: 'none', padding: 0, cursor: 'pointer', minHeight: 22, textAlign: 'left' }}>
-                                {tl && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: "'Montserrat', sans-serif", letterSpacing: '0.02em', flexShrink: 0, marginRight: 7, whiteSpace: 'nowrap' }}>{tl}</span>}
-                                <span style={{ width: 5, height: 5, borderRadius: '50%', background: dot, flexShrink: 0, marginRight: 7 }} />
-                                <span style={{ fontSize: 14, fontWeight: 400, color: isTod ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.78)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
-                                {amt && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', fontFamily: "'Montserrat', sans-serif", flexShrink: 0, marginLeft: 8 }}>{amt}</span>}
-                              </button>
-                            )
-                          })
-                      }
+                        const bar = ev.color ?? DETAIL_DOT[ev.type]
+                        const M   = 'var(--font-montserrat)'
+                        // Row 2: time range for custom/google, amount for financial types
+                        const row2: string | null = (ev.type === 'custom' || ev.type === 'google')
+                          ? (ev.amount ? getTimeRange(ev) : 'ALL DAY')
+                          : (ev.amount || null)
+                        return (
+                          <button key={idx} onClick={() => { setSelectedDay(ds); setViewIndex(2); navigator.vibrate?.(6) }}
+                            style={{ display: 'flex', alignItems: 'stretch', width: '100%', background: 'none', border: 'none', padding: '10px 0', cursor: 'pointer', textAlign: 'left', gap: 9 }}>
+                            {/* Vertical colored bar */}
+                            <div style={{ width: 3, borderRadius: 2, background: bar, flexShrink: 0 }} />
+                            {/* Text content */}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p style={{ fontSize: 14, fontWeight: 500, color: isTod ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.82)', fontFamily: M, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.35 }}>
+                                {ev.title}
+                              </p>
+                              {row2 && (
+                                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.32)', fontFamily: M, margin: '3px 0 0', lineHeight: 1.3 }}>
+                                  {row2}
+                                </p>
+                              )}
+                              {ev.location && (
+                                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.26)', fontFamily: M, margin: '2px 0 0', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {ev.location}
+                                </p>
+                              )}
+                            </div>
+                          </button>
+                        )
+                      })}
                     </div>
                   </div>
                 )
