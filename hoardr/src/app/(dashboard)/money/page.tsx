@@ -65,6 +65,7 @@ export default function MoneyPage() {
         supabase
           .from('expenses')
           .select('savings')
+          .gte('date', localToday().slice(0, 7) + '-01')
           .abortSignal(controller.signal),
       ])
 
