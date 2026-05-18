@@ -80,6 +80,7 @@ function PlansPageInner() {
   const [editWish,      setEditWish]     = useState<WishItem | null>(null)
   const [buyItem,       setBuyItem]      = useState<WishItem | null>(null)
   const [buyAmount,     setBuyAmount]    = useState('')
+  const [savedYear,     setSavedYear]    = useState(0)
   const [cards,         setCards]        = useState<CardOption[]>([])
   const [defaultCardId, setDefaultCardId] = useState<string | null>(null)
 
@@ -93,7 +94,8 @@ function PlansPageInner() {
     abortRef.current = controller
     const gen = ++loadGen.current
     try {
-      const [{ data: subsData }, { data: wishData }] = await Promise.all([
+      const yearStart = localToday().slice(0, 4) + '-01-01'
+      const [{ data: subsData }, { data: wishData }, { data: yrSavings }] = await Promise.all([
         supabase
           .from('subscriptions')
           .select('id, name, cost, billing, status, next_renewal, monthly_cost, annual_cost, card_id, category, cal_event_id')
@@ -103,6 +105,11 @@ function PlansPageInner() {
           .from('wishlist')
           .select('id, name, original_cost, category, url, bought_cost, status')
           .order('created_at', { ascending: false })
+          .abortSignal(controller.signal),
+        supabase
+          .from('expenses')
+          .select('savings')
+          .gte('date', yearStart)
           .abortSignal(controller.signal),
       ])
 
@@ -128,9 +135,15 @@ function PlansPageInner() {
         bought_cost:   w.bought_cost != null ? Number(w.bought_cost) : null,
         status:        String(w.status),
       }))
+      const yrSaved = (yrSavings ?? []).reduce((s, e) => {
+        const v = Number(e.savings ?? 0)
+        return v > 0 ? s + v : s
+      }, 0)
+
       if (gen !== loadGen.current) return
       setSubs(newSubs)
       setWishlist(newWish)
+      setSavedYear(yrSaved)
       pageCache.set('plans', { subs: newSubs, wishlist: newWish })
       setLoading(false)
     } catch (err) {
@@ -439,10 +452,10 @@ function PlansPageInner() {
           </div>
           <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Saved</p>
+              <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Saved / Yr</p>
               <span className="text-[13px] text-emerald">✦</span>
             </div>
-            <p className="text-[26px] font-bold tracking-tight text-emerald" style={{ fontFamily: "var(--font-big-shoulders)" }}><SlotNumber value={wishStats.saved} format={$fc} /></p>
+            <p className="text-[26px] font-bold tracking-tight text-emerald" style={{ fontFamily: "var(--font-big-shoulders)" }}><SlotNumber value={savedYear} format={$fc} /></p>
           </div>
         </div>
       )}

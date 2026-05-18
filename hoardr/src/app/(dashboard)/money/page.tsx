@@ -47,7 +47,7 @@ export default function MoneyPage() {
     abortRef.current = controller
     const gen = ++loadGen.current
     try {
-      const [{ data: expenses }, { data: income }, { data: wishSavings }] = await Promise.all([
+      const [{ data: expenses }, { data: income }, { data: expSavings }] = await Promise.all([
         supabase
           .from('expenses')
           .select('id, name, cost, date, description, card_id, savings, categories(name)')
@@ -63,9 +63,8 @@ export default function MoneyPage() {
           .limit(LIMIT)
           .abortSignal(controller.signal),
         supabase
-          .from('wishlist')
-          .select('original_cost, bought_cost')
-          .eq('status', 'Purchased')
+          .from('expenses')
+          .select('savings')
           .abortSignal(controller.signal),
       ])
 
@@ -97,9 +96,9 @@ export default function MoneyPage() {
       const rows = merged.slice(0, LIMIT)
       const totalFetched = (expenses?.length ?? 0) + (income?.length ?? 0)
 
-      const totalSaved = (wishSavings ?? []).reduce((sum, w) => {
-        const s = Number(w.original_cost ?? 0) - Number(w.bought_cost ?? 0)
-        return s > 0 ? sum + s : sum
+      const totalSaved = (expSavings ?? []).reduce((sum, e) => {
+        const v = Number(e.savings ?? 0)
+        return v > 0 ? sum + v : sum
       }, 0)
 
       if (gen !== loadGen.current) return
