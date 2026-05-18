@@ -31,6 +31,7 @@ export default function MoneyPage() {
   const [banks,         setBanks]         = useState<BankOption[]>([])
   const [defaultCardId, setDefaultCardId] = useState<string | null>(null)
   const [subNames,      setSubNames]      = useState<Set<string>>(new Set())
+  const [savedTotal,    setSavedTotal]    = useState(0)
 
   const supabase      = useMemo(() => createClient(), [])
   const loadGen       = useRef(0)
@@ -46,7 +47,7 @@ export default function MoneyPage() {
     abortRef.current = controller
     const gen = ++loadGen.current
     try {
-      const [{ data: expenses }, { data: income }] = await Promise.all([
+      const [{ data: expenses }, { data: income }, { data: wishSavings }] = await Promise.all([
         supabase
           .from('expenses')
           .select('id, name, cost, date, description, card_id, savings, categories(name)')
@@ -60,6 +61,11 @@ export default function MoneyPage() {
           .order('date', { ascending: false })
           .order('created_at', { ascending: false })
           .limit(LIMIT)
+          .abortSignal(controller.signal),
+        supabase
+          .from('wishlist')
+          .select('original_cost, bought_cost')
+          .eq('status', 'Purchased')
           .abortSignal(controller.signal),
       ])
 
@@ -91,9 +97,15 @@ export default function MoneyPage() {
       const rows = merged.slice(0, LIMIT)
       const totalFetched = (expenses?.length ?? 0) + (income?.length ?? 0)
 
+      const totalSaved = (wishSavings ?? []).reduce((sum, w) => {
+        const s = Number(w.original_cost ?? 0) - Number(w.bought_cost ?? 0)
+        return s > 0 ? sum + s : sum
+      }, 0)
+
       if (gen !== loadGen.current) return
       setTxList(rows)
       setHasMore(totalFetched > LIMIT)
+      setSavedTotal(totalSaved)
       pageCache.set('money', rows)
       setLoading(false)
     } catch (err) {
@@ -306,13 +318,11 @@ export default function MoneyPage() {
     }
   }
 
-  const { monthSpent, monthEarned, monthSaved } = useMemo(() => {
+  const { monthSpent, monthEarned } = useMemo(() => {
     const mo = localToday().slice(0, 7)
-    const exp = txList.filter(t => t.type === 'Expense' && t.date.startsWith(mo))
     return {
-      monthSpent:  exp.reduce((s, t) => s + t.amount, 0),
-      monthEarned: txList.filter(t => t.type === 'Income' && t.date.startsWith(mo)).reduce((s, t) => s + t.amount, 0),
-      monthSaved:  exp.reduce((s, t) => s + (t.savings ?? 0), 0),
+      monthSpent:  txList.filter(t => t.type === 'Expense' && t.date.startsWith(mo)).reduce((s, t) => s + t.amount, 0),
+      monthEarned: txList.filter(t => t.type === 'Income'  && t.date.startsWith(mo)).reduce((s, t) => s + t.amount, 0),
     }
   }, [txList])
 
@@ -382,7 +392,7 @@ export default function MoneyPage() {
             <p className="text-[9px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Saved</p>
             <span className="text-[11px] text-emerald">✦</span>
           </div>
-          <p className="text-[22px] font-bold tracking-tight text-emerald" style={{ fontFamily: "var(--font-big-shoulders)" }}><SlotNumber value={monthSaved} format={$fc} /></p>
+          <p className="text-[22px] font-bold tracking-tight text-emerald" style={{ fontFamily: "var(--font-big-shoulders)" }}><SlotNumber value={savedTotal} format={$fc} /></p>
         </div>
         <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-3">
           <div className="flex items-center justify-between mb-2">

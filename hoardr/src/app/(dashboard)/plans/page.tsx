@@ -102,7 +102,6 @@ function PlansPageInner() {
         supabase
           .from('wishlist')
           .select('id, name, original_cost, category, url, bought_cost, status')
-          .eq('status', 'Interested')
           .order('created_at', { ascending: false })
           .abortSignal(controller.signal),
       ])
@@ -179,9 +178,14 @@ function PlansPageInner() {
     const { data: expRow, error: expErr } = await supabase
       .from('expenses')
       .insert({
-        user_id: user.id, name: item.name, cost: paidCost, date: today,
-        category_id: categoryId, status: 'Procured',
-        ...(item.original_cost != null ? { original_cost: item.original_cost } : {}),
+        user_id:       user.id,
+        name:          item.name,
+        cost:          paidCost,
+        date:          today,
+        category_id:   categoryId,
+        status:        'Procured',
+        description:   item.url ?? null,
+        original_cost: item.original_cost ?? null,
       })
       .select('id')
       .single()
@@ -375,6 +379,19 @@ function PlansPageInner() {
     annual:  activeSubs.reduce((s, sub) => s + sub.annual_cost,  0),
   }), [activeSubs])
 
+  const interestedWish = useMemo(() => wishlist.filter(w => w.status === 'Interested'), [wishlist])
+
+  const wishStats = useMemo(() => {
+    const total = interestedWish.reduce((s, w) => s + (w.original_cost ?? 0), 0)
+    const saved = wishlist
+      .filter(w => w.status === 'Purchased')
+      .reduce((s, w) => {
+        const diff = (w.original_cost ?? 0) - (w.bought_cost ?? 0)
+        return diff > 0 ? s + diff : s
+      }, 0)
+    return { total, saved }
+  }, [wishlist, interestedWish])
+
   return (
   <>
     <div className="min-h-screen bg-bg-base tab-enter">
@@ -393,7 +410,7 @@ function PlansPageInner() {
       </div>
 
       {/* ── Stat tiles ───────────────────────────────────────────────────── */}
-      {!loading && (
+      {!loading && tab === 'Subscriptions' && (
         <div className="mx-4 mt-4 flex gap-3">
           <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
             <div className="flex items-center justify-between mb-3">
@@ -408,6 +425,24 @@ function PlansPageInner() {
               <span className="text-[13px] text-emerald">∞</span>
             </div>
             <p className="text-[26px] font-bold tracking-tight text-ink" style={{ fontFamily: "var(--font-big-shoulders)" }}><SlotNumber value={totals.annual} format={$fc} /></p>
+          </div>
+        </div>
+      )}
+      {!loading && tab === 'Wishlist' && (
+        <div className="mx-4 mt-4 flex gap-3">
+          <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">On List</p>
+              <span className="text-[13px] text-gold">★</span>
+            </div>
+            <p className="text-[26px] font-bold tracking-tight text-ink" style={{ fontFamily: "var(--font-big-shoulders)" }}><SlotNumber value={wishStats.total} format={$fc} /></p>
+          </div>
+          <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Saved</p>
+              <span className="text-[13px] text-emerald">✦</span>
+            </div>
+            <p className="text-[26px] font-bold tracking-tight text-emerald" style={{ fontFamily: "var(--font-big-shoulders)" }}><SlotNumber value={wishStats.saved} format={$fc} /></p>
           </div>
         </div>
       )}
@@ -522,12 +557,12 @@ function PlansPageInner() {
       {/* ── Wishlist ─────────────────────────────────────────────────────── */}
       {!loading && tab === 'Wishlist' && (
         <div className="mx-4 mt-4 space-y-2.5">
-          {wishlist.length === 0 && (
+          {interestedWish.length === 0 && (
             <div className="bg-bg-surface border border-white/[0.06] rounded-[18px] py-12 text-center text-ink-faint text-[13px]">
               Nothing on your wishlist — tap + to add an item.
             </div>
           )}
-          {wishlist.map(item => (
+          {interestedWish.map(item => (
             <SwipeToDelete
               key={item.id}
               onDelete={() => handleDeleteWish(item.id)}
