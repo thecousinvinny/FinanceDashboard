@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { NEXT_STATUS, STATUS_LABEL, STATUS_COLORS, STATUS_PROGRESS } from '@/lib/data/studio'
-import { fmtDate, daysUntilLabel, $fd, cn } from '@/lib/utils'
+import { fmtDate, daysUntilLabel, $fd, cn, localToday } from '@/lib/utils'
 import { createCalEvent, allDayEvent } from '@/lib/calendar'
 import type { CommissionStatus } from '@/types'
 import { AddCommissionSheet, type NewCommission } from '@/components/studio/AddCommissionSheet'
@@ -133,7 +133,7 @@ export default function StudioPage() {
             user_id:       user.id,
             name:          `${commission.client_name} — ${commission.project_name}`,
             amount:        commission.value,
-            date:          new Date().toISOString().slice(0, 10),
+            date:          localToday(),
             source:        'Freelance',
             commission_id: commission.id,
           })
@@ -191,16 +191,7 @@ export default function StudioPage() {
 
       <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
 
-      {/* ── Header ───────────────────────────────────────────────────────── */}
-      <div className="px-5 pt-12 flex justify-end">
-        <button
-          onClick={() => setSheetOpen(true)}
-          className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-white text-[22px] font-light select-none"
-          aria-label="Add commission"
-        >
-          +
-        </button>
-      </div>
+      <div className="pt-12" />
 
       {/* ── Ledger summary card ──────────────────────────────────────────── */}
       <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card p-5">
@@ -359,6 +350,16 @@ export default function StudioPage() {
 
       <div className="h-10" />
     </div>
+
+    {/* ── FAB ───────────────────────────────────────────────────────── */}
+    <button
+      onClick={() => setSheetOpen(true)}
+      className="fixed gradient-gold rounded-full flex items-center justify-center text-white font-light select-none"
+      style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, zIndex: 40, boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)' }}
+      aria-label="Add commission"
+    >
+      +
+    </button>
 
     <AddCommissionSheet
       open={sheetOpen}

@@ -187,7 +187,7 @@ function PlansPageInner() {
       categoryId = created?.id ?? null
     }
 
-    const today = new Date().toISOString().slice(0, 10)
+    const today = localToday()
     const { data: expRow, error: expErr } = await supabase
       .from('expenses')
       .insert({
@@ -411,16 +411,7 @@ function PlansPageInner() {
 
       <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
 
-      {/* ── Header ───────────────────────────────────────────────────────── */}
-      <div className="px-5 pt-12 flex justify-end">
-        <button
-          onClick={() => tab === 'Subscriptions' ? setSubSheet(true) : setWishSheet(true)}
-          className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-white text-[22px] font-light select-none"
-          aria-label="Add"
-        >
-          +
-        </button>
-      </div>
+      <div className="pt-12" />
 
       {/* ── Stat tiles ───────────────────────────────────────────────────── */}
       {!loading && tab === 'Subscriptions' && (
@@ -618,6 +609,16 @@ function PlansPageInner() {
 
       <div className="h-10" />
     </div>
+
+    {/* ── FAB ───────────────────────────────────────────────────────── */}
+    <button
+      onClick={() => tab === 'Subscriptions' ? setSubSheet(true) : setWishSheet(true)}
+      className="fixed gradient-gold rounded-full flex items-center justify-center text-white font-light select-none"
+      style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, zIndex: 40, boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)' }}
+      aria-label="Add"
+    >
+      +
+    </button>
 
     {/* ── Sheets — outside tab-enter div so fixed positioning works ────── */}
     {tab === 'Subscriptions' && (

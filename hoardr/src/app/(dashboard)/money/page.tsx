@@ -104,7 +104,7 @@ export default function MoneyPage() {
 
       if (gen !== loadGen.current) return
       setTxList(rows)
-      setHasMore(totalFetched > LIMIT)
+      setHasMore((expenses?.length ?? 0) >= LIMIT || (income?.length ?? 0) >= LIMIT)
       setSavedTotal(totalSaved)
       pageCache.set('money', rows)
       setLoading(false)
@@ -367,16 +367,7 @@ export default function MoneyPage() {
 
       <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
 
-      {/* ── Header ───────────────────────────────────────────────────────── */}
-      <div className="px-5 pt-12 flex justify-end">
-        <button
-          onClick={() => setSheetOpen(true)}
-          className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-white text-[22px] font-light select-none"
-          aria-label="Add transaction"
-        >
-          +
-        </button>
-      </div>
+      <div className="pt-12" />
 
       {/* ── Summary tiles ────────────────────────────────────────────────── */}
       <div className="mx-4 mt-4 flex gap-2">
@@ -525,6 +516,16 @@ export default function MoneyPage() {
 
       <div className="h-10" />
     </div>
+
+    {/* ── FAB ───────────────────────────────────────────────────────── */}
+    <button
+      onClick={() => setSheetOpen(true)}
+      className="fixed gradient-gold rounded-full flex items-center justify-center text-white font-light select-none"
+      style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, zIndex: 40, boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)' }}
+      aria-label="Add transaction"
+    >
+      +
+    </button>
 
     <AddTransactionSheet
       open={sheetOpen}

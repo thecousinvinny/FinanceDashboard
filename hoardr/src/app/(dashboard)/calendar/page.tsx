@@ -52,15 +52,6 @@ function fmt12(hhmm: string) {
   const [h, min] = hhmm.split(':').map(Number)
   return `${h % 12 || 12}:${String(min).padStart(2, '0')}${h >= 12 ? 'PM' : 'AM'}`
 }
-// Returns start-time only (for compact list display)
-function getTimeLabel(ev: CalEvent): string | null {
-  if (ev.type !== 'custom' && ev.type !== 'google') return null
-  if (!ev.amount) return null
-  const parts = ev.amount.split(' – ')
-  const start = parts[0]
-  if (/^\d{2}:\d{2}$/.test(start)) return fmt12(start)
-  return ev.amount || null
-}
 // Returns full FROM – TO range for expanded day view
 function getTimeRange(ev: CalEvent): string | null {
   if (ev.type !== 'custom' && ev.type !== 'google') return null

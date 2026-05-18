@@ -246,13 +246,6 @@ export default function WalletPage() {
               {reorderMode ? 'Done' : 'Reorder'}
             </button>
           )}
-          <button
-            onClick={() => setSheetOpen(true)}
-            className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-white text-[22px] font-light select-none"
-            aria-label="Add"
-          >
-            +
-          </button>
         </div>
 
         {/* ── Tab toggle ─────────────────────────────────────────────────── */}
@@ -342,6 +335,16 @@ export default function WalletPage() {
 
         <div className="h-10" />
       </div>
+
+      {/* ── FAB ─────────────────────────────────────────────────────── */}
+      <button
+        onClick={() => setSheetOpen(true)}
+        className="fixed gradient-gold rounded-full flex items-center justify-center text-white font-light select-none"
+        style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, zIndex: 40, boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)' }}
+        aria-label="Add"
+      >
+        +
+      </button>
 
       {tab === 'Cards' && (
         <AddCardSheet
