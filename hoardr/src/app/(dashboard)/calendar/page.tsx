@@ -52,7 +52,7 @@ function fmt12(hhmm: string) {
   const [h, min] = hhmm.split(':').map(Number)
   return `${h % 12 || 12}:${String(min).padStart(2, '0')}${h >= 12 ? 'PM' : 'AM'}`
 }
-// Returns start-time only (no end time)
+// Returns start-time only (for compact list display)
 function getTimeLabel(ev: CalEvent): string | null {
   if (ev.type !== 'custom' && ev.type !== 'google') return null
   if (!ev.amount) return null
@@ -61,61 +61,19 @@ function getTimeLabel(ev: CalEvent): string | null {
   if (/^\d{2}:\d{2}$/.test(start)) return fmt12(start)
   return ev.amount || null
 }
+// Returns full FROM – TO range for expanded day view
+function getTimeRange(ev: CalEvent): string | null {
+  if (ev.type !== 'custom' && ev.type !== 'google') return null
+  if (!ev.amount) return null
+  const parts = ev.amount.split(' – ').map(t => t.trim()).filter(Boolean)
+    .map(t => /^\d{2}:\d{2}$/.test(t) ? fmt12(t) : t)
+  return parts.length ? parts.join(' – ') : null
+}
 function monthLabel(y: number, m: number) {
   return new Date(y, m, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()
 }
 
 const SAFE_TOP = 'calc(max(env(safe-area-inset-top, 0px), 44px) + 12px)'
-
-// ── Event detail bottom sheet ─────────────────────────────────────────────────
-function EventDetailSheet({ event, onClose, onDelete }: {
-  event: CalEvent | null; onClose: () => void; onDelete: (ev: CalEvent) => Promise<void>
-}) {
-  const [deleting, setDeleting] = useState(false)
-  const open = event !== null
-
-  useEffect(() => {
-    if (!open) { const t = setTimeout(() => setDeleting(false), 300); return () => clearTimeout(t) }
-  }, [open])
-
-  const tl  = event ? getTimeLabel(event) : null
-  const amt = event && event.type !== 'custom' && event.type !== 'google' ? event.amount : null
-  const dot = event ? (event.color ?? DETAIL_DOT[event.type]) : '#fff'
-
-  return (
-    <>
-      {open && <div className="fixed inset-0 z-40" style={{ background: 'rgba(0,0,0,0.65)' }} onClick={onClose} />}
-      <div className="fixed bottom-0 left-0 right-0 z-50 transition-transform duration-300"
-        style={{ transform: open ? 'translateY(0)' : 'translateY(100%)', background: '#111118', borderRadius: '20px 20px 0 0', willChange: 'transform', maxHeight: '85dvh', display: 'flex', flexDirection: 'column' }}>
-        <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.18)' }} />
-        </div>
-        {event && (
-          <div style={{ overflowY: 'auto', flex: 1, paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 20px)' }}>
-            <div style={{ padding: '16px 24px 28px' }}>
-              <div className="flex items-start gap-3 mb-5">
-                <span style={{ width: 9, height: 9, borderRadius: '50%', background: dot, flexShrink: 0, marginTop: 7 }} />
-                <h2 style={{ fontSize: 22, fontWeight: 600, color: '#f0f0f8', lineHeight: 1.3, margin: 0 }}>{event.title}</h2>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginLeft: 21 }}>
-                {tl  && <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', fontFamily: 'monospace', margin: 0 }}>🕐 {tl}</p>}
-                {amt && <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)', fontFamily: 'monospace', fontWeight: 600, margin: 0 }}>{amt}</p>}
-                {event.location && <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', margin: 0 }}>📍 {event.location}</p>}
-                {event.notes    && <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', lineHeight: 1.55, margin: 0 }}>{event.notes}</p>}
-              </div>
-              {event.type === 'custom' && (
-                <button onClick={async () => { setDeleting(true); await onDelete(event); onClose() }} disabled={deleting}
-                  style={{ marginTop: 28, marginLeft: 21, display: 'flex', alignItems: 'center', gap: 6, color: '#ef4444', fontSize: 14, fontWeight: 500, background: 'none', border: 'none', padding: '8px 0', opacity: deleting ? 0.5 : 1, cursor: 'pointer' }}>
-                  <Trash2 size={14} />{deleting ? 'Deleting…' : 'Delete event'}
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    </>
-  )
-}
 
 // ── Grid event row ─────────────────────────────────────────────────────────────
 function EventRow({ ev, onDelete }: { ev: CalEvent; onDelete: (ev: CalEvent) => Promise<void> }) {
@@ -137,6 +95,56 @@ function EventRow({ ev, onDelete }: { ev: CalEvent; onDelete: (ev: CalEvent) => 
           <button onClick={() => onDelete(ev)} className="w-7 h-7 rounded-full bg-bg-overlay flex items-center justify-center">
             <Trash2 size={12} className="text-ruby" />
           </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Expanded day event card (View 3) ──────────────────────────────────────────
+function DayEventCard({ ev, dot, timeRange, amt, onDelete }: {
+  ev: CalEvent; dot: string; timeRange: string | null; amt: string | null
+  onDelete: (ev: CalEvent) => Promise<void>
+}) {
+  const [deleting, setDeleting] = useState(false)
+  return (
+    <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 14, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {/* Title row */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+        <span style={{ width: 8, height: 8, borderRadius: '50%', background: dot, flexShrink: 0, marginTop: 5 }} />
+        <span style={{ fontSize: 17, fontWeight: 500, color: 'rgba(255,255,255,0.92)', flex: 1, lineHeight: 1.35 }}>{ev.title}</span>
+        {ev.type === 'custom' && (
+          <button onClick={async () => { setDeleting(true); await onDelete(ev) }} disabled={deleting}
+            style={{ background: 'none', border: 'none', padding: 4, cursor: 'pointer', opacity: deleting ? 0.4 : 1, flexShrink: 0 }}>
+            <Trash2 size={14} color="#ef4444" />
+          </button>
+        )}
+      </div>
+      {/* Details */}
+      <div style={{ paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 5 }}>
+        {timeRange && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', width: 14 }}>⏱</span>
+            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace' }}>{timeRange}</span>
+          </div>
+        )}
+        {amt && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', width: 14 }}>$</span>
+            <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', fontFamily: 'monospace', fontWeight: 600 }}>{amt}</span>
+          </div>
+        )}
+        {ev.location && (
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', width: 14, flexShrink: 0 }}>📍</span>
+            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 1.4 }}>{ev.location}</span>
+          </div>
+        )}
+        {ev.notes && (
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', width: 14, flexShrink: 0, marginTop: 1 }}>✎</span>
+            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', lineHeight: 1.55 }}>{ev.notes}</span>
+          </div>
         )}
       </div>
     </div>
@@ -169,7 +177,7 @@ export default function CalendarPage() {
   const [calsLoading, setCalsLoading] = useState(false)
   const [addOpen,      setAddOpen]      = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [detailEvent,  setDetailEvent]  = useState<CalEvent | null>(null)
+  const [addDate,      setAddDate]      = useState<string | undefined>()
 
   // Infinite scroll
   const [months, setMonths] = useState<MonthKey[]>(() =>
@@ -611,14 +619,15 @@ export default function CalendarPage() {
                     {/* Vertical rule */}
                     <div style={{ width: 1, flexShrink: 0, background: isTod ? 'rgba(201,168,76,0.35)' : 'rgba(255,255,255,0.04)', marginTop: 8, marginBottom: 8 }} />
 
-                    {/* Events — min height = 4 events + padding */}
-                    <div style={{ flex: 1, paddingLeft: 12, paddingRight: 16, paddingTop: 9, paddingBottom: 9, display: 'flex', flexDirection: 'column', gap: 8, minHeight: 112, background: stripe ? '#171717' : '#1e1e1e' }}>
+                    {/* Events — min height = 4 events + padding; tap blank area = add event */}
+                    <div onClick={e => { if ((e.target as Element).closest('button')) return; setAddDate(ds); setAddOpen(true) }}
+                      style={{ flex: 1, paddingLeft: 12, paddingRight: 16, paddingTop: 9, paddingBottom: 9, display: 'flex', flexDirection: 'column', gap: 8, minHeight: 112, background: stripe ? '#171717' : '#1e1e1e', cursor: 'text' }}>
                       {events.map((ev, idx) => {
                             const tl  = getTimeLabel(ev)
                             const amt = ev.type !== 'custom' && ev.type !== 'google' ? ev.amount : null
                             const dot = ev.color ?? DETAIL_DOT[ev.type]
                             return (
-                              <button key={idx} onClick={() => { setDetailEvent(ev); navigator.vibrate?.(6) }}
+                              <button key={idx} onClick={() => { setSelectedDay(ds); setViewIndex(2); navigator.vibrate?.(6) }}
                                 style={{ display: 'flex', alignItems: 'center', width: '100%', background: 'none', border: 'none', padding: 0, cursor: 'pointer', minHeight: 22, textAlign: 'left' }}>
                                 {tl && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: "'Montserrat', sans-serif", letterSpacing: '0.02em', flexShrink: 0, marginRight: 7, whiteSpace: 'nowrap' }}>{tl}</span>}
                                 <span style={{ width: 5, height: 5, borderRadius: '50%', background: dot, flexShrink: 0, marginRight: 7 }} />
@@ -659,32 +668,23 @@ export default function CalendarPage() {
             </p>
           </div>
 
-          {/* Event list */}
+          {/* Event list — expanded inline, no detail sheet */}
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {dayEvents.length === 0 ? (
               <div style={{ paddingTop: 60, textAlign: 'center', color: 'rgba(255,255,255,0.2)', fontSize: 14 }}>
                 Nothing today
               </div>
             ) : (
-              dayEvents.map((ev, idx) => {
-                const tl  = getTimeLabel(ev)
-                const dot = ev.color ?? DETAIL_DOT[ev.type]
-                const amt = ev.type !== 'custom' && ev.type !== 'google' ? ev.amount : null
-                return (
-                  <button key={idx} onClick={() => { setDetailEvent(ev); navigator.vibrate?.(6) }}
-                    style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '16px 20px', background: 'none', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.04)', cursor: 'pointer', textAlign: 'left', gap: 14 }}>
-                    {/* Time column — fixed width so dots align */}
-                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.32)', fontFamily: "'Montserrat', sans-serif", width: 58, flexShrink: 0, textAlign: 'right' }}>
-                      {tl ?? ''}
-                    </span>
-                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: dot, flexShrink: 0 }} />
-                    <span style={{ fontSize: 17, fontWeight: 400, color: 'rgba(255,255,255,0.88)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {ev.title}
-                    </span>
-                    {amt && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)', fontFamily: "'Montserrat', sans-serif", flexShrink: 0 }}>{amt}</span>}
-                  </button>
-                )
-              })
+              <div style={{ padding: '12px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {dayEvents.map((ev, idx) => {
+                  const timeRange = getTimeRange(ev)
+                  const dot = ev.color ?? DETAIL_DOT[ev.type]
+                  const amt = ev.type !== 'custom' && ev.type !== 'google' ? ev.amount : null
+                  return (
+                    <DayEventCard key={idx} ev={ev} dot={dot} timeRange={timeRange} amt={amt} onDelete={handleDeleteCustomEvent} />
+                  )
+                })}
+              </div>
             )}
             <div style={{ height: 88 }} />
           </div>
@@ -693,8 +693,7 @@ export default function CalendarPage() {
       </div>{/* end sliding rail */}
     </div>{/* end root */}
 
-    <EventDetailSheet event={detailEvent} onClose={() => setDetailEvent(null)} onDelete={handleDeleteCustomEvent} />
-    <AddEventSheet open={addOpen} defaultDate={selectedDay ?? gridSel ?? undefined} defaultCalendarId={prefs.defaultCalendarId} googleCals={googleCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => setAddOpen(false)} onAdd={handleAddEvent} />
+    <AddEventSheet open={addOpen} defaultDate={addDate ?? selectedDay ?? gridSel ?? undefined} defaultCalendarId={prefs.defaultCalendarId} googleCals={googleCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => { setAddOpen(false); setTimeout(() => setAddDate(undefined), 300) }} onAdd={handleAddEvent} />
     <CalendarSettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} prefs={prefs} googleCals={googleCals} calsLoading={calsLoading} onSave={savePrefs} />
     </>
   )
