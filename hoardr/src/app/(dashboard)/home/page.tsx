@@ -4,7 +4,6 @@ import { localToday, $fk, $fc, $fd, fmtDate } from '@/lib/utils'
 import Link from 'next/link'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import { HomeHero } from '@/components/home/HomeHero'
-import { ThemeToggle, SignOutButton } from '@/components/ui/ThemeToggle'
 import { UpcomingBills, type UpcomingSub } from '@/components/home/UpcomingBills'
 
 export const dynamic = 'force-dynamic'
@@ -137,11 +136,7 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen bg-bg-base tab-enter">
 
-      {/* ── Top bar ──────────────────────────────────────────────────────── */}
-      <div className="px-5 pt-12 flex justify-end gap-2">
-        <SignOutButton />
-        <ThemeToggle />
-      </div>
+      <div className="pt-12" />
 
       {/* ── Monthly hero card (animated) ──────────────────────────────────── */}
       <HomeHero
