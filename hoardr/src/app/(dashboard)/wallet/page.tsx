@@ -63,27 +63,32 @@ export default function WalletPage() {
     const controller = new AbortController()
     abortRef.current = controller
     const gen = ++loadGen.current
-    const [{ data: cardsData }, { data: banksData }] = await Promise.all([
-      supabase
-        .from('cards')
-        .select('*, bank:banks(id, name, type, last4)')
-        .order('sort_order',  { ascending: true,  nullsFirst: false })
-        .order('is_default',  { ascending: false })
-        .order('created_at',  { ascending: false })
-        .abortSignal(controller.signal),
-      supabase
-        .from('banks')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .abortSignal(controller.signal),
-    ])
-    const newCards = (cardsData ?? []) as Card[]
-    const newBanks = (banksData  ?? []) as Bank[]
-    if (gen !== loadGen.current) return
-    setCards(newCards)
-    setBanks(newBanks)
-    pageCache.set('wallet', { cards: newCards, banks: newBanks })
-    setLoading(false)
+    try {
+      const [{ data: cardsData }, { data: banksData }] = await Promise.all([
+        supabase
+          .from('cards')
+          .select('*, bank:banks(id, name, type, last4)')
+          .order('sort_order',  { ascending: true,  nullsFirst: false })
+          .order('is_default',  { ascending: false })
+          .order('created_at',  { ascending: false })
+          .abortSignal(controller.signal),
+        supabase
+          .from('banks')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .abortSignal(controller.signal),
+      ])
+      const newCards = (cardsData ?? []) as Card[]
+      const newBanks = (banksData  ?? []) as Bank[]
+      if (gen !== loadGen.current) return
+      setCards(newCards)
+      setBanks(newBanks)
+      pageCache.set('wallet', { cards: newCards, banks: newBanks })
+      setLoading(false)
+    } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return
+      console.error('loadData error:', err)
+    }
   }, [supabase])
 
   useEffect(() => { loadData(); return () => { loadGen.current++; abortRef.current?.abort() } }, [loadData])
@@ -99,33 +104,38 @@ export default function WalletPage() {
     detailAbortRef.current = detailController
     setExpLoading(true)
     async function loadDetail() {
-      const [{ data: expData }, { data: subData }] = await Promise.all([
-        supabase
-          .from('expenses')
-          .select('id, name, cost, date, categories(name)')
-          .eq('card_id', selectedCard!.id)
-          .order('date', { ascending: false })
-          .order('created_at', { ascending: false })
-          .abortSignal(detailController.signal),
-        supabase
-          .from('subscriptions')
-          .select('id, name, cost, billing, monthly_cost, next_renewal, category')
-          .eq('card_id', selectedCard!.id)
-          .order('next_renewal', { ascending: true })
-          .abortSignal(detailController.signal),
-      ])
-      if (gen !== detailGen.current) return
-      setCardExpenses((expData ?? []) as unknown as CardExpense[])
-      setCardSubs((subData ?? []).map(s => ({
-        id:           String(s.id),
-        name:         String(s.name),
-        cost:         Number(s.cost),
-        billing:      String(s.billing),
-        monthly_cost: Number(s.monthly_cost ?? 0),
-        next_renewal: s.next_renewal ? String(s.next_renewal) : null,
-        category:     s.category ? String(s.category) : null,
-      })))
-      setExpLoading(false)
+      try {
+        const [{ data: expData }, { data: subData }] = await Promise.all([
+          supabase
+            .from('expenses')
+            .select('id, name, cost, date, categories(name)')
+            .eq('card_id', selectedCard!.id)
+            .order('date', { ascending: false })
+            .order('created_at', { ascending: false })
+            .abortSignal(detailController.signal),
+          supabase
+            .from('subscriptions')
+            .select('id, name, cost, billing, monthly_cost, next_renewal, category')
+            .eq('card_id', selectedCard!.id)
+            .order('next_renewal', { ascending: true })
+            .abortSignal(detailController.signal),
+        ])
+        if (gen !== detailGen.current) return
+        setCardExpenses((expData ?? []) as unknown as CardExpense[])
+        setCardSubs((subData ?? []).map(s => ({
+          id:           String(s.id),
+          name:         String(s.name),
+          cost:         Number(s.cost),
+          billing:      String(s.billing),
+          monthly_cost: Number(s.monthly_cost ?? 0),
+          next_renewal: s.next_renewal ? String(s.next_renewal) : null,
+          category:     s.category ? String(s.category) : null,
+        })))
+        setExpLoading(false)
+      } catch (err) {
+        if ((err as Error)?.name === 'AbortError') return
+        console.error('loadDetail error:', err)
+      }
     }
     loadDetail()
     return () => { detailGen.current++; detailAbortRef.current?.abort() }

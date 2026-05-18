@@ -37,49 +37,54 @@ export default function MoneyPage() {
     const controller = new AbortController()
     abortRef.current = controller
     const gen = ++loadGen.current
-    const [{ data: expenses }, { data: income }] = await Promise.all([
-      supabase
-        .from('expenses')
-        .select('id, name, cost, date, description, card_id, savings, categories(name)')
-        .order('date', { ascending: false })
-        .order('created_at', { ascending: false })
-        .abortSignal(controller.signal),
-      supabase
-        .from('income')
-        .select('id, name, amount, date, description, source, bank_id')
-        .order('date', { ascending: false })
-        .order('created_at', { ascending: false })
-        .abortSignal(controller.signal),
-    ])
+    try {
+      const [{ data: expenses }, { data: income }] = await Promise.all([
+        supabase
+          .from('expenses')
+          .select('id, name, cost, date, description, card_id, savings, categories(name)')
+          .order('date', { ascending: false })
+          .order('created_at', { ascending: false })
+          .abortSignal(controller.signal),
+        supabase
+          .from('income')
+          .select('id, name, amount, date, description, source, bank_id')
+          .order('date', { ascending: false })
+          .order('created_at', { ascending: false })
+          .abortSignal(controller.signal),
+      ])
 
-    const rows: SeedTx[] = [
-      ...(expenses ?? []).map(e => ({
-        id:          String(e.id),
-        type:        'Expense' as const,
-        name:        String(e.name),
-        category:    (e.categories as unknown as { name: string } | null)?.name ?? 'Other',
-        date:        String(e.date),
-        amount:      Number(e.cost),
-        savings:     e.savings != null ? Number(e.savings) : 0,
-        description: e.description ? String(e.description) : null,
-        card_id:     e.card_id ? String(e.card_id) : null,
-      })),
-      ...(income ?? []).map(i => ({
-        id:          String(i.id),
-        type:        'Income' as const,
-        name:        String(i.name),
-        category:    String(i.source ?? 'Other'),
-        date:        String(i.date),
-        amount:      Number(i.amount),
-        description: i.description ? String(i.description) : null,
-        bank_id:     i.bank_id ? String(i.bank_id) : null,
-      })),
-    ]
+      const rows: SeedTx[] = [
+        ...(expenses ?? []).map(e => ({
+          id:          String(e.id),
+          type:        'Expense' as const,
+          name:        String(e.name),
+          category:    (e.categories as unknown as { name: string } | null)?.name ?? 'Other',
+          date:        String(e.date),
+          amount:      Number(e.cost),
+          savings:     e.savings != null ? Number(e.savings) : 0,
+          description: e.description ? String(e.description) : null,
+          card_id:     e.card_id ? String(e.card_id) : null,
+        })),
+        ...(income ?? []).map(i => ({
+          id:          String(i.id),
+          type:        'Income' as const,
+          name:        String(i.name),
+          category:    String(i.source ?? 'Other'),
+          date:        String(i.date),
+          amount:      Number(i.amount),
+          description: i.description ? String(i.description) : null,
+          bank_id:     i.bank_id ? String(i.bank_id) : null,
+        })),
+      ]
 
-    if (gen !== loadGen.current) return
-    setTxList(rows)
-    pageCache.set('money', rows)
-    setLoading(false)
+      if (gen !== loadGen.current) return
+      setTxList(rows)
+      pageCache.set('money', rows)
+      setLoading(false)
+    } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return
+      console.error('loadData error:', err)
+    }
   }, [supabase])
 
   useEffect(() => { loadData(); return () => { loadGen.current++; abortRef.current?.abort() } }, [loadData])

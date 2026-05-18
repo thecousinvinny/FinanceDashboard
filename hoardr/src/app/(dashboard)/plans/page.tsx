@@ -92,47 +92,52 @@ function PlansPageInner() {
     const controller = new AbortController()
     abortRef.current = controller
     const gen = ++loadGen.current
-    const [{ data: subsData }, { data: wishData }] = await Promise.all([
-      supabase
-        .from('subscriptions')
-        .select('id, name, cost, billing, status, next_renewal, monthly_cost, annual_cost, card_id, category, cal_event_id')
-        .order('next_renewal', { ascending: true })
-        .abortSignal(controller.signal),
-      supabase
-        .from('wishlist')
-        .select('id, name, original_cost, category, url, bought_cost, status')
-        .eq('status', 'Interested')
-        .order('created_at', { ascending: false })
-        .abortSignal(controller.signal),
-    ])
+    try {
+      const [{ data: subsData }, { data: wishData }] = await Promise.all([
+        supabase
+          .from('subscriptions')
+          .select('id, name, cost, billing, status, next_renewal, monthly_cost, annual_cost, card_id, category, cal_event_id')
+          .order('next_renewal', { ascending: true })
+          .abortSignal(controller.signal),
+        supabase
+          .from('wishlist')
+          .select('id, name, original_cost, category, url, bought_cost, status')
+          .eq('status', 'Interested')
+          .order('created_at', { ascending: false })
+          .abortSignal(controller.signal),
+      ])
 
-    const newSubs: Sub[] = (subsData ?? []).map(s => ({
-      id:           String(s.id),
-      name:         String(s.name),
-      billing:      s.billing as BillingCycle,
-      cost:         Number(s.cost),
-      monthly_cost: Number(s.monthly_cost ?? 0),
-      annual_cost:  Number(s.annual_cost  ?? 0),
-      next_renewal: s.next_renewal ? String(s.next_renewal) : null,
-      status:       String(s.status),
-      card_id:      s.card_id ? String(s.card_id) : null,
-      category:     s.category ? String(s.category) : null,
-      cal_event_id: s.cal_event_id ? String(s.cal_event_id) : null,
-    }))
-    const newWish: WishItem[] = (wishData ?? []).map(w => ({
-      id:            String(w.id),
-      name:          String(w.name),
-      original_cost: w.original_cost != null ? Number(w.original_cost) : null,
-      category:      w.category ? String(w.category) : null,
-      url:           w.url ? String(w.url) : null,
-      bought_cost:   w.bought_cost != null ? Number(w.bought_cost) : null,
-      status:        String(w.status),
-    }))
-    if (gen !== loadGen.current) return
-    setSubs(newSubs)
-    setWishlist(newWish)
-    pageCache.set('plans', { subs: newSubs, wishlist: newWish })
-    setLoading(false)
+      const newSubs: Sub[] = (subsData ?? []).map(s => ({
+        id:           String(s.id),
+        name:         String(s.name),
+        billing:      s.billing as BillingCycle,
+        cost:         Number(s.cost),
+        monthly_cost: Number(s.monthly_cost ?? 0),
+        annual_cost:  Number(s.annual_cost  ?? 0),
+        next_renewal: s.next_renewal ? String(s.next_renewal) : null,
+        status:       String(s.status),
+        card_id:      s.card_id ? String(s.card_id) : null,
+        category:     s.category ? String(s.category) : null,
+        cal_event_id: s.cal_event_id ? String(s.cal_event_id) : null,
+      }))
+      const newWish: WishItem[] = (wishData ?? []).map(w => ({
+        id:            String(w.id),
+        name:          String(w.name),
+        original_cost: w.original_cost != null ? Number(w.original_cost) : null,
+        category:      w.category ? String(w.category) : null,
+        url:           w.url ? String(w.url) : null,
+        bought_cost:   w.bought_cost != null ? Number(w.bought_cost) : null,
+        status:        String(w.status),
+      }))
+      if (gen !== loadGen.current) return
+      setSubs(newSubs)
+      setWishlist(newWish)
+      pageCache.set('plans', { subs: newSubs, wishlist: newWish })
+      setLoading(false)
+    } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return
+      console.error('loadData error:', err)
+    }
   }, [supabase])
 
   useEffect(() => { loadData(); return () => { loadGen.current++; abortRef.current?.abort() } }, [loadData])

@@ -46,31 +46,35 @@ export default function StudioPage() {
     const controller = new AbortController()
     abortRef.current = controller
     const gen = ++loadGen.current
-    const { data } = await supabase
-      .from('commissions')
-      .select('id, client_name, project_name, project_type, value, deposit, deadline, status, notes, paid_at, income_id, cal_event_id')
-      .order('created_at', { ascending: false })
-      .abortSignal(controller.signal)
+    try {
+      const { data } = await supabase
+        .from('commissions')
+        .select('id, client_name, project_name, project_type, value, deposit, deadline, status, notes, paid_at, income_id, cal_event_id')
+        .order('created_at', { ascending: false })
+        .abortSignal(controller.signal)
 
-    if (gen !== loadGen.current) return
-    const mapped: Commission[] = (data ?? []).map(c => ({
-      id:           String(c.id),
-      client_name:  String(c.client_name),
-      project_name: String(c.project_name),
-      project_type: c.project_type ? String(c.project_type) : null,
-      value:        Number(c.value),
-      deposit:      c.deposit != null ? Number(c.deposit) : null,
-      deadline:     c.deadline     ? String(c.deadline)     : null,
-      status:       c.status as CommissionStatus,
-      notes:        c.notes       ? String(c.notes)       : null,
-      paid_at:      c.paid_at    ? String(c.paid_at)    : null,
-      income_id:    c.income_id  ? String(c.income_id)  : null,
-      cal_event_id: c.cal_event_id ? String(c.cal_event_id) : null,
-    }))
-    pageCache.set('studio', mapped)
-    setCommissions(mapped)
-
-    setLoading(false)
+      if (gen !== loadGen.current) return
+      const mapped: Commission[] = (data ?? []).map(c => ({
+        id:           String(c.id),
+        client_name:  String(c.client_name),
+        project_name: String(c.project_name),
+        project_type: c.project_type ? String(c.project_type) : null,
+        value:        Number(c.value),
+        deposit:      c.deposit != null ? Number(c.deposit) : null,
+        deadline:     c.deadline     ? String(c.deadline)     : null,
+        status:       c.status as CommissionStatus,
+        notes:        c.notes       ? String(c.notes)       : null,
+        paid_at:      c.paid_at    ? String(c.paid_at)    : null,
+        income_id:    c.income_id  ? String(c.income_id)  : null,
+        cal_event_id: c.cal_event_id ? String(c.cal_event_id) : null,
+      }))
+      pageCache.set('studio', mapped)
+      setCommissions(mapped)
+      setLoading(false)
+    } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return
+      console.error('loadData error:', err)
+    }
   }, [supabase])
 
   useEffect(() => { loadData(); return () => { loadGen.current++; abortRef.current?.abort() } }, [loadData])

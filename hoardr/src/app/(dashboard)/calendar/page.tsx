@@ -233,34 +233,39 @@ export default function CalendarPage() {
     const controller = new AbortController()
     abortRef.current = controller
     const gen = ++loadGen.current
-    const [{ data: exp }, { data: inc }, { data: subs }, { data: cevs }, { data: profile }] =
-      await Promise.all([
-        supabase.from('expenses').select('name, cost, date').abortSignal(controller.signal),
-        supabase.from('income').select('name, amount, date').abortSignal(controller.signal),
-        supabase.from('subscriptions').select('name, cost, next_renewal').eq('status', 'Active').abortSignal(controller.signal),
-        supabase.from('cal_events').select('id, title, date, start_time, end_time, location, notes, google_event_id').order('created_at').abortSignal(controller.signal),
-        supabase.from('profiles').select('calendar_prefs').abortSignal(controller.signal).single(),
-      ])
-    if (gen !== loadGen.current) return
-    if (profile?.calendar_prefs) setPrefs(profile.calendar_prefs as CalPrefs)
+    try {
+      const [{ data: exp }, { data: inc }, { data: subs }, { data: cevs }, { data: profile }] =
+        await Promise.all([
+          supabase.from('expenses').select('name, cost, date').abortSignal(controller.signal),
+          supabase.from('income').select('name, amount, date').abortSignal(controller.signal),
+          supabase.from('subscriptions').select('name, cost, next_renewal').eq('status', 'Active').abortSignal(controller.signal),
+          supabase.from('cal_events').select('id, title, date, start_time, end_time, location, notes, google_event_id').order('created_at').abortSignal(controller.signal),
+          supabase.from('profiles').select('calendar_prefs').abortSignal(controller.signal).single(),
+        ])
+      if (gen !== loadGen.current) return
+      if (profile?.calendar_prefs) setPrefs(profile.calendar_prefs as CalPrefs)
 
-    const map: Record<string, CalEvent[]> = {}
-    const push = (date: string, ev: CalEvent) => { if (!map[date]) map[date] = []; map[date].push(ev) }
-    for (const e of exp  ?? []) push(String(e.date), { title: String(e.name), type: 'expense', amount: `−$${Number(e.cost).toFixed(2)}` })
-    for (const i of inc  ?? []) push(String(i.date), { title: String(i.name), type: 'income',  amount: `+$${Number(i.amount).toFixed(2)}` })
-    for (const s of subs ?? []) if (s.next_renewal) push(String(s.next_renewal), { title: String(s.name), type: 'sub', amount: `$${Number(s.cost).toFixed(2)}` })
-    for (const c of cevs ?? []) {
-      const st = c.start_time ? String(c.start_time) : ''
-      const et = c.end_time   ? String(c.end_time)   : ''
-      push(String(c.date), {
-        id: String(c.id), title: String(c.title), type: 'custom',
-        amount: st ? `${st}${et ? ` – ${et}` : ''}` : '',
-        location: c.location ? String(c.location) : undefined,
-        notes:    c.notes    ? String(c.notes)    : undefined,
-        googleEventId: c.google_event_id ? String(c.google_event_id) : undefined,
-      })
+      const map: Record<string, CalEvent[]> = {}
+      const push = (date: string, ev: CalEvent) => { if (!map[date]) map[date] = []; map[date].push(ev) }
+      for (const e of exp  ?? []) push(String(e.date), { title: String(e.name), type: 'expense', amount: `−$${Number(e.cost).toFixed(2)}` })
+      for (const i of inc  ?? []) push(String(i.date), { title: String(i.name), type: 'income',  amount: `+$${Number(i.amount).toFixed(2)}` })
+      for (const s of subs ?? []) if (s.next_renewal) push(String(s.next_renewal), { title: String(s.name), type: 'sub', amount: `$${Number(s.cost).toFixed(2)}` })
+      for (const c of cevs ?? []) {
+        const st = c.start_time ? String(c.start_time) : ''
+        const et = c.end_time   ? String(c.end_time)   : ''
+        push(String(c.date), {
+          id: String(c.id), title: String(c.title), type: 'custom',
+          amount: st ? `${st}${et ? ` – ${et}` : ''}` : '',
+          location: c.location ? String(c.location) : undefined,
+          notes:    c.notes    ? String(c.notes)    : undefined,
+          googleEventId: c.google_event_id ? String(c.google_event_id) : undefined,
+        })
+      }
+      setEventMap(map)
+    } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return
+      console.error('loadData error:', err)
     }
-    setEventMap(map)
   }, [supabase])
 
   useEffect(() => { loadData(); return () => { loadGen.current++; abortRef.current?.abort() } }, [loadData])
