@@ -381,15 +381,11 @@ export default function CalendarPage() {
   useEffect(() => {
     if (viewIndex !== 1 || !scrollToToday.current) return
     scrollToToday.current = false
+    // Wait for the 320ms slide transition to finish before measuring
     const t = setTimeout(() => {
       const el = dayRefs.current.get(todayStr)
-      const sc = scrollRef.current
-      if (!el || !sc) return
-      // Align today's visual center with the viewport center (where the MAY 2026 side label sits)
-      const scRect = sc.getBoundingClientRect()
-      const viewportCenter = window.innerHeight / 2
-      sc.scrollTop = Math.max(0, scRect.top + el.offsetTop + el.offsetHeight / 2 - viewportCenter)
-    }, 120)
+      if (el) el.scrollIntoView({ block: 'center', behavior: 'instant' })
+    }, 360)
     return () => clearTimeout(t)
   }, [viewIndex, todayStr])
 
@@ -597,7 +593,7 @@ export default function CalendarPage() {
 
           {/* Compact header */}
           <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingTop: SAFE_TOP, paddingBottom: 10, paddingLeft: 14, paddingRight: 14, gap: 6, background: '#0a0a0a', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-            <button onClick={() => { const el = dayRefs.current.get(todayStr); const sc = scrollRef.current; if (el && sc) { const r = sc.getBoundingClientRect(); sc.scrollTo({ top: Math.max(0, r.top + el.offsetTop + el.offsetHeight / 2 - window.innerHeight / 2), behavior: 'smooth' }) } }}
+            <button onClick={() => { const el = dayRefs.current.get(todayStr); const sc = scrollRef.current; if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }) }}
               style={{ height: 30, padding: '0 10px', borderRadius: 15, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.07)', fontSize: 11, color: '#D4AF37', fontWeight: 600, flexShrink: 0, cursor: 'pointer' }}>
               Today
             </button>
