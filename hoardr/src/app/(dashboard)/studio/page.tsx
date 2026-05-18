@@ -188,16 +188,10 @@ export default function StudioPage() {
       <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
 
       {/* ── Header ───────────────────────────────────────────────────────── */}
-      <div className="px-5 pt-14 pb-0 flex items-start justify-between">
-        <div>
-          <p className="text-[10px] font-medium tracking-[0.14em] uppercase text-gold mb-1">
-            Studio
-          </p>
-          <h1 className="text-[28px] font-bold tracking-[-0.03em] text-ink">Commission Desk</h1>
-        </div>
+      <div className="px-5 pt-12 flex justify-end">
         <button
           onClick={() => setSheetOpen(true)}
-          className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-white text-[22px] font-light mt-10 select-none"
+          className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-white text-[22px] font-light select-none"
           aria-label="Add commission"
         >
           +
@@ -205,7 +199,7 @@ export default function StudioPage() {
       </div>
 
       {/* ── Ledger summary card ──────────────────────────────────────────── */}
-      <div className="mx-4 mt-5 bg-bg-surface border border-white/[0.06] rounded-card p-5">
+      <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card p-5">
         <div className="flex items-start justify-between mb-2">
           <p className="text-[9px] font-medium tracking-[0.14em] uppercase text-ink-faint">
             Matte Black Ledger

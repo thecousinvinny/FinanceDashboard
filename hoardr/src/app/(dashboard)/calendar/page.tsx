@@ -485,21 +485,17 @@ export default function CalendarPage() {
           <div style={{ paddingTop: SAFE_TOP }} className="bg-bg-base">
             {/* Header */}
             <div className="px-5 pb-4 pt-0">
-              <p className="text-[10px] font-medium tracking-[0.14em] uppercase text-gold mb-1">Schedule</p>
-              <div className="flex items-center justify-between">
-                <h1 className="text-[32px] font-bold tracking-[-0.04em] text-ink">Calendar</h1>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => setSettingsOpen(true)} className="w-9 h-9 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center select-none">
-                    <SlidersHorizontal size={15} className="text-ink-muted" />
-                  </button>
-                  <button onClick={() => setAddOpen(true)} className="w-9 h-9 rounded-full gradient-gold flex items-center justify-center select-none">
-                    <Plus size={18} className="text-white" />
-                  </button>
-                  <button onClick={goToPrev} className="w-8 h-8 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center text-ink-muted text-[14px] select-none">‹</button>
-                  <button onClick={goToNext} className="w-8 h-8 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center text-ink-muted text-[14px] select-none">›</button>
-                </div>
+              <div className="flex items-center justify-end gap-2 mb-2">
+                <button onClick={() => setSettingsOpen(true)} className="w-9 h-9 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center select-none">
+                  <SlidersHorizontal size={15} className="text-ink-muted" />
+                </button>
+                <button onClick={() => setAddOpen(true)} className="w-9 h-9 rounded-full gradient-gold flex items-center justify-center select-none">
+                  <Plus size={18} className="text-white" />
+                </button>
+                <button onClick={goToPrev} className="w-8 h-8 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center text-ink-muted text-[14px] select-none">‹</button>
+                <button onClick={goToNext} className="w-8 h-8 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center text-ink-muted text-[14px] select-none">›</button>
               </div>
-              <div className="flex items-center justify-between mt-1">
+              <div className="flex items-center justify-between">
                 <p className="text-[18px] font-semibold text-ink">{gridMonthLbl}</p>
                 <button onClick={goToToday} className="text-[11px] font-medium text-gold select-none">Today</button>
               </div>
@@ -563,8 +559,7 @@ export default function CalendarPage() {
           onTouchStart={v2Start} onTouchEnd={v2End}>
 
           {/* Compact header */}
-          <div style={{ flexShrink: 0, display: 'flex', alignItems: 'flex-end', paddingTop: SAFE_TOP, paddingBottom: 10, paddingLeft: 28, paddingRight: 14, gap: 6, background: '#0a0a0a', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, color: '#f0f0f8', flex: 1, letterSpacing: '-0.03em', margin: 0 }}>Calendar</h1>
+          <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingTop: SAFE_TOP, paddingBottom: 10, paddingLeft: 14, paddingRight: 14, gap: 6, background: '#0a0a0a', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
             <button onClick={() => { const el = dayRefs.current.get(todayStr); const sc = scrollRef.current; if (el && sc) sc.scrollTo({ top: el.offsetTop - 60, behavior: 'smooth' }) }}
               style={{ height: 30, padding: '0 10px', borderRadius: 15, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.07)', fontSize: 11, color: '#D4AF37', fontWeight: 600, flexShrink: 0, cursor: 'pointer' }}>
               Today

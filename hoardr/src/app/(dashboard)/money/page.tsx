@@ -89,12 +89,14 @@ export default function MoneyPage() {
 
   // Load wallet data once on mount — cards/banks change only in Wallet tab
   useEffect(() => {
+    let mounted = true
     async function loadWallet() {
       const [{ data: c }, { data: b }, { data: subs }] = await Promise.all([
         supabase.from('cards').select('id, name, last4, is_default').order('is_default', { ascending: false }).order('created_at', { ascending: false }),
         supabase.from('banks').select('id, name').order('created_at', { ascending: false }),
         supabase.from('subscriptions').select('name').eq('status', 'Active'),
       ])
+      if (!mounted) return
       const cList = c ?? []
       setDefaultCardId((cList as { is_default: boolean; id: string }[]).find(x => x.is_default)?.id ?? null)
       setCards(cList.map(x => ({ id: String(x.id), name: String(x.name), last4: x.last4 ? String(x.last4) : null })))
@@ -102,6 +104,7 @@ export default function MoneyPage() {
       setSubNames(new Set((subs ?? []).map(s => String(s.name).toLowerCase())))
     }
     loadWallet()
+    return () => { mounted = false }
   }, [supabase])
 
   async function handleDelete(tx: SeedTx) {
@@ -253,16 +256,10 @@ export default function MoneyPage() {
       <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
 
       {/* ── Header ───────────────────────────────────────────────────────── */}
-      <div className="px-5 pt-14 pb-0 flex items-start justify-between">
-        <div>
-          <p className="text-[10px] font-medium tracking-[0.14em] uppercase text-gold mb-1">
-            Activity
-          </p>
-          <h1 className="text-[32px] font-bold tracking-[-0.04em] text-ink">Money</h1>
-        </div>
+      <div className="px-5 pt-12 flex justify-end">
         <button
           onClick={() => setSheetOpen(true)}
-          className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-white text-[22px] font-light mt-10 select-none"
+          className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-white text-[22px] font-light select-none"
           aria-label="Add transaction"
         >
           +
@@ -270,7 +267,7 @@ export default function MoneyPage() {
       </div>
 
       {/* ── Summary tiles ────────────────────────────────────────────────── */}
-      <div className="mx-4 mt-5 flex gap-2">
+      <div className="mx-4 mt-4 flex gap-2">
         <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-3">
           <div className="flex items-center justify-between mb-2">
             <p className="text-[9px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Spent</p>

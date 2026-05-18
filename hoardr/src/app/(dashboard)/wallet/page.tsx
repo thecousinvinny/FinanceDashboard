@@ -224,35 +224,29 @@ export default function WalletPage() {
         <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
-        <div className="px-5 pt-14 pb-0 flex items-start justify-between">
-          <div>
-            <p className="text-[10px] font-medium tracking-[0.14em] uppercase text-gold mb-1">Wallet</p>
-            <h1 className="text-[32px] font-bold tracking-[-0.04em] text-ink">Wallet</h1>
-          </div>
-          <div className="flex items-center gap-2 mt-10">
-            {tab === 'Cards' && cards.length > 1 && (
-              <button
-                onClick={() => setReorderMode(v => !v)}
-                className={cn(
-                  'h-8 px-3 rounded-full text-[11px] font-medium select-none transition-colors',
-                  reorderMode ? 'bg-gold/20 text-gold' : 'bg-bg-overlay text-ink-muted'
-                )}
-              >
-                {reorderMode ? 'Done' : 'Reorder'}
-              </button>
-            )}
+        <div className="px-5 pt-12 pb-0 flex justify-end items-center gap-2">
+          {tab === 'Cards' && cards.length > 1 && (
             <button
-              onClick={() => setSheetOpen(true)}
-              className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-white text-[22px] font-light select-none"
-              aria-label="Add"
+              onClick={() => setReorderMode(v => !v)}
+              className={cn(
+                'h-8 px-3 rounded-full text-[11px] font-medium select-none transition-colors',
+                reorderMode ? 'bg-gold/20 text-gold' : 'bg-bg-overlay text-ink-muted'
+              )}
             >
-              +
+              {reorderMode ? 'Done' : 'Reorder'}
             </button>
-          </div>
+          )}
+          <button
+            onClick={() => setSheetOpen(true)}
+            className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-white text-[22px] font-light select-none"
+            aria-label="Add"
+          >
+            +
+          </button>
         </div>
 
         {/* ── Tab toggle ─────────────────────────────────────────────────── */}
-        <div className="mx-4 mt-5">
+        <div className="mx-4 mt-4">
           <PillGroup options={['Cards', 'Banks'] as Tab[]} value={tab} onChange={setTab} />
         </div>
 

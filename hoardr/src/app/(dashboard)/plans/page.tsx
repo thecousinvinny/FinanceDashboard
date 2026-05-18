@@ -173,7 +173,11 @@ function PlansPageInner() {
     const today = new Date().toISOString().slice(0, 10)
     const { data: expRow, error: expErr } = await supabase
       .from('expenses')
-      .insert({ user_id: user.id, name: item.name, cost: paidCost, date: today, category_id: categoryId, status: 'Procured' })
+      .insert({
+        user_id: user.id, name: item.name, cost: paidCost, date: today,
+        category_id: categoryId, status: 'Procured',
+        ...(item.original_cost != null ? { original_cost: item.original_cost } : {}),
+      })
       .select('id')
       .single()
     if (expErr) console.error('wishlist buy expense error:', JSON.stringify(expErr))
@@ -373,16 +377,10 @@ function PlansPageInner() {
       <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
 
       {/* ── Header ───────────────────────────────────────────────────────── */}
-      <div className="px-5 pt-14 pb-0 flex items-start justify-between">
-        <div>
-          <p className="text-[10px] font-medium tracking-[0.14em] uppercase text-gold mb-1">
-            Plans
-          </p>
-          <h1 className="text-[32px] font-bold tracking-[-0.04em] text-ink">Plans</h1>
-        </div>
+      <div className="px-5 pt-12 flex justify-end">
         <button
           onClick={() => tab === 'Subscriptions' ? setSubSheet(true) : setWishSheet(true)}
-          className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-white text-[22px] font-light mt-10 select-none"
+          className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-white text-[22px] font-light select-none"
           aria-label="Add"
         >
           +
@@ -391,7 +389,7 @@ function PlansPageInner() {
 
       {/* ── Stat tiles ───────────────────────────────────────────────────── */}
       {!loading && (
-        <div className="mx-4 mt-5 flex gap-3">
+        <div className="mx-4 mt-4 flex gap-3">
           <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
             <div className="flex items-center justify-between mb-3">
               <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Per Month</p>
@@ -533,42 +531,29 @@ function PlansPageInner() {
               onRight={item.status === 'Interested' ? () => { setBuyItem(item); setBuyAmount('') } : undefined}
               rightLabel={<CreditCard size={18} strokeWidth={1.5} className="text-white" />}
             >
-              <div className="bg-bg-surface border border-white/[0.06] rounded-[18px] p-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
-                    <CategoryIcon category={item.category ?? 'Other'} type="Expense" size={15} className="text-gold" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[14px] font-semibold text-ink truncate">{item.name}</p>
-                    {item.original_cost != null && (
-                      <p className="text-[13px] font-mono text-ink-muted mt-0.5">{$fd(item.original_cost)}</p>
-                    )}
-                    {(item.category || item.url) && (
-                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                        {item.category && (
-                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-bg-overlay text-ink-muted">
-                            {item.category}
-                          </span>
-                        )}
-                        {item.url && (
-                          <a
-                            href={item.url} target="_blank" rel="noopener noreferrer"
-                            onClick={e => e.stopPropagation()}
-                            className="text-[10px] font-semibold text-gold select-none"
-                          >
-                            View →
-                          </a>
-                        )}
-                      </div>
+              <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
+                <div className="w-10 h-10 rounded-full bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+                  <CategoryIcon category={item.category ?? 'Other'} type="Expense" size={15} className="text-gold" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[14px] font-medium text-ink truncate">{item.name}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {item.category && <p className="text-[11px] text-ink-muted">{item.category}</p>}
+                    {item.url && (
+                      <a href={item.url} target="_blank" rel="noopener noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        className="text-[11px] font-semibold text-gold select-none">
+                        View →
+                      </a>
                     )}
                   </div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  {item.original_cost != null && (
+                    <p className="text-[15px] font-semibold font-mono text-ink">{$fd(item.original_cost)}</p>
+                  )}
                   {item.status !== 'Interested' && (
-                    <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-                      <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-emerald/10 text-emerald">Bought</span>
-                      {item.bought_cost != null && item.original_cost != null && item.original_cost > item.bought_cost && (
-                        <span className="text-[10px] font-semibold text-emerald font-mono">saved {$fd(item.original_cost - item.bought_cost)}</span>
-                      )}
-                    </div>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald/10 text-emerald block mt-0.5">Bought</span>
                   )}
                 </div>
               </div>
