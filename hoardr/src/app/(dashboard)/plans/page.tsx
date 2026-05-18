@@ -12,7 +12,7 @@ import { daysUntilLabel, $fc, $fd, $fk, cn, calcSubCosts, localToday, nextRenewa
 import { SlotNumber } from '@/components/ui/SlotNumber'
 import { createCalEvent, updateCalEvent, deleteCalEvent, allDayEvent } from '@/lib/calendar'
 import { pageCache } from '@/lib/page-cache'
-import { RefreshCw, CreditCard } from 'lucide-react'
+import { RefreshCw, CreditCard, XCircle } from 'lucide-react'
 import { PullIndicator } from '@/components/ui/PullIndicator'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import type { CardOption } from '@/components/money/AddTransactionSheet'
@@ -495,7 +495,7 @@ function PlansPageInner() {
                     <SwipeToDelete
                       key={sub.id}
                       onDelete={() => handleCancelSub(sub.id)}
-                      actionLabel="Cancel" actionBg="bg-amber-600"
+                      actionLabel={<XCircle size={18} strokeWidth={1.5} className="text-white" />} actionBg="bg-amber-600"
                       onTap={() => setEditSub(sub)}
                       onRight={() => handlePaySub(sub.id)}
                       rightLabel={<CreditCard size={18} strokeWidth={1.5} className="text-white" />}
