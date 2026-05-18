@@ -63,7 +63,8 @@ export default function MoneyPage() {
           .abortSignal(controller.signal),
       ])
 
-      const rows: SeedTx[] = [
+      // Merge both sources, sort newest-first, take only the top LIMIT combined
+      const merged: SeedTx[] = [
         ...(expenses ?? []).map(e => ({
           id:          String(e.id),
           type:        'Expense' as const,
@@ -85,11 +86,14 @@ export default function MoneyPage() {
           description: i.description ? String(i.description) : null,
           bank_id:     i.bank_id ? String(i.bank_id) : null,
         })),
-      ]
+      ].sort((a, b) => b.date.localeCompare(a.date))
+
+      const rows = merged.slice(0, LIMIT)
+      const totalFetched = (expenses?.length ?? 0) + (income?.length ?? 0)
 
       if (gen !== loadGen.current) return
       setTxList(rows)
-      setHasMore((expenses?.length ?? 0) === LIMIT || (income?.length ?? 0) === LIMIT)
+      setHasMore(totalFetched > LIMIT)
       pageCache.set('money', rows)
       setLoading(false)
     } catch (err) {
@@ -109,22 +113,28 @@ export default function MoneyPage() {
     if (isLoadingMore.current || !hasMoreRef.current) return
     isLoadingMore.current = true
     setLoadingMore(true)
-    const expOff = txListRef.current.filter(t => t.type === 'Expense').length
-    const incOff = txListRef.current.filter(t => t.type === 'Income').length
+    // Cursor = date of last shown item; fetch both tables at/before that date,
+    // dedup by ID to handle same-date ties at page boundaries.
+    const list = txListRef.current
+    const lastDate = list[list.length - 1]?.date
+    if (!lastDate) { isLoadingMore.current = false; setLoadingMore(false); return }
+    const existingIds = new Set(list.map(t => t.id))
     try {
       const [{ data: expenses }, { data: income }] = await Promise.all([
         supabase
           .from('expenses')
           .select('id, name, cost, date, description, card_id, savings, categories(name)')
+          .lte('date', lastDate)
           .order('date', { ascending: false })
           .order('created_at', { ascending: false })
-          .range(expOff, expOff + LIMIT - 1),
+          .limit(LIMIT),
         supabase
           .from('income')
           .select('id, name, amount, date, description, source, bank_id')
+          .lte('date', lastDate)
           .order('date', { ascending: false })
           .order('created_at', { ascending: false })
-          .range(incOff, incOff + LIMIT - 1),
+          .limit(LIMIT),
       ])
       const newRows: SeedTx[] = [
         ...(expenses ?? []).map(e => ({
@@ -149,8 +159,11 @@ export default function MoneyPage() {
           bank_id:     i.bank_id ? String(i.bank_id) : null,
         })),
       ]
-      setTxList(prev => [...prev, ...newRows].sort((a, b) => b.date.localeCompare(a.date)))
-      const more = (expenses?.length ?? 0) === LIMIT || (income?.length ?? 0) === LIMIT
+        .filter(r => !existingIds.has(r.id))
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(0, LIMIT)
+      setTxList(prev => [...prev, ...newRows])
+      const more = newRows.length === LIMIT
       setHasMore(more)
       hasMoreRef.current = more
     } catch (err) {
