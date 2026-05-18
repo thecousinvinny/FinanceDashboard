@@ -484,12 +484,12 @@ export default function MoneyPage() {
                 </div>
 
                 {/* Rows */}
-                <div className="space-y-2.5">
+                <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
                   {group.rows.map(row => {
                     const tx = row as SeedTx
                     return (
-                      <SwipeToDelete key={tx.id} onDelete={() => handleDelete(tx)} onTap={() => setEditTx(tx)} className="rounded-[18px]">
-                        <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
+                      <SwipeToDelete key={tx.id} onDelete={() => handleDelete(tx)} onTap={() => setEditTx(tx)}>
+                        <div className="flex items-center gap-3 px-4 py-3.5">
                           <div className="w-10 h-10 rounded-full bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
                             <CategoryIcon category={tx.category} type={tx.type} size={15}
                               className={tx.type === 'Income' ? 'text-emerald' : subNames.has(tx.name.toLowerCase()) ? 'text-white/60' : 'text-gold'} />

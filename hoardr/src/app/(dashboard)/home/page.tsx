@@ -192,9 +192,9 @@ export default async function HomePage() {
           <Link href="/money" className="text-[11px] font-medium text-gold">All →</Link>
         </div>
         {activity.length > 0 ? (
-          <div className="space-y-2.5">
+          <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
             {activity.map(row => (
-              <div key={row.id} className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
+              <div key={row.id} className="flex items-center gap-3 px-4 py-3.5">
                 <div className="w-10 h-10 rounded-full bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
                   <CategoryIcon
                     category={row.category}

@@ -454,11 +454,12 @@ export default function WalletPage() {
           ) : (() => {
             const subNameSet = new Set(cardSubs.map(s => s.name.toLowerCase()))
             return (
-              <div className="px-4 space-y-2.5 pb-4">
+              <div className="mx-4 mb-4">
+              <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
                 {cardExpenses.map(exp => {
                   const isSub = subNameSet.has(exp.name.toLowerCase())
                   return (
-                    <div key={exp.id} className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
+                    <div key={exp.id} className="flex items-center gap-3 px-4 py-3.5">
                       <div className="w-10 h-10 rounded-full bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
                         <CategoryIcon
                           category={exp.categories?.name ?? 'Other'}
@@ -477,6 +478,7 @@ export default function WalletPage() {
                     </div>
                   )
                 })}
+              </div>
               </div>
             )
           })()}

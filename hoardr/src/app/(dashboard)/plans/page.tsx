@@ -487,7 +487,7 @@ function PlansPageInner() {
             </div>
           ) : (
             <div className="mx-4 mt-4">
-              <div className="space-y-2.5">
+              <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
                 {activeSubs.map(sub => {
                   const renewal   = sub.next_renewal ? daysUntilLabel(sub.next_renewal) : '—'
                   const isOverdue = typeof renewal === 'string' && renewal.includes('ago')
@@ -497,11 +497,10 @@ function PlansPageInner() {
                       onDelete={() => handleCancelSub(sub.id)}
                       actionLabel="Cancel" actionBg="bg-amber-600"
                       onTap={() => setEditSub(sub)}
-                      className="rounded-[18px]"
                       onRight={() => handlePaySub(sub.id)}
                       rightLabel={<CreditCard size={18} strokeWidth={1.5} className="text-white" />}
                     >
-                      <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
+                      <div className="flex items-center gap-3 px-4 py-3.5">
                         <div className="w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
                           {sub.category
                             ? <CategoryIcon category={sub.category} type="Expense" size={15} className="text-gold" />
@@ -540,10 +539,10 @@ function PlansPageInner() {
                 Cancelled ({cancelledSubs.length})
               </button>
               {showCancelled && (
-                <div className="space-y-2.5 opacity-60">
+                <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04] opacity-60">
                   {cancelledSubs.map(sub => (
-                    <SwipeToDelete key={sub.id} onDelete={() => handleDeleteSub(sub.id)} className="rounded-[18px]">
-                      <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
+                    <SwipeToDelete key={sub.id} onDelete={() => handleDeleteSub(sub.id)}>
+                      <div className="flex items-center gap-3 px-4 py-3.5">
                         <div className="w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
                           <RefreshCw size={15} className="text-ink-faint" strokeWidth={1.75} />
                         </div>
@@ -569,22 +568,22 @@ function PlansPageInner() {
 
       {/* ── Wishlist ─────────────────────────────────────────────────────── */}
       {!loading && tab === 'Wishlist' && (
-        <div className="mx-4 mt-4 space-y-2.5">
-          {interestedWish.length === 0 && (
-            <div className="bg-bg-surface border border-white/[0.06] rounded-[18px] py-12 text-center text-ink-faint text-[13px]">
+        <div className="mx-4 mt-4">
+          {interestedWish.length === 0 ? (
+            <div className="bg-bg-surface border border-white/[0.06] rounded-card py-12 text-center text-ink-faint text-[13px]">
               Nothing on your wishlist — tap + to add an item.
             </div>
-          )}
+          ) : (
+          <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
           {interestedWish.map(item => (
             <SwipeToDelete
               key={item.id}
               onDelete={() => handleDeleteWish(item.id)}
-              className="rounded-[18px]"
               onTap={() => setEditWish(item)}
               onRight={item.status === 'Interested' ? () => { setBuyItem(item); setBuyAmount('') } : undefined}
               rightLabel={<CreditCard size={18} strokeWidth={1.5} className="text-white" />}
             >
-              <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-[18px]">
+              <div className="flex items-center gap-3 px-4 py-3.5">
                 <div className="w-10 h-10 rounded-full bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
                   <CategoryIcon category={item.category ?? 'Other'} type="Expense" size={15} className="text-gold" />
                 </div>
@@ -612,6 +611,8 @@ function PlansPageInner() {
               </div>
             </SwipeToDelete>
           ))}
+          </div>
+          )}
         </div>
       )}
 
