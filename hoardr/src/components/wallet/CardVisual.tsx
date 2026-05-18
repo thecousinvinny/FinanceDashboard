@@ -22,23 +22,29 @@ function getTexturePattern(texture: CardTexture, id: string): React.ReactElement
       <polygon points="10,0 20,5.77 20,17.32 10,23.1 0,17.32 0,5.77" fill="none" stroke={G(0.2)} strokeWidth="0.5"/>
     </pattern>
   )
-  if (texture === 'waves') return (
-    <pattern key={id} id={id} width="40" height="14" patternUnits="userSpaceOnUse">
-      <path d="M0,7 C10,0 10,14 20,7 C30,0 30,14 40,7" fill="none" stroke={G(0.2)} strokeWidth="0.6"/>
+  if (texture === 'grid') return (
+    <pattern key={id} id={id} width="18" height="18" patternUnits="userSpaceOnUse">
+      <path d="M18,0 L0,0 L0,18" stroke={G(0.11)} strokeWidth="0.5" fill="none"/>
     </pattern>
   )
-  if (texture === 'circuit') return (
-    <pattern key={id} id={id} width="30" height="30" patternUnits="userSpaceOnUse">
-      <path d="M0,10 H8 V22 H22 M22,0 V8 H30 M10,30 V22" fill="none" stroke={G(0.18)} strokeWidth="0.5"/>
-      <circle cx="8"  cy="10" r="1.2" fill={G(0.28)}/>
-      <circle cx="22" cy="22" r="1.2" fill={G(0.28)}/>
-      <circle cx="22" cy="8"  r="0.8" fill={G(0.22)}/>
+  if (texture === 'chevron') return (
+    <pattern key={id} id={id} width="20" height="14" patternUnits="userSpaceOnUse">
+      <path d="M0,7 L10,0 L20,7 M0,14 L10,7 L20,14" stroke={G(0.17)} strokeWidth="0.6" fill="none"/>
     </pattern>
   )
-  // dots
+  if (texture === 'carbon') return (
+    <pattern key={id} id={id} width="8" height="8" patternUnits="userSpaceOnUse">
+      <rect x="0" y="0" width="4" height="4" rx="0.5" fill={G(0.12)}/>
+      <rect x="4" y="4" width="4" height="4" rx="0.5" fill={G(0.12)}/>
+      <path d="M4,0 V8 M0,4 H8" stroke={G(0.18)} strokeWidth="0.4" fill="none"/>
+    </pattern>
+  )
+  // topography
   return (
-    <pattern key={id} id={id} width="12" height="12" patternUnits="userSpaceOnUse">
-      <circle cx="6" cy="6" r="0.9" fill={G(0.3)}/>
+    <pattern key={id} id={id} width="50" height="40" patternUnits="userSpaceOnUse">
+      <ellipse cx="25" cy="20" rx="21" ry="15" fill="none" stroke={G(0.13)} strokeWidth="0.5"/>
+      <ellipse cx="25" cy="20" rx="13" ry="9"  fill="none" stroke={G(0.13)} strokeWidth="0.5"/>
+      <ellipse cx="25" cy="20" rx="5"  ry="4"  fill="none" stroke={G(0.15)} strokeWidth="0.5"/>
     </pattern>
   )
 }

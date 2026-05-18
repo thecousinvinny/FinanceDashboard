@@ -94,12 +94,13 @@ export const STYLE_GROUPS: { label: string; styles: CardStyle[] }[] = [
 ]
 
 export const CARD_TEXTURE_DEFS: Record<CardTexture, { label: string }> = {
-  none:     { label: 'None'    },
-  diamonds: { label: 'Diamond' },
-  slate:    { label: 'Slate'   },
-  fractal:  { label: 'Hex'     },
-  waves:    { label: 'Waves'   },
-  circuit:  { label: 'Circuit' },
-  dots:     { label: 'Dots'    },
+  none:       { label: 'None'    },
+  diamonds:   { label: 'Diamond' },
+  slate:      { label: 'Slate'   },
+  fractal:    { label: 'Hex'     },
+  grid:       { label: 'Grid'    },
+  chevron:    { label: 'Chevron' },
+  carbon:     { label: 'Carbon'  },
+  topography: { label: 'Topo'    },
 }
 
