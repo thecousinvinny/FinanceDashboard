@@ -40,7 +40,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${montserrat.variable} ${bigShoulders.variable}`}>
+    <html lang="en" className={`${montserrat.variable} ${bigShoulders.variable}`} style={{ backgroundColor: '#080810' }}>
       {/* Restore theme before first paint to prevent flash */}
       <head>
         <script
@@ -49,7 +49,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className="bg-bg-base text-ink font-sans antialiased" suppressHydrationWarning>
+      <body className="bg-bg-base text-ink font-sans antialiased" style={{ backgroundColor: '#080810' }} suppressHydrationWarning>
         {children}
       </body>
     </html>
