@@ -16,11 +16,15 @@ import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 
 type Filter = 'All' | 'Expenses' | 'Income'
 
+const LIMIT = 50
+
 export default function MoneyPage() {
   const [filter,    setFilter]    = useState<Filter>('All')
   const cachedTx = pageCache.get<SeedTx[]>('money')
   const [txList,    setTxList]    = useState<SeedTx[]>(cachedTx ?? [])
   const [loading,   setLoading]   = useState(!cachedTx)
+  const [hasMore,     setHasMore]     = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editTx,    setEditTx]    = useState<SeedTx | null>(null)
   const [cards,         setCards]         = useState<CardOption[]>([])
@@ -44,12 +48,14 @@ export default function MoneyPage() {
           .select('id, name, cost, date, description, card_id, savings, categories(name)')
           .order('date', { ascending: false })
           .order('created_at', { ascending: false })
+          .limit(LIMIT)
           .abortSignal(controller.signal),
         supabase
           .from('income')
           .select('id, name, amount, date, description, source, bank_id')
           .order('date', { ascending: false })
           .order('created_at', { ascending: false })
+          .limit(LIMIT)
           .abortSignal(controller.signal),
       ])
 
@@ -79,6 +85,7 @@ export default function MoneyPage() {
 
       if (gen !== loadGen.current) return
       setTxList(rows)
+      setHasMore((expenses?.length ?? 0) === LIMIT || (income?.length ?? 0) === LIMIT)
       pageCache.set('money', rows)
       setLoading(false)
     } catch (err) {
@@ -92,21 +99,77 @@ export default function MoneyPage() {
   const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } =
     usePullToRefresh(loadData)
 
+  async function loadMore() {
+    if (loadingMore || !hasMore) return
+    setLoadingMore(true)
+    const expOff = txList.filter(t => t.type === 'Expense').length
+    const incOff = txList.filter(t => t.type === 'Income').length
+    try {
+      const [{ data: expenses }, { data: income }] = await Promise.all([
+        supabase
+          .from('expenses')
+          .select('id, name, cost, date, description, card_id, savings, categories(name)')
+          .order('date', { ascending: false })
+          .order('created_at', { ascending: false })
+          .range(expOff, expOff + LIMIT - 1),
+        supabase
+          .from('income')
+          .select('id, name, amount, date, description, source, bank_id')
+          .order('date', { ascending: false })
+          .order('created_at', { ascending: false })
+          .range(incOff, incOff + LIMIT - 1),
+      ])
+      const newRows: SeedTx[] = [
+        ...(expenses ?? []).map(e => ({
+          id:          String(e.id),
+          type:        'Expense' as const,
+          name:        String(e.name),
+          category:    (e.categories as unknown as { name: string } | null)?.name ?? 'Other',
+          date:        String(e.date),
+          amount:      Number(e.cost),
+          savings:     e.savings != null ? Number(e.savings) : 0,
+          description: e.description ? String(e.description) : null,
+          card_id:     e.card_id ? String(e.card_id) : null,
+        })),
+        ...(income ?? []).map(i => ({
+          id:          String(i.id),
+          type:        'Income' as const,
+          name:        String(i.name),
+          category:    String(i.source ?? 'Other'),
+          date:        String(i.date),
+          amount:      Number(i.amount),
+          description: i.description ? String(i.description) : null,
+          bank_id:     i.bank_id ? String(i.bank_id) : null,
+        })),
+      ]
+      setTxList(prev => [...prev, ...newRows].sort((a, b) => b.date.localeCompare(a.date)))
+      setHasMore((expenses?.length ?? 0) === LIMIT || (income?.length ?? 0) === LIMIT)
+    } catch (err) {
+      console.error('loadMore error:', err)
+    } finally {
+      setLoadingMore(false)
+    }
+  }
+
   // Load wallet data once on mount — cards/banks change only in Wallet tab
   useEffect(() => {
     let mounted = true
     async function loadWallet() {
-      const [{ data: c }, { data: b }, { data: subs }] = await Promise.all([
-        supabase.from('cards').select('id, name, last4, is_default').order('is_default', { ascending: false }).order('created_at', { ascending: false }),
-        supabase.from('banks').select('id, name').order('created_at', { ascending: false }),
-        supabase.from('subscriptions').select('name').eq('status', 'Active'),
-      ])
-      if (!mounted) return
-      const cList = c ?? []
-      setDefaultCardId((cList as { is_default: boolean; id: string }[]).find(x => x.is_default)?.id ?? null)
-      setCards(cList.map(x => ({ id: String(x.id), name: String(x.name), last4: x.last4 ? String(x.last4) : null })))
-      setBanks((b ?? []).map(x => ({ id: String(x.id), name: String(x.name) })))
-      setSubNames(new Set((subs ?? []).map(s => String(s.name).toLowerCase())))
+      try {
+        const [{ data: c }, { data: b }, { data: subs }] = await Promise.all([
+          supabase.from('cards').select('id, name, last4, is_default').order('is_default', { ascending: false }).order('created_at', { ascending: false }),
+          supabase.from('banks').select('id, name').order('created_at', { ascending: false }),
+          supabase.from('subscriptions').select('name').eq('status', 'Active'),
+        ])
+        if (!mounted) return
+        const cList = c ?? []
+        setDefaultCardId((cList as { is_default: boolean; id: string }[]).find(x => x.is_default)?.id ?? null)
+        setCards(cList.map(x => ({ id: String(x.id), name: String(x.name), last4: x.last4 ? String(x.last4) : null })))
+        setBanks((b ?? []).map(x => ({ id: String(x.id), name: String(x.name) })))
+        setSubNames(new Set((subs ?? []).map(s => String(s.name).toLowerCase())))
+      } catch (err) {
+        console.error('loadWallet error:', err)
+      }
     }
     loadWallet()
     return () => { mounted = false }
@@ -407,6 +470,19 @@ export default function MoneyPage() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* ── Load older ───────────────────────────────────────────────────── */}
+      {!loading && hasMore && (
+        <div className="mx-4 mt-2 mb-2">
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="w-full py-3 rounded-[18px] bg-bg-surface border border-white/[0.06] text-[12px] font-medium text-ink-muted select-none disabled:opacity-50"
+          >
+            {loadingMore ? 'Loading…' : 'Load older'}
+          </button>
         </div>
       )}
 
