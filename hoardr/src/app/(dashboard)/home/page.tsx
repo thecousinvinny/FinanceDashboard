@@ -8,6 +8,7 @@ import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import { HomeHero } from '@/components/home/HomeHero'
 import { UpcomingBills, type UpcomingSub } from '@/components/home/UpcomingBills'
 import { AddTransactionSheet } from '@/components/money/AddTransactionSheet'
+import { AddWishlistSheet, type NewWishItem } from '@/components/plans/AddWishlistSheet'
 import { pageCache } from '@/lib/page-cache'
 import { showToast } from '@/lib/toast'
 import { PullIndicator } from '@/components/ui/PullIndicator'
@@ -15,7 +16,7 @@ import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import type { DayPoint } from '@/components/home/SparkChart'
 import type { SeedTx } from '@/lib/data/transactions'
-import { Truck } from 'lucide-react'
+import { Truck, Receipt, Star } from 'lucide-react'
 
 interface EnRouteItem {
   id:          string
@@ -57,7 +58,9 @@ export default function HomePage() {
   const [activity,      setActivity]      = useState<ActivityRow[]>(cached?.activity ?? [])
   const [sparkPoints,   setSparkPoints]   = useState<DayPoint[]>(cached?.sparkPoints ?? [])
   const [loading,       setLoading]       = useState(!cached)
-  const [sheetOpen,     setSheetOpen]     = useState(false)
+  const [pickerOpen,    setPickerOpen]    = useState(false)
+  const [expenseOpen,   setExpenseOpen]   = useState(false)
+  const [wishlistOpen,  setWishlistOpen]  = useState(false)
 
   const supabase = useMemo(() => createClient(), [])
   const loadGen  = useRef(0)
@@ -268,6 +271,20 @@ export default function HomePage() {
     await loadData()
   }
 
+  async function handleAddWish(item: NewWishItem) {
+    showToast(`${item.name} added to wishlist`, { type: 'add' })
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    await supabase.from('wishlist').insert({
+      user_id:       user.id,
+      name:          item.name,
+      original_cost: item.original_cost,
+      category:      item.category,
+      url:           item.url,
+      status:        'Interested',
+    })
+  }
+
   function handleMarkArrived(id: string, name: string) {
     setEnRoute(prev => prev.filter(i => i.id !== id))
     showToast(`${name} arrived`, { type: 'payment' })
@@ -409,18 +426,64 @@ export default function HomePage() {
 
     {/* ── FAB ─────────────────────────────────────────────────────────── */}
     <button
-      onClick={() => setSheetOpen(true)}
+      onClick={() => setPickerOpen(true)}
       className="fixed gradient-gold rounded-full flex items-center justify-center text-white font-light select-none"
       style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, zIndex: 40, boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)' }}
-      aria-label="Add expense"
+      aria-label="Quick add"
     >
       +
     </button>
 
+    {/* ── Quick-add picker ─────────────────────────────────────────────── */}
+    <div
+      onClick={() => setPickerOpen(false)}
+      className={`fixed inset-0 z-[59] transition-opacity duration-300 ${pickerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+      style={{ background: 'rgba(0,0,0,0.72)' }}
+    />
+    <div
+      className={`fixed inset-x-0 bottom-0 z-[60] rounded-t-[24px] bg-bg-surface transition-transform duration-300 ${pickerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+      style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+    >
+      <div className="flex justify-center pt-3 pb-2">
+        <div className="w-9 h-1 rounded-full bg-white/20" />
+      </div>
+      <div className="px-4 pb-6 space-y-2">
+        <button
+          onClick={() => { setPickerOpen(false); setTimeout(() => setExpenseOpen(true), 220) }}
+          className="w-full flex items-center gap-4 px-5 py-4 bg-bg-overlay rounded-[16px] active:scale-[0.98] transition-transform select-none"
+        >
+          <div className="w-10 h-10 rounded-full bg-gold/10 flex items-center justify-center flex-shrink-0">
+            <Receipt size={17} className="text-gold" strokeWidth={1.75} />
+          </div>
+          <div className="text-left">
+            <p className="text-[15px] font-semibold text-ink">Add Expense</p>
+            <p className="text-[11px] text-ink-muted">Log a purchase or payment</p>
+          </div>
+        </button>
+        <button
+          onClick={() => { setPickerOpen(false); setTimeout(() => setWishlistOpen(true), 220) }}
+          className="w-full flex items-center gap-4 px-5 py-4 bg-bg-overlay rounded-[16px] active:scale-[0.98] transition-transform select-none"
+        >
+          <div className="w-10 h-10 rounded-full bg-emerald/10 flex items-center justify-center flex-shrink-0">
+            <Star size={17} className="text-emerald" strokeWidth={1.75} />
+          </div>
+          <div className="text-left">
+            <p className="text-[15px] font-semibold text-ink">Add to Wishlist</p>
+            <p className="text-[11px] text-ink-muted">Save something for later</p>
+          </div>
+        </button>
+      </div>
+    </div>
+
     <AddTransactionSheet
-      open={sheetOpen}
-      onClose={() => setSheetOpen(false)}
+      open={expenseOpen}
+      onClose={() => setExpenseOpen(false)}
       onAdd={handleAdd}
+    />
+    <AddWishlistSheet
+      open={wishlistOpen}
+      onClose={() => setWishlistOpen(false)}
+      onAdd={handleAddWish}
     />
     </>
   )
