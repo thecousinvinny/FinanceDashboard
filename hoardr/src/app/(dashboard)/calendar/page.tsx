@@ -466,6 +466,14 @@ export default function CalendarPage() {
     const t = e.changedTouches[0], dx = t.clientX - s.x, dy = t.clientY - s.y
     if (dx < -60 && Math.abs(dx) > Math.abs(dy) * 1.5) { scrollToToday.current = true; setViewIndex(1) }
   }, [])
+  const v1MouseDown = useCallback((e: React.MouseEvent) => {
+    v1Swipe.current = { x: e.clientX, y: e.clientY }
+  }, [])
+  const v1MouseUp = useCallback((e: React.MouseEvent) => {
+    const s = v1Swipe.current; v1Swipe.current = null; if (!s) return
+    const dx = e.clientX - s.x, dy = e.clientY - s.y
+    if (dx < -60 && Math.abs(dx) > Math.abs(dy) * 1.5) { scrollToToday.current = true; setViewIndex(1) }
+  }, [])
 
   // View 2 → View 1: any right swipe (strict diagonal so vertical scroll still works)
   const v2Start = useCallback((e: React.TouchEvent) => {
@@ -474,6 +482,14 @@ export default function CalendarPage() {
   const v2End = useCallback((e: React.TouchEvent) => {
     const s = v2Swipe.current; v2Swipe.current = null; if (!s) return
     const t = e.changedTouches[0], dx = t.clientX - s.x, dy = t.clientY - s.y
+    if (dx > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) setViewIndex(0)
+  }, [])
+  const v2MouseDown = useCallback((e: React.MouseEvent) => {
+    v2Swipe.current = { x: e.clientX, y: e.clientY }
+  }, [])
+  const v2MouseUp = useCallback((e: React.MouseEvent) => {
+    const s = v2Swipe.current; v2Swipe.current = null; if (!s) return
+    const dx = e.clientX - s.x, dy = e.clientY - s.y
     if (dx > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) setViewIndex(0)
   }, [])
 
@@ -488,6 +504,16 @@ export default function CalendarPage() {
       setSelectedDay(s.ds); setViewIndex(2)
     }
   }, [])
+  const rowMouseDown = useCallback((e: React.MouseEvent, ds: string) => {
+    rowSwipe.current = { x: e.clientX, y: e.clientY, ds }
+  }, [])
+  const rowMouseUp = useCallback((e: React.MouseEvent) => {
+    const s = rowSwipe.current; rowSwipe.current = null; if (!s) return
+    const dx = e.clientX - s.x, dy = e.clientY - s.y
+    if (dx < -60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      setSelectedDay(s.ds); setViewIndex(2)
+    }
+  }, [])
 
   // View 3 → View 2: any right swipe (no edge restriction — touch-action:pan-y handles browser)
   const v3Start = useCallback((e: React.TouchEvent) => {
@@ -496,6 +522,14 @@ export default function CalendarPage() {
   const v3End = useCallback((e: React.TouchEvent) => {
     const s = v3Swipe.current; v3Swipe.current = null; if (!s) return
     const t = e.changedTouches[0], dx = t.clientX - s.x, dy = t.clientY - s.y
+    if (dx > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) setViewIndex(1)
+  }, [])
+  const v3MouseDown = useCallback((e: React.MouseEvent) => {
+    v3Swipe.current = { x: e.clientX, y: e.clientY }
+  }, [])
+  const v3MouseUp = useCallback((e: React.MouseEvent) => {
+    const s = v3Swipe.current; v3Swipe.current = null; if (!s) return
+    const dx = e.clientX - s.x, dy = e.clientY - s.y
     if (dx > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) setViewIndex(1)
   }, [])
 
@@ -519,8 +553,9 @@ export default function CalendarPage() {
             VIEW 1 — Monthly Grid
             Swipe left anywhere → View 2
         ═══════════════════════════════════════════════════════════════ */}
-        <div style={{ width: '100vw', height: '100%', flex: 'none', overflowY: 'auto', background: '#080810' }}
-          onTouchStart={v1Start} onTouchEnd={v1End}>
+        <div style={{ width: '100vw', height: '100%', flex: 'none', overflowY: 'auto', background: '#080810', cursor: 'grab', userSelect: 'none' }}
+          onTouchStart={v1Start} onTouchEnd={v1End}
+          onMouseDown={v1MouseDown} onMouseUp={v1MouseUp} onMouseLeave={() => { v1Swipe.current = null }}>
 
           <div style={{ paddingTop: SAFE_TOP }} className="bg-bg-base">
             {/* Header */}
@@ -595,8 +630,9 @@ export default function CalendarPage() {
             Right swipe anywhere → View 1
             Row swipe left       → View 3
         ═══════════════════════════════════════════════════════════════ */}
-        <div style={{ width: '100vw', height: '100%', flex: 'none', background: '#0a0a0a', display: 'flex', flexDirection: 'column', touchAction: 'pan-y' }}
-          onTouchStart={v2Start} onTouchEnd={v2End}>
+        <div style={{ width: '100vw', height: '100%', flex: 'none', background: '#0a0a0a', display: 'flex', flexDirection: 'column', touchAction: 'pan-y', userSelect: 'none' }}
+          onTouchStart={v2Start} onTouchEnd={v2End}
+          onMouseDown={v2MouseDown} onMouseUp={v2MouseUp} onMouseLeave={() => { v2Swipe.current = null }}>
 
           {/* Compact header */}
           <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingTop: SAFE_TOP, paddingBottom: 10, paddingLeft: 14, paddingRight: 14, gap: 6, background: '#0a0a0a', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
@@ -633,7 +669,10 @@ export default function CalendarPage() {
                     data-day={ds}
                     onTouchStart={e => rowStart(e, ds)}
                     onTouchEnd={rowEnd}
-                    style={{ display: 'flex', alignItems: 'stretch', paddingLeft: 20, background: '#111111' }}
+                    onMouseDown={e => rowMouseDown(e, ds)}
+                    onMouseUp={rowMouseUp}
+                    onMouseLeave={() => { rowSwipe.current = null }}
+                    style={{ display: 'flex', alignItems: 'stretch', paddingLeft: 20, background: '#111111', cursor: 'grab' }}
                   >
                     {/* Day label — centered vertically, abbr white, number grey */}
                     <div style={{ width: 44, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#111111' }}>
@@ -695,8 +734,9 @@ export default function CalendarPage() {
             VIEW 3 — Daily Summary (Timepage style)
             Edge swipe right → View 2
         ═══════════════════════════════════════════════════════════════ */}
-        <div style={{ width: '100vw', height: '100%', flex: 'none', background: '#080810', display: 'flex', flexDirection: 'column', touchAction: 'pan-y' }}
-          onTouchStart={v3Start} onTouchEnd={v3End}>
+        <div style={{ width: '100vw', height: '100%', flex: 'none', background: '#080810', display: 'flex', flexDirection: 'column', touchAction: 'pan-y', userSelect: 'none' }}
+          onTouchStart={v3Start} onTouchEnd={v3End}
+          onMouseDown={v3MouseDown} onMouseUp={v3MouseUp} onMouseLeave={() => { v3Swipe.current = null }}>
 
           {/* ── Centered date header ── */}
           <div style={{ flexShrink: 0, paddingTop: SAFE_TOP, paddingBottom: 28, textAlign: 'center', background: '#080810' }}>
