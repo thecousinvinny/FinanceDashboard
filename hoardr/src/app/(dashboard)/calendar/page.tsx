@@ -684,7 +684,7 @@ export default function CalendarPage() {
                     return (
                       <div
                         key={idx}
-                        onClick={() => { if (cell.current) { setSelectedDay(ds); setViewIndex(2); navigator.vibrate?.(6) } else if (idx < 7) { goToPrev() } else { goToNext() } }}
+                        onClick={() => { if (cell.current) { setAddDate(ds); setAddOpen(true); navigator.vibrate?.(6) } else if (idx < 7) { goToPrev() } else { goToNext() } }}
                         style={{ background: rowOdd ? '#151515' : '#111111', display: 'flex', flexDirection: 'column', padding: '5px 5px 4px', cursor: cell.current ? 'pointer' : 'default', overflow: 'hidden' }}
                       >
                         <div style={{ width: 22, height: 22, borderRadius: '50%', background: isToday ? '#C9A84C' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 3, flexShrink: 0 }}>

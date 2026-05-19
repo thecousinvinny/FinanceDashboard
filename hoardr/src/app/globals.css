@@ -143,6 +143,40 @@ html, body {
   .glow-ruby   { text-shadow: 0 0 25px rgba(243,99,105,0.3),  0 0 50px rgba(243,99,105,0.1);  }
 }
 
+/* ── Google Places Autocomplete dark theme ───────────────────────────────── */
+.pac-container {
+  background-color: #1c1c2a !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+  margin-top: 4px !important;
+  font-family: var(--font-montserrat), sans-serif !important;
+}
+.pac-item {
+  background-color: #1c1c2a !important;
+  border-color: rgba(255,255,255,0.05) !important;
+  color: #f0f0f8 !important;
+  padding: 10px 14px !important;
+  cursor: pointer !important;
+  font-size: 13px !important;
+}
+.pac-item:hover,
+.pac-item-selected {
+  background-color: #26263a !important;
+}
+.pac-item-query {
+  color: #f0f0f8 !important;
+  font-size: 13px !important;
+}
+.pac-matched {
+  color: #D4AF37 !important;
+  font-weight: 600 !important;
+}
+.pac-icon {
+  filter: brightness(0) invert(0.5) !important;
+}
+.pac-logo::after { display: none !important; }
+
 /* ── Light-mode border overrides ─────────────────────────────────────────── */
 html.light .border-white\/\[0\.06\]  { border-color: var(--card-border) !important; }
 html.light .border-white\/\[0\.04\]  { border-color: var(--card-divider) !important; }
