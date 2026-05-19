@@ -1,14 +1,14 @@
-﻿'use client'
+'use client'
 
 import { useState, useRef } from 'react'
 import { $fc, $fk } from '@/lib/utils'
 
 export interface DayPoint {
-  day:   string  // "29", "1", "12"
-  label: string  // "Apr 29", "May 12"
-  exp:   number
-  inc:   number
-  sub:   number
+  day:   string  // "1", "12", "31"
+  label: string  // "May 1", "May 12"
+  exp:   number  // cumulative non-sub expenses
+  inc:   number  // cumulative income
+  sub:   number  // cumulative subscription payments
 }
 
 export function SparkChart({ points }: { points: DayPoint[] }) {
@@ -16,10 +16,12 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   const W = 300, H = 64, n = points.length
+  if (n === 0) return null
+
   const maxVal = Math.max(...points.map(p => Math.max(p.exp, p.inc, p.sub)), 1)
 
   function toY(v: number) { return H - (v / maxVal) * (H - 10) - 5 }
-  function toX(i: number) { return (i / (n - 1)) * W }
+  function toX(i: number) { return n <= 1 ? W / 2 : (i / (n - 1)) * W }
 
   function buildPath(vals: number[]) {
     const pts = vals.map((v, i) => ({ x: toX(i), y: toY(v) }))
@@ -42,9 +44,9 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
   const expVals = points.map(p => p.exp)
   const incVals = points.map(p => p.inc)
   const subVals = points.map(p => p.sub)
-  const totalExp = expVals.reduce((s, v) => s + v, 0)
-  const totalInc = incVals.reduce((s, v) => s + v, 0)
-  const totalSub = subVals.reduce((s, v) => s + v, 0)
+  const totalExp = expVals[n - 1] ?? 0
+  const totalInc = incVals[n - 1] ?? 0
+  const totalSub = subVals[n - 1] ?? 0
 
   function pickIdx(clientX: number) {
     const rect = containerRef.current?.getBoundingClientRect()
@@ -55,11 +57,17 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
 
   const hovered = hoverIdx !== null ? points[hoverIdx] : null
 
+  // Sparse landmark labels — at most 5, always includes day 1 and today
+  const labelIndices: number[] = n <= 7
+    ? Array.from({ length: n }, (_, i) => i)
+    : [0, Math.round(n * 0.25), Math.round(n * 0.5), Math.round(n * 0.75), n - 1]
+  const labelSet = new Set(labelIndices)
+
   return (
     <div className="mb-4">
       <div className="flex items-center justify-between mb-2">
         <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint">
-          {hovered ? hovered.label : '14 days'}
+          {hovered ? hovered.label : 'Month to date'}
         </p>
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1 text-[10px] font-medium text-emerald" style={{ fontFamily: "var(--font-big-shoulders)" }}>
@@ -128,18 +136,45 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
         </svg>
       </div>
 
-      <div className="flex justify-between mt-1">
-        {points.map((p, i) => (
-          <span
-            key={i}
-            className={`text-[8px] font-medium leading-none transition-colors ${
-              i === hoverIdx ? 'text-ink' : i === n - 1 ? 'text-gold' : 'text-ink-faint'
-            }`}
-            style={{ fontFamily: "var(--font-big-shoulders)" }}
-          >
-            {p.day}
-          </span>
-        ))}
+      {/* Sparse absolute-positioned x-axis labels — no squish on any month length */}
+      <div className="relative mt-1" style={{ height: 12 }}>
+        {[...labelSet].sort((a, b) => a - b).map(i => {
+          const p      = points[i]
+          const isFirst = i === 0
+          const isLast  = i === n - 1
+          const pct    = n <= 1 ? 50 : (i / (n - 1)) * 100
+          return (
+            <span
+              key={i}
+              className={`absolute text-[8px] font-medium leading-none transition-colors ${
+                i === hoverIdx ? 'text-ink' : isLast ? 'text-gold' : 'text-ink-faint'
+              }`}
+              style={{
+                fontFamily: "var(--font-big-shoulders)",
+                ...(isFirst
+                  ? { left: 0 }
+                  : isLast
+                  ? { right: 0 }
+                  : { left: `${pct}%`, transform: 'translateX(-50%)' }),
+              }}
+            >
+              {p.day}
+            </span>
+          )
+        })}
+        {/* Show hovered day label even if not a landmark */}
+        {hoverIdx !== null && !labelSet.has(hoverIdx) && (() => {
+          const p   = points[hoverIdx]
+          const pct = (hoverIdx / (n - 1)) * 100
+          return (
+            <span
+              className="absolute text-[8px] font-medium leading-none text-ink"
+              style={{ fontFamily: "var(--font-big-shoulders)", left: `${pct}%`, transform: 'translateX(-50%)' }}
+            >
+              {p.day}
+            </span>
+          )
+        })()}
       </div>
     </div>
   )

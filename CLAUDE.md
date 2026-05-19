@@ -82,24 +82,33 @@ Two clients, never swap them:
 Rapid tab switching causes in-flight Supabase queries to resolve after a component unmounts, which produces setState-on-unmounted-component crashes in Safari's WKWebView. Every client page **must** use a generation counter to discard stale results:
 
 ```typescript
-const supabase = useMemo(() => createClient(), [])
-const loadGen  = useRef(0)
+const supabase   = useMemo(() => createClient(), [])
+const loadGen    = useRef(0)
+const abortRef   = useRef<AbortController | null>(null)
 
 const loadData = useCallback(async () => {
+  abortRef.current?.abort()
+  const controller = new AbortController()
+  abortRef.current = controller
   const gen = ++loadGen.current
-  const { data } = await supabase.from('...').select('...')
-  if (gen !== loadGen.current) return   // unmounted or superseded — discard
-  setState(data ?? [])
-  setLoading(false)
+  try {
+    const { data } = await supabase.from('...').select('...').abortSignal(controller.signal)
+    if (gen !== loadGen.current) return   // unmounted or superseded — discard
+    setState(data ?? [])
+    setLoading(false)
+  } catch (err) {
+    if ((err as Error)?.name === 'AbortError') return
+    console.error('loadData error:', err)
+  }
 }, [supabase])
 
 useEffect(() => {
   loadData()
-  return () => { loadGen.current++ }    // invalidate on unmount
+  return () => { loadGen.current++; abortRef.current?.abort() }
 }, [loadData])
 ```
 
-If a page has a second `useEffect` for detail data (e.g. Wallet card detail), use a separate `detailGen = useRef(0)` with the same pattern.
+If a page has a second `useEffect` for detail data (e.g. Wallet card detail), use a separate `detailGen = useRef(0)` and `detailAbortRef` with the same pattern.
 
 ### pageCache (`src/lib/page-cache.ts`)
 
@@ -171,8 +180,8 @@ Tailwind custom theme in `tailwind.config.ts`. Key tokens:
 | `ink-faint` | `#45455a` | labels, placeholders |
 
 Fonts are CSS variables loaded via `next/font/google` in `src/app/layout.tsx`:
-- `--font-inter` → `font-sans` — all UI text
-- `--font-dm-mono` → `font-mono` — every dollar amount and number
+- `--font-montserrat` → both `font-sans` and `font-mono` (Tailwind maps both aliases to Montserrat) — all UI text and numbers
+- `--font-big-shoulders` — display numerics only (stat heroes, calendar day numbers); use as inline `style={{ fontFamily: 'var(--font-big-shoulders)' }}`, not via a Tailwind class
 
 Utility classes defined in `globals.css`: `gradient-gold` (`135deg, #F7DF9E → #D4AF37 → #A47F23`), `gradient-emerald`, `glass`, `glow-green/gold/ruby`, `tab-enter` (page transition animation), `skeleton`.
 
@@ -244,20 +253,21 @@ Every page root `<div>` should include `tab-enter` for the mount animation. Each
 ### Card styles & textures (`src/lib/cardStyles.ts`)
 
 - `CARD_STYLE_DEFS: Record<CardStyle, CardStyleDef>` — 12 gradient styles (black, gold, green, platinum, sapphire, cobalt, graphite, ruby, midnight, rose, forest, obsidian), each with `gradient`, `chipFill`, `chipStroke`, `textPrimary`, `textMuted`
-- `CARD_TEXTURE_DEFS: Record<CardTexture, { label }>` — 7 texture options: none, diamonds, slate, fractal, waves, circuit, dots
+- `CARD_TEXTURE_DEFS: Record<CardTexture, { label }>` — 8 texture options: none, diamonds, slate, fractal, grid, chevron, carbon, topography
 - `STYLE_GROUPS` — 4 named groups (Neutral, Blue, Green, Warm) used to organize the color picker UI
 - Texture patterns are gold-tinted (`rgba(232,196,107,opacity)`) SVG `<pattern>` elements. `getTexturePattern` is defined inline in `CardVisual.tsx` (not in `cardStyles.ts`) since `.ts` files can't contain JSX.
 - `cards` DB table has a `texture text not null default 'none'` column (added by migration `20260512_cards_style_texture_fix.sql`). That migration also runs `alter column style type text` to remove any check constraint on style values.
 
 ### Key utilities (`src/lib/utils.ts`)
 
-- `$f(n)` — `$1,234` (whole dollars)
-- `$fc(n)` — `$12.50` (with cents)
+- `$f(n)` — `$1,234` (whole dollars, rounds)
+- `$fd(n)` — `$1,234` when whole, `$1,234.50` when cents are non-zero (use for transaction amounts)
+- `$fc(n)` — `$12.50` (always with cents)
 - `$fk(n)` — `$4.8K` (compact)
 - `calcSubCosts(cost, billing)` — returns `{ monthly, annual }` matching the original app's exact multipliers
 - `nextRenewalDate(from, billing)` — advances a date by one billing cycle
 - `daysUntil(date)` / `daysUntilLabel(date)` — "in 3 days" / "today" / "2 days ago"
-- `localToday()` — returns today as `YYYY-MM-DD` in `America/Los_Angeles` (hardcoded to match original app)
+- `localToday()` — returns today as `YYYY-MM-DD` in `America/Los_Angeles`. **Always use this for any date written to the DB.** Never use `new Date().toISOString().slice(0, 10)` — that's UTC and will produce the wrong date for users in negative-offset timezones.
 - `fmtDate(d)` / `fmtMonth(d)` — human-readable date/month strings
 - `groupByMonth(rows)` — groups any `{ date: string }` array into `{ label, key, rows }[]` sorted newest-first
 - `clamp(v, min, max)` — numeric clamp
@@ -274,6 +284,44 @@ Three icon files are expected in `hoardr/public/` (not yet committed — create 
 - `icon-512.png` — 512×512, splash / maskable
 
 To install on iPhone: Safari → Share → Add to Home Screen.
+
+### Calendar page architecture
+
+The calendar page (`calendar/page.tsx`) is a single client component with three views rendered on a horizontal sliding rail:
+
+```
+viewIndex 0 → month grid (View 1)
+viewIndex 1 → infinite vertical day list (View 2)
+viewIndex 2 → full-screen day detail (View 3)
+```
+
+The rail uses `transform: translateX(-${viewIndex * 100}vw)` with a 320ms cubic-bezier transition. All three panels are always mounted; only `viewIndex` changes which is visible.
+
+- **View 1 → 2**: left-swipe on the month grid. Sets `scrollToToday` ref to `true` so View 2 centers today on entry. Uses a 360ms delay after the animation completes before calling `scrollIntoView({ block: 'center', behavior: 'instant' })`.
+- **View 2 → 3**: tap any event row. Sets `selectedDay` and advances `viewIndex`.
+- **View 3 → 2**: left chevron button. Preserves scroll position (does NOT re-center today).
+
+The `scrollToToday` ref is the guard: set it to `true` only in the V1→V2 swipe handler; the scroll effect checks it and resets it to `false` before scrolling. This prevents the scroll-to-today from firing on V3→V2 returns.
+
+Weather uses the free Open-Meteo 14-day daily forecast API (no key required). Fetched once on mount via geolocation; stored in `weatherMap: Record<string, DayWeather>` keyed by `YYYY-MM-DD`. View 3 looks up `weatherMap[selectedDay]` for day-specific forecast. Weather icons are Lucide stroke icons (`Sun`, `CloudSun`, `Cloud`, `CloudFog`, `CloudDrizzle`, `CloudRain`, `CloudSnow`, `CloudLightning`).
+
+Finance events (expenses, income, subscriptions) are merged with Google Calendar events into a unified `CalEvent[]` type. Colors: gold = expense, emerald = income, ruby = subscription, Google Calendar events use their own `color` field.
+
+### FAB pattern
+
+The add (`+`) button on Money, Plans, Wallet, and Studio is a circular gold FAB fixed at `right: 16px, bottom: 80px` (8px above the 72px nav bar). It is rendered outside the scrolling content `<div>` (after the closing tag) but inside the page's fragment wrapper. Styling:
+
+```tsx
+<button
+  onClick={() => setSheetOpen(true)}
+  className="fixed gradient-gold rounded-full flex items-center justify-center text-white font-light select-none"
+  style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, zIndex: 40,
+           boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)' }}
+  aria-label="Add"
+>+</button>
+```
+
+`z-40` keeps it below bottom sheets (`z-[60]`) and below the nav (`z-50`). Do not use a top-right header button for add actions — the FAB is the established pattern.
 
 ### Studio commission flow
 
