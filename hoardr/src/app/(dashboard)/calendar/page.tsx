@@ -194,6 +194,7 @@ export default function CalendarPage() {
   const v3Swipe        = useRef<{ x: number; y: number } | null>(null)
   const rowSwipe       = useRef<{ x: number; y: number; ds: string } | null>(null)
   const scrollToToday  = useRef(false)  // only center today when entering from View 1
+  const suppressPrepend = useRef(false)  // block prepend rAF from clobbering scroll-to-today
 
   useEffect(() => { monthsRef.current = months }, [months])
 
@@ -388,7 +389,10 @@ export default function CalendarPage() {
   useEffect(() => {
     if (viewIndex !== 1 || !scrollToToday.current) return
     scrollToToday.current = false
-    // Wait for the 320ms slide transition to finish before measuring.
+    // Suppress the prepend observer's rAF correction — it fires when View 2
+    // activates at scroll=0 and stores prevTop=0, then its rAF overwrites our
+    // scroll-to-today on iOS (slower renders mean the rAF fires after us).
+    suppressPrepend.current = true
     // Use manual scrollTop instead of scrollIntoView — the latter is unreliable
     // inside fixed-position containers on iOS WKWebView.
     const t = setTimeout(() => {
@@ -399,8 +403,9 @@ export default function CalendarPage() {
         const eRect = el.getBoundingClientRect()
         sc.scrollTop = sc.scrollTop + eRect.top - cRect.top - sc.clientHeight / 2 + eRect.height / 2
       }
+      suppressPrepend.current = false
     }, 360)
-    return () => clearTimeout(t)
+    return () => { clearTimeout(t); suppressPrepend.current = false }
   }, [viewIndex, todayStr])
 
   // ── Infinite scroll: append ────────────────────────────────────────────────
@@ -427,7 +432,7 @@ export default function CalendarPage() {
     const sc = scrollRef.current, top = topSentRef.current
     if (!sc || !top) return
     const obs = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting || loadingMore.current) return
+      if (!entry.isIntersecting || loadingMore.current || suppressPrepend.current) return
       loadingMore.current = true
       const prevH = sc.scrollHeight, prevTop = sc.scrollTop
       setMonths(prev => {
@@ -471,7 +476,7 @@ export default function CalendarPage() {
   const v1End = useCallback((e: React.TouchEvent) => {
     const s = v1Swipe.current; v1Swipe.current = null; if (!s) return
     const t = e.changedTouches[0], dx = t.clientX - s.x, dy = t.clientY - s.y
-    if (dx < -60 && Math.abs(dx) > Math.abs(dy) * 1.5) { scrollToToday.current = true; setViewIndex(1) }
+    if (dx < -60 && Math.abs(dx) > Math.abs(dy) * 1.5) { scrollToToday.current = true; suppressPrepend.current = true; setViewIndex(1) }
   }, [])
   const v1MouseDown = useCallback((e: React.MouseEvent) => {
     v1Swipe.current = { x: e.clientX, y: e.clientY }
@@ -479,7 +484,7 @@ export default function CalendarPage() {
   const v1MouseUp = useCallback((e: React.MouseEvent) => {
     const s = v1Swipe.current; v1Swipe.current = null; if (!s) return
     const dx = e.clientX - s.x, dy = e.clientY - s.y
-    if (dx < -60 && Math.abs(dx) > Math.abs(dy) * 1.5) { scrollToToday.current = true; setViewIndex(1) }
+    if (dx < -60 && Math.abs(dx) > Math.abs(dy) * 1.5) { scrollToToday.current = true; suppressPrepend.current = true; setViewIndex(1) }
   }, [])
 
   // View 2 → View 1: any right swipe (strict diagonal so vertical scroll still works)
