@@ -75,7 +75,7 @@ Two clients, never swap them:
 
 ### Server vs client pages
 
-`/home` is a **server component** — it fetches all data at render time via `src/lib/supabase/server.ts` and streams HTML. All other five tabs (`/money`, `/plans`, `/studio`, `/wallet`, `/calendar`) are `'use client'` components that fetch on mount via `src/lib/supabase/client.ts`.
+All six tabs are `'use client'` components that fetch on mount via `src/lib/supabase/client.ts`. There are no server-rendered data pages — the only server-side logic is `middleware.ts` (auth guard) and `src/app/api/` routes.
 
 ### Async safety pattern (required on every `'use client'` page)
 
@@ -112,11 +112,29 @@ If a page has a second `useEffect` for detail data (e.g. Wallet card detail), us
 
 ### pageCache (`src/lib/page-cache.ts`)
 
-Module-level in-memory cache (survives tab switches within a session, clears on hard reload). TTL = 60 seconds. Used by Money, Plans, and Wallet to show stale data instantly while the background refresh runs.
+Module-level in-memory cache (survives tab switches within a session, clears on hard reload). TTL = 60 seconds. Used by all six tabs (Home, Money, Plans, Studio, Wallet, Calendar) to show stale data instantly while the background refresh runs.
 
 - `pageCache.get<T>(key)` — returns `T | undefined` (undefined if missing or expired)
 - `pageCache.set(key, data)` — call after a successful load, before `setLoading(false)`
 - Initialize state from cache: `useState<T[]>(pageCache.get<T[]>('key') ?? [])` and `useState(!pageCache.get('key'))` for the loading flag
+
+### Toast notifications (`src/lib/toast.ts`)
+
+Module-level event emitter — callable from anywhere without React context. `<ToastContainer />` is mounted once in `(dashboard)/layout.tsx` and subscribes to it.
+
+```typescript
+showToast('Thing added',   { type: 'add' })       // 2.5s, emerald dot
+showToast('Thing paid',    { type: 'payment' })    // 2.5s, gold dot
+showToast('Thing deleted', {                        // 5s, ruby dot + Undo button
+  type: 'delete',
+  undo: {
+    onUndo:   () => restoreLocalState(),   // fires immediately on Undo tap
+    onCommit: () => supabase.delete(...),  // fires after 5s if not undone
+  },
+})
+```
+
+**Deferred delete pattern**: remove from local state optimistically, capture a snapshot in the `onUndo` closure to restore it, fire the actual DB delete only in `onCommit`. This gives the user a 5-second undo window with zero latency on the optimistic removal.
 
 ### Data phase
 
@@ -136,8 +154,8 @@ All six tabs are wired to live Supabase. `src/lib/data/transactions.ts` still ex
 - `wallet/AddCardSheet.tsx` / `EditCardSheet.tsx` — card add/edit sheets with grouped 12-style color picker and 7-texture picker; `NewCard` and `CardEdits` interfaces both include `texture: CardTexture`
 
 **Wallet sub stats** (Sub/Mo, Sub/Yr, All Time) are computed by cross-referencing actual paid expenses against subscription names via a case-insensitive `Set`: `new Set(cardSubs.map(s => s.name.toLowerCase()))`. The subscription name in the `subscriptions` table **must exactly match** the expense name (case-insensitive) for payments to be counted. A name mismatch silently drops those payments from the stats.
-- `home/SparkChart.tsx` — 14-day sparkline with three **non-overlapping** series: `inc` (income), `exp` (non-sub expenses), `sub` (subscription payments only). The hero total = `exp + sub`. Series are separated at the `sparkPoints` computation in `home/page.tsx` using the same case-insensitive active-sub name set.
-- `home/UpcomingBills.tsx` — `'use client'` component that receives `initial: UpcomingSub[]` from the server-rendered home page. Right-swipe pays (creates an expense + advances `next_renewal`), left-swipe cancels (sets status `Cancelled`). Calls `router.refresh()` after pay so the server component re-renders and the hero number animates up.
+- `home/SparkChart.tsx` — cumulative monthly sparkline with three series: `inc` (income), `exp` (non-sub expenses), `sub` (subscription payments). Values are **running totals from day 1 of the current month** — lines start at 0 on the 1st and climb to today. X-axis uses sparse absolute-positioned landmark labels (5 max) so it never squishes regardless of month length. `DayPoint { day, label, exp, inc, sub }` — all three fields are cumulative totals, not daily amounts.
+- `home/UpcomingBills.tsx` — receives `initial: UpcomingSub[]` from the home client page. Right-swipe pays (creates an expense + advances `next_renewal`), left-swipe cancels (sets status `Cancelled`). Home data refreshes via pull-to-refresh or the 60s cache TTL (not `router.refresh()` — home has no server component).
 
 ### Card / bank picker pattern
 
@@ -215,7 +233,7 @@ CategoryIcon `className` follows a three-way rule applied consistently across Ho
 - Subscription payment (expense name matches an active subscription name, case-insensitive) → `text-white/60`
 - Regular expense → `text-gold`
 
-Detection pattern (used in Money and Wallet): load `subscriptions.name` where `status = 'Active'` once on mount; build `new Set(names.map(n => n.toLowerCase()))`; check `subNames.has(tx.name.toLowerCase())`. The home page server component uses the already-fetched `activeSubs` array.
+Detection pattern (used in Home, Money, and Wallet): load `subscriptions.name` where `status = 'Active'` once on mount; build `new Set(names.map(n => n.toLowerCase()))`; check `subNames.has(tx.name.toLowerCase())`.
 
 ### Recurring layout patterns
 
@@ -309,7 +327,7 @@ Finance events (expenses, income, subscriptions) are merged with Google Calendar
 
 ### FAB pattern
 
-The add (`+`) button on Money, Plans, Wallet, and Studio is a circular gold FAB fixed at `right: 16px, bottom: 80px` (8px above the 72px nav bar). It is rendered outside the scrolling content `<div>` (after the closing tag) but inside the page's fragment wrapper. Styling:
+The add (`+`) button on all six tabs (Home, Money, Plans, Wallet, Studio, Calendar) is a circular gold FAB fixed at `right: 16px, bottom: 80px` (8px above the 72px nav bar). It is rendered outside the scrolling content `<div>` (after the closing tag) but inside the page's fragment wrapper. Styling:
 
 ```tsx
 <button
