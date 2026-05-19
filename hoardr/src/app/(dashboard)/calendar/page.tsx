@@ -171,6 +171,10 @@ export default function CalendarPage() {
   )
   const [sideLbl, setSideLbl] = useState(() => monthLabel(today.getFullYear(), today.getMonth()))
 
+  // iPad/Mac month grid view
+  const [isLargeScreen, setIsLargeScreen] = useState(false)
+  const [calView, setCalView] = useState<'list' | 'month'>('list')
+
   const rangeKey = useMemo(() => {
     const f = months[0], l = months[months.length - 1]
     return `${f.year}/${f.month}..${l.year}/${l.month}`
@@ -197,6 +201,25 @@ export default function CalendarPage() {
   const suppressPrepend = useRef(false)  // block prepend rAF from clobbering scroll-to-today
 
   useEffect(() => { monthsRef.current = months }, [months])
+
+  // ── Large-screen detection (iPad ≥768px, Mac ≥1024px) ────────────────────
+  useEffect(() => {
+    const check = () => setIsLargeScreen(window.innerWidth >= 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  // ── Persist calView preference ────────────────────────────────────────────
+  useEffect(() => {
+    const saved = localStorage.getItem('cal-view-mode') as 'list' | 'month' | null
+    if (saved) setCalView(saved)
+  }, [])
+
+  function switchCalView(v: 'list' | 'month') {
+    setCalView(v)
+    localStorage.setItem('cal-view-mode', v)
+  }
 
   // ── Scroll-based haptic (replaces IntersectionObserver) ──────────────────
   const handleDetailScroll = useCallback(() => {
@@ -647,8 +670,31 @@ export default function CalendarPage() {
           onMouseDown={v2MouseDown} onMouseUp={v2MouseUp} onMouseLeave={() => { v2Swipe.current = null }}>
 
           {/* Compact header */}
-          <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingTop: SAFE_TOP, paddingBottom: 10, paddingLeft: 14, paddingRight: 14, gap: 6, background: '#0a0a0a', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-            <button onClick={() => { const sc = scrollRef.current; const el = dayRefs.current.get(todayStr); if (sc && el) { const cRect = sc.getBoundingClientRect(); const eRect = el.getBoundingClientRect(); sc.scrollTop = sc.scrollTop + eRect.top - cRect.top - sc.clientHeight / 2 + eRect.height / 2 } }}
+          <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', paddingTop: SAFE_TOP, paddingBottom: 10, paddingLeft: 14, paddingRight: 14, gap: 6, background: '#0a0a0a', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+            {/* List / Month toggle — iPad/Mac only */}
+            {isLargeScreen && (
+              <div style={{ display: 'flex', background: 'rgba(255,255,255,0.06)', borderRadius: 20, padding: 2, gap: 2, flexShrink: 0 }}>
+                {(['list', 'month'] as const).map(v => (
+                  <button key={v} onClick={() => switchCalView(v)} style={{
+                    padding: '5px 14px', borderRadius: 18, border: 'none', cursor: 'pointer',
+                    fontSize: 11, fontWeight: 600, fontFamily: 'var(--font-montserrat)', letterSpacing: '0.04em',
+                    background: calView === v ? 'linear-gradient(135deg,#F7DF9E,#D4AF37,#A47F23)' : 'transparent',
+                    color: calView === v ? '#000' : 'rgba(255,255,255,0.4)',
+                    transition: 'background 0.15s, color 0.15s',
+                  }}>
+                    {v === 'list' ? 'List' : 'Month'}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div style={{ flex: 1 }} />
+            <button
+              onClick={() => {
+                if (isLargeScreen && calView === 'month') { goToToday() } else {
+                  const sc = scrollRef.current; const el = dayRefs.current.get(todayStr)
+                  if (sc && el) { const cRect = sc.getBoundingClientRect(); const eRect = el.getBoundingClientRect(); sc.scrollTop = sc.scrollTop + eRect.top - cRect.top - sc.clientHeight / 2 + eRect.height / 2 }
+                }
+              }}
               style={{ height: 30, padding: '0 10px', borderRadius: 15, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.07)', fontSize: 11, color: '#D4AF37', fontWeight: 600, flexShrink: 0, cursor: 'pointer' }}>
               Today
             </button>
@@ -660,6 +706,79 @@ export default function CalendarPage() {
             </button>
           </div>
 
+          {/* ── Full Month Grid (iPad/Mac only) ─────────────────────────── */}
+          {isLargeScreen && calView === 'month' && (() => {
+            const BS = 'var(--font-big-shoulders)'
+            const M  = 'var(--font-montserrat)'
+            const dim = getDaysInMonth(gridYear, gridMonth)
+            const firstDow = new Date(gridYear, gridMonth, 1).getDay()
+            const prevM = gridMonth === 0 ? 11 : gridMonth - 1
+            const prevY = gridMonth === 0 ? gridYear - 1 : gridYear
+            const prevDim = getDaysInMonth(prevY, prevM)
+            const nextM = gridMonth === 11 ? 0 : gridMonth + 1
+            const nextY = gridMonth === 11 ? gridYear + 1 : gridYear
+            type Cell = { day: number; month: number; year: number; current: boolean }
+            const cells: Cell[] = []
+            for (let i = firstDow - 1; i >= 0; i--) cells.push({ day: prevDim - i, month: prevM, year: prevY, current: false })
+            for (let d = 1; d <= dim; d++) cells.push({ day: d, month: gridMonth, year: gridYear, current: true })
+            while (cells.length < 42) { const d = cells.length - firstDow - dim + 1; cells.push({ day: d, month: nextM, year: nextY, current: false }) }
+            const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
+            return (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#0D0D0D' }}>
+                {/* Month title + prev/next */}
+                <div style={{ display: 'flex', alignItems: 'center', padding: '14px 20px 10px', gap: 10, flexShrink: 0 }}>
+                  <button onClick={goToPrev} style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.07)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#C9A84C', fontSize: 18, lineHeight: 1 }}>‹</button>
+                  <span style={{ flex: 1, fontSize: 26, fontWeight: 800, color: '#C9A84C', fontFamily: BS, letterSpacing: '-0.01em' }}>
+                    {new Date(gridYear, gridMonth, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()}
+                  </span>
+                  <button onClick={goToNext} style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.07)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#C9A84C', fontSize: 18, lineHeight: 1 }}>›</button>
+                </div>
+                {/* Day-of-week header */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', padding: '0 8px', flexShrink: 0 }}>
+                  {DAYS.map(d => (
+                    <div key={d} style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#C9A84C', padding: '4px 0 6px', fontFamily: M }}>
+                      {d}
+                    </div>
+                  ))}
+                </div>
+                {/* Grid */}
+                <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gridTemplateRows: 'repeat(6,1fr)', gap: 1, background: 'rgba(255,255,255,0.04)', padding: '0 8px 8px', overflow: 'hidden' }}>
+                  {cells.map((cell, idx) => {
+                    const ds      = toDateStr(cell.year, cell.month, cell.day)
+                    const isToday = ds === todayStr
+                    const events  = cell.current ? (visibleMap[ds] ?? []) : []
+                    const rowOdd  = Math.floor(idx / 7) % 2 === 1
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => { if (cell.current) { setSelectedDay(ds); setViewIndex(2); navigator.vibrate?.(6) } else if (idx < 7) { goToPrev() } else { goToNext() } }}
+                        style={{ background: rowOdd ? '#151515' : '#111111', display: 'flex', flexDirection: 'column', padding: '5px 5px 4px', cursor: cell.current ? 'pointer' : 'default', overflow: 'hidden', position: 'relative' }}
+                      >
+                        {/* Day number */}
+                        <div style={{ width: 22, height: 22, borderRadius: '50%', background: isToday ? '#C9A84C' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 3, flexShrink: 0 }}>
+                          <span style={{ fontSize: 12, fontWeight: isToday ? 700 : 500, color: isToday ? '#000' : cell.current ? 'rgba(255,255,255,0.82)' : 'rgba(255,255,255,0.18)', fontFamily: M, lineHeight: 1 }}>
+                            {cell.day}
+                          </span>
+                        </div>
+                        {/* Event pills */}
+                        {events.slice(0, 3).map((ev, i) => (
+                          <div key={i} style={{ fontSize: 10, lineHeight: '15px', padding: '1px 5px', borderRadius: 3, marginBottom: 2, background: (ev.color ?? DOT_COLOR[ev.type]) + '28', color: ev.color ?? DOT_COLOR[ev.type], overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: M, fontWeight: 500, flexShrink: 0 }}>
+                            {ev.title}
+                          </div>
+                        ))}
+                        {events.length > 3 && (
+                          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.28)', fontFamily: M, flexShrink: 0 }}>+{events.length - 3} more</div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* ── Infinite Scroll List ─────────────────────────────────────── */}
+          {(!isLargeScreen || calView === 'list') && (
           <div ref={scrollRef} onScroll={handleDetailScroll}
             style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', position: 'relative' }}>
             <div ref={topSentRef} style={{ height: 1 }} />
@@ -740,6 +859,7 @@ export default function CalendarPage() {
             <div ref={botSentRef} style={{ height: 1 }} />
             <div style={{ height: 96 }} />
           </div>
+          )}
         </div>
 
         {/* ═══════════════════════════════════════════════════════════════
