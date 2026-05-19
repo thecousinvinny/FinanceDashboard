@@ -917,52 +917,65 @@ export default function CalendarPage() {
                           const shownAllDay  = Math.min(allDayEvs.length, 2)
                           const shownTimed   = Math.min(timedEvs.length, Math.max(0, 4 - shownAllDay))
                           const overflow     = singleEvs.length - shownAllDay - shownTimed
+                          const isPast = ds < todayStr
                           return (
                             <div
                               key={ds}
                               ref={el => { if (el) monthCellRefs.current.set(ds, el); else monthCellRefs.current.delete(ds) }}
                               onClick={() => { setAddDate(ds); setAddOpen(true); navigator.vibrate?.(6) }}
-                              style={{ minHeight: 140, borderRight: ci < 6 ? '1px solid #2a2a2a' : 'none', padding: '5px 4px 4px', cursor: 'pointer', display: 'flex', flexDirection: 'column', background: '#0d0d0d' }}
+                              onPointerDown={e => { const el = e.currentTarget; el.style.transition = 'transform 0.1s cubic-bezier(0.34,1.56,0.64,1)'; el.style.transform = 'scale(0.97)' }}
+                              onPointerUp={e => { e.currentTarget.style.transform = 'scale(1)' }}
+                              onPointerLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
+                              onPointerCancel={e => { e.currentTarget.style.transform = 'scale(1)' }}
+                              className="group"
+                              style={{ minHeight: 140, borderRight: ci < 6 ? '1px solid #2a2a2a' : 'none', padding: '5px 4px 4px', cursor: 'pointer', display: 'flex', flexDirection: 'column', background: isToday ? 'rgba(201,168,76,0.05)' : '#0d0d0d', position: 'relative' }}
                             >
-                              {/* Date number row — month abbr inline for 1st of month */}
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3, flexShrink: 0 }}>
-                                {isMonthStart && (
-                                  <span style={{ fontSize: 10, fontWeight: 700, color: '#C9A84C', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.03em', textTransform: 'uppercase', lineHeight: 1 }}>
-                                    {new Date(cy, cm - 1, 1).toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
-                                  </span>
-                                )}
-                                <div style={{ width: 22, height: 22, borderRadius: '50%', background: isToday ? '#C9A84C' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                  <span style={{ fontSize: 12, fontWeight: isToday ? 700 : 400, color: isToday ? '#000' : 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-montserrat)', lineHeight: 1 }}>
-                                    {cd}
-                                  </span>
-                                </div>
-                              </div>
-                              {/* Reserved height for spanning bar overlay */}
-                              {spanAreaH > 0 && <div style={{ height: spanAreaH + 4, flexShrink: 0 }} />}
-                              {/* All-day single-day events */}
-                              {allDayEvs.slice(0, shownAllDay).map((ev, ei) => (
-                                <div key={ei} style={{ background: (ev.color ?? DOT_COLOR[ev.type]) + 'DD', borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0 }}>
-                                  <span style={{ fontSize: 10, color: '#fff', fontFamily: 'var(--font-montserrat)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
-                                </div>
-                              ))}
-                              {/* Timed / financial events */}
-                              {timedEvs.slice(0, shownTimed).map((ev, ei) => {
-                                const bar     = ev.color ?? DOT_COLOR[ev.type]
-                                const timeStr = (ev.type === 'custom' || ev.type === 'google') && ev.amount
-                                  ? ev.amount.split(' – ')[0].trim().replace(/^(\d{2}):(\d{2})$/, (_, hh, mm) => { const n = Number(hh); return `${n % 12 || 12}:${mm}${n >= 12 ? 'p' : 'a'}` })
-                                  : null
-                                return (
-                                  <div key={ei} style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 2, height: 18, overflow: 'hidden', flexShrink: 0 }}>
-                                    <div style={{ width: 3, height: '100%', borderRadius: 2, background: bar, flexShrink: 0 }} />
-                                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.72)', fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
-                                      {timeStr && <span style={{ color: 'rgba(255,255,255,0.38)', marginRight: 3 }}>{timeStr}</span>}{ev.title}
+                              {/* Hover background tint */}
+                              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none" style={{ background: 'rgba(255,255,255,0.03)' }} />
+                              {/* Hover quick-add icon */}
+                              <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-100 pointer-events-none flex items-center justify-center" style={{ width: 16, height: 16, color: 'rgba(255,255,255,0.28)', fontSize: 15, lineHeight: 1 }}>+</div>
+                              {/* Cell content — dimmed for past days */}
+                              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', opacity: isPast ? 0.45 : 1, transition: 'opacity 0.15s' }}>
+                                {/* Date number row — month abbr inline for 1st of month */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3, flexShrink: 0 }}>
+                                  {isMonthStart && (
+                                    <span style={{ fontSize: 10, fontWeight: 700, color: '#C9A84C', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.03em', textTransform: 'uppercase', lineHeight: 1 }}>
+                                      {new Date(cy, cm - 1, 1).toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
+                                    </span>
+                                  )}
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, minWidth: 22 }}>
+                                    <span style={{ fontSize: isToday ? 20 : 12, fontWeight: isToday ? 700 : 400, color: isToday ? '#C9A84C' : 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-montserrat)', lineHeight: 1 }}>
+                                      {cd}
                                     </span>
                                   </div>
-                                )
-                              })}
-                              {overflow > 0 && (
-                                <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-montserrat)', flexShrink: 0 }}>+{overflow} more</span>
-                              )}
+                                </div>
+                                {/* Reserved height for spanning bar overlay */}
+                                {spanAreaH > 0 && <div style={{ height: spanAreaH + 4, flexShrink: 0 }} />}
+                                {/* All-day single-day events */}
+                                {allDayEvs.slice(0, shownAllDay).map((ev, ei) => (
+                                  <div key={ei} style={{ background: (ev.color ?? DOT_COLOR[ev.type]) + 'DD', borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, opacity: 0.85 }}>
+                                    <span style={{ fontSize: 10, color: '#fff', fontFamily: 'var(--font-montserrat)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
+                                  </div>
+                                ))}
+                                {/* Timed / financial events */}
+                                {timedEvs.slice(0, shownTimed).map((ev, ei) => {
+                                  const bar     = ev.color ?? DOT_COLOR[ev.type]
+                                  const timeStr = (ev.type === 'custom' || ev.type === 'google') && ev.amount
+                                    ? ev.amount.split(' – ')[0].trim().replace(/^(\d{2}):(\d{2})$/, (_, hh, mm) => { const n = Number(hh); return `${n % 12 || 12}:${mm}${n >= 12 ? 'p' : 'a'}` })
+                                    : null
+                                  return (
+                                    <div key={ei} style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 2, height: 18, overflow: 'hidden', flexShrink: 0, opacity: 0.85 }}>
+                                      <div style={{ width: 3, height: '100%', borderRadius: 2, background: bar, flexShrink: 0 }} />
+                                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.72)', fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+                                        {timeStr && <span style={{ color: 'rgba(255,255,255,0.38)', marginRight: 3 }}>{timeStr}</span>}{ev.title}
+                                      </span>
+                                    </div>
+                                  )
+                                })}
+                                {overflow > 0 && (
+                                  <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-montserrat)', flexShrink: 0 }}>+{overflow} more</span>
+                                )}
+                              </div>
                             </div>
                           )
                         })}
