@@ -81,6 +81,18 @@ function monthLabel(y: number, m: number) {
 function daysBetween(from: string, to: string): number {
   return Math.round((new Date(to + 'T00:00:00').getTime() - new Date(from + 'T00:00:00').getTime()) / 86400000)
 }
+function addWeeks(weekStart: string, n: number): string {
+  const [y, m, d] = weekStart.split('-').map(Number)
+  const date = new Date(y, m - 1, d + n * 7)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+function weekDays(weekStart: string): string[] {
+  const [y, m, d] = weekStart.split('-').map(Number)
+  return Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(y, m - 1, d + i)
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  })
+}
 // Greedy lane allocator for multi-day spanning bars in a single week row
 function allocateSpanLanes(
   spans: Array<{ startDate: string; endDate: string; ev: CalEvent }>,
@@ -208,6 +220,14 @@ export default function CalendarPage() {
   const [hiddenTypes, setHiddenTypes] = useState<Set<EventType>>(new Set())
   const [sidebarYear, setSidebarYear] = useState(today.getFullYear())
   const [sidebarMonth, setSidebarMonth] = useState(today.getMonth())
+  const [notionWeeks, setNotionWeeks] = useState<string[]>(() => {
+    const t = new Date()
+    const sun = new Date(t.getFullYear(), t.getMonth(), t.getDate() - t.getDay())
+    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const sunStr = fmt(sun)
+    return Array.from({ length: 48 }, (_, i) => addWeeks(sunStr, i - 24))
+  })
+  const notionWeeksRef = useRef<string[]>([])
 
   const rangeKey = useMemo(() => {
     const f = months[0], l = months[months.length - 1]
@@ -235,6 +255,7 @@ export default function CalendarPage() {
   const suppressPrepend = useRef(false)  // block prepend rAF from clobbering scroll-to-today
 
   useEffect(() => { monthsRef.current = months }, [months])
+  useEffect(() => { notionWeeksRef.current = notionWeeks }, [notionWeeks])
 
   // ── Large-screen detection (iPad ≥768px, Mac ≥1024px) ────────────────────
   useEffect(() => {
@@ -558,9 +579,9 @@ export default function CalendarPage() {
     const obs = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting || monthGridLoadingRef.current) return
       monthGridLoadingRef.current = true
-      setMonths(prev => {
+      setNotionWeeks(prev => {
         const last = prev[prev.length - 1]
-        return [...prev, ...[1, 2, 3, 4].map(i => addMonths(last.year, last.month, i))]
+        return [...prev, ...[1,2,3,4,5,6,7,8].map(i => addWeeks(last, i))]
       })
       setTimeout(() => { monthGridLoadingRef.current = false }, 600)
     }, { root: sc, rootMargin: '0px 0px 400px 0px', threshold: 0 })
@@ -577,9 +598,9 @@ export default function CalendarPage() {
       if (!entry.isIntersecting || monthGridLoadingRef.current) return
       monthGridLoadingRef.current = true
       const prevH = sc.scrollHeight, prevTop = sc.scrollTop
-      setMonths(prev => {
+      setNotionWeeks(prev => {
         const first = prev[0]
-        return [[4, 3, 2, 1].map(i => addMonths(first.year, first.month, -i)), prev].flat()
+        return [[8,7,6,5,4,3,2,1].map(i => addWeeks(first, -i)), prev].flat()
       })
       requestAnimationFrame(() => requestAnimationFrame(() => {
         sc.scrollTop = prevTop + (sc.scrollHeight - prevH)
@@ -876,124 +897,105 @@ export default function CalendarPage() {
                 {/* Scrollable months */}
                 <div ref={monthGridRef} style={{ flex: 1, overflowY: 'auto', background: '#0d0d0d', position: 'relative' }}>
                   <div ref={monthGridTopSentRef} style={{ height: 1 }} />
-                  {months.map(({ year: y, month: m }) => {
-                    const dim      = getDaysInMonth(y, m)
-                    const firstDow = new Date(y, m, 1).getDay()
-                    const prevM    = m === 0 ? 11 : m - 1
-                    const prevY    = m === 0 ? y - 1 : y
-                    const prevDim  = getDaysInMonth(prevY, prevM)
-                    const nextM    = m === 11 ? 0 : m + 1
-                    const nextY    = m === 11 ? y + 1 : y
-                    type MCell = { day: number; month: number; year: number; current: boolean }
-                    const cells: MCell[] = []
-                    for (let i = firstDow - 1; i >= 0; i--) cells.push({ day: prevDim - i, month: prevM, year: prevY, current: false })
-                    for (let d = 1; d <= dim; d++) cells.push({ day: d, month: m, year: y, current: true })
-                    while (cells.length % 7 !== 0) { const d = cells.length - firstDow - dim + 1; cells.push({ day: d, month: nextM, year: nextY, current: false }) }
-                    const weeks: MCell[][] = []
-                    for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
+                  {notionWeeks.map(weekStart => {
+                    const days      = weekDays(weekStart)
+                    const weekSpans = multiDayEvents.filter(s => s.startDate <= days[6] && s.endDate >= days[0])
+                    const spanLanes = allocateSpanLanes(weekSpans, days)
+                    const SPAN_H = 18, SPAN_GAP = 2, DATE_H = 32
+                    const spanAreaH = spanLanes.length * (SPAN_H + SPAN_GAP)
                     return (
-                      <div key={`${y}-${m}`}>
-                        {/* Sticky month label */}
-                        <div style={{ position: 'sticky', top: 0, zIndex: 10, background: '#0d0d0d', padding: '4px 14px 4px', borderBottom: '1px solid #2a2a2a', display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                          <span style={{ fontSize: 18, fontWeight: 800, color: '#C9A84C', fontFamily: 'var(--font-big-shoulders)', letterSpacing: '-0.01em' }}>
-                            {new Date(y, m, 1).toLocaleDateString('en-US', { month: 'long' }).toUpperCase()}
-                          </span>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(201,168,76,0.45)', fontFamily: 'var(--font-montserrat)' }}>{y}</span>
-                        </div>
-                        {/* Week rows */}
-                        {weeks.map((week, wi) => {
-                          const weekDates  = week.map(cell => toDateStr(cell.year, cell.month, cell.day))
-                          const weekSpans  = multiDayEvents.filter(s => s.startDate <= weekDates[6] && s.endDate >= weekDates[0])
-                          const spanLanes  = allocateSpanLanes(weekSpans, weekDates)
-                          const SPAN_H = 18, SPAN_GAP = 2, DATE_H = 28
-                          const spanAreaH  = spanLanes.length * (SPAN_H + SPAN_GAP)
+                      <div key={weekStart} style={{ position: 'relative', display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', borderBottom: '1px solid #2a2a2a' }}>
+                        {days.map((ds, ci) => {
+                          const parts       = ds.split('-').map(Number)
+                          const [cy, cm, cd] = parts
+                          const isToday      = ds === todayStr
+                          const isMonthStart = cd === 1
+                          const allEvs       = monthVisibleMap[ds] ?? []
+                          const singleEvs    = allEvs.filter(ev => !ev.endDate)
+                          const allDayEvs    = singleEvs.filter(ev => (ev.type === 'custom' || ev.type === 'google') && !ev.amount)
+                          const timedEvs     = singleEvs.filter(ev => !((ev.type === 'custom' || ev.type === 'google') && !ev.amount))
+                          const shownAllDay  = Math.min(allDayEvs.length, 2)
+                          const shownTimed   = Math.min(timedEvs.length, Math.max(0, 4 - shownAllDay))
+                          const overflow     = singleEvs.length - shownAllDay - shownTimed
                           return (
-                            <div key={wi} style={{ position: 'relative', display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', borderBottom: '1px solid #2a2a2a' }}>
-                              {week.map((cell, ci) => {
-                                const ds        = toDateStr(cell.year, cell.month, cell.day)
-                                const isToday   = ds === todayStr && cell.current
-                                const allEvs    = cell.current ? (monthVisibleMap[ds] ?? []) : []
-                                // Exclude multi-day events — they render as spanning bars
-                                const singleEvs = allEvs.filter(ev => !ev.endDate)
-                                const allDayEvs = singleEvs.filter(ev => (ev.type === 'custom' || ev.type === 'google') && !ev.amount)
-                                const timedEvs  = singleEvs.filter(ev => !((ev.type === 'custom' || ev.type === 'google') && !ev.amount))
-                                const maxTimed  = Math.max(0, 3 - Math.min(allDayEvs.length, 2))
-                                const overflow  = singleEvs.length - Math.min(2, allDayEvs.length) - Math.min(maxTimed, timedEvs.length)
+                            <div
+                              key={ds}
+                              ref={el => { if (el) monthCellRefs.current.set(ds, el); else monthCellRefs.current.delete(ds) }}
+                              onClick={() => { setAddDate(ds); setAddOpen(true); navigator.vibrate?.(6) }}
+                              style={{ minHeight: 140, borderRight: ci < 6 ? '1px solid #2a2a2a' : 'none', padding: '5px 4px 4px', cursor: 'pointer', display: 'flex', flexDirection: 'column', background: '#0d0d0d' }}
+                            >
+                              {/* Date number row — month abbr inline for 1st of month */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3, flexShrink: 0 }}>
+                                {isMonthStart && (
+                                  <span style={{ fontSize: 10, fontWeight: 700, color: '#C9A84C', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.03em', textTransform: 'uppercase', lineHeight: 1 }}>
+                                    {new Date(cy, cm - 1, 1).toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
+                                  </span>
+                                )}
+                                <div style={{ width: 22, height: 22, borderRadius: '50%', background: isToday ? '#C9A84C' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                  <span style={{ fontSize: 12, fontWeight: isToday ? 700 : 400, color: isToday ? '#000' : 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-montserrat)', lineHeight: 1 }}>
+                                    {cd}
+                                  </span>
+                                </div>
+                              </div>
+                              {/* Reserved height for spanning bar overlay */}
+                              {spanAreaH > 0 && <div style={{ height: spanAreaH + 4, flexShrink: 0 }} />}
+                              {/* All-day single-day events */}
+                              {allDayEvs.slice(0, shownAllDay).map((ev, ei) => (
+                                <div key={ei} style={{ background: (ev.color ?? DOT_COLOR[ev.type]) + 'DD', borderRadius: 4, padding: '2px 5px', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                  <span style={{ fontSize: 10, lineHeight: '14px', color: '#fff', fontFamily: 'var(--font-montserrat)', fontWeight: 500 }}>{ev.title}</span>
+                                </div>
+                              ))}
+                              {/* Timed / financial events */}
+                              {timedEvs.slice(0, shownTimed).map((ev, ei) => {
+                                const bar     = ev.color ?? DOT_COLOR[ev.type]
+                                const timeStr = (ev.type === 'custom' || ev.type === 'google') && ev.amount
+                                  ? ev.amount.split(' – ')[0].trim().replace(/^(\d{2}):(\d{2})$/, (_, hh, mm) => { const n = Number(hh); return `${n % 12 || 12}:${mm}${n >= 12 ? 'p' : 'a'}` })
+                                  : null
                                 return (
-                                  <div
-                                    key={ci}
-                                    ref={el => { if (cell.current) { if (el) monthCellRefs.current.set(ds, el); else monthCellRefs.current.delete(ds) } }}
-                                    onClick={() => { if (cell.current) { setAddDate(ds); setAddOpen(true); navigator.vibrate?.(6) } }}
-                                    style={{ minHeight: 96, borderRight: ci < 6 ? '1px solid #2a2a2a' : 'none', padding: '5px 4px 4px', cursor: cell.current ? 'pointer' : 'default', display: 'flex', flexDirection: 'column', background: '#0d0d0d' }}
-                                  >
-                                    {/* Date number */}
-                                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: isToday ? '#C9A84C' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 3, flexShrink: 0 }}>
-                                      <span style={{ fontSize: 12, fontWeight: isToday ? 700 : 400, color: isToday ? '#000' : cell.current ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.18)', fontFamily: 'var(--font-montserrat)', lineHeight: 1 }}>
-                                        {cell.day}
-                                      </span>
-                                    </div>
-                                    {/* Reserved height for spanning bar overlay */}
-                                    {spanAreaH > 0 && <div style={{ height: spanAreaH + 4, flexShrink: 0 }} />}
-                                    {/* All-day single-day events — full-width colored bars */}
-                                    {allDayEvs.slice(0, 2).map((ev, ei) => (
-                                      <div key={ei} style={{ background: (ev.color ?? DOT_COLOR[ev.type]) + 'DD', borderRadius: 4, padding: '2px 5px', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                        <span style={{ fontSize: 10, lineHeight: '14px', color: '#fff', fontFamily: 'var(--font-montserrat)', fontWeight: 500 }}>{ev.title}</span>
-                                      </div>
-                                    ))}
-                                    {/* Timed / financial events */}
-                                    {timedEvs.slice(0, maxTimed).map((ev, ei) => {
-                                      const bar     = ev.color ?? DOT_COLOR[ev.type]
-                                      const timeStr = (ev.type === 'custom' || ev.type === 'google') && ev.amount
-                                        ? ev.amount.split(' – ')[0].trim().replace(/^(\d{2}):(\d{2})$/, (_, hh, mm) => { const n = Number(hh); return `${n % 12 || 12}:${mm}${n >= 12 ? 'p' : 'a'}` })
-                                        : null
-                                      return (
-                                        <div key={ei} style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 2, overflow: 'hidden', flexShrink: 0 }}>
-                                          <div style={{ width: 3, alignSelf: 'stretch', minHeight: 14, borderRadius: 2, background: bar, flexShrink: 0 }} />
-                                          <span style={{ fontSize: 10, lineHeight: '14px', color: 'rgba(255,255,255,0.72)', fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
-                                            {timeStr && <span style={{ color: 'rgba(255,255,255,0.38)', marginRight: 3 }}>{timeStr}</span>}{ev.title}
-                                          </span>
-                                        </div>
-                                      )
-                                    })}
-                                    {overflow > 0 && (
-                                      <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-montserrat)', flexShrink: 0 }}>+{overflow} more</span>
-                                    )}
+                                  <div key={ei} style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 2, overflow: 'hidden', flexShrink: 0 }}>
+                                    <div style={{ width: 3, alignSelf: 'stretch', minHeight: 14, borderRadius: 2, background: bar, flexShrink: 0 }} />
+                                    <span style={{ fontSize: 10, lineHeight: '14px', color: 'rgba(255,255,255,0.72)', fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+                                      {timeStr && <span style={{ color: 'rgba(255,255,255,0.38)', marginRight: 3 }}>{timeStr}</span>}{ev.title}
+                                    </span>
                                   </div>
                                 )
                               })}
-                              {/* Multi-day spanning bars — absolute overlay, one per lane */}
-                              {spanLanes.map((lane, laneIdx) =>
-                                lane.map((bar, i) => {
-                                  const barColor = bar.ev.color ?? DOT_COLOR[bar.ev.type]
-                                  return (
-                                    <div
-                                      key={`${laneIdx}-${i}`}
-                                      style={{
-                                        position: 'absolute',
-                                        top: DATE_H + laneIdx * (SPAN_H + SPAN_GAP),
-                                        left:  `calc(${(bar.startCol / 7) * 100}% + 4px)`,
-                                        right: `calc(${((6 - bar.endCol) / 7) * 100}% + 4px)`,
-                                        height: SPAN_H,
-                                        background: barColor + 'DD',
-                                        borderRadius: 4,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        paddingLeft: 7,
-                                        overflow: 'hidden',
-                                        zIndex: 1,
-                                        pointerEvents: 'none',
-                                      }}
-                                    >
-                                      <span style={{ fontSize: 10, color: '#fff', fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>
-                                        {bar.ev.title}
-                                      </span>
-                                    </div>
-                                  )
-                                })
+                              {overflow > 0 && (
+                                <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-montserrat)', flexShrink: 0 }}>+{overflow} more</span>
                               )}
                             </div>
                           )
                         })}
+                        {/* Multi-day spanning bars — absolute overlay */}
+                        {spanLanes.map((lane, laneIdx) =>
+                          lane.map((bar, i) => {
+                            const barColor = bar.ev.color ?? DOT_COLOR[bar.ev.type]
+                            return (
+                              <div
+                                key={`${laneIdx}-${i}`}
+                                style={{
+                                  position: 'absolute',
+                                  top: DATE_H + laneIdx * (SPAN_H + SPAN_GAP),
+                                  left:  `calc(${(bar.startCol / 7) * 100}% + 4px)`,
+                                  right: `calc(${((6 - bar.endCol) / 7) * 100}% + 4px)`,
+                                  height: SPAN_H,
+                                  background: barColor + 'DD',
+                                  borderRadius: 4,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  paddingLeft: 7,
+                                  overflow: 'hidden',
+                                  zIndex: 1,
+                                  pointerEvents: 'none',
+                                }}
+                              >
+                                <span style={{ fontSize: 10, color: '#fff', fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>
+                                  {bar.ev.title}
+                                </span>
+                              </div>
+                            )
+                          })
+                        )}
                       </div>
                     )
                   })}

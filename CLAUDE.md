@@ -54,8 +54,8 @@ Next.js 15 App Router with two route groups:
 | `/money` | 30-day bar chart hero + combined expense/income feed with filter |
 | `/plans` | 30-day renewal strip hero + Subscriptions/Wishlist toggle |
 | `/studio` | Commission desk — Pending → Approved → In Progress → Completed → Paid flow |
-| `/wallet` | Card visuals (12 styles, 7 textures) + Banks |
-| `/calendar` | Month grid with colored event dots (gold=expense, green=income, red=sub) |
+| `/wallet` | Card visuals (12 styles, 8 textures) + Banks |
+| `/calendar` | Compact month grid (phone) / Notion-style infinite grid with sidebar (iPad+) |
 
 ### Data model
 
@@ -66,6 +66,7 @@ Key invariants carried over from the original app:
 - `subscriptions.monthly_cost` and `annual_cost` are **stored** (not derived at read time) — recompute and write on every subscription save using `calcSubCosts()` in `src/lib/utils.ts`
 - Income is a **first-class table** (not mixed into a master ledger). The `ledger` view provides the unified read layer
 - `commissions.cal_event_id` is set when a commission is Approved (creates a Google Calendar event); cleared and recreated on deadline changes
+- `wishlist_status` enum includes `'Ordered'` (added by migration `20260518_wishlist_ordered.sql`); `wishlist.ordered_at text` stores the purchase date. Do **not** spread non-existent columns into wishlist updates — the table has no `expense_id` column.
 
 ### Supabase clients
 
@@ -151,7 +152,7 @@ All six tabs are wired to live Supabase. `src/lib/data/transactions.ts` still ex
 - `plans/AddSubscriptionSheet.tsx` / `EditSubscriptionSheet.tsx` — exports `NewSub` / `SubEdits`
 - `plans/AddWishlistSheet.tsx` / `EditWishlistSheet.tsx` — exports `WishEdits`
 - `wallet/CardVisual.tsx` — renders a credit card from a `Card` prop using `CARD_STYLE_DEFS`; draws SVG texture overlay from `getTexturePattern` (defined inline); use this everywhere a card is displayed
-- `wallet/AddCardSheet.tsx` / `EditCardSheet.tsx` — card add/edit sheets with grouped 12-style color picker and 7-texture picker; `NewCard` and `CardEdits` interfaces both include `texture: CardTexture`
+- `wallet/AddCardSheet.tsx` / `EditCardSheet.tsx` — card add/edit sheets with grouped 12-style color picker and 8-texture picker; `NewCard` and `CardEdits` interfaces both include `texture: CardTexture`
 
 **Wallet sub stats** (Sub/Mo, Sub/Yr, All Time) are computed by cross-referencing actual paid expenses against subscription names via a case-insensitive `Set`: `new Set(cardSubs.map(s => s.name.toLowerCase()))`. The subscription name in the `subscriptions` table **must exactly match** the expense name (case-insensitive) for payments to be counted. A name mismatch silently drops those payments from the stats.
 - `home/SparkChart.tsx` — cumulative monthly sparkline with three series: `inc` (income), `exp` (non-sub expenses), `sub` (subscription payments). Values are **running totals from day 1 of the current month** — lines start at 0 on the 1st and climb to today. X-axis uses sparse absolute-positioned landmark labels (5 max) so it never squishes regardless of month length. `DayPoint { day, label, exp, inc, sub }` — all three fields are cumulative totals, not daily amounts.
@@ -305,25 +306,49 @@ To install on iPhone: Safari → Share → Add to Home Screen.
 
 ### Calendar page architecture
 
-The calendar page (`calendar/page.tsx`) is a single client component with three views rendered on a horizontal sliding rail:
+The calendar page (`calendar/page.tsx`) is a single client component with three views on a horizontal sliding rail:
 
 ```
-viewIndex 0 → month grid (View 1)
-viewIndex 1 → infinite vertical day list (View 2)
-viewIndex 2 → full-screen day detail (View 3)
+viewIndex 0 → View 1: month grid  (phone) / Notion grid (iPad+)
+viewIndex 1 → View 2: infinite vertical day list
+viewIndex 2 → View 3: full-screen day detail (Timepage style)
 ```
 
-The rail uses `transform: translateX(-${viewIndex * 100}vw)` with a 320ms cubic-bezier transition. All three panels are always mounted; only `viewIndex` changes which is visible.
+The rail uses `transform: translateX(-${viewIndex * 100}vw)` with a 320ms cubic-bezier transition. All three panels are always mounted.
 
-- **View 1 → 2**: left-swipe on the month grid. Sets `scrollToToday` ref to `true` so View 2 centers today on entry. Uses a 360ms delay after the animation completes before calling `scrollIntoView({ block: 'center', behavior: 'instant' })`.
-- **View 2 → 3**: tap any event row. Sets `selectedDay` and advances `viewIndex`.
-- **View 3 → 2**: left chevron button. Preserves scroll position (does NOT re-center today).
+**Swipe navigation** — touch and mouse drag both supported (same 60px threshold + `|dx| > |dy| × 1.5`):
+- V1 → V2: left swipe/drag. Sets `scrollToToday.current = true` + `suppressPrepend.current = true`.
+- V2 → V1: right swipe/drag. Preserves View 2 scroll position.
+- V2 row → V3: left swipe on a day row.
+- V3 → V2: right swipe/drag. Preserves View 2 scroll (does NOT re-center today).
 
-The `scrollToToday` ref is the guard: set it to `true` only in the V1→V2 swipe handler; the scroll effect checks it and resets it to `false` before scrolling. This prevents the scroll-to-today from firing on V3→V2 returns.
+**Scroll-to-today (View 2)** — **never use `scrollIntoView`**: it silently fails inside `position: fixed` overflow containers on iOS WKWebView. Use manual `scrollTop`:
+```typescript
+const cRect = sc.getBoundingClientRect()
+const eRect = el.getBoundingClientRect()
+sc.scrollTop = sc.scrollTop + eRect.top - cRect.top - sc.clientHeight / 2 + eRect.height / 2
+```
+Fires 360ms after V1→V2 transition in a `useEffect` watching `viewIndex`.
 
-Weather uses the free Open-Meteo 14-day daily forecast API (no key required). Fetched once on mount via geolocation; stored in `weatherMap: Record<string, DayWeather>` keyed by `YYYY-MM-DD`. View 3 looks up `weatherMap[selectedDay]` for day-specific forecast. Weather icons are Lucide stroke icons (`Sun`, `CloudSun`, `Cloud`, `CloudFog`, `CloudDrizzle`, `CloudRain`, `CloudSnow`, `CloudLightning`).
+**`suppressPrepend` ref**: the prepend IntersectionObserver fires immediately when View 2 enters at `scrollTop=0`, saving `prevH=0`. On iOS (slower renders) its double-`rAF` fires *after* the scroll-to-today, clobbering the position. Fix: set `suppressPrepend.current = true` before `setViewIndex(1)` in any swipe/drag handler; the prepend observer returns early if it's set; clear it after `scrollTop` is written.
 
-Finance events (expenses, income, subscriptions) are merged with Google Calendar events into a unified `CalEvent[]` type. Colors: gold = expense, emerald = income, ruby = subscription, Google Calendar events use their own `color` field.
+**`months: MonthKey[]` state** — shared between View 2's infinite day list and the Notion month grid. Initial 9 months centered on today. View 2 has its own `topSentRef`/`botSentRef` IntersectionObservers (active only when `viewIndex === 1`). The Notion grid has `monthGridTopSentRef`/`monthGridBotSentRef` observers (active only when `isLargeScreen && calView === 'month'`).
+
+**Large-screen calendar (≥768px)** — `isLargeScreen` boolean from a `resize` listener. View 1 shows a List/Month toggle in the header. `calView: 'list' | 'month'` is persisted to `localStorage`.
+
+*Notion-style month grid* (month mode on large screens):
+- **180px sidebar** (`#1a1a1a`, `borderRight: 1px solid #2a2a2a`): mini month navigator (`sidebarYear`/`sidebarMonth` state, independent from the main grid), per-type legend toggles (`hiddenTypes: Set<EventType>` local state — clicking hides that type from the grid only), Today button scrolls main grid to today, Add Calendar button → settings sheet.
+- **Main grid** (`#0d0d0d`): sticky DOW header + scrollable `<div ref={monthGridRef}>` containing all `months` rendered as calendar month sections.
+  - Each month section: sticky gold Big Shoulders label + week rows (7 cells, `minHeight: 80px`, `#2a2a2a` grid lines).
+  - Event pills: `width: 3px` left colored border + optional short time prefix + truncated title.
+  - `monthCellRefs: Map<string, HTMLElement>` — set in ref callbacks on current-month cells; used to scroll-to-day from the sidebar mini calendar or on entry to month mode.
+  - `monthVisibleMap` = `visibleMap` additionally filtered by `hiddenTypes`.
+- Clicking a day cell opens `AddEventSheet` directly (stays on View 1, no navigation to View 3).
+- Clicking a day in the sidebar mini calendar scrolls `monthGridRef` to that cell using the same `getBoundingClientRect()` pattern.
+
+**Finance events** are merged into a unified `CalEvent[]` type: `type: 'expense' | 'income' | 'sub' | 'custom' | 'google'`. Dot/bar colors: gold = expense, emerald = income, ruby = sub, violet = custom, blue = Google. Google events use their own `color` field from the calendar API.
+
+**Weather** — Open-Meteo 14-day forecast (no key, free). Fetched once on mount via geolocation; stored in `weatherMap: Record<string, DayWeather>`. View 3 renders day-specific weather at the bottom. Weather icons are Lucide: `Sun`, `CloudSun`, `Cloud`, `CloudFog`, `CloudDrizzle`, `CloudRain`, `CloudSnow`, `CloudLightning`.
 
 ### FAB pattern
 
