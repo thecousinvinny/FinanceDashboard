@@ -211,7 +211,7 @@ function PlansPageInner() {
 
     const { error } = await supabase
       .from('wishlist')
-      .update({ status: 'Ordered', bought_cost: paidCost, ordered_at: today, ...(expRow?.id ? { expense_id: expRow.id } : {}) })
+      .update({ status: 'Ordered', bought_cost: paidCost, ordered_at: today })
       .eq('id', id)
     if (error) { console.error('buy item error:', JSON.stringify(error)); await loadData() }
   }
