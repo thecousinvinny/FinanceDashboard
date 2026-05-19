@@ -588,29 +588,129 @@ export default function CalendarPage() {
             VIEW 1 — Monthly Grid
             Swipe left anywhere → View 2
         ═══════════════════════════════════════════════════════════════ */}
-        <div style={{ width: '100vw', height: '100%', flex: 'none', overflowY: 'auto', background: '#080810', cursor: 'grab', userSelect: 'none' }}
+        <div
+          style={isLargeScreen && calView === 'month'
+            ? { width: '100vw', height: '100%', flex: 'none', display: 'flex', flexDirection: 'column', background: '#080810', userSelect: 'none', cursor: 'default' }
+            : { width: '100vw', height: '100%', flex: 'none', overflowY: 'auto', background: '#080810', cursor: 'grab', userSelect: 'none' }}
           onTouchStart={v1Start} onTouchEnd={v1End}
-          onMouseDown={v1MouseDown} onMouseUp={v1MouseUp} onMouseLeave={() => { v1Swipe.current = null }}>
+          onMouseDown={isLargeScreen && calView === 'month' ? undefined : v1MouseDown}
+          onMouseUp={isLargeScreen && calView === 'month' ? undefined : v1MouseUp}
+          onMouseLeave={isLargeScreen && calView === 'month' ? undefined : () => { v1Swipe.current = null }}>
 
-          <div style={{ paddingTop: SAFE_TOP }} className="bg-bg-base">
-            {/* Header */}
-            <div className="px-5 pb-4 pt-0">
-              <div className="flex items-center justify-end gap-2 mb-2">
+          {/* ── Top bar (always visible) ──────────────────────────────────── */}
+          <div style={{ paddingTop: SAFE_TOP, flexShrink: 0 }}>
+            <div className="px-5 pb-3 pt-0">
+              <div className="flex items-center gap-2">
+                {/* List / Month toggle — iPad/Mac only */}
+                {isLargeScreen && (
+                  <div style={{ display: 'flex', background: 'rgba(255,255,255,0.06)', borderRadius: 20, padding: 2, gap: 2 }}>
+                    {(['list', 'month'] as const).map(v => (
+                      <button key={v} onClick={() => switchCalView(v)} style={{
+                        padding: '5px 14px', borderRadius: 18, border: 'none', cursor: 'pointer',
+                        fontSize: 11, fontWeight: 600, fontFamily: 'var(--font-montserrat)', letterSpacing: '0.04em',
+                        background: calView === v ? 'linear-gradient(135deg,#F7DF9E,#D4AF37,#A47F23)' : 'transparent',
+                        color: calView === v ? '#000' : 'rgba(255,255,255,0.4)',
+                        transition: 'background 0.15s, color 0.15s',
+                      }}>
+                        {v === 'list' ? 'List' : 'Month'}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div style={{ flex: 1 }} />
                 <button onClick={() => setSettingsOpen(true)} className="w-9 h-9 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center select-none">
                   <SlidersHorizontal size={15} className="text-ink-muted" />
                 </button>
                 <button onClick={() => setAddOpen(true)} className="w-9 h-9 rounded-full gradient-gold flex items-center justify-center select-none">
                   <Plus size={18} className="text-white" />
                 </button>
-                <button onClick={goToPrev} className="w-8 h-8 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center text-ink-muted text-[14px] select-none">‹</button>
-                <button onClick={goToNext} className="w-8 h-8 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center text-ink-muted text-[14px] select-none">›</button>
+                {!(isLargeScreen && calView === 'month') && <>
+                  <button onClick={goToPrev} className="w-8 h-8 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center text-ink-muted text-[14px] select-none">‹</button>
+                  <button onClick={goToNext} className="w-8 h-8 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center text-ink-muted text-[14px] select-none">›</button>
+                </>}
               </div>
-              <div className="flex items-center justify-between">
-                <p className="text-[18px] font-semibold text-ink">{gridMonthLbl}</p>
-                <button onClick={goToToday} className="text-[11px] font-medium text-gold select-none">Today</button>
-              </div>
+              {!(isLargeScreen && calView === 'month') && (
+                <div className="flex items-center justify-between mt-2">
+                  <p className="text-[18px] font-semibold text-ink">{gridMonthLbl}</p>
+                  <button onClick={goToToday} className="text-[11px] font-medium text-gold select-none">Today</button>
+                </div>
+              )}
             </div>
+          </div>
 
+          {/* ── Full Month Grid (iPad/Mac month mode) ─────────────────────── */}
+          {isLargeScreen && calView === 'month' && (() => {
+            const BS = 'var(--font-big-shoulders)'
+            const M  = 'var(--font-montserrat)'
+            const dim = getDaysInMonth(gridYear, gridMonth)
+            const firstDow = new Date(gridYear, gridMonth, 1).getDay()
+            const prevM = gridMonth === 0 ? 11 : gridMonth - 1
+            const prevY = gridMonth === 0 ? gridYear - 1 : gridYear
+            const prevDim = getDaysInMonth(prevY, prevM)
+            const nextM = gridMonth === 11 ? 0 : gridMonth + 1
+            const nextY = gridMonth === 11 ? gridYear + 1 : gridYear
+            type Cell = { day: number; month: number; year: number; current: boolean }
+            const cells: Cell[] = []
+            for (let i = firstDow - 1; i >= 0; i--) cells.push({ day: prevDim - i, month: prevM, year: prevY, current: false })
+            for (let d = 1; d <= dim; d++) cells.push({ day: d, month: gridMonth, year: gridYear, current: true })
+            while (cells.length < 42) { const d = cells.length - firstDow - dim + 1; cells.push({ day: d, month: nextM, year: nextY, current: false }) }
+            const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
+            return (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#0D0D0D' }}>
+                {/* Month title + prev/next */}
+                <div style={{ display: 'flex', alignItems: 'center', padding: '10px 20px 8px', gap: 10, flexShrink: 0 }}>
+                  <button onClick={goToPrev} style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.07)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#C9A84C', fontSize: 18, lineHeight: 1 }}>‹</button>
+                  <span style={{ flex: 1, fontSize: 26, fontWeight: 800, color: '#C9A84C', fontFamily: BS, letterSpacing: '-0.01em' }}>
+                    {new Date(gridYear, gridMonth, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()}
+                  </span>
+                  <button onClick={goToToday} style={{ height: 28, padding: '0 10px', borderRadius: 14, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.07)', fontSize: 11, color: '#D4AF37', fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>Today</button>
+                  <button onClick={goToNext} style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.07)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#C9A84C', fontSize: 18, lineHeight: 1 }}>›</button>
+                </div>
+                {/* Day-of-week header */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', padding: '0 8px', flexShrink: 0 }}>
+                  {DAYS.map(d => (
+                    <div key={d} style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#C9A84C', padding: '4px 0 6px', fontFamily: M }}>
+                      {d}
+                    </div>
+                  ))}
+                </div>
+                {/* Grid */}
+                <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gridTemplateRows: 'repeat(6,1fr)', gap: 1, background: 'rgba(255,255,255,0.04)', padding: '0 8px 8px', overflow: 'hidden' }}>
+                  {cells.map((cell, idx) => {
+                    const ds      = toDateStr(cell.year, cell.month, cell.day)
+                    const isToday = ds === todayStr
+                    const events  = cell.current ? (visibleMap[ds] ?? []) : []
+                    const rowOdd  = Math.floor(idx / 7) % 2 === 1
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => { if (cell.current) { setSelectedDay(ds); setViewIndex(2); navigator.vibrate?.(6) } else if (idx < 7) { goToPrev() } else { goToNext() } }}
+                        style={{ background: rowOdd ? '#151515' : '#111111', display: 'flex', flexDirection: 'column', padding: '5px 5px 4px', cursor: cell.current ? 'pointer' : 'default', overflow: 'hidden' }}
+                      >
+                        <div style={{ width: 22, height: 22, borderRadius: '50%', background: isToday ? '#C9A84C' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 3, flexShrink: 0 }}>
+                          <span style={{ fontSize: 12, fontWeight: isToday ? 700 : 500, color: isToday ? '#000' : cell.current ? 'rgba(255,255,255,0.82)' : 'rgba(255,255,255,0.18)', fontFamily: M, lineHeight: 1 }}>
+                            {cell.day}
+                          </span>
+                        </div>
+                        {events.slice(0, 3).map((ev, i) => (
+                          <div key={i} style={{ fontSize: 10, lineHeight: '15px', padding: '1px 5px', borderRadius: 3, marginBottom: 2, background: (ev.color ?? DOT_COLOR[ev.type]) + '28', color: ev.color ?? DOT_COLOR[ev.type], overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: M, fontWeight: 500, flexShrink: 0 }}>
+                            {ev.title}
+                          </div>
+                        ))}
+                        {events.length > 3 && (
+                          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.28)', fontFamily: M, flexShrink: 0 }}>+{events.length - 3} more</div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* ── Compact list-mode content (phone + list mode) ─────────────── */}
+          {!(isLargeScreen && calView === 'month') && (
+          <div className="bg-bg-base">
             {/* Day-of-week row */}
             <div className="grid grid-cols-7 px-3 mb-1">
               {['S','M','T','W','T','F','S'].map((d, i) => (
@@ -658,6 +758,7 @@ export default function CalendarPage() {
             {/* Nav bar clearance */}
             <div style={{ height: 88 }} />
           </div>
+          )}
         </div>
 
         {/* ═══════════════════════════════════════════════════════════════
@@ -670,31 +771,8 @@ export default function CalendarPage() {
           onMouseDown={v2MouseDown} onMouseUp={v2MouseUp} onMouseLeave={() => { v2Swipe.current = null }}>
 
           {/* Compact header */}
-          <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', paddingTop: SAFE_TOP, paddingBottom: 10, paddingLeft: 14, paddingRight: 14, gap: 6, background: '#0a0a0a', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-            {/* List / Month toggle — iPad/Mac only */}
-            {isLargeScreen && (
-              <div style={{ display: 'flex', background: 'rgba(255,255,255,0.06)', borderRadius: 20, padding: 2, gap: 2, flexShrink: 0 }}>
-                {(['list', 'month'] as const).map(v => (
-                  <button key={v} onClick={() => switchCalView(v)} style={{
-                    padding: '5px 14px', borderRadius: 18, border: 'none', cursor: 'pointer',
-                    fontSize: 11, fontWeight: 600, fontFamily: 'var(--font-montserrat)', letterSpacing: '0.04em',
-                    background: calView === v ? 'linear-gradient(135deg,#F7DF9E,#D4AF37,#A47F23)' : 'transparent',
-                    color: calView === v ? '#000' : 'rgba(255,255,255,0.4)',
-                    transition: 'background 0.15s, color 0.15s',
-                  }}>
-                    {v === 'list' ? 'List' : 'Month'}
-                  </button>
-                ))}
-              </div>
-            )}
-            <div style={{ flex: 1 }} />
-            <button
-              onClick={() => {
-                if (isLargeScreen && calView === 'month') { goToToday() } else {
-                  const sc = scrollRef.current; const el = dayRefs.current.get(todayStr)
-                  if (sc && el) { const cRect = sc.getBoundingClientRect(); const eRect = el.getBoundingClientRect(); sc.scrollTop = sc.scrollTop + eRect.top - cRect.top - sc.clientHeight / 2 + eRect.height / 2 }
-                }
-              }}
+          <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingTop: SAFE_TOP, paddingBottom: 10, paddingLeft: 14, paddingRight: 14, gap: 6, background: '#0a0a0a', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+            <button onClick={() => { const sc = scrollRef.current; const el = dayRefs.current.get(todayStr); if (sc && el) { const cRect = sc.getBoundingClientRect(); const eRect = el.getBoundingClientRect(); sc.scrollTop = sc.scrollTop + eRect.top - cRect.top - sc.clientHeight / 2 + eRect.height / 2 } }}
               style={{ height: 30, padding: '0 10px', borderRadius: 15, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.07)', fontSize: 11, color: '#D4AF37', fontWeight: 600, flexShrink: 0, cursor: 'pointer' }}>
               Today
             </button>
@@ -706,79 +784,8 @@ export default function CalendarPage() {
             </button>
           </div>
 
-          {/* ── Full Month Grid (iPad/Mac only) ─────────────────────────── */}
-          {isLargeScreen && calView === 'month' && (() => {
-            const BS = 'var(--font-big-shoulders)'
-            const M  = 'var(--font-montserrat)'
-            const dim = getDaysInMonth(gridYear, gridMonth)
-            const firstDow = new Date(gridYear, gridMonth, 1).getDay()
-            const prevM = gridMonth === 0 ? 11 : gridMonth - 1
-            const prevY = gridMonth === 0 ? gridYear - 1 : gridYear
-            const prevDim = getDaysInMonth(prevY, prevM)
-            const nextM = gridMonth === 11 ? 0 : gridMonth + 1
-            const nextY = gridMonth === 11 ? gridYear + 1 : gridYear
-            type Cell = { day: number; month: number; year: number; current: boolean }
-            const cells: Cell[] = []
-            for (let i = firstDow - 1; i >= 0; i--) cells.push({ day: prevDim - i, month: prevM, year: prevY, current: false })
-            for (let d = 1; d <= dim; d++) cells.push({ day: d, month: gridMonth, year: gridYear, current: true })
-            while (cells.length < 42) { const d = cells.length - firstDow - dim + 1; cells.push({ day: d, month: nextM, year: nextY, current: false }) }
-            const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
-            return (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#0D0D0D' }}>
-                {/* Month title + prev/next */}
-                <div style={{ display: 'flex', alignItems: 'center', padding: '14px 20px 10px', gap: 10, flexShrink: 0 }}>
-                  <button onClick={goToPrev} style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.07)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#C9A84C', fontSize: 18, lineHeight: 1 }}>‹</button>
-                  <span style={{ flex: 1, fontSize: 26, fontWeight: 800, color: '#C9A84C', fontFamily: BS, letterSpacing: '-0.01em' }}>
-                    {new Date(gridYear, gridMonth, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()}
-                  </span>
-                  <button onClick={goToNext} style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.07)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#C9A84C', fontSize: 18, lineHeight: 1 }}>›</button>
-                </div>
-                {/* Day-of-week header */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', padding: '0 8px', flexShrink: 0 }}>
-                  {DAYS.map(d => (
-                    <div key={d} style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#C9A84C', padding: '4px 0 6px', fontFamily: M }}>
-                      {d}
-                    </div>
-                  ))}
-                </div>
-                {/* Grid */}
-                <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gridTemplateRows: 'repeat(6,1fr)', gap: 1, background: 'rgba(255,255,255,0.04)', padding: '0 8px 8px', overflow: 'hidden' }}>
-                  {cells.map((cell, idx) => {
-                    const ds      = toDateStr(cell.year, cell.month, cell.day)
-                    const isToday = ds === todayStr
-                    const events  = cell.current ? (visibleMap[ds] ?? []) : []
-                    const rowOdd  = Math.floor(idx / 7) % 2 === 1
-                    return (
-                      <div
-                        key={idx}
-                        onClick={() => { if (cell.current) { setSelectedDay(ds); setViewIndex(2); navigator.vibrate?.(6) } else if (idx < 7) { goToPrev() } else { goToNext() } }}
-                        style={{ background: rowOdd ? '#151515' : '#111111', display: 'flex', flexDirection: 'column', padding: '5px 5px 4px', cursor: cell.current ? 'pointer' : 'default', overflow: 'hidden', position: 'relative' }}
-                      >
-                        {/* Day number */}
-                        <div style={{ width: 22, height: 22, borderRadius: '50%', background: isToday ? '#C9A84C' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 3, flexShrink: 0 }}>
-                          <span style={{ fontSize: 12, fontWeight: isToday ? 700 : 500, color: isToday ? '#000' : cell.current ? 'rgba(255,255,255,0.82)' : 'rgba(255,255,255,0.18)', fontFamily: M, lineHeight: 1 }}>
-                            {cell.day}
-                          </span>
-                        </div>
-                        {/* Event pills */}
-                        {events.slice(0, 3).map((ev, i) => (
-                          <div key={i} style={{ fontSize: 10, lineHeight: '15px', padding: '1px 5px', borderRadius: 3, marginBottom: 2, background: (ev.color ?? DOT_COLOR[ev.type]) + '28', color: ev.color ?? DOT_COLOR[ev.type], overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: M, fontWeight: 500, flexShrink: 0 }}>
-                            {ev.title}
-                          </div>
-                        ))}
-                        {events.length > 3 && (
-                          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.28)', fontFamily: M, flexShrink: 0 }}>+{events.length - 3} more</div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )
-          })()}
-
           {/* ── Infinite Scroll List ─────────────────────────────────────── */}
-          {(!isLargeScreen || calView === 'list') && (
+          {(
           <div ref={scrollRef} onScroll={handleDetailScroll}
             style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', position: 'relative' }}>
             <div ref={topSentRef} style={{ height: 1 }} />
