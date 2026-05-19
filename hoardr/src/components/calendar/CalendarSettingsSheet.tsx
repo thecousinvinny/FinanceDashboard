@@ -7,9 +7,10 @@ import { cn } from '@/lib/utils'
 export type EventTypeFilter = 'expense' | 'income' | 'sub' | 'custom' | 'google'
 
 export interface CalPrefs {
-  visibleTypes:       EventTypeFilter[]
-  googleCalendarIds:  string[]
-  defaultCalendarId?: string
+  visibleTypes:           EventTypeFilter[]
+  googleCalendarIds:      string[]
+  defaultCalendarId?:     string
+  googleCalendarColors?:  Record<string, string>   // calId → hex override
 }
 
 export interface GCalendar {
@@ -135,21 +136,34 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
           ) : (
             <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] overflow-hidden divide-y divide-white/[0.04]">
               {googleCals.map(cal => {
-                const on = local.googleCalendarIds.includes(cal.id)
+                const on           = local.googleCalendarIds.includes(cal.id)
+                const activeColor  = local.googleCalendarColors?.[cal.id] ?? cal.backgroundColor
+                const isCustom     = !!local.googleCalendarColors?.[cal.id]
                 return (
-                  <button
-                    key={cal.id}
-                    onClick={() => toggleCal(cal.id)}
-                    className="w-full flex items-center gap-3 px-4 py-3.5 text-left select-none"
-                  >
-                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: cal.backgroundColor }} />
-                    <span className="text-[14px] font-medium text-ink flex-1 truncate">
-                      {cal.summary}{cal.primary ? ' (primary)' : ''}
-                    </span>
-                    <span className={`w-11 h-6 rounded-full relative transition-colors flex-shrink-0 ${on ? 'gradient-gold' : 'bg-bg-base border border-white/10'}`}>
+                  <div key={cal.id} className="flex items-center gap-3 px-4 py-3.5 select-none">
+                    {/* Color dot — click opens native color picker */}
+                    <label className="relative flex-shrink-0 cursor-pointer flex items-center" style={{ width: 20, height: 20 }} title="Change color">
+                      <span className="w-2.5 h-2.5 rounded-full block" style={{ background: activeColor }} />
+                      <input type="color" value={activeColor}
+                        onChange={e => setLocal(p => ({ ...p, googleCalendarColors: { ...(p.googleCalendarColors ?? {}), [cal.id]: e.target.value } }))}
+                        className="absolute inset-0 opacity-0 w-full h-full cursor-pointer p-0 border-0" />
+                    </label>
+                    {/* Reset custom color */}
+                    {isCustom && (
+                      <button onClick={() => setLocal(p => { const cols = { ...(p.googleCalendarColors ?? {}) }; delete cols[cal.id]; return { ...p, googleCalendarColors: cols } })}
+                        className="flex-shrink-0 text-[9px] text-ink-faint leading-none" title="Reset to default">✕</button>
+                    )}
+                    {/* Name — click toggles enable/disable */}
+                    <button onClick={() => toggleCal(cal.id)} className="flex-1 text-left min-w-0">
+                      <span className="text-[14px] font-medium text-ink truncate block">
+                        {cal.summary}{cal.primary ? ' (primary)' : ''}
+                      </span>
+                    </button>
+                    {/* Toggle */}
+                    <button onClick={() => toggleCal(cal.id)} className={`w-11 h-6 rounded-full relative transition-colors flex-shrink-0 ${on ? 'gradient-gold' : 'bg-bg-base border border-white/10'}`}>
                       <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
-                    </span>
-                  </button>
+                    </button>
+                  </div>
                 )
               })}
             </div>
@@ -174,7 +188,7 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
                         onClick={() => setLocal(p => ({ ...p, defaultCalendarId: calKey }))}
                         className="w-full flex items-center gap-3 px-4 py-3.5 text-left select-none"
                       >
-                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: cal.backgroundColor }} />
+                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: local.googleCalendarColors?.[cal.id] ?? cal.backgroundColor }} />
                         <span className="text-[14px] font-medium text-ink flex-1 truncate">
                           {cal.summary}{cal.primary ? ' (primary)' : ''}
                         </span>

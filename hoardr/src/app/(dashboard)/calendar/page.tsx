@@ -425,7 +425,7 @@ export default function CalendarPage() {
       if (gen !== gEvGen.current) return
       const map: Record<string, CalEvent[]> = {}
       for (const { calId, items } of results) {
-        const color = clr[calId] ?? '#4285F4'
+        const color = prefs.googleCalendarColors?.[calId] ?? clr[calId] ?? '#4285F4'
         for (const ev of items) {
           const date = ev.start.date ?? ev.start.dateTime?.slice(0, 10)
           if (!date) continue
