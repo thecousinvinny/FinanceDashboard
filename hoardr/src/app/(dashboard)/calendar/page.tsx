@@ -230,7 +230,10 @@ export default function CalendarPage() {
   const monthCellRefs       = useRef(new Map<string, HTMLElement>())
   const monthGridTopSentRef = useRef<HTMLDivElement>(null)
   const monthGridBotSentRef = useRef<HTMLDivElement>(null)
-  const [hiddenTypes, setHiddenTypes] = useState<Set<EventType>>(new Set())
+  const [hiddenTypes,  setHiddenTypes]  = useState<Set<EventType>>(new Set())
+  const [typeColors,   setTypeColors]   = useState<Partial<Record<EventType, string>>>(() => {
+    try { const s = localStorage.getItem('cal-type-colors'); return s ? JSON.parse(s) : {} } catch { return {} }
+  })
   const [sidebarYear, setSidebarYear] = useState(today.getFullYear())
   const [sidebarMonth, setSidebarMonth] = useState(today.getMonth())
   const [notionWeeks, setNotionWeeks] = useState<string[]>(() => {
@@ -269,6 +272,7 @@ export default function CalendarPage() {
 
   useEffect(() => { monthsRef.current = months }, [months])
   useEffect(() => { notionWeeksRef.current = notionWeeks }, [notionWeeks])
+  useEffect(() => { localStorage.setItem('cal-type-colors', JSON.stringify(typeColors)) }, [typeColors])
 
   // ── Large-screen detection (iPad ≥768px, Mac ≥1024px) ────────────────────
   useEffect(() => {
@@ -795,6 +799,9 @@ export default function CalendarPage() {
     return () => obs.disconnect()
   }, [isLargeScreen, calView])
 
+  // Applies per-type color override from typeColors (Notion grid only)
+  const notionColor = (ev: CalEvent) => ev.color ?? typeColors[ev.type] ?? DOT_COLOR[ev.type]
+
   // ── Grid helpers ───────────────────────────────────────────────────────────
   const gridDays  = getDaysInMonth(gridYear, gridMonth)
   const firstDay  = new Date(gridYear, gridMonth, 1).getDay()
@@ -1045,16 +1052,31 @@ export default function CalendarPage() {
                     { type: 'custom'  as EventType, label: 'Events',        color: DOT_COLOR.custom  },
                     { type: 'google'  as EventType, label: 'Google',        color: DOT_COLOR.google  },
                   ].map(item => {
-                    const hidden = hiddenTypes.has(item.type)
+                    const hidden      = hiddenTypes.has(item.type)
+                    const activeColor = typeColors[item.type] ?? item.color
+                    const isCustom    = !!typeColors[item.type]
                     return (
-                      <button key={item.type} onClick={() => setHiddenTypes(prev => {
-                        const next = new Set(prev); if (next.has(item.type)) next.delete(item.type); else next.add(item.type); return next
-                      })} style={{ display: 'flex', alignItems: 'center', gap: 7, width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', textAlign: 'left' }}>
-                        <span style={{ width: 9, height: 9, borderRadius: '50%', background: hidden ? 'transparent' : item.color, border: `1.5px solid ${item.color}`, flexShrink: 0, opacity: hidden ? 0.4 : 1, transition: 'all 0.15s' }} />
-                        <span style={{ fontSize: 11, color: hidden ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-montserrat)', fontWeight: 500, transition: 'color 0.15s' }}>
-                          {item.label}
-                        </span>
-                      </button>
+                      <div key={item.type} style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: '3px 0' }}>
+                        {/* Color dot — click opens native color picker */}
+                        <label style={{ position: 'relative', flexShrink: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', width: 16, height: 16, justifyContent: 'center' }} title="Change color">
+                          <span style={{ width: 10, height: 10, borderRadius: '50%', background: hidden ? 'transparent' : activeColor, border: `1.5px solid ${activeColor}`, display: 'block', transition: 'all 0.15s', opacity: hidden ? 0.4 : 1, flexShrink: 0 }} />
+                          <input type="color" value={activeColor}
+                            onChange={e => setTypeColors(p => ({ ...p, [item.type]: e.target.value }))}
+                            style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', padding: 0, border: 'none' }} />
+                        </label>
+                        {/* Label — click toggles show/hide */}
+                        <button onClick={() => setHiddenTypes(prev => { const next = new Set(prev); if (next.has(item.type)) next.delete(item.type); else next.add(item.type); return next })}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', flex: 1, textAlign: 'left', padding: 0 }}>
+                          <span style={{ fontSize: 11, color: hidden ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-montserrat)', fontWeight: 500, transition: 'color 0.15s' }}>{item.label}</span>
+                        </button>
+                        {/* Reset — only shown when a custom color is applied */}
+                        {isCustom && (
+                          <button onClick={() => setTypeColors(p => { const n = { ...p }; delete n[item.type]; return n })}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', opacity: 0.35, flexShrink: 0, lineHeight: 1, fontSize: 9, color: '#fff' }} title="Reset to default">
+                            ✕
+                          </button>
+                        )}
+                      </div>
                     )
                   }))}
                 </div>
@@ -1142,7 +1164,7 @@ export default function CalendarPage() {
                                       if (!seg) return <div key={laneIdx} style={{ height: SPAN_H, marginBottom: SPAN_GAP }} />
                                       const isStart  = seg.startCol === ci
                                       const isEnd    = seg.endCol   === ci
-                                      const segColor = seg.ev.color ?? DOT_COLOR[seg.ev.type]
+                                      const segColor = notionColor(seg.ev)
                                       return (
                                         <div key={laneIdx} style={{
                                           height: SPAN_H, marginBottom: SPAN_GAP, overflow: 'hidden',
@@ -1160,13 +1182,13 @@ export default function CalendarPage() {
                                 {/* Single-day all-day events */}
                                 <div style={{ paddingLeft: 4, paddingRight: 4, display: 'flex', flexDirection: 'column' }}>
                                   {allDayEvs.slice(0, shownAllDay).map((ev, ei) => (
-                                    <div key={ei} style={{ background: (ev.color ?? DOT_COLOR[ev.type]) + 'DD', borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, opacity: 0.85 }}>
+                                    <div key={ei} style={{ background: notionColor(ev) + 'DD', borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, opacity: 0.85 }}>
                                       <span style={{ fontSize: 10, color: '#fff', fontFamily: 'var(--font-montserrat)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
                                     </div>
                                   ))}
                                   {/* Timed / financial events */}
                                   {timedEvs.slice(0, shownTimed).map((ev, ei) => {
-                                    const bar     = ev.color ?? DOT_COLOR[ev.type]
+                                    const bar     = notionColor(ev)
                                     const timeStr = (ev.type === 'custom' || ev.type === 'google') && ev.amount
                                       ? ev.amount.split(' – ')[0].trim().replace(/^(\d{2}):(\d{2})$/, (_, hh, mm) => { const n = Number(hh); return `${n % 12 || 12}:${mm}${n >= 12 ? 'p' : 'a'}` })
                                       : null
