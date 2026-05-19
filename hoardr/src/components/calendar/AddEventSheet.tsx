@@ -26,7 +26,7 @@ interface Props {
 }
 
 const EMPTY: NewCalEvent = {
-  title: '', date: '', allDay: true,
+  title: '', date: '', allDay: false,
   startTime: '09:00', endTime: '10:00',
   location: '', notes: '', calendarId: 'primary',
 }
