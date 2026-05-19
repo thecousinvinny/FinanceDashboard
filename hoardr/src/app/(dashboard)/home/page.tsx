@@ -12,8 +12,17 @@ import { pageCache } from '@/lib/page-cache'
 import { showToast } from '@/lib/toast'
 import { PullIndicator } from '@/components/ui/PullIndicator'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
+import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import type { DayPoint } from '@/components/home/SparkChart'
 import type { SeedTx } from '@/lib/data/transactions'
+import { Truck } from 'lucide-react'
+
+interface EnRouteItem {
+  id:          string
+  name:        string
+  bought_cost: number | null
+  ordered_at:  string | null
+}
 
 interface ActivityRow {
   id:       string
@@ -31,6 +40,7 @@ interface HomeCache {
   monthlySubs:   number
   wishlistTotal: number
   upcoming:      UpcomingSub[]
+  enRoute:       EnRouteItem[]
   activity:      ActivityRow[]
   sparkPoints:   DayPoint[]
 }
@@ -43,6 +53,7 @@ export default function HomePage() {
   const [monthlySubs,   setMonthlySubs]   = useState(cached?.monthlySubs ?? 0)
   const [wishlistTotal, setWishlistTotal] = useState(cached?.wishlistTotal ?? 0)
   const [upcoming,      setUpcoming]      = useState<UpcomingSub[]>(cached?.upcoming ?? [])
+  const [enRoute,       setEnRoute]       = useState<EnRouteItem[]>(cached?.enRoute ?? [])
   const [activity,      setActivity]      = useState<ActivityRow[]>(cached?.activity ?? [])
   const [sparkPoints,   setSparkPoints]   = useState<DayPoint[]>(cached?.sparkPoints ?? [])
   const [loading,       setLoading]       = useState(!cached)
@@ -71,6 +82,7 @@ export default function HomePage() {
         { data: activeSubs },
         { data: upcomingData },
         { data: wishlist },
+        { data: enRouteData },
         { data: recentExp },
         { data: recentInc },
       ] = await Promise.all([
@@ -85,6 +97,11 @@ export default function HomePage() {
           .limit(3)
           .abortSignal(sig),
         supabase.from('wishlist').select('original_cost').eq('status', 'Interested').abortSignal(sig),
+        supabase.from('wishlist')
+          .select('id, name, bought_cost, ordered_at')
+          .eq('status', 'Ordered')
+          .order('ordered_at', { ascending: false })
+          .abortSignal(sig),
         supabase.from('expenses')
           .select('id, name, cost, date, categories(name)')
           .order('date', { ascending: false })
@@ -118,6 +135,13 @@ export default function HomePage() {
       }))
 
       const subNameSet = new Set((activeSubs ?? []).map(s => String(s.name).toLowerCase()))
+
+      const newEnRoute: EnRouteItem[] = (enRouteData ?? []).map(w => ({
+        id:          String(w.id),
+        name:        String(w.name),
+        bought_cost: w.bought_cost != null ? Number(w.bought_cost) : null,
+        ordered_at:  w.ordered_at ? String(w.ordered_at) : null,
+      }))
 
       const newActivity: ActivityRow[] = [
         ...(recentExp ?? []).map(e => ({
@@ -180,7 +204,7 @@ export default function HomePage() {
       pageCache.set('home', {
         spent: newSpent, earned: newEarned,
         monthlySubs: newMonthlySubs, wishlistTotal: newWishlistTotal,
-        upcoming: newUpcoming, activity: newActivity,
+        upcoming: newUpcoming, enRoute: newEnRoute, activity: newActivity,
         sparkPoints: newSparkPoints,
       })
 
@@ -189,6 +213,7 @@ export default function HomePage() {
       setMonthlySubs(newMonthlySubs)
       setWishlistTotal(newWishlistTotal)
       setUpcoming(newUpcoming)
+      setEnRoute(newEnRoute)
       setActivity(newActivity)
       setSparkPoints(newSparkPoints)
       setLoading(false)
@@ -241,6 +266,12 @@ export default function HomePage() {
     }
 
     await loadData()
+  }
+
+  function handleMarkArrived(id: string, name: string) {
+    setEnRoute(prev => prev.filter(i => i.id !== id))
+    showToast(`${name} arrived`, { type: 'payment' })
+    supabase.from('wishlist').delete().eq('id', id)
   }
 
   const saved       = earned - spent
@@ -299,6 +330,42 @@ export default function HomePage() {
           </div>
 
           <UpcomingBills initial={upcoming} />
+
+          {/* ── En route ────────────────────────────────────────────────── */}
+          {enRoute.length > 0 && (
+            <div className="mx-4 mt-6">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint">En Route</p>
+              </div>
+              <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
+                {enRoute.map(item => (
+                  <SwipeToDelete
+                    key={item.id}
+                    onRight={() => handleMarkArrived(item.id, item.name)}
+                    rightLabel={<Truck size={18} strokeWidth={1.5} />}
+                    rightBg="bg-emerald-600"
+                  >
+                    <div className="flex items-center gap-3 px-4 py-3.5">
+                      <div className="w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+                        <Truck size={15} strokeWidth={1.75} className="text-gold" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[14px] font-medium text-ink truncate">{item.name}</p>
+                        <p className="text-[11px] text-ink-muted">
+                          {item.ordered_at ? `Ordered ${fmtDate(item.ordered_at)}` : 'En route'}
+                        </p>
+                      </div>
+                      {item.bought_cost != null && (
+                        <p className="text-[15px] font-semibold font-mono text-ink flex-shrink-0">
+                          {$fd(item.bought_cost)}
+                        </p>
+                      )}
+                    </div>
+                  </SwipeToDelete>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* ── Recent activity ─────────────────────────────────────────── */}
           <div className="mx-4 mt-6">

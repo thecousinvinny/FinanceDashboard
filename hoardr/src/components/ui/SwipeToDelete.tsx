@@ -9,13 +9,13 @@ const AUTO     = 200   // px to auto-confirm
 const TAP_SLOP = 10    // max movement still counted as a tap
 
 interface Props {
-  onDelete:       () => void
+  onDelete?:      () => void
   children:       React.ReactNode
   className?:     string
   actionLabel?:   React.ReactNode
   actionBg?:      string
   onTap?:         () => void
-  // right-swipe (buy / pay)
+  // right-swipe (buy / pay / arrive)
   onRight?:       () => void
   rightLabel?:    React.ReactNode
   rightBg?:       string
@@ -74,6 +74,7 @@ export function SwipeToDelete({
   }
 
   function triggerDelete() {
+    if (!onDelete) return
     haptic('delete')
     setPos(-window.innerWidth, true)
     setTimeout(onDelete, 240)
@@ -97,8 +98,8 @@ export function SwipeToDelete({
   function clampX(dx: number) {
     const base = revealed.current === 'right' ? REVEAL : revealed.current === 'left' ? -REVEAL : 0
     const raw  = base + dx
-    const minX = -(AUTO + 20)
-    const maxX = onRight ? (AUTO + 20) : 0
+    const minX = onDelete ? -(AUTO + 20) : 0
+    const maxX = onRight  ?  (AUTO + 20) : 0
     return Math.min(maxX, Math.max(minX, raw))
   }
 
@@ -132,9 +133,9 @@ export function SwipeToDelete({
     } else if (x > REVEAL / 2 && onRight) {
       setPos(REVEAL, true)
       revealed.current = 'right'
-    } else if (x <= -AUTO) {
+    } else if (x <= -AUTO && onDelete) {
       triggerDelete()
-    } else if (x < -(REVEAL / 2)) {
+    } else if (x < -(REVEAL / 2) && onDelete) {
       setPos(-REVEAL, true)
       revealed.current = 'left'
     } else {
@@ -181,9 +182,9 @@ export function SwipeToDelete({
     } else if (x > REVEAL / 2 && onRight) {
       setPos(REVEAL, true)
       revealed.current = 'right'
-    } else if (x <= -AUTO) {
+    } else if (x <= -AUTO && onDelete) {
       triggerDelete()
-    } else if (x < -(REVEAL / 2)) {
+    } else if (x < -(REVEAL / 2) && onDelete) {
       setPos(-REVEAL, true)
       revealed.current = 'left'
     } else {
@@ -208,14 +209,16 @@ export function SwipeToDelete({
       )}
 
       {/* Right action zone (revealed on left swipe — delete/cancel) */}
-      <div
-        ref={rightActionRef}
-        className={cn('absolute inset-y-0 right-0 flex items-center justify-center cursor-pointer select-none text-white', actionBg)}
-        style={{ width: REVEAL, opacity: 0 }}
-        onClick={triggerDelete}
-      >
-        {actionLabel}
-      </div>
+      {onDelete && (
+        <div
+          ref={rightActionRef}
+          className={cn('absolute inset-y-0 right-0 flex items-center justify-center cursor-pointer select-none text-white', actionBg)}
+          style={{ width: REVEAL, opacity: 0 }}
+          onClick={triggerDelete}
+        >
+          {actionLabel}
+        </div>
+      )}
 
       {/* Sliding content */}
       <div

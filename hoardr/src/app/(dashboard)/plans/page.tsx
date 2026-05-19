@@ -44,6 +44,7 @@ interface WishItem {
   category:      string | null
   url:           string | null
   bought_cost:   number | null
+  ordered_at:    string | null
   status:        string
 }
 
@@ -104,7 +105,7 @@ function PlansPageInner() {
           .abortSignal(controller.signal),
         supabase
           .from('wishlist')
-          .select('id, name, original_cost, category, url, bought_cost, status')
+          .select('id, name, original_cost, category, url, bought_cost, ordered_at, status')
           .order('created_at', { ascending: false })
           .abortSignal(controller.signal),
         supabase
@@ -134,6 +135,7 @@ function PlansPageInner() {
         category:      w.category ? String(w.category) : null,
         url:           w.url ? String(w.url) : null,
         bought_cost:   w.bought_cost != null ? Number(w.bought_cost) : null,
+        ordered_at:    w.ordered_at ? String(w.ordered_at) : null,
         status:        String(w.status),
       }))
       const yrSaved = (yrSavings ?? []).reduce((s, e) => {
@@ -172,8 +174,9 @@ function PlansPageInner() {
     const item = wishlist.find(w => w.id === id)
     if (!item) return
 
-    setWishlist(prev => prev.map(w => w.id === id ? { ...w, status: 'Purchased', bought_cost: paidCost } : w))
-    showToast(`${item.name} purchased`, { type: 'payment' })
+    const orderedAt = localToday()
+    setWishlist(prev => prev.map(w => w.id === id ? { ...w, status: 'Ordered', bought_cost: paidCost, ordered_at: orderedAt } : w))
+    showToast(`${item.name} ordered`, { type: 'payment' })
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { await loadData(); return }
@@ -208,7 +211,7 @@ function PlansPageInner() {
 
     const { error } = await supabase
       .from('wishlist')
-      .update({ status: 'Purchased', bought_cost: paidCost, ...(expRow?.id ? { expense_id: expRow.id } : {}) })
+      .update({ status: 'Ordered', bought_cost: paidCost, ordered_at: today, ...(expRow?.id ? { expense_id: expRow.id } : {}) })
       .eq('id', id)
     if (error) { console.error('buy item error:', JSON.stringify(error)); await loadData() }
   }
@@ -359,7 +362,7 @@ function PlansPageInner() {
       id: tempId, name: item.name,
       original_cost: item.original_cost,
       category: item.category, url: item.url,
-      bought_cost: null, status: 'Interested',
+      bought_cost: null, ordered_at: null, status: 'Interested',
     }, ...prev])
     showToast(`${item.name} added`, { type: 'add' })
 
