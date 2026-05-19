@@ -388,10 +388,17 @@ export default function CalendarPage() {
   useEffect(() => {
     if (viewIndex !== 1 || !scrollToToday.current) return
     scrollToToday.current = false
-    // Wait for the 320ms slide transition to finish before measuring
+    // Wait for the 320ms slide transition to finish before measuring.
+    // Use manual scrollTop instead of scrollIntoView — the latter is unreliable
+    // inside fixed-position containers on iOS WKWebView.
     const t = setTimeout(() => {
+      const sc = scrollRef.current
       const el = dayRefs.current.get(todayStr)
-      if (el) el.scrollIntoView({ block: 'center', behavior: 'instant' })
+      if (sc && el) {
+        const cRect = sc.getBoundingClientRect()
+        const eRect = el.getBoundingClientRect()
+        sc.scrollTop = sc.scrollTop + eRect.top - cRect.top - sc.clientHeight / 2 + eRect.height / 2
+      }
     }, 360)
     return () => clearTimeout(t)
   }, [viewIndex, todayStr])
@@ -636,7 +643,7 @@ export default function CalendarPage() {
 
           {/* Compact header */}
           <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingTop: SAFE_TOP, paddingBottom: 10, paddingLeft: 14, paddingRight: 14, gap: 6, background: '#0a0a0a', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-            <button onClick={() => { const el = dayRefs.current.get(todayStr); const sc = scrollRef.current; if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }) }}
+            <button onClick={() => { const sc = scrollRef.current; const el = dayRefs.current.get(todayStr); if (sc && el) { const cRect = sc.getBoundingClientRect(); const eRect = el.getBoundingClientRect(); sc.scrollTop = sc.scrollTop + eRect.top - cRect.top - sc.clientHeight / 2 + eRect.height / 2 } }}
               style={{ height: 30, padding: '0 10px', borderRadius: 15, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.07)', fontSize: 11, color: '#D4AF37', fontWeight: 600, flexShrink: 0, cursor: 'pointer' }}>
               Today
             </button>
