@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(git *)",
+      "Bash(npm run *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Cousin Vinny\\\\Documents\\\\FinanceDashboard\\\\hoardr\\\\src\" -Recurse -Force)",
+      "Bash(Select-Object FullName, PSIsContainer)",
+      "Bash(Sort-Object FullName)",
+      "Bash(Format-Table -AutoSize)",
+      "Bash(powershell *)",
+      "PowerShell(New-Item *)",
+      "Bash(Test-Path *)",
+      "WebFetch(domain:vfqubgxmxibxjcsinmox.supabase.co)",
+      "Bash(curl *)",
+      "Bash(New-Item -ItemType Directory -Force -Path \"C:\\\\Users\\\\Cousin Vinny\\\\Documents\\\\FinanceDashboard\\\\hoardr\\\\src\\\\app\\\\auth\\\\callback\")",
+      "Bash(Out-Null)",
+      "Bash(npm show *)",
+      "Bash(npm audit *)",
+      "Bash(python3 -c ' *)",
+      "PowerShell(Get-Content *)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Cousin Vinny\\\\Documents\\\\FinanceDashboard\" -Recurse -Depth 4 | Where-Object { !$_.PSIsContainer } | Select-Object FullName)",
+      "Read(//c/c/Users/Cousin Vinny/Documents/FinanceDashboard/GoogleSheets/**)"
+    ]
+  }
+}

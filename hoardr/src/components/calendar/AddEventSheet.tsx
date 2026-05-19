@@ -1,19 +1,22 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { MapPin, Clock, AlignLeft, X, ChevronDown } from 'lucide-react'
+import { MapPin, Clock, AlignLeft, X, ChevronDown, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { rruleLabel } from '@/lib/rrule'
+import { RecurrencePicker } from './RecurrencePicker'
 import type { GCalendar } from './CalendarSettingsSheet'
 
 export interface NewCalEvent {
-  title:      string
-  date:       string
-  allDay:     boolean
-  startTime:  string
-  endTime:    string
-  location:   string
-  notes:      string
-  calendarId: string
+  title:          string
+  date:           string
+  allDay:         boolean
+  startTime:      string
+  endTime:        string
+  location:       string
+  notes:          string
+  calendarId:     string
+  recurrenceRule: string
 }
 
 interface Props {
@@ -28,12 +31,13 @@ interface Props {
 const EMPTY: NewCalEvent = {
   title: '', date: '', allDay: false,
   startTime: '09:00', endTime: '10:00',
-  location: '', notes: '', calendarId: 'primary',
+  location: '', notes: '', calendarId: 'primary', recurrenceRule: '',
 }
 
 export function AddEventSheet({ open, defaultDate, defaultCalendarId, googleCals = [], onClose, onAdd }: Props) {
-  const [form,   setForm]   = useState<NewCalEvent>(EMPTY)
-  const [saving, setSaving] = useState(false)
+  const [form,               setForm]               = useState<NewCalEvent>(EMPTY)
+  const [saving,             setSaving]             = useState(false)
+  const [recurrencePickerOpen, setRecurrencePickerOpen] = useState(false)
   const locationRef = useRef<HTMLInputElement>(null)
   const acRef       = useRef<unknown>(null)
 
@@ -227,6 +231,21 @@ export function AddEventSheet({ open, defaultDate, defaultCalendarId, googleCals
             </div>
           )}
 
+          {/* Repeat */}
+          <button
+            type="button"
+            onClick={() => setRecurrencePickerOpen(true)}
+            className="w-full flex items-center justify-between bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-left"
+          >
+            <div className="flex items-center gap-2.5 pointer-events-none">
+              <RefreshCw size={15} className="text-ink-muted" />
+              <span className="text-[14px] text-ink">Repeat</span>
+            </div>
+            <span className="text-[13px] text-ink-muted">
+              {form.recurrenceRule ? rruleLabel(form.recurrenceRule, form.date || new Date().toISOString().slice(0,10)) : 'Never'}
+            </span>
+          </button>
+
           {/* Location */}
           <div className="relative">
             <MapPin size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
@@ -263,6 +282,13 @@ export function AddEventSheet({ open, defaultDate, defaultCalendarId, googleCals
           </button>
         </div>
       </div>
+      <RecurrencePicker
+        open={recurrencePickerOpen}
+        date={form.date || new Date().toISOString().slice(0, 10)}
+        value={form.recurrenceRule}
+        onClose={() => setRecurrencePickerOpen(false)}
+        onChange={rule => set('recurrenceRule', rule)}
+      />
     </>
   )
 }

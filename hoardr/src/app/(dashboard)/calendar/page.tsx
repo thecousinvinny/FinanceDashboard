@@ -4,23 +4,27 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
-import { Plus, Trash2, SlidersHorizontal, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning, type LucideIcon } from 'lucide-react'
+import { Plus, Trash2, Pencil, SlidersHorizontal, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning, type LucideIcon } from 'lucide-react'
 import { AddEventSheet, type NewCalEvent } from '@/components/calendar/AddEventSheet'
+import { EditEventSheet, type EditableEvent, type EventEdits, type RecurrenceScope } from '@/components/calendar/EditEventSheet'
 import { CalendarSettingsSheet, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
-import { createCalEvent, deleteCalEvent, allDayEvent, timedEvent } from '@/lib/calendar'
+import { createCalEvent, updateCalEvent, deleteCalEvent, allDayEvent, timedEvent, type GCalEvent } from '@/lib/calendar'
+import { expandRRule } from '@/lib/rrule'
 
 type EventType = 'expense' | 'income' | 'sub' | 'custom' | 'google'
 
 interface CalEvent {
-  id?:            string
-  title:          string
-  type:           EventType
-  amount:         string
-  location?:      string
-  notes?:         string
-  googleEventId?: string
-  color?:         string
-  endDate?:       string  // inclusive end date for multi-day all-day events (Google Calendar only)
+  id?:             string
+  title:           string
+  type:            EventType
+  amount:          string
+  location?:       string
+  notes?:          string
+  googleEventId?:  string
+  color?:          string
+  endDate?:        string   // inclusive end date for multi-day all-day events (Google Calendar only)
+  recurrenceRule?: string   // RRULE string (no "RRULE:" prefix); set on recurring custom events
+  instanceDate?:   string   // actual date of this occurrence (equals the map key for expanded instances)
 }
 
 interface MonthKey { year: number; month: number }
@@ -145,9 +149,10 @@ function EventRow({ ev, onDelete }: { ev: CalEvent; onDelete: (ev: CalEvent) => 
 }
 
 // ── Expanded day event card (View 3 — Timepage style, no cards) ──────────────
-function DayEventCard({ ev, dot, timeRange, amt, onDelete }: {
+function DayEventCard({ ev, dot, timeRange, amt, onDelete, onEdit }: {
   ev: CalEvent; dot: string; timeRange: string | null; amt: string | null
   onDelete: (ev: CalEvent) => void
+  onEdit:   (ev: CalEvent) => void
 }) {
   const M = 'var(--font-montserrat)'
   return (
@@ -155,12 +160,18 @@ function DayEventCard({ ev, dot, timeRange, amt, onDelete }: {
       {/* Title + dot — centered as a group */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, marginBottom: 6 }}>
         <span style={{ width: 7, height: 7, borderRadius: '50%', background: dot, flexShrink: 0 }} />
-        <span style={{ fontSize: 18, fontWeight: 500, color: 'rgba(255,255,255,0.9)', fontFamily: M, lineHeight: 1.3 }}>{ev.title}</span>
+        <span style={{ fontSize: 18, fontWeight: 500, color: '#fff', fontFamily: M, lineHeight: 1.3 }}>{ev.title}</span>
         {ev.type === 'custom' && (
-          <button onClick={() => onDelete(ev)}
-            style={{ background: 'none', border: 'none', padding: '2px 4px', cursor: 'pointer', opacity: 0.4, flexShrink: 0 }}>
-            <Trash2 size={13} color="#ef4444" />
-          </button>
+          <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+            <button onClick={() => onEdit(ev)}
+              style={{ background: 'none', border: 'none', padding: '2px 4px', cursor: 'pointer', opacity: 0.35, flexShrink: 0 }}>
+              <Pencil size={13} color="#fff" />
+            </button>
+            <button onClick={() => onDelete(ev)}
+              style={{ background: 'none', border: 'none', padding: '2px 4px', cursor: 'pointer', opacity: 0.4, flexShrink: 0 }}>
+              <Trash2 size={13} color="#ef4444" />
+            </button>
+          </div>
         )}
       </div>
       {/* Sub-info — centered below */}
@@ -198,10 +209,12 @@ export default function CalendarPage() {
   const [prefs,       setPrefs]       = useState<CalPrefs>(DEFAULT_PREFS)
   const [googleCals,  setGoogleCals]  = useState<GCalendar[]>([])
   const [calsLoading, setCalsLoading] = useState(false)
-  const [addOpen,      setAddOpen]      = useState(false)
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const [addDate,      setAddDate]      = useState<string | undefined>()
-  const [weatherMap,   setWeatherMap]   = useState<Record<string, DayWeather>>({})
+  const [addOpen,        setAddOpen]        = useState(false)
+  const [settingsOpen,   setSettingsOpen]   = useState(false)
+  const [addDate,        setAddDate]        = useState<string | undefined>()
+  const [weatherMap,     setWeatherMap]     = useState<Record<string, DayWeather>>({})
+  const [editEvent,      setEditEvent]      = useState<EditableEvent | null>(null)
+  const [deleteScopeEv,  setDeleteScopeEv]  = useState<CalEvent | null>(null)
 
   // Infinite scroll
   const [months, setMonths] = useState<MonthKey[]>(() =>
@@ -313,11 +326,15 @@ export default function CalendarPage() {
           supabase.from('expenses').select('name, cost, date').abortSignal(controller.signal),
           supabase.from('income').select('name, amount, date').abortSignal(controller.signal),
           supabase.from('subscriptions').select('name, cost, next_renewal').eq('status', 'Active').abortSignal(controller.signal),
-          supabase.from('cal_events').select('id, title, date, start_time, end_time, location, notes, google_event_id').order('created_at').abortSignal(controller.signal),
+          supabase.from('cal_events').select('id, title, date, start_time, end_time, location, notes, google_event_id, recurrence_rule, recurrence_exceptions').order('created_at').abortSignal(controller.signal),
           supabase.from('profiles').select('calendar_prefs').abortSignal(controller.signal).single(),
         ])
       if (gen !== loadGen.current) return
       if (profile?.calendar_prefs) setPrefs(profile.calendar_prefs as CalPrefs)
+
+      const now      = new Date()
+      const expandStart = `${now.getFullYear() - 1}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      const expandEnd   = `${now.getFullYear() + 2}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
       const map: Record<string, CalEvent[]> = {}
       const push = (date: string, ev: CalEvent) => { if (!map[date]) map[date] = []; map[date].push(ev) }
@@ -325,15 +342,26 @@ export default function CalendarPage() {
       for (const i of inc  ?? []) push(String(i.date), { title: String(i.name), type: 'income',  amount: `+$${Number(i.amount).toFixed(2)}` })
       for (const s of subs ?? []) if (s.next_renewal) push(String(s.next_renewal), { title: String(s.name), type: 'sub', amount: `$${Number(s.cost).toFixed(2)}` })
       for (const c of cevs ?? []) {
-        const st = c.start_time ? String(c.start_time) : ''
-        const et = c.end_time   ? String(c.end_time)   : ''
-        push(String(c.date), {
+        const st         = c.start_time ? String(c.start_time) : ''
+        const et         = c.end_time   ? String(c.end_time)   : ''
+        const baseDate   = String(c.date)
+        const rrule      = c.recurrence_rule ? String(c.recurrence_rule) : null
+        const exceptions = (c.recurrence_exceptions as string[] | null) ?? []
+        const base: CalEvent = {
           id: String(c.id), title: String(c.title), type: 'custom',
           amount: st ? `${st}${et ? ` – ${et}` : ''}` : '',
-          location: c.location ? String(c.location) : undefined,
-          notes:    c.notes    ? String(c.notes)    : undefined,
+          location:      c.location      ? String(c.location)      : undefined,
+          notes:         c.notes         ? String(c.notes)         : undefined,
           googleEventId: c.google_event_id ? String(c.google_event_id) : undefined,
-        })
+          recurrenceRule: rrule ?? undefined,
+        }
+        if (rrule) {
+          for (const instanceDate of expandRRule(rrule, baseDate, expandStart, expandEnd, exceptions)) {
+            push(instanceDate, { ...base, instanceDate })
+          }
+        } else {
+          push(baseDate, { ...base, instanceDate: baseDate })
+        }
       }
       setEventMap(map)
     } catch (err) {
@@ -455,42 +483,198 @@ export default function CalendarPage() {
     await supabase.from('profiles').update({ calendar_prefs: p }).eq('id', (await supabase.auth.getUser()).data.user?.id ?? '')
   }
 
+  function buildGCalEvent(
+    title: string, date: string, allDay: boolean,
+    startTime: string, endTime: string,
+    notes: string, location: string, recurrenceRule: string,
+  ): GCalEvent {
+    const gcal = allDay
+      ? allDayEvent(title, date, notes || undefined, location || undefined)
+      : timedEvent(title, date, startTime, endTime, { description: notes || undefined, location: location || undefined })
+    if (recurrenceRule) gcal.recurrence = [`RRULE:${recurrenceRule}`]
+    return gcal
+  }
+
   async function handleAddEvent(ev: NewCalEvent) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    const gcal = ev.allDay
-      ? allDayEvent(ev.title, ev.date, ev.notes || undefined, ev.location || undefined)
-      : timedEvent(ev.title, ev.date, ev.startTime, ev.endTime, { description: ev.notes || undefined, location: ev.location || undefined })
-    const gid = await createCalEvent(gcal, ev.calendarId)
+    const gcal = buildGCalEvent(ev.title, ev.date, ev.allDay, ev.startTime, ev.endTime, ev.notes, ev.location, ev.recurrenceRule)
+    const gid  = await createCalEvent(gcal, ev.calendarId)
     await supabase.from('cal_events').insert({
       user_id: user.id, title: ev.title, date: ev.date,
       start_time: ev.allDay ? null : ev.startTime, end_time: ev.allDay ? null : ev.endTime,
       location: ev.location || null, notes: ev.notes || null, google_event_id: gid,
+      recurrence_rule: ev.recurrenceRule || null,
     })
     showToast(`${ev.title} added`, { type: 'add' })
     await loadData()
   }
 
+  function localDatePlusDays(ds: string, n: number): string {
+    const [y, m, d] = ds.split('-').map(Number)
+    const date = new Date(y, m - 1, d + n)
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  }
+
   function handleDeleteCustomEvent(ev: CalEvent) {
     if (!ev.id) return
-    // Optimistic: remove from map so it disappears instantly
-    const dayKey = selectedDay
+    if (ev.recurrenceRule) { setDeleteScopeEv(ev); return }
+    const dayKey = ev.instanceDate ?? selectedDay
     if (dayKey) {
-      setEventMap(prev => ({
-        ...prev,
-        [dayKey]: (prev[dayKey] ?? []).filter(e => e.id !== ev.id),
-      }))
+      setEventMap(prev => ({ ...prev, [dayKey]: (prev[dayKey] ?? []).filter(e => e.id !== ev.id) }))
     }
     showToast('Event deleted', {
       type: 'delete',
       undo: {
-        onUndo:   () => loadData(),  // DB unchanged — re-fetch restores it
+        onUndo:   () => loadData(),
         onCommit: () => {
           if (ev.googleEventId) deleteCalEvent(ev.googleEventId)
           supabase.from('cal_events').delete().eq('id', ev.id!)
         },
       },
     })
+  }
+
+  function handleDeleteEventWithScope(ev: CalEvent, scope: RecurrenceScope) {
+    setDeleteScopeEv(null)
+    const instanceDate = ev.instanceDate ?? selectedDay ?? ''
+    if (scope === 'all') {
+      setEventMap(prev => {
+        const m = { ...prev }
+        for (const key of Object.keys(m)) {
+          m[key] = m[key].filter(e => e.id !== ev.id)
+          if (!m[key].length) delete m[key]
+        }
+        return m
+      })
+      showToast('All events deleted', {
+        type: 'delete',
+        undo: {
+          onUndo:   () => loadData(),
+          onCommit: () => {
+            if (ev.googleEventId) deleteCalEvent(ev.googleEventId)
+            supabase.from('cal_events').delete().eq('id', ev.id!)
+          },
+        },
+      })
+    } else if (scope === 'this') {
+      setEventMap(prev => {
+        const m = { ...prev }
+        if (m[instanceDate]) {
+          m[instanceDate] = m[instanceDate].filter(e => !(e.id === ev.id && e.instanceDate === instanceDate))
+          if (!m[instanceDate].length) delete m[instanceDate]
+        }
+        return m
+      })
+      showToast('Event deleted', {
+        type: 'delete',
+        undo: {
+          onUndo: () => loadData(),
+          onCommit: async () => {
+            const { data } = await supabase.from('cal_events').select('recurrence_exceptions').eq('id', ev.id!).single()
+            const exceptions = [...((data?.recurrence_exceptions as string[] | null) ?? []), instanceDate]
+            await supabase.from('cal_events').update({ recurrence_exceptions: exceptions }).eq('id', ev.id!)
+          },
+        },
+      })
+    } else {
+      const prevDay = localDatePlusDays(instanceDate, -1)
+      setEventMap(prev => {
+        const m = { ...prev }
+        for (const key of Object.keys(m)) {
+          if (key >= instanceDate) {
+            m[key] = m[key].filter(e => e.id !== ev.id)
+            if (!m[key].length) delete m[key]
+          }
+        }
+        return m
+      })
+      showToast('Events deleted', {
+        type: 'delete',
+        undo: {
+          onUndo: () => loadData(),
+          onCommit: async () => {
+            const { data } = await supabase.from('cal_events').select('recurrence_rule').eq('id', ev.id!).single()
+            const oldRule = String(data?.recurrence_rule ?? '')
+            const newRule = oldRule.includes('UNTIL=') || oldRule.includes('COUNT=')
+              ? oldRule : `${oldRule};UNTIL=${prevDay.replace(/-/g, '')}`
+            await supabase.from('cal_events').update({ recurrence_rule: newRule }).eq('id', ev.id!)
+          },
+        },
+      })
+    }
+  }
+
+  function handleOpenEdit(ev: CalEvent) {
+    if (!ev.id) return
+    const parts   = ev.amount?.split(' – ').map(t => t.trim()) ?? []
+    const allDay  = !ev.amount?.trim()
+    const startT  = !allDay && parts[0] ? parts[0] : '09:00'
+    const endT    = !allDay && parts[1] ? parts[1] : '10:00'
+    setEditEvent({
+      id: ev.id, title: ev.title, allDay, date: ev.instanceDate ?? '',
+      startTime: startT, endTime: endT,
+      location: ev.location ?? '', notes: ev.notes ?? '',
+      recurrenceRule: ev.recurrenceRule ?? '',
+      calendarId: 'primary', googleEventId: ev.googleEventId,
+      instanceDate: ev.instanceDate,
+    })
+  }
+
+  async function handleEditEvent(edits: EventEdits, scope: RecurrenceScope) {
+    const ev = editEvent
+    if (!ev?.id) return
+    if (scope === 'all') {
+      await supabase.from('cal_events').update({
+        title: edits.title, date: edits.date,
+        start_time: edits.allDay ? null : edits.startTime,
+        end_time:   edits.allDay ? null : edits.endTime,
+        location: edits.location || null, notes: edits.notes || null,
+        recurrence_rule: edits.recurrenceRule || null,
+      }).eq('id', ev.id)
+      if (ev.googleEventId) {
+        const gcal = buildGCalEvent(edits.title, edits.date, edits.allDay, edits.startTime, edits.endTime, edits.notes, edits.location, edits.recurrenceRule)
+        await updateCalEvent(ev.googleEventId, gcal)
+      }
+    } else if (scope === 'this') {
+      const instanceDate = ev.instanceDate ?? ev.date
+      const { data } = await supabase.from('cal_events').select('recurrence_exceptions').eq('id', ev.id).single()
+      const exceptions = [...((data?.recurrence_exceptions as string[] | null) ?? []), instanceDate]
+      await supabase.from('cal_events').update({ recurrence_exceptions: exceptions }).eq('id', ev.id)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const gcal = buildGCalEvent(edits.title, edits.date, edits.allDay, edits.startTime, edits.endTime, edits.notes, edits.location, '')
+        const gid  = await createCalEvent(gcal)
+        await supabase.from('cal_events').insert({
+          user_id: user.id, title: edits.title, date: edits.date,
+          start_time: edits.allDay ? null : edits.startTime, end_time: edits.allDay ? null : edits.endTime,
+          location: edits.location || null, notes: edits.notes || null, google_event_id: gid,
+          recurrence_parent_id: ev.id,
+        })
+      }
+    } else {
+      const instanceDate = ev.instanceDate ?? ev.date
+      const prevDay = localDatePlusDays(instanceDate, -1)
+      const { data } = await supabase.from('cal_events').select('recurrence_rule').eq('id', ev.id).single()
+      const oldRule = String(data?.recurrence_rule ?? '')
+      const truncated = oldRule.includes('UNTIL=') || oldRule.includes('COUNT=')
+        ? oldRule : `${oldRule};UNTIL=${prevDay.replace(/-/g, '')}`
+      await supabase.from('cal_events').update({ recurrence_rule: truncated }).eq('id', ev.id)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const gcal = buildGCalEvent(edits.title, edits.date, edits.allDay, edits.startTime, edits.endTime, edits.notes, edits.location, edits.recurrenceRule)
+        const gid  = await createCalEvent(gcal)
+        await supabase.from('cal_events').insert({
+          user_id: user.id, title: edits.title, date: edits.date,
+          start_time: edits.allDay ? null : edits.startTime, end_time: edits.allDay ? null : edits.endTime,
+          location: edits.location || null, notes: edits.notes || null, google_event_id: gid,
+          recurrence_rule: edits.recurrenceRule || null, recurrence_parent_id: ev.id,
+        })
+      }
+    }
+    showToast('Event updated', { type: 'payment' })
+    setEditEvent(null)
+    await loadData()
   }
 
   // ── Scroll to today when entering View 2 from View 1 only ───────────────
@@ -944,7 +1128,7 @@ export default function CalendarPage() {
                                     </span>
                                   )}
                                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, minWidth: 22 }}>
-                                    <span style={{ fontSize: isToday ? 20 : 12, fontWeight: isToday ? 700 : 400, color: isToday ? '#C9A84C' : 'rgba(255,255,255,0.88)', fontFamily: 'var(--font-montserrat)', lineHeight: 1 }}>
+                                    <span style={{ fontSize: isToday ? 20 : 12, fontWeight: isToday ? 700 : 400, color: isToday ? '#C9A84C' : '#fff', fontFamily: 'var(--font-montserrat)', lineHeight: 1 }}>
                                       {cd}
                                     </span>
                                   </div>
@@ -989,7 +1173,7 @@ export default function CalendarPage() {
                                     return (
                                       <div key={ei} style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 2, height: 18, overflow: 'hidden', flexShrink: 0, opacity: 0.85 }}>
                                         <div style={{ width: 3, height: '100%', borderRadius: 2, background: bar, flexShrink: 0 }} />
-                                        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.9)', fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+                                        <span style={{ fontSize: 10, color: '#fff', fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
                                           {timeStr && <span style={{ color: 'rgba(255,255,255,0.45)', marginRight: 3 }}>{timeStr}</span>}{ev.title}
                                         </span>
                                       </div>
@@ -1208,7 +1392,7 @@ export default function CalendarPage() {
                   const dot = ev.color ?? DETAIL_DOT[ev.type]
                   const amt = ev.type !== 'custom' && ev.type !== 'google' ? ev.amount : null
                   return (
-                    <DayEventCard key={idx} ev={ev} dot={dot} timeRange={timeRange} amt={amt} onDelete={handleDeleteCustomEvent} />
+                    <DayEventCard key={idx} ev={ev} dot={dot} timeRange={timeRange} amt={amt} onDelete={handleDeleteCustomEvent} onEdit={handleOpenEdit} />
                   )
                 })}
               </div>
@@ -1237,7 +1421,40 @@ export default function CalendarPage() {
     </div>{/* end root */}
 
     <AddEventSheet open={addOpen} defaultDate={addDate ?? selectedDay ?? gridSel ?? undefined} defaultCalendarId={prefs.defaultCalendarId} googleCals={googleCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => { setAddOpen(false); setTimeout(() => setAddDate(undefined), 300) }} onAdd={handleAddEvent} />
+    <EditEventSheet open={!!editEvent} event={editEvent} googleCals={googleCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => setEditEvent(null)} onSave={handleEditEvent} onDelete={scope => { if (editEvent) { const ev: CalEvent = { id: editEvent.id, title: editEvent.title, type: 'custom', amount: editEvent.allDay ? '' : `${editEvent.startTime}${editEvent.endTime ? ` – ${editEvent.endTime}` : ''}`, recurrenceRule: editEvent.recurrenceRule || undefined, instanceDate: editEvent.instanceDate, googleEventId: editEvent.googleEventId }; handleDeleteEventWithScope(ev, scope) } setEditEvent(null) }} />
     <CalendarSettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} prefs={prefs} googleCals={googleCals} calsLoading={calsLoading} onSave={savePrefs} />
+
+    {/* Delete scope picker for recurring events triggered from View 3 delete button */}
+    {deleteScopeEv && (
+      <>
+        <div className="fixed inset-0 z-[60]" style={{ background: 'rgba(0,0,0,0.72)' }} onClick={() => setDeleteScopeEv(null)} />
+        <div className="fixed inset-x-0 bottom-0 z-[70] rounded-t-[24px]" style={{ background: '#1a1a1a', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+          <div className="flex justify-center pt-3 pb-2">
+            <div className="w-9 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.2)' }} />
+          </div>
+          <div className="px-5 mb-4">
+            <h2 style={{ fontFamily: 'var(--font-montserrat)', fontSize: 17, fontWeight: 700, color: '#fff' }}>Delete Recurring Event</h2>
+            <p style={{ fontFamily: 'var(--font-montserrat)', fontSize: 13, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>Which events do you want to delete?</p>
+          </div>
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            {([
+              { s: 'this'      as RecurrenceScope, label: 'This event',               danger: false },
+              { s: 'following' as RecurrenceScope, label: 'This and following events', danger: false },
+              { s: 'all'       as RecurrenceScope, label: 'All events',               danger: true  },
+            ]).map(({ s, label, danger }, i) => (
+              <button key={s} onClick={() => handleDeleteEventWithScope(deleteScopeEv, s)}
+                className="w-full px-5 py-4 text-left"
+                style={{ borderBottom: i < 2 ? '1px solid rgba(255,255,255,0.06)' : 'none', background: 'none', cursor: 'pointer' }}>
+                <span style={{ fontFamily: 'var(--font-montserrat)', fontSize: 15, fontWeight: 500, color: danger ? '#ef4444' : '#fff' }}>{label}</span>
+              </button>
+            ))}
+          </div>
+          <div className="px-5 py-4">
+            <button onClick={() => setDeleteScopeEv(null)} className="w-full py-3.5 rounded-[14px] bg-white/[0.06] text-[15px] font-medium text-ink-muted">Cancel</button>
+          </div>
+        </div>
+      </>
+    )}
     </>
   )
 }

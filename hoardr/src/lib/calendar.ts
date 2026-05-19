@@ -7,6 +7,7 @@ export interface GCalEvent {
   location?:    string
   start:        { date: string } | { dateTime: string; timeZone: string }
   end:          { date: string } | { dateTime: string; timeZone: string }
+  recurrence?:  string[]   // e.g. ['RRULE:FREQ=WEEKLY;BYDAY=FR']
 }
 
 export async function createCalEvent(event: GCalEvent, calendarId?: string): Promise<string | null> {

@@ -1,0 +1,28 @@
+Name,Billing,Card,Cost,LastRenewal,NextRenewal,Category,Status,Payments,MonthlyCost,AnnualCost
+A.B 1007,Cancelled,A.C 4027,0,4/14/2025,,,Cancelled,2,0,0
+AAA Membership,Cancelled,C.F 3882,92,8/7/2025,,,Cancelled,,92,1104
+AAA Policy,Cancelled,P.D 0260,100,7/2/2025,,,Cancelled,6,100,1200
+Amazon Prime,Monthly,C.F 3882,15,4/26/2026,5/26/2026,Life,Active,16,15,180
+AMEX HHB,Cancelled,A.B 1007,195,4/14/2025,,,Cancelled,,195,2340
+AMEX Surpass,Annual,A.S 1008,150,2/6/2026,2/6/2027,Life,Active,2,12.5,150
+Apple 2TB,Monthly,C.F 3882,10,4/21/2026,5/21/2026,Tech,Active,16,10,120
+BC,Monthly,C.F 3882,27,4/19/2026,5/19/2026,Health,Active,14,27,324
+C.F 3882,Monthly,A.C 4027,0,4/23/2026,5/23/2026,Life,Active,14,0,0
+Claude,Monthly,C.F 3882,20,5/8/2026,6/8/2026,Tech,Active,2,20,240
+ClickUp,Cancelled,C.F 3882,84,2/10/2025,,,Cancelled,,84,1008
+Discord Nitro,Monthly,C.F 3882,10,5/4/2026,6/4/2026,Fun,Active,17,10,120
+Kaiser Surgery,Cancelled,A.S 1008,629,1/16/2026,,,Cancelled,6,629,7548
+MyQ,Annual,C.F 3882,45,2/8/2026,2/8/2027,Tesla,Active,2,3.75,45
+Notion,Monthly,C.F 3882,12,4/6/2026,5/6/2026,Tech,Cancelled,16,12,144
+Ring,Annual,C.F 3882,50,1/20/2026,1/20/2027,Home,Active,2,4.17,50
+Robinhood SCHD,BiWeekly,A.C 4027,40,5/1/2026,5/15/2026,Fun,Active,15,86.8,1040
+Robinhood SPHD,BiWeekly,A.C 4027,40,5/1/2026,5/15/2026,Fun,Active,15,86.8,1040
+Robinhood VGT,BiWeekly,A.C 4027,80,5/1/2026,5/15/2026,Fun,Active,15,173.6,2080
+Robinhood VOO,BiWeekly,A.C 4027,100,5/1/2026,5/15/2026,Fun,Active,15,217,2600
+Robinhood VYM,BiWeekly,A.C 4027,80,5/1/2026,5/15/2026,Fun,Active,15,173.6,2080
+Tesla,Monthly,A.C 4027,529,4/22/2026,5/22/2026,Tesla,Active,16,529,6348
+Tesla FSD,Monthly,C.F 3882,99,4/14/2026,5/14/2026,Tesla,Active,14,99,1188
+Tesla Insurance,Monthly,A.S 1008,167,4/22/2026,5/22/2026,Tesla,Active,16,167,2004
+Tesla Premium Connectivity,Annual,C.F 3882,99,1/9/2026,1/9/2027,Tesla,Active,2,8.25,99
+Tessie,Cancelled,C.F 3882,7,6/2/2025,,,Cancelled,5,7,84
+Visible,Monthly,A.S 1008,25,5/1/2026,6/1/2026,Life,Active,15,25,300

@@ -1,0 +1,1277 @@
+Date,Type,Name,Description,Category,Cost,Original,Savings,Card,Bank,Billing,Status,Source
+4/23/2026,Expense,Halal Guys,Halal Guys,Food,23,,0,A.S 1008,AMEX CHECKING,,Procured,Food
+4/23/2026,Expense,C.F 3882,C.F 3882,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+4/22/2026,Expense,Paradise Dynasty,Paradise Dynasty,Food,23,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/22/2026,Expense,Tesla,Tesla,Tesla,529,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+4/22/2026,Expense,Tesla Insurance,Tesla Insurance,Tesla,167,,0,A.S 1008,AMEX CHECKING,,Procured,Sub
+4/21/2026,Expense,Apple 2TB,Apple 2TB,Tech,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+4/21/2026,Expense,Flame Broiler,Flame Broiler,Food,15,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/20/2026,Expense,TK Burger,TK Burger,Food,15,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/19/2026,Expense,Dada Shabu,Dada Shabu,Food,49,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/19/2026,Expense,Pokemon Cards,Umbreon/Charizard/Reshiram/Etc,Fun,516,,96,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/19/2026,Expense,Pokemon Box,Mega Charizard X ex UPC,Fun,140,,60,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/19/2026,Expense,BC,BC,Health,27,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+4/18/2026,Expense,14 AWG Cable,AWG Cable for Appliances,Home,8,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/18/2026,Expense,Galpao Gaucho,Galpao Gaucho,Food,100,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/17/2026,Expense,Display Case,LANSCOERY Case,Fun,46,,9,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/16/2026,Expense,Ikes Love and Sandwiches,Ikes Love and Sandwiches,Food,31,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/16/2026,Income,Jose Venmo 18,,Repayment,18,,0,V.M 1111,AMEX CHECKING,,,Income
+4/15/2026,Expense,Vox,Vox,Food,14,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/15/2026,Expense,Compact Mini Fridge,"Frigidaire Combo, 3.1 cu",Home,158,,102,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/14/2026,Expense,Slurpin Ramen,Slurpin Ramen,Food,14,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/14/2026,Expense,McDonalds,McDonalds,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/14/2026,Expense,Tesla FSD,Tesla FSD,Tesla,99,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+4/13/2026,Expense,Rooster Cafe,Rooster Cafe,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/12/2026,Expense,Star KBBQ,Star KBBQ,Food,43,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/12/2026,Expense,Karaoke,Ding Dong Dang,Fun,14,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/11/2026,Income,Amazon Snow Chain 192,,Refund,192,,0,,AMEX CHECKING,,,Income
+4/10/2026,Expense,Sukiya,Sukiya,Food,92,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/10/2026,Expense,Pokemon Cards,GasMeUp Event,Fun,72,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/9/2026,Expense,Pho Nic,Pho Nic,Food,18,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/8/2026,Expense,Chicken Skewers,Chicken Skewers,Food,60,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/7/2026,Income,Alissa Zelle 10,,Repayment,10,,0,Z.L 1111,AMEX CHECKING,,,Income
+4/7/2026,Expense,Card Binder/Sleeves,VaultX 4 Pocket + Sleeves,Fun,32,,3,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/7/2026,Expense,Claude,Claude,Tech,20,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+4/6/2026,Expense,Car Wash,24/7 Car Wash,Tesla,15,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/6/2026,Income,Bastion Zelle 250,,Repayment,250,,0,Z.L 1111,AMEX CHECKING,,,Income
+4/6/2026,Expense,Notion,Notion,Life,12,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+4/5/2026,Expense,Starbucks,Starbucks,Food,14,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/4/2026,Expense,Discord Nitro,Discord Nitro,Fun,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+4/4/2026,Expense,Happy Burger Diner,Happy Burger Diner,Food,48,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/3/2026,Expense,Pokemon Booster,Black Bolt,Fun,70,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/3/2026,Expense,Little Shop of Ramen,Little Shop of Ramen,Food,43,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/2/2026,Expense,Visible,Visible,Life,25,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+4/2/2026,Expense,Pho Ha Noi,Pho Ha Noi,Food,28,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/1/2026,Expense,Brazuca,Brazuca,Food,26,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/31/2026,Expense,Vox,Vox,Food,14,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/30/2026,Expense,Magnetic Pen Holder,Magnet Pencil Cup Storage,Home,6,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/30/2026,Expense,Rooster Cafe,Rooster Cafe,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/30/2026,Expense,Tesla Snow Chains,Konig CG-9 103,Tesla,200,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/30/2026,Expense,Yosemite Airbnb,Rustic House Mariposa,Travel,500,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/29/2026,Income,Dean Venmo 479,,Repayment,479,,0,V.M 1111,AMEX CHECKING,,,Income
+3/29/2026,Expense,Com Tam TQC,Com Tam TQC,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/28/2026,Expense,Pentel .4 Gel Refill,Pentel XLRN4-A,Fun,6,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/28/2026,Expense,Cuticle Trimmer,Tweezerman Rockhard,Health,22,28,6,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/28/2026,Expense,ZWILLING Vacuum Sealer,ZWILLING Fresh & Save,Home,62,80,18,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/28/2026,Expense,Hot C Pot,Hot C Pot,Food,55,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/27/2026,Expense,Bolt Action Pen,Refyne EP1L Pen + Stand,Fun,92,108,16,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/27/2026,Expense,Costco,Costco,Food,30,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/27/2026,Expense,McDonalds,McDonalds,Food,21,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/27/2026,Expense,Glassware + Knife + Cookware,Glassware + Knife + Cookware,Home,160,490,330,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/26/2026,Expense,Amazon Prime,Amazon Prime,Fun,15,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+3/26/2026,Expense,Chafinity,Chafinity,Food,9,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/26/2026,Expense,Wendys,Wendys,Food,11,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/25/2026,Income,CFCO Check 136,,Repayment,136,,0,,AMEX CHECKING,,,Income
+3/25/2026,Expense,Cha Redefined,Cha Redefined,Food,8,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/25/2026,Expense,Pho Dakao,Pho Dakao,Food,18,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/24/2026,Expense,California Fish Grill,California Fish Grill,Food,27,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/24/2026,Expense,Afters,Afters,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/24/2026,Expense,A.S 1008,A.S 1008,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+3/23/2026,Expense,C.F 3882,C.F 3882,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+3/22/2026,Expense,Boutcha,Boutcha,Food,8,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/22/2026,Expense,Pradera,Pradera,Food,72,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/22/2026,Expense,Tesla Insurance,Tesla Insurance,Insurance,167,,0,A.S 1008,AMEX CHECKING,,Procured,Sub
+3/22/2026,Expense,Tesla,Tesla,Tesla,529,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+3/22/2026,Expense,Pure Vida,Pure Vida,Food,10,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/21/2026,Expense,Apple 2TB,Apple 2TB,Tech,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+3/20/2026,Expense,Chicken Skewers,Chicken Skewers,Food,60,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/20/2026,Expense,Dewalt Black Gold,Dewalt Black Gold,Home,31,31,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/20/2026,Expense,Alaska + Southwest,Alaska + Southwest,Travel,105,105,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/19/2026,Expense,Udon Mugizo,Udon Mugizo,Food,63,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/19/2026,Expense,Nijiya Market,Nijiya Market,Food,2,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/15/2026,Expense,Costco,Costco,Food,33,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/15/2026,Expense,FogoDeChao Cards,FogoDeChao Cards,Gift,320,400,80,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/15/2026,Expense,OSTBA Meat Slicer,OSTBA Meat Slicer,Gift,91,109,18,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/14/2026,Expense,House of Shabu 2,House of Shabu 2,Food,265,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/14/2026,Income,Dean Venmo 53,,Repayment,53,,0,V.M 1111,AMEX CHECKING,,,Income
+3/14/2026,Income,Cindy Venmo 53,,Repayment,53,,0,V.M 1111,AMEX CHECKING,,,Income
+3/14/2026,Income,Andrew2 Cash 100,,Repayment,100,,0,,AMEX CHECKING,,,Income
+3/14/2026,Income,Andrew2 Venmo 6,,Repayment,6,,0,V.M 1111,AMEX CHECKING,,,Income
+3/14/2026,Expense,Tesla FSD,Tesla FSD,Tesla,99,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+3/13/2026,Income,Dean Venmo 479,,Repayment,479,,0,V.M 1111,AMEX CHECKING,,,Income
+3/13/2026,Expense,Slurpin Ramen,Slurpin Ramen,Food,27,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/13/2026,Expense,Uroko,Uroko,Food,21,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/13/2026,Income,Cindy Venmo 20,,Repayment,20,,0,V.M 1111,AMEX CHECKING,,,Income
+3/12/2026,Expense,Kappo Honda,Kappo Honda,Food,55,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/11/2026,Expense,Ka Don Katsu,Ka Don Katsu,Food,21,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/11/2026,Expense,Thai Station,Thai Station,Food,19,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/11/2026,Expense,Arcana Tahm Kench,Arcana Tahm Kench,Fun,11,11,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/10/2026,Expense,7 Leaves,7 Leaves,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/9/2026,Expense,Taco Stand,Taco Stand,Food,11,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/8/2026,Expense,Slice House,Slice House,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/7/2026,Expense,Avenue Shabu,Avenue Shabu,Food,80,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/6/2026,Expense,Notion,Notion,Life,12,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+3/6/2026,Expense,Vox,Vox,Food,25,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/6/2026,Expense,Simply Pho,Simply Pho,Food,19,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/5/2026,Expense,Rooster Cafe,Rooster Cafe,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/4/2026,Income,Alissa Zelle 32,,Repayment,32,,0,Z.L 1111,AMEX CHECKING,,,Income
+3/4/2026,Income,Beth Venmo 135,,Repayment,135,,0,V.M 1111,AMEX CHECKING,,,Income
+3/4/2026,Expense,Taco Stand,Taco Stand,Food,20,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/4/2026,Expense,Discord Nitro,Discord Nitro,Fun,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+3/3/2026,Expense,Haneda Yaki,Haneda Yaki,Food,29,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/3/2026,Expense,Dr Baymax,Dr Baymax,Gift,19,19,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/3/2026,Expense,Lucky Charms,Lucky Charms,Gift,43,43,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/3/2026,Expense,Conrad Tokyo,Conrad Tokyo,Travel,400,400,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/2/2026,Expense,Nail clipper + Shampoo,Nail clipper + Shampoo,Health,35,35,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/2/2026,Expense,Suica,Suica,Travel,6,6,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/2/2026,Expense,Visible,Visible,Life,25,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+3/1/2026,Expense,Aero Stretch Jacket,Aero Stretch Jacket,Apparel,211,211,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/1/2026,Expense,Security Deposit,Security Deposit,Travel,640,640,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/1/2026,Expense,Karaoke Rainbow,Karaoke Rainbow,Fun,123,123,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/1/2026,Expense,Rio Brewing Co,Rio Brewing Co,Food,31,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/1/2026,Income,Andrew3 Zelle 50,,Repayment,50,,0,Z.L 1111,AMEX CHECKING,,,Income
+3/1/2026,Income,Jack Venmo 50,,Repayment,50,,0,V.M 1111,AMEX CHECKING,,,Income
+2/28/2026,Income,Cee PayPal 115,,Repayment,115,,0,,AMEX CHECKING,,,Income
+2/27/2026,Expense,WPA UV Umbrellas,WPA UV Umbrellas,Gift,54,54,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/27/2026,Expense,Ohtani XL Jersey,Ohtani XL Jersey,Gift,128,128,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/27/2026,Expense,Duck + Bear,Duck + Bear,Gift,22,22,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/27/2026,Expense,Leafeon,Leafeon,Gift,38,38,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/27/2026,Expense,Nose Mint + Kitkat,Nose Mint + Kitkat,Gift,37,37,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/27/2026,Expense,Suzuki Choju Shoten,Suzuki Choju Shoten,Gift,35,35,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/27/2026,Expense,Ginza Happo,Ginza Happo,Food,691,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/27/2026,Income,Andrew Zelle 120,,Repayment,120,,0,Z.L 1111,AMEX CHECKING,,,Income
+2/27/2026,Income,Jack Venmo 230,,Repayment,230,,0,V.M 1111,AMEX CHECKING,,,Income
+2/27/2026,Expense,Pot Made Bakery,Pot Made Bakery,Food,30,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/27/2026,Expense,Saunas,Saunas,Food,9,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/26/2026,Expense,Banana Biyori,Banana Biyori,Food,4,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/26/2026,Expense,Melon Ice Cream,Melon Ice Cream,Food,3,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/26/2026,Expense,Saboten Tonkatsu,Saboten Tonkatsu,Food,26,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/26/2026,Expense,Amazon Prime,Amazon Prime,Fun,15,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+2/25/2026,Expense,Nakayoshi Shibuya,Nakayoshi Shibuya,Food,19,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/25/2026,Expense,7-11 Shibuya,7-11 Shibuya,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/25/2026,Expense,Nick Judy Hats,Nick Judy Hats,Fun,41,41,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/25/2026,Expense,Zekrom Pokemon Card,Zekrom Pokemon Card,Fun,15,15,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/25/2026,Expense,Nakayoshi,Nakayoshi,Food,19,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/25/2026,Expense,7-11 Shibuya,7-11 Shibuya,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/25/2026,Expense,Coco Ichibanya Sunshine,Coco Ichibanya Sunshine,Food,26,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/25/2026,Expense,Tokyo Matcha,Tokyo Matcha,Food,11,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/24/2026,Expense,Disney Popcorn,Disney Popcorn,Food,3,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/24/2026,Expense,A.S 1008,A.S 1008,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+2/23/2026,Expense,Shibuya Starbucks,Shibuya Starbucks,Food,5,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/23/2026,Expense,Shibuya McDonalds,Shibuya McDonalds,Food,5,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/23/2026,Expense,Shibuya Muji,Shibuya Muji,Food,11,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/23/2026,Expense,Shibuya Zeniba,Shibuya Zeniba,Food,92,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/23/2026,Expense,Hotel Convenience Fee,Hotel Convenience Fee,Travel,13,13,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/23/2026,Expense,Anker MagGo Slim,Anker MagGo Slim,Tech,50,80,30,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/23/2026,Expense,Suica,Suica,Travel,33,33,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/23/2026,Expense,Ebisu Starbucks,Ebisu Starbucks,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/23/2026,Expense,Akihabara KFC,Akihabara KFC,Food,15,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/23/2026,Expense,Tabelog Fee,Tabelog Fee,Travel,11,11,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/23/2026,Expense,C.F 3882,C.F 3882,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+2/22/2026,Expense,Tesla,Tesla,Tesla,529,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+2/22/2026,Expense,Tesla Insurance,Tesla Insurance,Insurance,175,,0,A.S 1008,AMEX CHECKING,,Procured,Sub
+2/21/2026,Expense,Shibuya Stream,Shibuya Stream,Travel,1818,1818,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/21/2026,Expense,Apple 2TB,Apple 2TB,Tech,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+2/21/2026,Expense,Hot C Pot,Hot C Pot,Food,27,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/21/2026,Expense,Ubigi ESim Japan,Ubigi ESim Japan,Travel,35,39,4,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/21/2026,Expense,Uber LAX,Uber LAX,Travel,90,90,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/20/2026,Expense,KaDon Katsu,KaDon Katsu,Food,25,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/20/2026,Expense,Habit,Habit,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/18/2026,Expense,Seabirds,Seabirds,Food,30,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/18/2026,Expense,Hoka Clifton 9,Hoka Clifton 9,,165,165,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/18/2026,Expense,Xpand Laces,Xpand Laces,Apparel,10,12,2,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/17/2026,Expense,Capital Noodle,Capital Noodle,Food,33,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/17/2026,Expense,Heytea,Heytea,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/16/2026,Expense,Rooster and Rice,Rooster and Rice,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/15/2026,Expense,Texas Roadhouse,Texas Roadhouse,Food,50,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/14/2026,Expense,Tesla FSD,Tesla FSD,Tesla,99,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+2/12/2026,Expense,Wagyu Experience,Wagyu Experience,Food,25,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/11/2026,Expense,EPL,EPL,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/11/2026,Expense,Qua,Qua,Food,33,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/10/2026,Expense,Rooster Cafe,Rooster Cafe,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/9/2026,Expense,Right S3XY Stalk,Right S3XY Stalk,Tesla,237,237,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/9/2026,Income,America Tire Cash,,Repayment,200,,0,,AMEX CHECKING,,,Income
+2/8/2026,Expense,Okayama Kobo,Okayama Kobo,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/8/2026,Expense,Kobe Gyukatsu,Kobe Gyukatsu,Food,65,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/8/2026,Expense,Coffee Sweater,Coffee Sweater,Apparel,85,85,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/8/2026,Expense,Metropolis,Metropolis,Travel,10,10,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/8/2026,Expense,MyQ,MyQ,Tesla,45,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+2/7/2026,Expense,Hot C Pot,Hot C Pot,Food,40,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/6/2026,Expense,Yogurtland,Yogurtland,Food,14,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/6/2026,Expense,Georgias,Georgias,Food,26,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/6/2026,Expense,Notion,Notion,Life,12,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+2/6/2026,Expense,AMEX Surpass,AMEX Surpass,Life,150,,0,A.S 1008,AMEX CHECKING,,Procured,Sub
+2/4/2026,Expense,Bo No Nabe,Bo No Nabe,Food,30,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/4/2026,Expense,Discord Nitro,Discord Nitro,Fun,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+2/3/2026,Expense,Whole Foods,Whole Foods,Food,41,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/3/2026,Expense,Curry Do,Curry Do,Food,19,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/2/2026,Expense,Visible,Visible,Life,25,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+2/2/2026,Expense,Ramen Nagi,Ramen Nagi,Food,25,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/1/2026,Expense,Saigon District,Saigon District,Food,39,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/31/2026,Expense,DisneySea x2,DisneySea x2,Fun,115,115,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/31/2026,Expense,Shabuya,Shabuya,Food,70,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/30/2026,Expense,Vox,Vox,Food,25,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/29/2026,Expense,Memphis Cafe,Memphis Cafe,Food,24,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/29/2026,Expense,Memphis Cafe,Memphis Cafe,Food,24,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/29/2026,Expense,Taco Bell,Taco Bell,Food,9,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/29/2026,Expense,Registration,Registration,Fun,80,80,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/29/2026,Expense,Christmas POE2,Christmas POE2,Gift,60,60,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/29/2026,Expense,Lord Ohgam Pack,Lord Ohgam Pack,Fun,30,30,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/28/2026,Expense,Nep,Nep,Food,30,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/27/2026,Expense,Ref Sheet,Ref Sheet,Fun,450,450,0,,AMEX CHECKING,,Procured,Expense
+1/27/2026,Expense,No1 Chinese,No1 Chinese,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/26/2026,Expense,Paradise Dynasty,Paradise Dynasty,Food,23,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/26/2026,Expense,Popeyes,Popeyes,Food,27,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/26/2026,Expense,Amazon Prime,Amazon Prime,Fun,15,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+1/25/2026,Expense,Costco,Costco,Food,263,,0,C.F 3882,AMEX CHECKING,,Procured,Expense
+1/25/2026,Income,Cindy Venmo,,Repayment,114,,0,V.M 1111,AMEX CHECKING,,,Income
+1/25/2026,Income,Dean Cash,,Repayment,116,,0,,AMEX CHECKING,,,Income
+1/24/2026,Expense,A.S 1008,A.S 1008,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+1/24/2026,Expense,Galpao Gaucho,Galpao Gaucho,Food,92,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/23/2026,Expense,C.F 3882,C.F 3882,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+1/23/2026,Expense,Phoholic,Phoholic,Food,18,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/23/2026,Expense,Cha Redefined,Cha Redefined,Food,8,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/23/2026,Expense,Pho Ha Noi,Pho Ha Noi,Food,18,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/22/2026,Expense,Tesla,Tesla,Tesla,529,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+1/22/2026,Expense,Tesla Insurance,Tesla Insurance,Insurance,175,,0,A.S 1008,AMEX CHECKING,,Procured,Sub
+1/22/2026,Expense,Thai Station,Thai Station,Food,19,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/21/2026,Expense,Hong Kong Express,Hong Kong Express,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/21/2026,Expense,Apple 2TB,Apple 2TB,Tech,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+1/20/2026,Expense,Ring,Ring,Tech,50,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+1/20/2026,Expense,In N Out,In N Out,Food,14,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/19/2026,Expense,Halal Guys,Halal Guys,Food,21,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/19/2026,Expense,BC,BC,Fun,27,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+1/18/2026,Expense,Paws Tea,Paws Tea,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/18/2026,Expense,Sen,Sen,Food,16,,0,C.F 3882,AMEX CHECKING,,Procured,Expense
+1/18/2026,Expense,Momonoki,Momonoki,Food,52,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/18/2026,Expense,Vtube Studio,Vtube Studio,Fun,15,15,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/17/2026,Expense,Gen Kbbq,Gen Kbbq,Food,23,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/16/2026,Expense,Kaiser Surgery,Kaiser Surgery,"Insurance,Life",629,,0,A.S 1008,AMEX CHECKING,,Procured,Sub
+1/15/2026,Expense,Rooster,Rooster,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/15/2026,Income,Andrew Zelle 300,,Repayment,300,,0,Z.L 1111,AMEX CHECKING,,,Income
+1/14/2026,Expense,Slurpin Ramen,Slurpin Ramen,Food,28,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/14/2026,Expense,Amazon Fresh,Amazon Fresh,Food,20,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/14/2026,Expense,Slice House,Slice House,Food,9,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/14/2026,Expense,Tesla FSD,Tesla FSD,Tesla,99,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+1/13/2026,Expense,Cha Redefined,Cha Redefined,Food,8,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/12/2026,Expense,Vox,Vox,Food,14,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/12/2026,Expense,Tkebob,Tkebob,Food,83,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/11/2026,Expense,Dakao,Dakao,Food,18,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/10/2026,Expense,Pelicana,Pelicana,Food,86,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/9/2026,Expense,Amarith,Amarith,Food,40,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/9/2026,Expense,POE2 Gold,POE2 Gold,Fun,20,20,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/9/2026,Expense,Tesla PConnect,Tesla PConnect,Tesla,99,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+1/8/2026,Expense,Hong Kong Express,Hong Kong Express,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/7/2026,Expense,Rooster,Rooster,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/7/2026,Expense,Sharetea,Sharetea,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/6/2026,Expense,Notion,Notion,Life,12,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+1/6/2026,Expense,The Taco Stand,The Taco Stand,Food,19,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/6/2026,Income,Angel Zelle 100,,Repayment,100,,0,Z.L 1111,AMEX CHECKING,,,Income
+1/5/2026,Expense,Kitakata,Kitakata,Food,20,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/4/2026,Expense,Mikiya,Mikiya,Food,193,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/4/2026,Income,Cindy Venmo 129,,Repayment,129,,0,V.M 1111,AMEX CHECKING,,,Income
+1/4/2026,Expense,Discord Nitro,Discord Nitro,Fun,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+1/3/2026,Expense,Kenwood,Kenwood,Food,43,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/3/2026,Expense,Sprouts,Sprouts,Food,10,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/2/2026,Expense,Vox,Vox,Food,23,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/2/2026,Expense,Visible,Visible,Life,25,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+12/31/2025,Expense,Mimi Cafe,Mimi Cafe,Food,60,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/30/2025,Expense,In N Out,In N Out,Food,14,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/30/2025,Expense,Tokyo Central,Tokyo Central,Food,27,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/30/2025,Expense,HOTO Laser,HOTO Laser,Home,30,50,20,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/30/2025,Expense,Basenor Liners,Basenor Liners,Tesla,19,26,7,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/30/2025,Expense,HOTO 40 Piece Kit,HOTO 40 Piece Kit,Home,60,80,20,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/29/2025,Expense,No1 Chinese,No1 Chinese,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/28/2025,Expense,Costco,Costco,Food,72,,0,C.F 3882,AMEX CHECKING,,Procured,Expense
+12/27/2025,Expense,Apple Strudel,Apple Strudel,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/26/2025,Expense,Gyukaku,Gyukaku,Food,59,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/26/2025,Income,Cindy Venmo 125,,Repayment,125,,0,V.M 1111,AMEX CHECKING,,,Income
+12/26/2025,Expense,Amazon Prime,Amazon Prime,Fun,15,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+12/25/2025,Expense,Kei Coffee House,Kei Coffee House,Food,18,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/24/2025,Expense,A.S 1008,A.S 1008,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+12/23/2025,Expense,Vox,Vox,Food,37,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/23/2025,Expense,Nine Sols,Nine Sols,Fun,18,30,12,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/23/2025,Expense,C.F 3882,C.F 3882,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+12/22/2025,Expense,Spicy Noodle House,Spicy Noodle House,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/22/2025,Expense,Tesla,Tesla,Tesla,529,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+12/22/2025,Expense,Tesla Insurance,Tesla Insurance,Insurance,175,,0,A.S 1008,AMEX CHECKING,,Procured,Sub
+12/21/2025,Expense,Apple 2TB,Apple 2TB,Tech,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+12/21/2025,Expense,Macy Tip,Macy Tip,Gift,40,40,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/21/2025,Expense,Satoshi,Satoshi,Food,37,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/20/2025,Expense,In N Out,In N Out,Food,10,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/20/2025,Expense,Raising Canes,Raising Canes,Food,14,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/19/2025,Expense,Butchers House,Butchers House,Food,87,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/19/2025,Expense,BC,BC,Fun,27,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+12/17/2025,Income,Andrew Zelle 300,,Repayment,300,,0,Z.L 1111,AMEX CHECKING,,,Income
+12/17/2025,Expense,Wagyu Factory,Wagyu Factory,Food,109,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/16/2025,Expense,Kaiser Surgery,Kaiser Surgery,"Insurance,Life",649,,0,A.S 1008,AMEX CHECKING,,Procured,Sub
+12/16/2025,Expense,No1 Chinese,No1 Chinese,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/16/2025,Expense,Aqara Hub G3,Aqara Hub G3,Tech,85,110,25,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/16/2025,Expense,Anker Soundcore Earbuds,Anker Soundcore Earbuds,Gift,25,50,25,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/16/2025,Expense,Ralphs,Ralphs,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/15/2025,Expense,Undertale,Undertale,Fun,2,10,8,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/15/2025,Expense,Vox,Vox,Food,23,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/15/2025,Expense,Urban Plate,Urban Plate,Food,42,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/14/2025,Expense,Holiday Tease,Holiday Tease,Fun,210,210,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/14/2025,Expense,Tesla FSD,Tesla FSD,Tesla,99,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+12/14/2025,Expense,Thai Station,Thai Station,Food,32,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/13/2025,Expense,Fast Hotpot,Fast Hotpot,Food,20,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/13/2025,Expense,3Cat,3Cat,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/13/2025,Expense,Outerwear Underwear,Outerwear Underwear,Apparel,187,645,458,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/12/2025,Expense,EPL,EPL,Food,8,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/12/2025,Expense,Simply Pho,Simply Pho,Food,19,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/11/2025,Expense,Que Vida Tacos,Que Vida Tacos,Food,50,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/11/2025,Expense,Even Realities G2,Even Realities G2,Health,932,1106,174,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/10/2025,Expense,No1 Chinese,No1 Chinese,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/10/2025,Expense,In N Out,In N Out,Food,14,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/8/2025,Expense,Vox,Vox,Food,25,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/7/2025,Expense,Habit,Habit,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/6/2025,Expense,Notion,Notion,Life,12,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+12/6/2025,Expense,Wicked 2,Wicked 2,Fun,77,77,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/5/2025,Expense,West Eyecare,West Eyecare,Health,10,10,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/5/2025,Expense,Com Tam Xi Gon,Com Tam Xi Gon,Food,26,,0,C.F 3882,AMEX CHECKING,,Procured,Expense
+12/4/2025,Expense,EPL,EPL,Food,9,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/4/2025,Expense,Discord Nitro,Discord Nitro,Fun,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+12/4/2025,Expense,Kin,Kin,Food,25,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/3/2025,Expense,Cards + Warmers,Cards + Warmers,Gift,51,69,18,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/3/2025,Expense,Thai Station,Thai Station,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/3/2025,Expense,Rooster Cafe,Rooster Cafe,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/2/2025,Expense,Ubuya,Ubuya,Travel,706,706,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/2/2025,Expense,Visible,Visible,Life,25,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+12/2/2025,Income,Dean Venmo 353,,Repayment,353,,0,V.M 1111,AMEX CHECKING,,,Income
+12/2/2025,Expense,Discord Flair,Discord Flair,Fun,12,16,4,,AMEX CHECKING,,Procured,Expense
+12/1/2025,Expense,Capital,Capital,Food,27,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/1/2025,Expense,Wicked Cushions APM,Wicked Cushions APM,,18,18,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/1/2025,Expense,Airpods Max USBC,Airpods Max USBC,Tech,336,550,214,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/30/2025,Expense,In N Out,In N Out,Food,5,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/30/2025,Income,Man Venmo 14,,Repayment,14,,0,V.M 1111,AMEX CHECKING,,,Income
+11/30/2025,Expense,Zootopia Gary,Zootopia Gary,Fun,35,35,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/30/2025,Expense,Coop Pillowcase/Blanket,Coop Pillowcase/Blanket,Health,72,197,125,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/30/2025,Income,Nathan Venmo 18,,Repayment,18,,0,V.M 1111,AMEX CHECKING,,,Income
+11/29/2025,Expense,Storageworks 110L,Storageworks 110L,Home,34,43,9,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/29/2025,Expense,Kei Coffee House,Kei Coffee House,Food,20,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/28/2025,Expense,Larq Purevis 2,Larq Purevis 2,Health,102,139,37,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/28/2025,Expense,Ark Bifold Wallet,Ark Bifold Wallet,Travel,19,40,21,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/28/2025,Expense,Tastea,Tastea,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/27/2025,Income,Nathan Venmo 14,,Repayment,14,,0,V.M 1111,AMEX CHECKING,,,Income
+11/27/2025,Income,Brian Venmo 24,,Repayment,24,,0,V.M 1111,AMEX CHECKING,,,Income
+11/26/2025,Expense,Bonchon,Bonchon,Food,50,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/26/2025,Expense,Amazon Prime,Amazon Prime,Fun,15,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+11/26/2025,Expense,Zootopia,Zootopia,Fun,70,70,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/25/2025,Expense,Ralph’s,Ralph’s,Food,29,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/25/2025,Expense,Kaiten Sushi,Kaiten Sushi,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/24/2025,Expense,AER Travel Pack 3 XPac,AER Travel Pack 3 XPac,Travel,207,259,52,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/24/2025,Expense,Thai Station,Thai Station,Food,18,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/24/2025,Expense,Chemical Guys Cleaner,Chemical Guys Cleaner,Tesla,13,24,11,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/24/2025,Expense,A.S 1008,A.S 1008,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+11/23/2025,Expense,C.F 3882,C.F 3882,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+11/23/2025,Expense,Hot C Pot,Hot C Pot,Food,36,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/22/2025,Expense,Tesla Insurance,Tesla Insurance,Insurance,175,,0,A.S 1008,AMEX CHECKING,,Procured,Sub
+11/22/2025,Expense,District 36,District 36,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/22/2025,Expense,Apple iPhone 17 Pro 256GB,Apple iPhone 17 Pro 256GB,Tech,870,1100,230,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/22/2025,Expense,Tesla,Tesla,Tesla,529,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+11/21/2025,Expense,Apple 2TB,Apple 2TB,Tech,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+11/21/2025,Expense,Costco,Costco,Food,65,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/20/2025,Expense,WSKEN Screen Protector,WSKEN Screen Protector,Tech,21,36,15,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/20/2025,Expense,Wicked Freeze A50 Gel,Wicked Freeze A50 Gel,Tech,31,31,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/20/2025,Expense,Caudabe Synthesis,Caudabe Synthesis,Tech,49,58,9,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/20/2025,Expense,A Astro A50 5th Gen,A Astro A50 5th Gen,Tech,240,300,60,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/20/2025,Expense,MyQ Smart Camera,MyQ Smart Camera,Home,22,50,28,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/20/2025,Expense,California Fish Grill,California Fish Grill,Food,15,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/20/2025,Expense,Toothpaste,Toothpaste,Health,28,28,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/19/2025,Expense,BC,BC,Fun,27,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+11/19/2025,Expense,No 1 Chinese,No 1 Chinese,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/18/2025,Expense,Cava,Cava,Food,13,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/18/2025,Expense,JAL LAX>HND,JAL LAX>HND,Travel,790,790,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/17/2025,Expense,Blanket + Pillowcase,Blanket + Pillowcase,Health,151,300,149,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/17/2025,Income,Andrew Zelle 350,,Repayment,350,,0,Z.L 1111,AMEX CHECKING,,,Income
+11/17/2025,Income,Christine Paypal,,Repayment,52,,0,,AMEX CHECKING,,,Income
+11/17/2025,Expense,Rooster Cafe,Rooster Cafe,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/16/2025,Expense,Kaiser Surgery,Kaiser Surgery,"Insurance,Life",649,,0,A.S 1008,AMEX CHECKING,,Procured,Sub
+11/16/2025,Expense,Lion and Lamb,Lion and Lamb,Food,8,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/16/2025,Expense,Meliusly Queen Board,Meliusly Queen Board,Health,130,163,33,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/16/2025,Expense,Mi Casa,Mi Casa,Food,96,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/16/2025,Income,Cindy Venmo 68,,Repayment,68,,0,V.M 1111,AMEX CHECKING,,,Income
+11/16/2025,Income,Dean Venmo 24,,Repayment,24,,0,V.M 1111,AMEX CHECKING,,,Income
+11/16/2025,Income,Dean Venmo 50,,Repayment,50,,0,V.M 1111,AMEX CHECKING,,,Income
+11/16/2025,Expense,Ribs and Co,Ribs and Co,Food,200,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/14/2025,Expense,Bullgolgi,Bullgolgi,Food,50,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/14/2025,Expense,Tesla FSD,Tesla FSD,Tesla,99,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+11/13/2025,Expense,Vox,Vox,Food,28,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/13/2025,Expense,The Cut,The Cut,Food,13,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/12/2025,Expense,Queen Luxury Firm,Queen Luxury Firm,Health,1900,3025,1125,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/12/2025,Expense,Coop Queen Eden,Coop Queen Eden,Health,79,105,26,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/12/2025,Expense,Coop Queen Eden,Coop Queen Eden,Gift,79,105,26,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/12/2025,Expense,CHA,CHA,Food,8,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/11/2025,Expense,Pizza Doro,Pizza Doro,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/10/2025,Expense,East Borough,East Borough,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/9/2025,Expense,Avenue Shabu,Avenue Shabu,Food,38,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/7/2025,Expense,EPL,EPL,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/7/2025,Expense,Oneric Shards,Oneric Shards,Fun,50,50,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/7/2025,Expense,Tokyo Central,Tokyo Central,Food,19,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/6/2025,Expense,Skin Tag + Loofa,Skin Tag + Loofa,Health,31,31,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/6/2025,Expense,In N Out,In N Out,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/6/2025,Expense,Notion,Notion,Life,12,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+11/6/2025,Expense,Capital,Capital,Food,21,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/5/2025,Expense,Peak,Peak,Fun,5,8,3,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/5/2025,Expense,Vox,Vox,Food,14,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/4/2025,Expense,Com Tam Bui,Com Tam Bui,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/4/2025,Expense,McDonalds,McDonalds,Food,10,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/4/2025,Expense,Discord Nitro,Discord Nitro,Fun,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+11/4/2025,Expense,Amazon Fresh,Amazon Fresh,Food,13,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/3/2025,Expense,Dakao,Dakao,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/3/2025,Expense,Paws Tea,Paws Tea,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/2/2025,Expense,Visible,Visible,Life,25,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+11/2/2025,Income,Dean Venmo 27 ,,Repayment,27,,0,V.M 1111,AMEX CHECKING,,,Income
+11/2/2025,Expense,Mama Egg House,Mama Egg House,Food,47,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/2/2025,Expense,In N Out,In N Out,Food,9,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/1/2025,Expense,Fairway Foods,Fairway Foods,Food,48,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/30/2025,Expense,Kitakata,Kitakata,Food,20,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/30/2025,Expense,Ikea,Ikea,Food,15,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/29/2025,Expense,Simply Pho,Simply Pho,Food,19,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/28/2025,Expense,Dreamlayer Pillow,Dreamlayer Pillow,Health,190,225,35,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/28/2025,Expense,Idyllwild Camping,Idyllwild Camping,Travel,120,120,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/27/2025,Expense,Brazuca,Brazuca,Food,26,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/27/2025,Expense,Ikea,Ikea,Food,5,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/26/2025,Expense,Amazon Prime,Amazon Prime,Fun,15,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+10/26/2025,Expense,Wallpaper + RV,Wallpaper + RV,Fun,12,12,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/26/2025,Expense,District36,District36,Food,21,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/24/2025,Expense,A.S 1008,A.S 1008,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+10/23/2025,Expense,C.F 3882,C.F 3882,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+10/22/2025,Expense,Tesla,Tesla,Tesla,529,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+10/22/2025,Expense,Ramen Nagi,Ramen Nagi,Food,27,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/22/2025,Expense,Tesla Insurance,Tesla Insurance,Insurance,175,,0,A.S 1008,AMEX CHECKING,,Procured,Sub
+10/22/2025,Expense,Ikea,Ikea,Food,8,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/21/2025,Expense,Halal Guys,Halal Guys,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/21/2025,Expense,Apple 2TB,Apple 2TB,Tech,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+10/19/2025,Expense,BC,BC,Fun,27,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+10/18/2025,Expense,Kei Coffee,Kei Coffee,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/18/2025,Expense,Pikalin Studios,Pikalin Studios,Fun,92,92,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/18/2025,Expense,Amarith,Amarith,Food,47,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/17/2025,Expense,EPL,EPL,Food,10,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/16/2025,Expense,Null Number,Null Number,Gift,0,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/16/2025,Expense,Kaiser Surgery,Kaiser Surgery,"Insurance,Life",649,,0,A.S 1008,AMEX CHECKING,,Procured,Sub
+10/16/2025,Income,Andrew Zelle 300,,Repayment,300,,0,Z.L 1111,AMEX CHECKING,,,Income
+10/16/2025,Expense,Capital Noodle,Capital Noodle,Food,19,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/16/2025,Expense,Ikea,Ikea,Food,6,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/15/2025,Expense,Black Angus,Black Angus,Food,39,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/14/2025,Expense,No1 Chinese,No1 Chinese,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/14/2025,Expense,Tesla FSD,Tesla FSD,Tesla,99,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+10/14/2025,Expense,Com Tam TQQ,Com Tam TQQ,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/13/2025,Expense,In n Out,In n Out,Food,11,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/13/2025,Expense,"Sheet Set, Towels, Pillowcase","Sheet Set, Towels, Pillowcase",Home,79,192,113,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/13/2025,Income,Man Venmo 24,,Repayment,24,,0,V.M 1111,AMEX CHECKING,,,Income
+10/13/2025,Expense,Vox,Vox,Food,39,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/12/2025,Expense,Pillows + Pillowcase,Pillows + Pillowcase,,67,234,167,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/12/2025,Expense,Wendys,Wendys,Food,9,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/12/2025,Expense,Bep Viet,Bep Viet,Food,38,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/10/2025,Expense,Thai By Fire,Thai By Fire,Food,22,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/9/2025,Expense,Rooster Cafe,Rooster Cafe,Food,15,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/9/2025,Expense,Shin Sen Gumi,Shin Sen Gumi,Food,39,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/8/2025,Expense,Paradise Dynasty,Paradise Dynasty,Food,23,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/7/2025,Expense,Shake Shack,Shake Shack,Food,15,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/7/2025,Expense,Capital,Capital,Food,21,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/6/2025,Expense,Notion,Notion,Life,12,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+10/6/2025,Expense,Hot C Pot,Hot C Pot,Food,114,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/6/2025,Expense,No1 Chinese,No1 Chinese,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/4/2025,Expense,Be You,Be You,Food,31,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/4/2025,Expense,Sauna,Sauna,Fun,90,90,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/4/2025,Expense,Discord Nitro,Discord Nitro,Fun,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+10/3/2025,Expense,3Cat,3Cat,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/3/2025,Expense,Goblin Secrets,Goblin Secrets,Fun,120,120,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/3/2025,Expense,Kura,Kura,Food,75,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/2/2025,Expense,Visible,Visible,Life,25,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+10/2/2025,Expense,Rooster and Rice,Rooster and Rice,Food,65,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/1/2025,Expense,TESLA Registration,TESLA Registration,Tesla,711,711,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+10/1/2025,Expense,Tenaktori,Tenaktori,Food,19,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/30/2025,Expense,Slurpin Ramen,Slurpin Ramen,Food,22,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/30/2025,Expense,Slice House,Slice House,Food,14,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/29/2025,Expense,Rooster Cafe,Rooster Cafe,Food,4,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/28/2025,Expense,Hot C,Hot C,Food,35,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/28/2025,Expense,In N Out,In N Out,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/27/2025,Expense,Pho Nic,Pho Nic,Food,35,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/27/2025,Expense,Shape of Dreams,Shape of Dreams,Fun,12,25,13,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/26/2025,Expense,Vox,Vox,Food,14,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/26/2025,Expense,Amazon Prime,Amazon Prime,Fun,15,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+9/25/2025,Expense,Vox,Vox,Food,24,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/24/2025,Expense,A.S 1008,A.S 1008,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+9/23/2025,Expense,Cava,Cava,Food,13,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/23/2025,Expense,C.F 3882,C.F 3882,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+9/23/2025,Expense,No1 Chinese,No1 Chinese,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/23/2025,Expense,Cava,Cava,Food,13,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/22/2025,Expense,Tesla,Tesla,Tesla,529,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+9/22/2025,Expense,Tesla Insurance,Tesla Insurance,Insurance,175,,0,A.S 1008,AMEX CHECKING,,Procured,Sub
+9/22/2025,Expense,Vox,Vox,Food,13,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/22/2025,Expense,Dakao,Dakao,Food,18,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/21/2025,Expense,Apple 2TB,Apple 2TB,Tech,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+9/21/2025,Expense,In N Out,In N Out,Food,19,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/21/2025,Expense,Merch + Additional,Merch + Additional,Fun,150,150,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/21/2025,Expense,Whole Foods,Whole Foods,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/21/2025,Expense,Kappo Honda,Kappo Honda,Food,25,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/19/2025,Expense,Kin,Kin,Food,48,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/19/2025,Expense,Ultra 3,Ultra 3,Tech,625,800,175,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/19/2025,Expense,BC,BC,Fun,27,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+9/19/2025,Expense,EPL,EPL,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/19/2025,Expense,AFC Convention,AFC Convention,Fun,50,50,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/19/2025,Income,Andrew Zelle 300,,Repayment,300,,0,Z.L 1111,AMEX CHECKING,,,Income
+9/18/2025,Expense,Rooster Rice,Rooster Rice,Food,22,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/17/2025,Expense,Paradise,Paradise,Food,21,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/16/2025,Expense,Jack In The Box,Jack In The Box,Food,11,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/16/2025,Expense,Kaiser Surgery,Kaiser Surgery,"Insurance,Life",649,,0,A.S 1008,AMEX CHECKING,,Procured,Sub
+9/16/2025,Expense,Paradise Dynasty,Paradise Dynasty,Food,20,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/15/2025,Expense,Rooster Cafe,Rooster Cafe,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/15/2025,Expense,Box + Card,Box + Card,Gift,18,18,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/14/2025,Expense,Tesla FSD,Tesla FSD,Tesla,99,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+9/13/2025,Expense,Infinity Castle,Infinity Castle,Fun,20,20,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/13/2025,Expense,Sunright,Sunright,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/13/2025,Expense,Tokyo Central,Tokyo Central,Food,30,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/12/2025,Expense,McDonalds,McDonalds,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/11/2025,Expense,No1 Chinese,No1 Chinese,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/10/2025,Expense,Thirsty Cow,Thirsty Cow,Food,106,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/9/2025,Expense,Quan Mii,Quan Mii,Food,21,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/9/2025,Expense,EPL,EPL,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/9/2025,Expense,S3XY Stalk Repair,S3XY Stalk Repair,Tesla,29,29,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/7/2025,Expense,Shabuya,Shabuya,Food,70,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/6/2025,Expense,Notion,Notion,Life,12,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+9/5/2025,Expense,Kitakata,Kitakata,Food,23,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/5/2025,Expense,Flexzilla Hose Nozzle,Flexzilla Hose Nozzle,Home,7,10,3,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/5/2025,Expense,Quiget Chair,Quiget Chair,Home,23,35,12,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/5/2025,Expense,Flexzilla Hose 50',Flexzilla Hose 50',Home,49,70,21,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/5/2025,Expense,Sabrosada,Sabrosada,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/4/2025,Expense,Quantum Science Set,Quantum Science Set,Gift,25,40,15,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/4/2025,Expense,Mama Bear Diapers,Mama Bear Diapers,Gift,10,13,3,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/4/2025,Expense,Roomba Bag,Roomba Bag,Home,13,17,4,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/4/2025,Expense,Ridge Washer 3.0,Ridge Washer 3.0,Home,21,25,4,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/4/2025,Expense,Brazuca,Brazuca,Food,25,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/4/2025,Expense,Discord Nitro,Discord Nitro,Fun,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+9/3/2025,Expense,Simply Pho,Simply Pho,Food,18,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/3/2025,Expense,Gyutan,Gyutan,Food,35,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/2/2025,Expense,Visible,Visible,Life,25,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+9/2/2025,Expense,In N Out,In N Out,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/1/2025,Expense,McKillans Swivel Gun Pro,McKillans Swivel Gun Pro,Home,80,90,10,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/1/2025,Expense,Dakao,Dakao,Food,18,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+9/1/2025,Expense,Ryobi 1800 1.2,Ryobi 1800 1.2,Home,90,100,10,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/31/2025,Expense,Hanoi Old Quarter,Hanoi Old Quarter,Food,18,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/31/2025,Expense,Avilas Ranchito,Avilas Ranchito,Food,52,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/30/2025,Expense,Bangkok Broth,Bangkok Broth,Food,27,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/29/2025,Expense,Lotrimin AF,Lotrimin AF,Health,16,16,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/28/2025,Expense,Vox,Vox,Food,27,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/28/2025,Expense,Dave’s Hot,Dave’s Hot,Food,13,,0,C.F 3882,AMEX CHECKING,,Procured,Expense
+8/28/2025,Expense,Sabrosada,Sabrosada,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/27/2025,Expense,Alley,Alley,Food,8,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/27/2025,Expense,Oniku,Oniku,Food,89,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/27/2025,Income,CFCO Reimbursement,,Other,22,,0,,AMEX CHECKING,,,Income
+8/27/2025,Expense,Exterior Transponder,Exterior Transponder,Tesla,5,5,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/26/2025,Expense,Ramen Nagi,Ramen Nagi,Food,21,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/26/2025,Expense,TESLA Registration,TESLA Registration,Tesla,0,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/26/2025,Expense,Amazon Prime,Amazon Prime,Fun,15,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+8/26/2025,Expense,Insignia USB Extender,Insignia USB Extender,Gift,22,22,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/25/2025,Expense,Vox,Vox,Food,23,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/24/2025,Expense,A.S 1008,A.S 1008,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+8/24/2025,Expense,Brodard,Brodard,Food,24,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/24/2025,Expense,Olive Garden,Olive Garden,Food,28,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/23/2025,Expense,C.F 3882,C.F 3882,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+8/22/2025,Expense,Tesla Insurance,Tesla Insurance,Insurance,152,,0,A.S 1008,AMEX CHECKING,,Procured,Sub
+8/22/2025,Expense,Tesla,Tesla,Tesla,529,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+8/22/2025,Expense,Sticker Transponder,Sticker Transponder,Tesla,55,55,0,,AMEX CHECKING,,Procured,Expense
+8/22/2025,Income,Andrew Zelle 300,,Repayment,300,,0,Z.L 1111,AMEX CHECKING,,,Income
+8/22/2025,Expense,Chipotle,Chipotle,Food,6,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/22/2025,Expense,Capital Noodle,Capital Noodle,Food,21,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/21/2025,Expense,Apple 2TB,Apple 2TB,Tech,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+8/21/2025,Expense,Chobop,Chobop,Food,20,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/20/2025,Income,CFCO Reimbursement,,Other,51,,0,,AMEX CHECKING,,,Income
+8/20/2025,Expense,Yoo Place,Yoo Place,Food,26,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/20/2025,Expense,Starbucks,Starbucks,Food,11,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/19/2025,Expense,Vox,Vox,Food,51,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/19/2025,Expense,BC,BC,Fun,27,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+8/18/2025,Expense,No 1 Chinese,No 1 Chinese,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/18/2025,Expense,Hot C Pot,Hot C Pot,Food,38,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/18/2025,Expense,Shakin Booty,Shakin Booty,Gift,40,40,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/17/2025,Expense,Tacos Los Cholos,Tacos Los Cholos,Food,48,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/16/2025,Expense,Great Maple,Great Maple,Food,55,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/16/2025,Expense,Ramen Taiko,Ramen Taiko,Food,47,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/16/2025,Expense,Kaiser Surgery,Kaiser Surgery,"Insurance,Life",649,,0,A.S 1008,AMEX CHECKING,,Procured,Sub
+8/14/2025,Expense,Asterom DireWolf Cane,Asterom DireWolf Cane,Health,99,99,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/14/2025,Expense,Chobop,Chobop,Food,50,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/14/2025,Income,Andrew Zelle 100,,Repayment,100,,0,Z.L 1111,AMEX CHECKING,,,Income
+8/14/2025,Expense,Tesla FSD,Tesla FSD,Tesla,99,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+8/13/2025,Expense,Amarith,Amarith,Food,36,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/13/2025,Expense,EPL,EPL,Food,13,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/12/2025,Expense,Iris Organizer,Iris Organizer,Home,18,25,7,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/12/2025,Expense,Dakao,Dakao,Food,18,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/11/2025,Expense,Oki Niku Wagyu,Oki Niku Wagyu,Food,45,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/10/2025,Expense,Happy Lamb,Happy Lamb,Food,78,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/9/2025,Expense,In N Out,In N Out,Food,11,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/9/2025,Expense,Bad Guys 2,Bad Guys 2,Fun,45,45,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/8/2025,Expense,Vox,Vox,Food,36,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/8/2025,Expense,Wanderlust,Wanderlust,Food,8,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/7/2025,Expense,McDonalds,McDonalds,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/6/2025,Expense,Hue Oi,Hue Oi,Food,22,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/6/2025,Expense,Notion,Notion,Life,12,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+8/5/2025,Expense,Amarith,Amarith,Food,33,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/5/2025,Expense,Filling Station,Filling Station,Food,45,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/4/2025,Expense,Discord Nitro,Discord Nitro,Fun,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+8/4/2025,Expense,Hue Oi,Hue Oi,Food,28,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/3/2025,Expense,Simmzy,Simmzy,Food,50,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/2/2025,Expense,Visible,Visible,Life,25,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+8/2/2025,Expense,Thai By SOF,Thai By SOF,Food,28,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/1/2025,Expense,Robinhood SCHD,Robinhood SCHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+8/1/2025,Expense,Robinhood SPHD,Robinhood SPHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+8/1/2025,Expense,Robinhood VGT,Robinhood VGT,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+8/1/2025,Expense,Robinhood VOO,Robinhood VOO,Stocks,100,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+8/1/2025,Expense,Taco Bell,Taco Bell,Food,27,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+8/1/2025,Expense,Robinhood VYM,Robinhood VYM,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+7/31/2025,Expense,ShinSenGumi,ShinSenGumi,Food,28,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/30/2025,Expense,Vox,Vox,Food,37,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/30/2025,Expense,HeyBings,HeyBings,Food,20,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/29/2025,Expense,California Fish Grill,California Fish Grill,Food,22,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/27/2025,Expense,Additional ER Costs,Additional ER Costs,Health,1685,1685,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/26/2025,Expense,Amazon Prime,Amazon Prime,Fun,15,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+7/26/2025,Expense,Bullgolgi,Bullgolgi,Food,25,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/25/2025,Income,Andrew Zelle 300 ,,Repayment,300,,0,Z.L 1111,AMEX CHECKING,,,Income
+7/25/2025,Expense,Panda Express,Panda Express,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/25/2025,Income,Jack Venmo 65,,Repayment,65,,0,V.M 1111,AMEX CHECKING,,,Income
+7/25/2025,Expense,Kappo Honda,Kappo Honda,Food,200,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/24/2025,Expense,Our Nest,Our Nest,Food,48,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/24/2025,Expense,Spirit Blossom Pass,Spirit Blossom Pass,Fun,22,22,0,,AMEX CHECKING,,Procured,Expense
+7/24/2025,Expense,A.S 1008,A.S 1008,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+7/23/2025,Expense,Habit,Habit,Food,25,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/23/2025,Expense,C.F 3882,C.F 3882,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+7/22/2025,Expense,Tesla Insurance,Tesla Insurance,Insurance,153,,0,A.S 1008,AMEX CHECKING,,Procured,Sub
+7/22/2025,Expense,Tesla,Tesla,Tesla,529,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+7/21/2025,Expense,Apple 2TB,Apple 2TB,Tech,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+7/21/2025,Expense,Vox,Vox,Food,20,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/20/2025,Expense,Gogi KBBQ,Gogi KBBQ,Food,70,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/20/2025,Expense,Portillos,Portillos,Food,13,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/19/2025,Expense,Thai Boy,Thai Boy,Food,30,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/19/2025,Expense,BC,BC,Fun,27,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+7/18/2025,Expense,Robinhood VOO,Robinhood VOO,Stocks,100,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+7/18/2025,Expense,Robinhood VGT,Robinhood VGT,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+7/18/2025,Expense,Robinhood VYM,Robinhood VYM,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+7/18/2025,Expense,Robinhood SCHD,Robinhood SCHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+7/18/2025,Expense,Robinhood SPHD,Robinhood SPHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+7/17/2025,Expense,Katchy Catcher,Katchy Catcher,Tech,40,44,4,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/16/2025,Expense,Dominoes,Dominoes,Food,30,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/15/2025,Expense,Panda Expess,Panda Expess,Food,18,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/14/2025,Expense,Gas,Gas,Gift,70,70,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/14/2025,Expense,Tesla FSD,Tesla FSD,Tesla,99,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+7/14/2025,Expense,BoPoMoFo,BoPoMoFo,Food,35,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/12/2025,Expense,Panda Express,Panda Express,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/11/2025,Expense,Nitecore EDC29,Nitecore EDC29,Tech,88,110,22,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/11/2025,Expense,SmallRig Holder,SmallRig Holder,Tech,18,23,5,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/11/2025,Expense,Atmoshue Adapter,Atmoshue Adapter,Tech,12,12,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/11/2025,Expense,ESR Upgraded,ESR Upgraded,Tech,22,27,5,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/11/2025,Expense,RhinoKey Card,RhinoKey Card,Tech,30,40,10,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/11/2025,Expense,INIU Pocket Size,INIU Pocket Size,Tech,28,39,11,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/11/2025,Expense,Supergoop Unseen,Supergoop Unseen,Health,38,48,10,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/10/2025,Expense,Amazon Fresh,Amazon Fresh,Food,1,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/10/2025,Income,AAA Refund,,Repayment,88,,0,,AMEX CHECKING,,,Income
+7/8/2025,Expense,Disabled Person Parking,Disabled Person Parking,Life,6,6,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/8/2025,Expense,Nexcare Cloth Tape,Nexcare Cloth Tape,Health,6,18,12,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/7/2025,Expense,Haagen and Pham,Haagen and Pham,Health,431,431,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/7/2025,Expense,Artisan,Artisan,Food,36,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/7/2025,Expense,Afters,Afters,Food,9,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/6/2025,Expense,Paradise Dynasty,Paradise Dynasty,Food,38,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/6/2025,Expense,Cha Redefined,Cha Redefined,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/6/2025,Expense,Notion,Notion,Life,12,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+7/6/2025,Expense,Istanbul Grill,Istanbul Grill,Food,29,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/6/2025,Expense,Airisms,Airisms,Apparel,107,107,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/4/2025,Expense,Hot C Pot,Hot C Pot,Food,76,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/4/2025,Expense,Robinhood VYM,Robinhood VYM,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+7/4/2025,Expense,Robinhood VGT,Robinhood VGT,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+7/4/2025,Expense,Discord Nitro,Discord Nitro,Fun,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+7/4/2025,Expense,Robinhood SCHD,Robinhood SCHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+7/4/2025,Expense,Robinhood SPHD,Robinhood SPHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+7/4/2025,Expense,Robinhood VOO,Robinhood VOO,Stocks,100,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+7/3/2025,Expense,Wendy’s,Wendy’s,Food,34,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/3/2025,Expense,Shakin Booty,Shakin Booty,Fun,40,40,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/3/2025,Expense,Shinsengumi,Shinsengumi,Food,22,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/3/2025,Expense,Sillies Sitting,Sillies Sitting,Fun,55,55,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+7/2/2025,Expense,Visible,Visible,Life,25,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+7/1/2025,Expense,Nep,Nep,Food,45,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/30/2025,Expense,Kei KH,Kei KH,Food,23,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/29/2025,Expense,Surgery Costs,Surgery Costs,Health,3100,3100,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/28/2025,Expense,Pannier Refund,Pannier Refund,Health,50,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/26/2025,Expense,CFG + SR,CFG + SR,Food,43,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/26/2025,Expense,Amazon Prime,Amazon Prime,Fun,15,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+6/25/2025,Expense,Keyboard Remove Kit,Keyboard Remove Kit,Tech,10,10,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/25/2025,Expense,CoPay,CoPay,Health,80,80,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/25/2025,Expense,Burker King Sushi,Burker King Sushi,Food,70,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/24/2025,Expense,A.S 1008,A.S 1008,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+6/23/2025,Expense,C.F 3882,C.F 3882,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+6/22/2025,Expense,Tesla,Tesla,Tesla,529,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+6/22/2025,Expense,Tesla Insurance,Tesla Insurance,Insurance,153,,0,A.S 1008,AMEX CHECKING,,Procured,Sub
+6/21/2025,Expense,Apple 2TB,Apple 2TB,Tech,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+6/21/2025,Expense,Rotwood,Rotwood,Fun,16,20,4,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/20/2025,Expense,Dean Uber,Dean Uber,Travel,31,31,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/20/2025,Expense,Amazon Fresh,Amazon Fresh,Food,42,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/20/2025,Expense,Robinhood SCHD,Robinhood SCHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+6/20/2025,Expense,Kaiser ER,Kaiser ER,Health,500,500,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/20/2025,Expense,Mandba One,Mandba One,Fun,70,70,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/20/2025,Expense,Robinhood VOO,Robinhood VOO,Stocks,100,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+6/20/2025,Expense,Robinhood SPHD,Robinhood SPHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+6/20/2025,Expense,Robinhood VYM,Robinhood VYM,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+6/20/2025,Expense,Robinhood VGT,Robinhood VGT,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+6/19/2025,Expense,BC,BC,Fun,27,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+6/19/2025,Expense,Vox,Vox,Food,22,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/18/2025,Expense,Amazon Fresh,Amazon Fresh,Food,10,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/18/2025,Expense,Vox,Vox,Food,25,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/16/2025,Expense,No1 Chinese,No1 Chinese,Food,11,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/16/2025,Expense,Mendocino Farms,Mendocino Farms,Food,9,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/15/2025,Expense,SmallRig DJI Cage,SmallRig DJI Cage,Tech,40,40,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/15/2025,Expense,Civivi Vision FG,Civivi Vision FG,Home,70,92,22,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/15/2025,Expense,Le Dip,Le Dip,Food,12,,0,C.F 3882,AMEX CHECKING,,Procured,Expense
+6/15/2025,Expense,Spigen Athlex Air,Spigen Athlex Air,Tech,25,25,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/15/2025,Expense,Rhinowalk Pannier,Rhinowalk Pannier,Travel,50,50,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/14/2025,Expense,Tesla FSD,Tesla FSD,Tesla,99,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+6/14/2025,Expense,Mount Repair Kit Lube,Mount Repair Kit Lube,Health,65,65,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/14/2025,Expense,ATB Bike,ATB Bike,Health,60,60,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/14/2025,Expense,Spolite 9000mAh Battery,Spolite 9000mAh Battery,Tech,56,56,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/14/2025,Expense,Birria Truck,Birria Truck,Food,11,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/13/2025,Expense,Raincovo Cannon,Raincovo Cannon,Tesla,33,33,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/13/2025,Expense,Rooster and Rice,Rooster and Rice,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/13/2025,Expense,Pressure Washer QC,Pressure Washer QC,Tesla,25,30,5,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/13/2025,Income,Andrew Zelle 350,,Repayment,350,,0,Z.L 1111,AMEX CHECKING,,,Income
+6/12/2025,Expense,Paradise Dynasty,Paradise Dynasty,Food,14,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/11/2025,Expense,BCD,BCD,Food,28,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/11/2025,Expense,Rooster Cafe,Rooster Cafe,Food,22,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/10/2025,Expense,Vox,Vox,Food,22,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/9/2025,Expense,Ramen Nagi,Ramen Nagi,Food,27,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/8/2025,Expense,AAA Policy,AAA Policy,Insurance,100,,0,P.D 0260,AMEX CHECKING,,Procured,Sub
+6/7/2025,Expense,Nep,Nep,Food,136,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/7/2025,Expense,Jolibee,Jolibee,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/7/2025,Income,Jack Venmo 70,,Repayment,70,,0,V.M 1111,AMEX CHECKING,,,Income
+6/6/2025,Expense,Ikkousha,Ikkousha,Food,18,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/6/2025,Expense,Notion,Notion,Life,12,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+6/6/2025,Expense,Robinhood VYM,Robinhood VYM,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+6/6/2025,Expense,Costco,Costco,Food,111,,0,,AMEX CHECKING,,Procured,Expense
+6/6/2025,Expense,Robinhood VOO,Robinhood VOO,Stocks,100,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+6/6/2025,Expense,Robinhood SPHD,Robinhood SPHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+6/6/2025,Expense,Robinhood SCHD,Robinhood SCHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+6/6/2025,Expense,Robinhood VGT,Robinhood VGT,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+6/5/2025,Expense,Halal Guys,Halal Guys,Food,18,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/5/2025,Expense,7 Leaves,7 Leaves,Food,6,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/4/2025,Expense,Capital,Capital,Food,19,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/4/2025,Expense,Discord Nitro,Discord Nitro,Fun,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+6/3/2025,Expense,Hoyo,Hoyo,Fun,100,100,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/3/2025,Expense,Le Shrimp,Le Shrimp,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/3/2025,Income,Deanna Paypal,,Repayment,25,,0,,AMEX CHECKING,,,Income
+6/2/2025,Expense,Ralphs,Ralphs,Food,13,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/2/2025,Expense,HHTYD,HHTYD,Fun,51,51,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/2/2025,Expense,Lifetime Buy,Lifetime Buy,Tesla,150,200,50,C.F 3882,AMEX CHECKING,,Procured,Expense
+6/2/2025,Expense,Rooster,Rooster,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/2/2025,Expense,Visible,Visible,Life,25,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+6/2/2025,Expense,Shinsengumi,Shinsengumi,Food,29,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+6/1/2025,Expense,Com Tam Thanh,Com Tam Thanh,Food,20,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/31/2025,Expense,Gogi Kbbq,Gogi Kbbq,Food,103,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/31/2025,Expense,imuto Charging Box,imuto Charging Box,Home,26,26,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/31/2025,Expense,Apple Homepod Mini,Apple Homepod Mini,Tech,73,99,26,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/31/2025,Expense,imuto 8x AA,imuto 8x AA,Home,17,24,7,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/31/2025,Income,CP Paypal,,Repayment,55,,0,,AMEX CHECKING,,,Income
+5/30/2025,Expense,Aqara U300,Aqara U300,Tech,180,230,50,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/29/2025,Expense,No1 Chinese,No1 Chinese,Food,11,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/29/2025,Expense,Ralphs,Ralphs,Food,9,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/28/2025,Expense,Quan Mii,Quan Mii,Food,21,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/28/2025,Expense,EPL,EPL,Food,11,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/28/2025,Expense,Platinum,Platinum,Fun,15,50,35,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/27/2025,Expense,Miyabi,Miyabi,Food,10,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/26/2025,Expense,Amazon Prime,Amazon Prime,Fun,15,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+5/26/2025,Expense,Warframe Cape,Warframe Cape,Fun,6,6,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/26/2025,Expense,Shabuya,Shabuya,Food,36,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/24/2025,Expense,A.S 1008,A.S 1008,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+5/24/2025,Expense,Amazon Fresh,Amazon Fresh,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/23/2025,Expense,Afters,Afters,Food,18,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/23/2025,Expense,Ralphs,Ralphs,Food,37,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/23/2025,Expense,Robinhood VGT,Robinhood VGT,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+5/23/2025,Expense,Amazon Fresh,Amazon Fresh,Food,5,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/23/2025,Expense,C.F 3882,C.F 3882,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+5/23/2025,Expense,Robinhood VYM,Robinhood VYM,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+5/23/2025,Expense,Robinhood VOO,Robinhood VOO,Stocks,100,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+5/23/2025,Expense,Robinhood SCHD,Robinhood SCHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+5/23/2025,Expense,Robinhood SPHD,Robinhood SPHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+5/22/2025,Expense,Tesla Insurance,Tesla Insurance,Insurance,153,,0,A.S 1008,AMEX CHECKING,,Procured,Sub
+5/22/2025,Expense,Tesla,Tesla,Tesla,529,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+5/21/2025,Expense,Slice Haus,Slice Haus,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/21/2025,Expense,Apple 2TB,Apple 2TB,Tech,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+5/20/2025,Expense,Shinsengumi,Shinsengumi,Food,22,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/20/2025,Expense,EPL,EPL,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/19/2025,Expense,BC,BC,Fun,27,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+5/19/2025,Expense,California Fish Grill,California Fish Grill,Food,21,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/19/2025,Income,CP Paypal,,Repayment,255,,0,,AMEX CHECKING,,,Income
+5/18/2025,Expense,Hotel/Parking/Food,Hotel/Parking/Food,Travel,175,1245,1070,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/18/2025,Expense,Da Vien,Da Vien,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/18/2025,Expense,Kei,Kei,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/18/2025,Income,Andrew3 Zelle 350,,Repayment,350,,0,Z.L 1111,AMEX CHECKING,,,Income
+5/18/2025,Expense,Com Tam Dao Vien,Com Tam Dao Vien,Food,26,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/17/2025,Expense,Amazon Fresh,Amazon Fresh,Food,2,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/17/2025,Expense,Costco,Costco,Food,13,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/16/2025,Expense,Scizor,Scizor,Fun,10,10,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/16/2025,Expense,Amazon Fresh,Amazon Fresh,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/15/2025,Expense,No1 Chinese,No1 Chinese,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/14/2025,Expense,Amazon Fresh,Amazon Fresh,Food,25,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/14/2025,Expense,Capital,Capital,Food,21,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/14/2025,Expense,Leafeon Pikachu Garchomp,Leafeon Pikachu Garchomp,Fun,85,95,10,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/14/2025,Expense,Afters,Afters,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/14/2025,Expense,Tesla FSD,Tesla FSD,Tesla,99,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+5/13/2025,Expense,EPL,EPL,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/12/2025,Expense,TukTuk,TukTuk,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/12/2025,Expense,Amazon Apples,Amazon Apples,Food,5,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/10/2025,Expense,Wang Cho,Wang Cho,Food,39,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/10/2025,Expense,Gardenwalk Parking,Gardenwalk Parking,Fun,4,4,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/10/2025,Expense,Wahoos,Wahoos,Food,15,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/10/2025,Expense,Jamba Juice,Jamba Juice,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/9/2025,Expense,Robinhood SCHD,Robinhood SCHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+5/9/2025,Expense,Robinhood VGT,Robinhood VGT,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+5/9/2025,Expense,Robinhood SPHD,Robinhood SPHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+5/9/2025,Expense,Robinhood VOO,Robinhood VOO,Stocks,100,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+5/9/2025,Expense,Robinhood VYM,Robinhood VYM,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+5/9/2025,Expense,Paradise Dynasty,Paradise Dynasty,Food,24,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/8/2025,Expense,AAA Policy,AAA Policy,Insurance,100,,0,P.D 0260,AMEX CHECKING,,Procured,Sub
+5/8/2025,Expense,Tessie,Tessie,Tesla,7,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+5/8/2025,Expense,Red Flame,Red Flame,Food,27,,0,C.F 3882,AMEX CHECKING,,Procured,Expense
+5/7/2025,Expense,CHA,CHA,Food,8,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/7/2025,Expense,Rooster and Rice,Rooster and Rice,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/6/2025,Expense,Notion,Notion,Life,12,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+5/6/2025,Expense,Kin,Kin,Food,55,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/5/2025,Expense,Robinhood SPHD,Robinhood SPHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+5/5/2025,Expense,Halal Guys,Halal Guys,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/5/2025,Expense,Panda,Panda,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/4/2025,Expense,Discord Nitro,Discord Nitro,Fun,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+5/4/2025,Expense,Vox,Vox,Food,21,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/4/2025,Expense,La Taqueria,La Taqueria,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/4/2025,Expense,Thunderbolts,Thunderbolts,Fun,20,20,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/3/2025,Expense,Somisomi,Somisomi,Food,4,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/3/2025,Expense,Avenue,Avenue,Food,42,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/2/2025,Income,CP Paypal,,Repayment,200,,0,,AMEX CHECKING,,,Income
+5/1/2025,Expense,ShinSenGumi,ShinSenGumi,Food,22,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/1/2025,Expense,Rooster,Rooster,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/1/2025,Expense,BKFK HDMI,BKFK HDMI,Fun,3,3,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/30/2025,Expense,7Leaves,7Leaves,Food,6,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/30/2025,Expense,Capital,Capital,Food,19,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/30/2025,Expense,RP,RP,Fun,11,11,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/29/2025,Expense,Brodard,Brodard,Food,61,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/29/2025,Expense,EPL,EPL,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/28/2025,Expense,"CAT6, MorandiSwitch, ASCoiled","CAT6, MorandiSwitch, ASCoiled",PC,78,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/28/2025,Expense,Rooster and Rice,Rooster and Rice,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/28/2025,Expense,Bedrock+Java,Bedrock+Java,Fun,30,30,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/28/2025,Expense,Osume Tsukimi Keycaps,Osume Tsukimi Keycaps,PC,80,96,16,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/27/2025,Expense,Smoke Queen,Smoke Queen,Food,45,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/27/2025,Expense,Orobae,Orobae,Food,6,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/26/2025,Expense,Zoom75 TIGA,Zoom75 TIGA,PC,220,240,20,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/26/2025,Expense,INIU + Felt,INIU + Felt,Tech,28,28,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/26/2025,Expense,Dakao,Dakao,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/26/2025,Expense,ZoomPad TIGA,ZoomPad TIGA,PC,112,112,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/26/2025,Expense,3Cat,3Cat,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/24/2025,Expense,TESBEAUTY 7 covers,TESBEAUTY 7 covers,Tesla,69,69,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/24/2025,Expense,Cha,Cha,Food,8,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/23/2025,Expense,Mioui Full Body,Mioui Full Body,Fun,80,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/23/2025,Expense,In N Out,In N Out,Food,3,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/23/2025,Expense,No 1 Chinese,No 1 Chinese,Food,11,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/22/2025,Expense,Sukihana,Sukihana,Food,13,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/22/2025,Expense,Panda,Panda,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/22/2025,Income,CP Paypal,,Repayment,200,,0,,AMEX CHECKING,,,Income
+4/22/2025,Expense,Capital,Capital,Food,21,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/22/2025,Expense,CoCo Ichibanya,CoCo Ichibanya,Food,25,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/22/2025,Expense,CDKeys Win 11 Pro,CDKeys Win 11 Pro,PC,1,200,199,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/22/2025,Expense,Cha,Cha,Food,8,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/22/2025,Expense,Robinhood SPHD,Robinhood SPHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+4/19/2025,Expense,Pur Bowls,Pur Bowls,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/19/2025,Expense,Happy Lamb,Happy Lamb,Food,39,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/18/2025,Expense,Simply Pho,Simply Pho,Food,18,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/18/2025,Expense,Room Pillow,Room Pillow,Home,10,10,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/18/2025,Expense,Riot Points,Riot Points,Fun,11,11,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/17/2025,Expense,Brodard Express,Brodard Express,Food,10,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/17/2025,Expense,Maruwu Seicha,Maruwu Seicha,Food,18,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/17/2025,Expense,Sweet Maple,Sweet Maple,Food,64,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/17/2025,Expense,Hummus,Hummus,Food,34,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/17/2025,Expense,Starbucks,Starbucks,Food,8,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/17/2025,Expense,Dough Zone,Dough Zone,Food,32,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/17/2025,Expense,Earls,Earls,Food,40,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/14/2025,Expense,Blue Bowl,Blue Bowl,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/13/2025,Expense,Com Tam TQC,Com Tam TQC,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/12/2025,Expense,Zachs Chicken,Zachs Chicken,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/12/2025,Expense,HMart,HMart,Food,47,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/11/2025,Expense,Panda,Panda,Food,9,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/11/2025,Expense,Cha,Cha,Food,8,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/11/2025,Expense,Slurpin,Slurpin,Food,22,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/11/2025,Expense,Robinhood VGT,Robinhood VGT,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+4/11/2025,Expense,Robinhood SPHD,Robinhood SPHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+4/11/2025,Expense,Robinhood VYM,Robinhood VYM,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+4/11/2025,Expense,Robinhood VOO,Robinhood VOO,Stocks,100,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+4/11/2025,Expense,Robinhood SCHD,Robinhood SCHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+4/10/2025,Expense,Rooster and Rice,Rooster and Rice,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/9/2025,Expense,Red Robin,Red Robin,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/9/2025,Income,Andrew Zelle 402,,Repayment,402,,0,Z.L 1111,AMEX CHECKING,,,Income
+4/8/2025,Expense,EPL,EPL,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/7/2025,Expense,Cha,Cha,Food,8,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/7/2025,Expense,Vox,Vox,Food,24,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/7/2025,Expense,Robinhood SPHD,Robinhood SPHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+4/6/2025,Expense,Atra,Atra,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/6/2025,Expense,Driver License Renew,Driver License Renew,Life,45,45,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/6/2025,Expense,Crest Optic White,Crest Optic White,Health,7,14,7,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/6/2025,Expense,GE and TSA Pre,GE and TSA Pre,Life,120,120,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/6/2025,Expense,Da Hawaiian,Da Hawaiian,Food,19,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/5/2025,Expense,Tony Slice,Tony Slice,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/4/2025,Expense,Cha,Cha,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/4/2025,Income,CP Paypal 110,,Repayment,110,,0,,AMEX CHECKING,,,Income
+4/4/2025,Expense,Jumpa Thai,Jumpa Thai,Food,34,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/3/2025,Expense,Rooster and Rice,Rooster and Rice,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/3/2025,Expense,No Money Gif,No Money Gif,Fun,35,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/3/2025,Expense,Amazon Basics Ext,Amazon Basics Ext,PC,10,11,1,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/2/2025,Expense,Kin,Kin,Food,14,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/2/2025,Expense,Anker HDMI USBC,Anker HDMI USBC,PC,30,34,4,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/2/2025,Expense,Visible,Visible,Life,5,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+3/31/2025,Expense,Angel Rent,Angel Rent,Life,1000,1000,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/31/2025,Expense,Pure Zen Infuser,Pure Zen Infuser,Health,25,38,13,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/31/2025,Expense,Foam King Spray,Foam King Spray,Tesla,40,50,10,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/31/2025,Expense,Willingheart Car Brush,Willingheart Car Brush,Tesla,22,25,3,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/31/2025,Expense,Mugimaru,Mugimaru,Food,15,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/31/2025,Expense,Chewie Mellow,Chewie Mellow,Food,10,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/30/2025,Expense,Hot C,Hot C,Food,36,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/30/2025,Expense,Tastea,Tastea,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/30/2025,Expense,Secretlab Mount,Secretlab Mount,PC,300,300,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/29/2025,Expense,Brodard,Brodard,Food,23,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/28/2025,Expense,Disney Dole Whip,Disney Dole Whip,Food,10,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/28/2025,Expense,Robinhood VOO,Robinhood VOO,Stocks,100,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+3/28/2025,Expense,Robinhood SPHD,Robinhood SPHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+3/28/2025,Expense,Robinhood VYM,Robinhood VYM,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+3/28/2025,Expense,Robinhood SCHD,Robinhood SCHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+3/28/2025,Expense,Robinhood VGT,Robinhood VGT,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+3/27/2025,Expense,Istanbul Grill,Istanbul Grill,Food,27,,0,,AMEX CHECKING,,Procured,Expense
+3/27/2025,Expense,Elfa Narrow Cabinet,Elfa Narrow Cabinet,Home,109,144,35,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/26/2025,Expense,Hoto Vacuum,Hoto Vacuum,Tech,10,110,100,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/26/2025,Expense,Taco Bell,Taco Bell,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/26/2025,Expense,Capital,Capital,Food,23,,0,,AMEX CHECKING,,Procured,Expense
+3/26/2025,Expense,Amazon Prime,Amazon Prime,Fun,15,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+3/25/2025,Expense,Rockin Sushi,Rockin Sushi,Food,23,,0,,AMEX CHECKING,,Procured,Expense
+3/24/2025,Expense,Rooster and Rice,Rooster and Rice,Food,16,,0,,AMEX CHECKING,,Procured,Expense
+3/24/2025,Expense,Secretlab Magnus,Secretlab Magnus,PC,726,766,40,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/24/2025,Expense,Flame Broiler,Flame Broiler,Food,9,,0,,AMEX CHECKING,,Procured,Expense
+3/24/2025,Expense,A.S 1008,A.S 1008,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+3/24/2025,Expense,Robinhood SPHD,Robinhood SPHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+3/23/2025,Expense,Feve,Feve,Fun,75,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/23/2025,Expense,C.F 3882,C.F 3882,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+3/22/2025,Expense,Dewalt Tape,Dewalt Tape,Home,24,24,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/22/2025,Expense,Tesla,Tesla,Tesla,529,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+3/22/2025,Expense,Tesla Insurance,Tesla Insurance,Insurance,153,,0,A.S 1008,AMEX CHECKING,,Procured,Sub
+3/21/2025,Expense,Apple 2TB,Apple 2TB,Tech,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+3/20/2025,Expense,LAX > Home,LAX > Home,Travel,30,80,50,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/20/2025,Expense,Dakao,Dakao,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/19/2025,Expense,Anker Chargers,Anker Chargers,Tech,153,166,13,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/19/2025,Expense,Matcha Tokyo,Matcha Tokyo,Food,5,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/19/2025,Expense,Skytree Katsu,Skytree Katsu,Food,19,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/19/2025,Expense,&Honey,&Honey,Health,15,15,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/19/2025,Expense,Plushes,Plushes,Fun,107,118,11,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/19/2025,Expense,BC,BC,Fun,27,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+3/18/2025,Expense,Pokemon Charging,Pokemon Charging,Tech,59,66,7,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/18/2025,Expense,Hats,Hats,Fun,46,50,4,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/18/2025,Expense,Travel Card,Travel Card,Travel,13,13,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/18/2025,Expense,Plush Merch,Plush Merch,Fun,42,46,4,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/18/2025,Expense,DisneySea,DisneySea,Food,6,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/18/2025,Expense,7-11,7-11,Food,2,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/18/2025,Expense,RakuRaku,RakuRaku,Food,25,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/18/2025,Expense,Blind Box,Blind Box,Gift,59,66,7,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/17/2025,Expense,Ichiran,Ichiran,Food,10,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/16/2025,Expense,Bus/Shinkansen/DisneyC,Bus/Shinkansen/DisneyC,Travel,130,130,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/16/2025,Expense,Socks/Inner/Jacket,Socks/Inner/Jacket,Apparel,61,67,6,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/16/2025,Expense,Cream/Clipper,Cream/Clipper,Health,18,18,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/16/2025,Expense,Handkerchief,Handkerchief,Fun,6,6,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/16/2025,Expense,Travel Card,Travel Card,Travel,13,13,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/14/2025,Expense,Tocen Goshobo Drinks,Tocen Goshobo Drinks,Food,22,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/14/2025,Expense,7-11,7-11,Food,15,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/14/2025,Expense,Travel Card,Travel Card,Travel,26,26,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/14/2025,Expense,Robinhood VYM,Robinhood VYM,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+3/14/2025,Expense,Robinhood VGT,Robinhood VGT,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+3/14/2025,Expense,Robinhood VOO,Robinhood VOO,Stocks,100,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+3/14/2025,Expense,Robinhood SPHD,Robinhood SPHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+3/14/2025,Expense,Robinhood SCHD,Robinhood SCHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+3/14/2025,Expense,Tesla FSD,Tesla FSD,Tesla,99,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+3/13/2025,Expense,JR Bus Arima,JR Bus Arima,Travel,10,10,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/12/2025,Expense,Ramen Makotoya,Ramen Makotoya,Food,9,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/12/2025,Expense,Kyoto Unagi,Kyoto Unagi,Food,41,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/12/2025,Expense,Gokujyun Premium,Gokujyun Premium,Health,7,7,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/11/2025,Expense,McDonalds,McDonalds,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/10/2025,Expense,House of Shabu 2,House of Shabu 2,Food,56,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/10/2025,Expense,Medical Bill,Medical Bill,Health,20,20,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/10/2025,Expense,Robinhood SPHD,Robinhood SPHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+3/9/2025,Expense,Nook,Nook,Food,13,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/9/2025,Expense,Ubigi 10GB eSim,Ubigi 10GB eSim,Travel,16,18,2,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/9/2025,Expense,Wushiland,Wushiland,Food,6,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/9/2025,Expense,Ulu Tokyo,Ulu Tokyo,Travel,1601,1601,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/8/2025,Expense,Togos,Togos,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/8/2025,Expense,Flame Broiler,Flame Broiler,Food,18,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/8/2025,Expense,AAA Policy,AAA Policy,Insurance,100,,0,P.D 0260,AMEX CHECKING,,Procured,Sub
+3/8/2025,Expense,Tessie,Tessie,Tesla,7,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+3/7/2025,Expense,Cross Hotel Osaka,Cross Hotel Osaka,Travel,919,920,1,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/7/2025,Expense,Rooster Rice,Rooster Rice,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/7/2025,Income,CP Paypal 477,,Repayment,477,,0,,AMEX CHECKING,,,Income
+3/6/2025,Expense,AMD RX 9070 XT,AMD RX 9070 XT,PC,800,800,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/6/2025,Expense,Rakuten STAY Hakone,Rakuten STAY Hakone,Travel,610,672,62,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/6/2025,Expense,Noctua NF-A14x25,Noctua NF-A14x25,PC,0,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/6/2025,Expense,Notion,Notion,Life,12,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+3/5/2025,Expense,McDonalds,McDonalds,Food,21,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/5/2025,Expense,Arima Onsen Goshobo,Arima Onsen Goshobo,Travel,2438,2697,259,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/4/2025,Expense,Capital,Capital,Food,20,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/4/2025,Expense,Outback Steak,Outback Steak,Food,40,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/4/2025,Expense,Discord Nitro,Discord Nitro,Fun,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+3/4/2025,Expense,Discord Nitro,Discord Nitro,Fun,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+3/3/2025,Expense,EPL,EPL,Food,13,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/3/2025,Expense,Panda Ex,Panda Ex,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/2/2025,Expense,Tastea,Tastea,Food,8,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/2/2025,Expense,Visible,Visible,Life,25,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+3/1/2025,Expense,JAL Round Trip,JAL Round Trip,Travel,840,840,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/1/2025,Expense,Peach Tokyo to Osaka,Peach Tokyo to Osaka,Travel,62,62,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/1/2025,Expense,Urban Plates,Urban Plates,Food,18,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+3/1/2025,Expense,A.B 1007,A.B 1007,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+3/1/2025,Expense,A.B 1007,A.B 1007,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+2/28/2025,Expense,Robinhood VOO,Robinhood VOO,Stocks,100,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+2/28/2025,Expense,Robinhood VGT,Robinhood VGT,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+2/28/2025,Expense,Robinhood SCHD,Robinhood SCHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+2/28/2025,Expense,Robinhood SPHD,Robinhood SPHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+2/28/2025,Expense,Casey Grill,Casey Grill,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/28/2025,Expense,Robinhood VYM,Robinhood VYM,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+2/28/2025,Expense,Target Bin,Target Bin,Home,10,10,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/28/2025,Expense,BYLT,BYLT,Apparel,375,908,533,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/28/2025,Expense,Fast Hotpot,Fast Hotpot,Food,20,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/28/2025,Expense,Robinhood SCHD,Robinhood SCHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+2/28/2025,Expense,Robinhood VGT,Robinhood VGT,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+2/28/2025,Expense,Robinhood SPHD,Robinhood SPHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+2/28/2025,Expense,Robinhood VOO,Robinhood VOO,Stocks,100,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+2/28/2025,Expense,Robinhood VYM,Robinhood VYM,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+2/27/2025,Expense,Capital,Capital,Food,20,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/27/2025,Expense,Cava,Cava,Food,13,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/27/2025,Expense,Annual Taxes,Annual Taxes,Fun,927,927,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/26/2025,Expense,Paradise,Paradise,Food,18,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/26/2025,Expense,Cha,Cha,Food,8,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/26/2025,Expense,Amazon Prime,Amazon Prime,Fun,15,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+2/26/2025,Income,Tax Return,,Other,624,,0,,AMEX CHECKING,,,Income
+2/26/2025,Expense,Amazon Prime,Amazon Prime,Fun,15,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+2/25/2025,Expense,Kin,Kin,Food,14,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/25/2025,Expense,EPL,EPL,Food,11,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/24/2025,Expense,EPL,EPL,Food,6,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/24/2025,Expense,Simply Pho,Simply Pho,Food,18,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/24/2025,Expense,Robinhood SPHD,Robinhood SPHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+2/23/2025,Expense,Banh Cuon LL,Banh Cuon LL,Food,14,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/23/2025,Expense,C.F 3882,C.F 3882,Life,0,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+2/22/2025,Expense,Red Flame,Red Flame,Food,26,,0,C.F 3882,AMEX CHECKING,,Procured,Expense
+2/22/2025,Expense,Dakao,Dakao,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/22/2025,Expense,Tesla Insurance,Tesla Insurance,Insurance,153,,0,A.S 1008,AMEX CHECKING,,Procured,Sub
+2/22/2025,Expense,Tesla,Tesla,Tesla,529,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+2/22/2025,Expense,Tesla Insurance,Tesla Insurance,Insurance,153,,0,A.S 1008,AMEX CHECKING,,Procured,Sub
+2/22/2025,Expense,Tesla,Tesla,Tesla,529,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+2/21/2025,Expense,Apple 2TB,Apple 2TB,Tech,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+2/21/2025,Expense,EPL,EPL,Food,13,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/21/2025,Expense,Athens 2 Blackout Size 8,Athens 2 Blackout Size 8,Apparel,119,139,20,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/21/2025,Income,Jack Paypal 996,,Repayment,996,,0,,AMEX CHECKING,,,Income
+2/21/2025,Expense,Apple 2TB,Apple 2TB,Tech,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+2/20/2025,Expense,CHA,CHA,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/19/2025,Expense,Kristal Klarr Fluid,Kristal Klarr Fluid,Tesla,27,40,13,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/19/2025,Expense,BC,BC,Fun,27,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+2/19/2025,Expense,Curry Do,Curry Do,Food,20,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/19/2025,Expense,BC,BC,Fun,27,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+2/18/2025,Expense,EPL,EPL,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/18/2025,Income,Jack Zelle 500,,Repayment,500,,0,Z.L 1111,AMEX CHECKING,,,Income
+2/17/2025,Expense,London Chippy,London Chippy,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/17/2025,Expense,Paradise,Paradise,Food,22,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/16/2025,Expense,Com Tam TQC,Com Tam TQC,Food,17,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/16/2025,Expense,Tastea,Tastea,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/15/2025,Expense,Warehouse Sale,Warehouse Sale,Apparel,90,350,260,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/14/2025,Expense,Robinhood VGT,Robinhood VGT,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+2/14/2025,Expense,Robinhood SCHD,Robinhood SCHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+2/14/2025,Expense,Robinhood SPHD,Robinhood SPHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+2/14/2025,Expense,Robinhood VOO,Robinhood VOO,Stocks,100,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+2/14/2025,Expense,Robinhood VYM,Robinhood VYM,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+2/13/2025,Expense,No1 C,No1 C,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/13/2025,Expense,Dominos,Dominos,Food,10,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/12/2025,Expense,Capital,Capital,Food,20,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/11/2025,Expense,Paradise,Paradise,Food,21,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/11/2025,Expense,Shin Sen Gumi,Shin Sen Gumi,Food,30,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/11/2025,Expense,Discord Snake Icon + Banner,Discord Snake Icon + Banner,Fun,9,10,1,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/10/2025,Expense,EPL,EPL,Food,13,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/10/2025,Expense,Robinhood SPHD,Robinhood SPHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+2/9/2025,Expense,Farmers Market,Farmers Market,Food,20,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/9/2025,Expense,Grams,Grams,Food,44,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/9/2025,Expense,Baking,Baking,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/8/2025,Expense,MyQ,MyQ,Tesla,45,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+2/8/2025,Expense,Tessie,Tessie,Tesla,7,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+2/8/2025,Expense,AAA Membership,AAA Membership,Insurance,100,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+2/8/2025,Expense,Geeki Tiki Mando Mug,Geeki Tiki Mando Mug,Gift,40,40,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/8/2025,Expense,Stonefire Grill,Stonefire Grill,Food,20,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/8/2025,Expense,Spigen Side Trunk Organizer,Spigen Side Trunk Organizer,Tesla,51,55,4,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/8/2025,Expense,Kholer 8G Stainless Steel,Kholer 8G Stainless Steel,Home,80,80,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/8/2025,Expense,RhinoCard Apple Card,RhinoCard Apple Card,Travel,30,40,10,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/8/2025,Expense,Cha,Cha,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/8/2025,Expense,Tessie,Tessie,Tesla,7,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+2/8/2025,Expense,AAA Membership,AAA Membership,Insurance,100,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+2/6/2025,Expense,Notion,Notion,Life,12,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+2/6/2025,Expense,Cha,Cha,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/6/2025,Expense,AMEX Surpass,AMEX Surpass,Life,150,,0,A.S 1008,AMEX CHECKING,,Procured,Sub
+2/6/2025,Expense,Capital,Capital,Food,20,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/6/2025,Income,CP Paypal 175,,Repayment,175,,0,,AMEX CHECKING,,,Income
+2/6/2025,Expense,Notion,Notion,Life,12,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+2/5/2025,Expense,EPL,EPL,Food,7,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/4/2025,Expense,Discord Nitro,Discord Nitro,Fun,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+2/4/2025,Expense,EPL,EPL,Food,13,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/4/2025,Expense,Brodard,Brodard,Food,24,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/3/2025,Expense,NZXT Kraken 360,NZXT Kraken 360,PC,180,190,10,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/3/2025,Expense,AMD Ryzen 7 7800X3D,AMD Ryzen 7 7800X3D,PC,450,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/3/2025,Expense,Shabuya,Shabuya,Food,35,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/3/2025,Expense,SF Leadex III Gold UP 850 W,SF Leadex III Gold UP 850 W,PC,120,196,76,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/3/2025,Expense,GIGABYTE X870 EAGLE AM5,GIGABYTE X870 EAGLE AM5,PC,220,244,24,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/3/2025,Expense,EPL,EPL,Food,13,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/3/2025,Expense,G.SKILL Trident Z5 Neo RGB,G.SKILL Trident Z5 Neo RGB,PC,112,112,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/3/2025,Expense,Kin,Kin,Food,23,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/3/2025,Expense,Fractal Design North Mid Tower,Fractal Design North Mid Tower,PC,140,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+2/1/2025,Expense,Simply Pho,Simply Pho,Food,18,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/31/2025,Expense,Gyutan,Gyutan,Food,34,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/30/2025,Expense,Slurpin,Slurpin,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/29/2025,Expense,Monos Carry On,Monos Carry On,Travel,212,265,53,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/29/2025,Expense,Capital,Capital,Food,19,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/28/2025,Expense,Robinhood VYM,Robinhood VYM,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+1/28/2025,Expense,Robinhood SCHD,Robinhood SCHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+1/28/2025,Expense,Robinhood SPHD,Robinhood SPHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+1/28/2025,Expense,Robinhood VGT,Robinhood VGT,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+1/28/2025,Expense,Robinhood VOO,Robinhood VOO,Stocks,100,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+1/27/2025,Expense,Tesla Core Jacket (S),Tesla Core Jacket (S),Apparel,120,120,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/27/2025,Expense,EPL,EPL,Food,13,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/26/2025,Expense,Amazon Prime,Amazon Prime,Fun,15,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+1/26/2025,Expense,Com Tam TQC,Com Tam TQC,Food,18,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/25/2025,Expense,Noks,Noks,Food,34,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/24/2025,Expense,Mitsuwa,Mitsuwa,Food,11,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/23/2025,Expense,Paradise,Paradise,Food,21,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/23/2025,Expense,McD,McD,Food,11,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/22/2025,Expense,Spigen Bespoke Cable Organizer,Spigen Bespoke Cable Organizer,Tesla,24,35,11,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/22/2025,Expense,Tesla Insurance,Tesla Insurance,Insurance,153,,0,A.S 1008,AMEX CHECKING,,Procured,Sub
+1/22/2025,Expense,Tesla,Tesla,Tesla,529,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+1/22/2025,Expense,Rooster,Rooster,Food,16,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/21/2025,Expense,Apple 2TB,Apple 2TB,Tech,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+1/21/2025,Expense,Capital,Capital,Food,20,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/21/2025,Expense,Spigen Tough Armor Case,Spigen Tough Armor Case,Tech,27,27,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/20/2025,Expense,Electrician,Electrician,Tesla,900,900,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/20/2025,Expense,Ring,Ring,Tech,50,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+1/20/2025,Expense,TPARTS Frunk LED Strip,TPARTS Frunk LED Strip,Tesla,35,35,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/19/2025,Expense,BC,BC,Fun,27,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+1/19/2025,Expense,Hot C,Hot C,Food,36,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/18/2025,Expense,Sen,Sen,Food,18,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/18/2025,Expense,Taco Bell,Taco Bell,Food,14,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/17/2025,Expense,Curry Do,Curry Do,Food,20,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/16/2025,Expense,JITB,JITB,Food,13,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/15/2025,Expense,Brodard,Brodard,Food,13,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/15/2025,Expense,3CAT,3CAT,Food,13,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/15/2025,Expense,Capital,Capital,Food,20,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/14/2025,Expense,Robinhood VOO,Robinhood VOO,Stocks,100,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+1/14/2025,Expense,Robinhood SPHD,Robinhood SPHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+1/14/2025,Expense,Tesla FSD,Tesla FSD,Tesla,99,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+1/14/2025,Expense,7Leaves,7Leaves,Food,6,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/14/2025,Expense,Robinhood SCHD,Robinhood SCHD,Stocks,40,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+1/14/2025,Expense,Robinhood VGT,Robinhood VGT,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+1/14/2025,Expense,Robinhood VYM,Robinhood VYM,Stocks,80,,0,A.C 4027,AMEX CHECKING,,Procured,Sub
+1/13/2025,Expense,No1 CF,No1 CF,Food,12,,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/12/2025,Expense,Hungry Boy,Hungry Boy,Food,16,,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+1/11/2025,Expense,Com Tam TQC,Com Tam TQC,Food,18,,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+1/11/2025,Expense,ENGPOW Accordion Organizer,ENGPOW Accordion Organizer,Home,26,30,4,A.B.1007,AMEX CHECKING,,Procured,Expense
+1/11/2025,Expense,Habit,Habit,Food,16,,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+1/10/2025,Expense,Slurpin,Slurpin,Food,12,,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+1/10/2025,Income,Andrew Zelle 370,,Repayment,370,,0,Z.L 1111,AMEX CHECKING,,,Income
+1/9/2025,Expense,Tesla PConnect,Tesla PConnect,Tesla,99,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+1/9/2025,Expense,Meiji,Meiji,Food,24,,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+1/8/2025,Expense,Panda Ex,Panda Ex,Food,12,,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+1/8/2025,Expense,Tessie,Tessie,Tesla,7,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+1/8/2025,Expense,AAA Membership,AAA Membership,Insurance,100,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+1/7/2025,Expense,Rooster,Rooster,Food,15,,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+1/6/2025,Expense,Capital,Capital,Food,20,,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+1/6/2025,Expense,Notion,Notion,Life,12,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+1/5/2025,Expense,Quan Mii,Quan Mii,Food,19,,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+1/5/2025,Expense,CHAMBERLAIN Garage Control,CHAMBERLAIN Garage Control,Tesla,28,30,2,A.B.1007,AMEX CHECKING,,Procured,Expense
+1/5/2025,Expense,Pho HB,Pho HB,Food,22,,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+1/5/2025,Expense,Spigen Armrest Organizer,Spigen Armrest Organizer,Tesla,26,34,8,A.B.1007,AMEX CHECKING,,Procured,Expense
+1/4/2025,Expense,Seasurf,Seasurf,Food,11,,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+1/4/2025,Expense,Discord Nitro,Discord Nitro,Fun,10,,0,C.F 3882,AMEX CHECKING,,Procured,Sub
+1/4/2025,Expense,Spigen Stuttgart Type A,Spigen Stuttgart Type A,Tesla,40,60,20,A.B.1007,AMEX CHECKING,,Procured,Expense
+1/4/2025,Expense,HALOBLK Console Cup Holder,HALOBLK Console Cup Holder,Tesla,23,23,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+1/4/2025,Expense,3CAT,3CAT,Food,7,,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+1/3/2025,Expense,Blue Bowl,Blue Bowl,Food,12,,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+1/3/2025,Expense,Raising Canes,Raising Canes,Food,20,,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+1/3/2025,Expense,Samsung 990 PRO SSD 4TB,Samsung 990 PRO SSD 4TB,PC,300,465,165,A.S 1008,AMEX CHECKING,,Procured,Expense
+1/2/2025,Expense,Sen,Sen,Food,40,,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+1/1/2025,Expense,Ini,Ini,Food,43,,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+12/31/2024,Expense,Paint Repair Stealth Grey - PN01,Paint Repair Stealth Grey - PN01,Tesla,75,75,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+12/20/2024,Expense,Spigen Center Console Organizer,Spigen Center Console Organizer,Tesla,28,33,5,A.B.1007,AMEX CHECKING,,Procured,Expense
+12/20/2024,Expense,Seven Minerals Aloe Vera,Seven Minerals Aloe Vera,Health,17,25,8,A.B.1007,AMEX CHECKING,,Procured,Expense
+12/20/2024,Expense,Under Screen Storage Box,Under Screen Storage Box,Tesla,44,48,4,A.B.1007,AMEX CHECKING,,Procured,Expense
+12/20/2024,Expense,3D MAXpider Floor Mats,3D MAXpider Floor Mats,Tesla,240,312,72,A.B.1007,AMEX CHECKING,,Procured,Expense
+12/20/2024,Expense,Fanttik X8 APEX EV Tire Inflator,Fanttik X8 APEX EV Tire Inflator,Tesla,87,99,12,A.B.1007,AMEX CHECKING,,Procured,Expense
+12/20/2024,Expense,Spigen Hidden Storage Box,Spigen Hidden Storage Box,Tesla,23,28,5,A.B.1007,AMEX CHECKING,,Procured,Expense
+12/20/2024,Expense,Aulumu A11 Mag Band,Aulumu A11 Mag Band,Tech,40,40,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+12/20/2024,Expense,Apple Watch 10,Apple Watch 10,Tech,380,430,50,A.B.1007,AMEX CHECKING,,Procured,Expense
+12/20/2024,Expense,Spigen Car Registration Holder,Spigen Car Registration Holder,Tesla,25,30,5,A.B.1007,AMEX CHECKING,,Procured,Expense
+12/20/2024,Expense,Gillette Intimate Pubic Hair Razor,Gillette Intimate Pubic Hair Razor,Health,22,22,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+12/20/2024,Expense,S3XY Knob Commander Combo,S3XY Knob Commander Combo,Tesla,322,380,58,A.B.1007,AMEX CHECKING,,Procured,Expense
+12/20/2024,Expense,Fanttik Slim V8 Apex,Fanttik Slim V8 Apex,Tesla,76,100,24,A.B.1007,AMEX CHECKING,,Procured,Expense
+12/20/2024,Expense,Spigen Center Console Armrest,Spigen Center Console Armrest,Tesla,36,40,4,A.B.1007,AMEX CHECKING,,Procured,Expense
+12/20/2024,Expense,Spigen Tempered Glass Protector,Spigen Tempered Glass Protector,Tesla,43,43,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+12/20/2024,Expense,Spigen WeatherBloc Mat Set,Spigen WeatherBloc Mat Set,Tesla,150,150,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+12/18/2024,Expense,Spigen Urban Fit,Spigen Urban Fit,Tech,19,30,11,A.B.1007,AMEX CHECKING,,Procured,Expense
+12/18/2024,Expense,Snuggle Sac Heather Black,Snuggle Sac Heather Black,Home,30,40,10,A.B.1007,AMEX CHECKING,,Procured,Expense
+12/18/2024,Expense,AWINNER Headband,AWINNER Headband,Tech,9,9,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+12/18/2024,Expense,Spigen Triple-Coated CryoShade,Spigen Triple-Coated CryoShade,Tesla,34,40,6,A.B.1007,AMEX CHECKING,,Procured,Expense
+12/17/2024,Expense,The Max Stand,The Max Stand,Tech,89,89,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+12/15/2024,Expense,Logitech 2017 Brio 4K Webcam,Logitech 2017 Brio 4K Webcam,Gift,140,200,60,A.B.1007,AMEX CHECKING,,Procured,Expense
+12/6/2024,Expense,6 Sessions SEV Laser,6 Sessions SEV Laser,Health,260,540,280,A.B.1007,AMEX CHECKING,,Procured,Expense
+12/5/2024,Expense,Gillette Intimate 2 in 1 Cream,Gillette Intimate 2 in 1 Cream,Health,10,10,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+12/5/2024,Expense,Ebanel 5% Lidocaine Cream,Ebanel 5% Lidocaine Cream,Health,18,18,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+12/5/2024,Expense,Gillette Intimate Men’s Manscape,Gillette Intimate Men’s Manscape,Health,60,60,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+11/29/2024,Expense,Honey-Can-Do DRY-09065,Honey-Can-Do DRY-09065,Home,24,40,16,A.B.1007,AMEX CHECKING,,Procured,Expense
+11/27/2024,Expense,Govee RGBIC Smart Lamp,Govee RGBIC Smart Lamp,Tech,55,100,45,A.B.1007,AMEX CHECKING,,Procured,Expense
+11/27/2024,Expense,Govee RGBIC Smart Lamp,Govee RGBIC Smart Lamp,Gift,55,100,45,A.B.1007,AMEX CHECKING,,Procured,Expense
+11/27/2024,Expense,Meguiars Gold Car Wash Soap,Meguiars Gold Car Wash Soap,Tesla,21,25,4,A.B.1007,AMEX CHECKING,,Procured,Expense
+11/27/2024,Expense,ChemGuys Microfiber Detergent,ChemGuys Microfiber Detergent,Tesla,13,13,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+11/27/2024,Expense,Echo Spot 2024,Echo Spot 2024,Tech,45,80,35,A.B.1007,AMEX CHECKING,,Procured,Expense
+11/27/2024,Expense,Govee RGBIC Smart Lamp,Govee RGBIC Smart Lamp,Gift,55,100,45,A.B.1007,AMEX CHECKING,,Procured,Expense
+11/23/2024,Expense,BASENOR Sunglasses Holder,BASENOR Sunglasses Holder,Tesla,17,20,3,A.B.1007,AMEX CHECKING,,Procured,Expense
+11/22/2024,Expense,Enhauto S3XY Stalks,Enhauto S3XY Stalks,Tesla,300,375,75,A.B.1007,AMEX CHECKING,,Procured,Expense
+11/21/2024,Expense,Chirano Lifting Jack Pad,Chirano Lifting Jack Pad,Tesla,20,35,15,A.B.1007,AMEX CHECKING,,Procured,Expense
+11/18/2024,Expense,2022 iPad Pro,2022 iPad Pro,Tech,784,1000,216,A.B.1007,AMEX CHECKING,,Procured,Expense
+11/18/2024,Expense,Click Sling S,Click Sling S,Apparel,40,130,90,A.S 1008,AMEX CHECKING,,Procured,Expense
+11/18/2024,Expense,Benks Magnetic Silicone Band,Benks Magnetic Silicone Band,Tech,13,30,17,A.B.1007,AMEX CHECKING,,Procured,Expense
+11/18/2024,Expense,BenQ Webcam Adaptor,BenQ Webcam Adaptor,Tech,20,20,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+11/18/2024,Expense,LTT Screwdriver,LTT Screwdriver,Home,40,70,30,A.B.1007,AMEX CHECKING,,Procured,Expense
+11/18/2024,Expense,BenQ ScreenBar Halo LED,BenQ ScreenBar Halo LED,Tech,180,180,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+11/18/2024,Expense,Apple Pencil (2nd Generation),Apple Pencil (2nd Generation),Tech,80,130,50,A.B.1007,AMEX CHECKING,,Procured,Expense
+11/17/2024,Expense,Airpods Pro 2,Airpods Pro 2,Tech,160,250,90,A.B.1007,AMEX CHECKING,,Procured,Expense
+11/17/2024,Expense,Anker MagSafe MagGo,Anker MagSafe MagGo,Travel,63,90,27,A.B.1007,AMEX CHECKING,,Procured,Expense
+11/17/2024,Expense,ESR for AirPods Pro 2nd,ESR for AirPods Pro 2nd,Tech,10,24,14,A.B.1007,AMEX CHECKING,,Procured,Expense
+11/17/2024,Expense,Anker MagGo 3,Anker MagGo 3,Tech,72,100,28,A.B.1007,AMEX CHECKING,,Procured,Expense
+10/21/2024,Expense,Rain-X Washer Fluid,Rain-X Washer Fluid,Tesla,14,15,1,A.B.1007,AMEX CHECKING,,Procured,Expense
+9/3/2023,Expense,Atlas Embody Headrest,Atlas Embody Headrest,Home,190,190,0,A.B.1007,AMEX CHECKING,,Procured,Expense
+8/5/2023,Expense,Embody Logitech Chair,Embody Logitech Chair,Home,1356,1995,639,A.B.1007,AMEX CHECKING,,Procured,Expense
+4/25/2026,Expense,Smoke Queen,Smoke Queen,Food,37,37,0,A.S 1008,AMEX CHECKING,,Procured,Food
+4/25/2026,Expense,Costco,Costco,Food,127,127,0,C.F 3882,AMEX CHECKING,,Procured,Food
+4/25/2026,Expense,Junbi,Junbi,Food,9,9,0,A.S 1008,AMEX CHECKING,,Procured,Food
+4/24/2026,Expense,Phoholic,Phoholic,Food,18,18,0,A.S 1008,AMEX CHECKING,,Procured,Food
+4/24/2026,Expense,Cha Redefine,Cha Redefine,Food,8,8,0,A.S 1008,AMEX CHECKING,,Procured,Food
+4/26/2026,Subscription,Amazon Prime,,Life,15,,,C.F 3882,,Monthly,Paid,Subscription
+4/27/2026,Expense,Hot C Pot,,Food,27,27,0,A.S 1008,AMEX CHECKING,,Procured,Food
+4/17/2026,Expense,Capital Noodle,,Food,21,21,0,A.S 1008,AMEX CHECKING,,Procured,Food
+4/6/2026,Expense,No 1 Chinese,,Food,12,12,0,A.S 1008,AMEX CHECKING,,Procured,Food
+4/28/2026,Expense,Auntie Annes,,Food,10,10,0,A.S 1008,AMEX CHECKING,,Procured,Food
+4/30/2026,Expense,World Wrapps,,Food,33,33,0,A.S 1008,AMEX CHECKING,,Procured,Food
+4/29/2026,Expense,Hilton,Hilton Garden Inn,Travel,545,545,0,A.S 1008,AMEX CHECKING,,Procured,Wishlist
+4/29/2026,Expense,Hilton,Hilton Garden Inn,Travel,545,545,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+4/28/2026,Expense,Tendon Kohaku,,Food,41,41,0,A.S 1008,AMEX CHECKING,,Procured,Food
+4/28/2026,Expense,Brodard Express,,Food,10,10,0,A.S 1008,AMEX CHECKING,,Procured,Food
+4/30/2026,Expense,Harrys Hoffbrau,,Food,25,25,0,A.S 1008,AMEX CHECKING,,Procured,Food
+5/1/2026,Expense,Rabbit Rabbit Cream,,Food,7,7,0,A.S 1008,AMEX CHECKING,,Procured,Food
+5/1/2026,Expense,Sigonas,,Food,5,5,0,C.F 3882,AMEX CHECKING,,Procured,Food
+5/1/2026,Subscription,Visible,,Life,25,25,0,A.S 1008,AMEX CHECKING,Monthly,Paid,Sub
+5/1/2026,Expense,Trader Vics,,Food,38,38,0,A.S 1008,AMEX CHECKING,,Procured,Food
+5/2/2026,Expense,Lego Smart Play,Luke's Red Five X-Wing,Gift,90,90,0,A.S 1008,AMEX CHECKING,,Procured,Wishlist
+5/2/2026,Expense,Lego Smart Play,Luke's Red Five X-Wing,Gift,90,90,0,A.S 1008,AMEX CHECKING,,Procured,Expense
+5/2/2026,Expense,Bourbon Steak,,Food,175,175,0,A.S 1008,AMEX CHECKING,,Procured,Food
+5/3/2026,Expense,Waldorf Astoria Parking,,Travel,75,75,0,A.S 1008,AMEX CHECKING,,Procured,Travel
+5/3/2026,Income,Waldorf Astoria Credit 50,Daily Credit,Refund,50,,,,AMEX CHECKING,,Refund,Refund
+5/3/2026,Expense,Hole Mole,,Food,15,15,0,A.S 1008,AMEX CHECKING,,Procured,Food
+4/29/2026,Expense,Holiday Inn Express,,Travel,608,608,0,A.S 1008,AMEX CHECKING,,Procured,Travel
+5/4/2026,Subscription,Discord Nitro,,Fun,10,,,C.F 3882,,Monthly,Paid,Subscription
+5/5/2026,Expense,Slurpin Ramen,,Food,27,27,0,A.S 1008,AMEX CHECKING,,Procured,Food
+5/5/2026,Expense,Skewers,,Food,60,60,0,V.M 1111,AMEX CHECKING,,Procured,Food
+5/6/2026,Expense,Vox,,Food,25,25,0,A.S 1008,AMEX CHECKING,,Procured,Food
+5/6/2026,Expense,Medocino Farms,,Food,26,26,0,A.S 1008,AMEX CHECKING,,Procured,Food
+5/6/2026,Expense,Vons,,Food,8,8,0,A.S 1008,AMEX CHECKING,,Procured,Food
+5/6/2026,Expense,Afters,,Food,7,7,0,A.S 1008,AMEX CHECKING,,Procured,Food
+5/7/2026,Expense,Capital Noodle,,Food,22,22,0,A.S 1008,AMEX CHECKING,,Procured,Food
+5/7/2026,Expense,Pho Lab,,Food,27,27,0,A.S 1008,AMEX CHECKING,,Procured,Food
+5/8/2026,Subscription,Claude,,Tech,20,,,C.F 3882,,Monthly,Paid,Subscription
+5/8/2026,Expense,1954 Bakery,,Food,26,26,0,A.S 1008,AMEX CHECKING,,Procured,Food
+5/8/2026,Expense,Zion Market,,Food,50,50,0,A.S 1008,AMEX CHECKING,,Procured,Food
+5/8/2026,Income,Cindy Venmo 12,,,12,,,,AMEX CHECKING,,Repayment,Repayment
