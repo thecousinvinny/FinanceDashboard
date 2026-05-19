@@ -941,8 +941,8 @@ export default function CalendarPage() {
                               {spanAreaH > 0 && <div style={{ height: spanAreaH + 4, flexShrink: 0 }} />}
                               {/* All-day single-day events */}
                               {allDayEvs.slice(0, shownAllDay).map((ev, ei) => (
-                                <div key={ei} style={{ background: (ev.color ?? DOT_COLOR[ev.type]) + 'DD', borderRadius: 4, padding: '2px 5px', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                  <span style={{ fontSize: 10, lineHeight: '14px', color: '#fff', fontFamily: 'var(--font-montserrat)', fontWeight: 500 }}>{ev.title}</span>
+                                <div key={ei} style={{ background: (ev.color ?? DOT_COLOR[ev.type]) + 'DD', borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                                  <span style={{ fontSize: 10, color: '#fff', fontFamily: 'var(--font-montserrat)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
                                 </div>
                               ))}
                               {/* Timed / financial events */}
@@ -952,9 +952,9 @@ export default function CalendarPage() {
                                   ? ev.amount.split(' – ')[0].trim().replace(/^(\d{2}):(\d{2})$/, (_, hh, mm) => { const n = Number(hh); return `${n % 12 || 12}:${mm}${n >= 12 ? 'p' : 'a'}` })
                                   : null
                                 return (
-                                  <div key={ei} style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 2, overflow: 'hidden', flexShrink: 0 }}>
-                                    <div style={{ width: 3, alignSelf: 'stretch', minHeight: 14, borderRadius: 2, background: bar, flexShrink: 0 }} />
-                                    <span style={{ fontSize: 10, lineHeight: '14px', color: 'rgba(255,255,255,0.72)', fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+                                  <div key={ei} style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 2, height: 18, overflow: 'hidden', flexShrink: 0 }}>
+                                    <div style={{ width: 3, height: '100%', borderRadius: 2, background: bar, flexShrink: 0 }} />
+                                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.72)', fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
                                       {timeStr && <span style={{ color: 'rgba(255,255,255,0.38)', marginRight: 3 }}>{timeStr}</span>}{ev.title}
                                     </span>
                                   </div>
