@@ -332,16 +332,21 @@ Fires 360ms after V1→V2 transition in a `useEffect` watching `viewIndex`.
 
 **`suppressPrepend` ref**: the prepend IntersectionObserver fires immediately when View 2 enters at `scrollTop=0`, saving `prevH=0`. On iOS (slower renders) its double-`rAF` fires *after* the scroll-to-today, clobbering the position. Fix: set `suppressPrepend.current = true` before `setViewIndex(1)` in any swipe/drag handler; the prepend observer returns early if it's set; clear it after `scrollTop` is written.
 
-**`months: MonthKey[]` state** — shared between View 2's infinite day list and the Notion month grid. Initial 9 months centered on today. View 2 has its own `topSentRef`/`botSentRef` IntersectionObservers (active only when `viewIndex === 1`). The Notion grid has `monthGridTopSentRef`/`monthGridBotSentRef` observers (active only when `isLargeScreen && calView === 'month'`).
+**`months: MonthKey[]` state** — used exclusively by View 2's infinite day list. Initial 9 months centered on today. View 2 has its own `topSentRef`/`botSentRef` IntersectionObservers (active only when `viewIndex === 1`).
+
+**`notionWeeks: string[]` state** — used exclusively by the Notion month grid on large screens. Array of Sunday date strings (`YYYY-MM-DD`), initialized to 48 weeks centered on today's Sunday. `monthGridTopSentRef`/`monthGridBotSentRef` IntersectionObservers (active only when `isLargeScreen && calView === 'month'`) append/prepend **8 weeks at a time** via `addWeeks(weekStart, n)` helper. `notionWeeksRef` syncs on every change (same pattern as `monthsRef`).
+
+Module-level date helpers: `addWeeks(weekStart, n)` advances a Sunday date string by `n` weeks using local `new Date(y, m-1, d + n*7)` (never UTC). `weekDays(weekStart)` returns 7 date strings for Sun–Sat of that week.
 
 **Large-screen calendar (≥768px)** — `isLargeScreen` boolean from a `resize` listener. View 1 shows a List/Month toggle in the header. `calView: 'list' | 'month'` is persisted to `localStorage`.
 
 *Notion-style month grid* (month mode on large screens):
 - **180px sidebar** (`#1a1a1a`, `borderRight: 1px solid #2a2a2a`): mini month navigator (`sidebarYear`/`sidebarMonth` state, independent from the main grid), per-type legend toggles (`hiddenTypes: Set<EventType>` local state — clicking hides that type from the grid only), Today button scrolls main grid to today, Add Calendar button → settings sheet.
-- **Main grid** (`#0d0d0d`): sticky DOW header + scrollable `<div ref={monthGridRef}>` containing all `months` rendered as calendar month sections.
-  - Each month section: sticky gold Big Shoulders label + week rows (7 cells, `minHeight: 80px`, `#2a2a2a` grid lines).
-  - Event pills: `width: 3px` left colored border + optional short time prefix + truncated title.
-  - `monthCellRefs: Map<string, HTMLElement>` — set in ref callbacks on current-month cells; used to scroll-to-day from the sidebar mini calendar or on entry to month mode.
+- **Main grid** (`#0d0d0d`): sticky DOW header + scrollable `<div ref={monthGridRef}>` containing a **single continuous week-based grid** — `notionWeeks.map(weekStart => ...)` with no month section breaks, no sticky month labels.
+  - Each row: one week (`position: relative`, CSS Grid `repeat(7,1fr)`, `borderBottom: 1px solid #2a2a2a`, `minHeight: 140`).
+  - When a cell's day is `1` (first of month), an inline gold month abbreviation appears to the left of the date number.
+  - All event pills (all-day colored bars and timed/financial rows) are **18px tall**. Show up to 4 events per cell + `+N more` overflow.
+  - `monthCellRefs: Map<string, HTMLElement>` — set for every cell (no `current` filter needed); used to scroll-to-day from the sidebar or on entry to month mode.
   - `monthVisibleMap` = `visibleMap` additionally filtered by `hiddenTypes`.
 - Clicking a day cell opens `AddEventSheet` directly (stays on View 1, no navigation to View 3).
 - Clicking a day in the sidebar mini calendar scrolls `monthGridRef` to that cell using the same `getBoundingClientRect()` pattern.
@@ -375,4 +380,4 @@ Status transitions: `Pending → Approved → In Progress → Completed → Paid
 
 The Google Calendar integration is proxied through `src/app/api/calendar/route.ts` (keeps credentials server-side). Direct gapi calls from the client are not used in the new app.
 
-`AddEventSheet` accepts `googleCals?: GCalendar[]` and renders a native `<select>` dropdown for choosing which calendar to create the event in. The calendar page filters this list to only calendars enabled in settings (`prefs.googleCalendarIds`). The selected `calendarId` is passed to `createCalEvent()` which forwards it to the API route.
+`AddEventSheet` accepts `googleCals?: GCalendar[]` and renders a native `<select>` dropdown for choosing which calendar to create the event in. The calendar page filters this list to only calendars enabled in settings (`prefs.googleCalendarIds`). The selected `calendarId` is passed to `createCalEvent()` which forwards it to the API route. The `EMPTY` form state defaults `allDay: false` — new events open with time pickers visible.
