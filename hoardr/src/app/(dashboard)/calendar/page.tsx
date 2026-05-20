@@ -217,11 +217,12 @@ export default function CalendarPage() {
   const [addDate,        setAddDate]        = useState<string | undefined>()
   const [weatherMap,     setWeatherMap]     = useState<Record<string, DayWeather>>({})
   const [editEvent,      setEditEvent]      = useState<EditableEvent | null>(null)
-  const [deleteScopeEv,  setDeleteScopeEv]  = useState<CalEvent | null>(null)
+  const [deleteScopeEv,    setDeleteScopeEv]    = useState<CalEvent | null>(null)
+  const [eventActionState, setEventActionState] = useState<{ ev: CalEvent; ds: string } | null>(null)
 
   // Infinite scroll
   const [months, setMonths] = useState<MonthKey[]>(() =>
-    Array.from({ length: 9 }, (_, i) => addMonths(today.getFullYear(), today.getMonth(), i - 4))
+    Array.from({ length: 6 }, (_, i) => addMonths(today.getFullYear(), today.getMonth(), i - 1))
   )
   const [sideLbl, setSideLbl] = useState(() => monthLabel(today.getFullYear(), today.getMonth()))
 
@@ -268,7 +269,7 @@ export default function CalendarPage() {
   // Swipe gesture refs
   const v3Swipe        = useRef<{ x: number; y: number } | null>(null)
   const rowSwipe       = useRef<{ x: number; y: number; ds: string } | null>(null)
-  const suppressPrepend = useRef(false)
+  const suppressPrepend = useRef(true)  // true initially — cleared after scroll-to-today so prepend IO doesn't clobber initial position
   const monthLblTapRef  = useRef<number>(0)
   const gridSwipe       = useRef<{ x: number; y: number } | null>(null)
   const handleDragRef   = useRef<{ startY: number; startH: number } | null>(null)
@@ -317,7 +318,11 @@ export default function CalendarPage() {
       lastHapticDay.current = found
       navigator.vibrate?.(8)
       const [ys, ms] = found.split('-')
-      setSideLbl(monthLabel(parseInt(ys), parseInt(ms) - 1))
+      const y = parseInt(ys), m = parseInt(ms) - 1
+      setSideLbl(monthLabel(y, m))
+      setGridYear(y)
+      setGridMonth(m)
+      setGridSel(found)
     }
   }, [])
 
@@ -703,6 +708,7 @@ export default function CalendarPage() {
         const eRect = el.getBoundingClientRect()
         sc.scrollTop = sc.scrollTop + eRect.top - cRect.top - 20
       }
+      suppressPrepend.current = false  // allow prepend IO after initial position is set
     }, 500)
     return () => clearTimeout(t)
   }, [todayStr])
@@ -878,25 +884,6 @@ export default function CalendarPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <>
-    {/* Gold month label — fixed left edge, shown only when split grid is collapsed */}
-    <div
-      style={{ position: 'fixed', left: 6, top: 'env(safe-area-inset-top, 0px)', bottom: 72, width: 20, zIndex: 30,
-               pointerEvents: viewIndex === 0 && gridH === 0 ? 'auto' : 'none',
-               display: 'flex', alignItems: 'center', justifyContent: 'center',
-               opacity: viewIndex === 0 && gridH === 0 ? 1 : 0, transition: 'opacity 0.25s ease', cursor: 'pointer' }}
-      onDoubleClick={scrollListToToday}
-      onTouchEnd={(e) => {
-        e.preventDefault()
-        const now = Date.now()
-        if (now - monthLblTapRef.current < 350) { monthLblTapRef.current = 0; scrollListToToday() }
-        else { monthLblTapRef.current = now }
-      }}
-    >
-      <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 8, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 800, color: 'rgba(212,175,55,0.65)', userSelect: 'none', whiteSpace: 'nowrap' }}>
-        {sideLbl}
-      </span>
-    </div>
-
     {/* Root — fixed viewport clip */}
     <div className="tab-enter" style={{ position: 'fixed', inset: 0, overflow: 'hidden' }}>
 
@@ -1334,7 +1321,23 @@ export default function CalendarPage() {
             </div>
 
             {/* Infinite scroll list — same design as before */}
-            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+              {/* Gold month label — always visible in the list area, sits in the 20px left gutter */}
+              <div
+                style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 20, zIndex: 5,
+                         display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                onDoubleClick={scrollListToToday}
+                onTouchEnd={(e) => {
+                  e.preventDefault()
+                  const now = Date.now()
+                  if (now - monthLblTapRef.current < 350) { monthLblTapRef.current = 0; scrollListToToday() }
+                  else { monthLblTapRef.current = now }
+                }}
+              >
+                <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 8, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 800, color: 'rgba(212,175,55,0.65)', userSelect: 'none', whiteSpace: 'nowrap' }}>
+                  {sideLbl}
+                </span>
+              </div>
               <div ref={scrollRef} onScroll={handleDetailScroll}
                 style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', position: 'relative' }}>
                 <div ref={topSentRef} style={{ height: 1 }} />
@@ -1380,7 +1383,7 @@ export default function CalendarPage() {
                               ? (ev.amount ? getTimeRange(ev) : 'ALL DAY')
                               : (ev.amount || null)
                             return (
-                              <button key={idx} onClick={() => { navigator.vibrate?.(6); if (ev.type === 'custom' && ev.id) { handleOpenEdit(ev) } else { setSelectedDay(ds); setViewIndex(1) } }}
+                              <button key={idx} onClick={() => { navigator.vibrate?.(6); if (ev.type === 'custom' && ev.id) { setEventActionState({ ev, ds }) } else { setSelectedDay(ds); setViewIndex(1) } }}
                                 style={{ display: 'flex', alignItems: 'stretch', width: '100%', background: 'none', border: 'none', padding: '10px 0', cursor: 'pointer', textAlign: 'left', gap: 9 }}>
                                 <div style={{ width: 3, borderRadius: 2, background: bar, flexShrink: 0 }} />
                                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -1495,6 +1498,42 @@ export default function CalendarPage() {
         style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, fontWeight: 300, zIndex: 40, boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)' }}
         aria-label="Add event"
       >+</button>
+    )}
+
+    {/* Event action sheet — shown when tapping a custom event in the split view */}
+    {eventActionState && (
+      <>
+        <div className="fixed inset-0 z-[60]" style={{ background: 'rgba(0,0,0,0.72)' }} onClick={() => setEventActionState(null)} />
+        <div className="fixed inset-x-0 bottom-0 z-[70] rounded-t-[24px]" style={{ background: '#1a1a1a', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+          <div className="flex justify-center pt-3 pb-2">
+            <div className="w-9 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.2)' }} />
+          </div>
+          <div className="px-5 pb-3">
+            <p style={{ fontFamily: 'var(--font-montserrat)', fontSize: 15, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {eventActionState.ev.title}
+            </p>
+          </div>
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <button
+              onClick={() => { handleOpenEdit(eventActionState.ev); setEventActionState(null) }}
+              className="w-full px-5 py-4 text-left"
+              style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'none', cursor: 'pointer' }}
+            >
+              <span style={{ fontFamily: 'var(--font-montserrat)', fontSize: 15, fontWeight: 500, color: '#fff' }}>Edit Event</span>
+            </button>
+            <button
+              onClick={() => { setSelectedDay(eventActionState.ds); setViewIndex(1); setEventActionState(null) }}
+              className="w-full px-5 py-4 text-left"
+              style={{ background: 'none', cursor: 'pointer' }}
+            >
+              <span style={{ fontFamily: 'var(--font-montserrat)', fontSize: 15, fontWeight: 500, color: '#fff' }}>Open Day View</span>
+            </button>
+          </div>
+          <div className="px-5 py-4">
+            <button onClick={() => setEventActionState(null)} className="w-full py-3.5 rounded-[14px] text-[15px] font-medium text-ink-muted" style={{ background: 'rgba(255,255,255,0.06)' }}>Cancel</button>
+          </div>
+        </div>
+      </>
     )}
 
     <AddEventSheet open={addOpen} defaultDate={addDate ?? selectedDay ?? gridSel ?? undefined} defaultCalendarId={prefs.defaultCalendarId} googleCals={googleCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => { setAddOpen(false); setTimeout(() => setAddDate(undefined), 300) }} onAdd={handleAddEvent} />
