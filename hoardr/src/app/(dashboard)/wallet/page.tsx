@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { flushSync } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 import { PillGroup } from '@/components/ui/Pill'
 import { AddCardSheet, type NewCard } from '@/components/wallet/AddCardSheet'
@@ -11,7 +12,7 @@ import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 
 import type { Card, Bank } from '@/types'
-import { cn, $fd, $fk, fmtDate } from '@/lib/utils'
+import { cn, $fd, $fk, fmtDate, haptic } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
 import { pageCache } from '@/lib/page-cache'
 import { PullIndicator } from '@/components/ui/PullIndicator'
@@ -51,13 +52,27 @@ export default function WalletPage() {
   const [cardExpenses,    setCardExpenses]  = useState<CardExpense[]>([])
   const [cardSubs,        setCardSubs]      = useState<CardSub[]>([])
   const [expLoading,      setExpLoading]    = useState(false)
-  const [reorderMode,     setReorderMode]   = useState(false)
+  const [draggingId,      setDraggingId]    = useState<string | null>(null)
+  const [dragCards,       setDragCards]     = useState<Card[]>([])
 
   const supabase        = useMemo(() => createClient(), [])
   const loadGen         = useRef(0)
   const abortRef        = useRef<AbortController | null>(null)
   const detailGen       = useRef(0)
   const detailAbortRef  = useRef<AbortController | null>(null)
+
+  const containerRef        = useRef<HTMLDivElement | null>(null)
+  const cardsRef            = useRef<Card[]>(cards)
+  const draggingIdRef       = useRef<string | null>(null)
+  const isDraggingRef       = useRef(false)
+  const justEndedDragRef    = useRef(false)
+  const lpTimerRef          = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const workingRef          = useRef<Card[]>([])
+  const dragStartYRef       = useRef(0)
+  const dragStartXRef       = useRef(0)
+  const dragStartIdxRef     = useRef(0)
+  const dragCurrentIdxRef   = useRef(0)
+  const dragCardHRef        = useRef(0)
 
   const loadData = useCallback(async () => {
     abortRef.current?.abort()
@@ -93,6 +108,7 @@ export default function WalletPage() {
   }, [supabase])
 
   useEffect(() => { loadData(); return () => { loadGen.current++; abortRef.current?.abort() } }, [loadData])
+  useEffect(() => { cardsRef.current = cards }, [cards])
 
   const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } =
     usePullToRefresh(loadData)
@@ -202,20 +218,130 @@ export default function WalletPage() {
     if (error) { console.error('update card error:', JSON.stringify(error)); await loadData() }
   }
 
-  async function handleMoveCard(id: string, dir: 'up' | 'down') {
-    const idx = cards.findIndex(c => c.id === id)
-    if (idx === -1) return
-    const swapIdx = dir === 'up' ? idx - 1 : idx + 1
-    if (swapIdx < 0 || swapIdx >= cards.length) return
+  useEffect(() => {
+    const el = containerRef.current!
+    if (!el) return
 
-    const reordered = [...cards]
-    ;[reordered[idx], reordered[swapIdx]] = [reordered[swapIdx], reordered[idx]]
-    setCards(reordered)
+    function getCardId(touch: Touch): string | null {
+      let node = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement | null
+      while (node && node !== el) {
+        if (node.dataset.cardId) return node.dataset.cardId
+        node = node.parentElement
+      }
+      return null
+    }
 
-    await Promise.all(
-      reordered.map((c, i) => supabase.from('cards').update({ sort_order: i }).eq('id', c.id))
-    )
-  }
+    function onTouchStart(e: TouchEvent) {
+      const touch = e.touches[0]
+      const cardId = getCardId(touch)
+      if (!cardId) return
+
+      dragStartYRef.current = touch.clientY
+      dragStartXRef.current = touch.clientX
+
+      lpTimerRef.current = setTimeout(() => {
+        const cur = cardsRef.current
+        const startIdx = cur.findIndex(c => c.id === cardId)
+        if (startIdx === -1) return
+        const cardEl = el.querySelector(`[data-card-id="${cardId}"]`) as HTMLElement | null
+        if (!cardEl) return
+
+        workingRef.current        = [...cur]
+        dragStartIdxRef.current   = startIdx
+        dragCurrentIdxRef.current = startIdx
+        dragCardHRef.current      = cardEl.getBoundingClientRect().height + 16
+        isDraggingRef.current     = true
+        draggingIdRef.current     = cardId
+
+        haptic('tap')
+        cardEl.style.transition = 'none'
+
+        flushSync(() => {
+          setDraggingId(cardId)
+          setDragCards([...cur])
+        })
+      }, 450)
+    }
+
+    function onTouchMove(e: TouchEvent) {
+      const touch = e.touches[0]
+
+      if (!isDraggingRef.current) {
+        if (lpTimerRef.current !== null) {
+          const dx = Math.abs(touch.clientX - dragStartXRef.current)
+          const dy = Math.abs(touch.clientY - dragStartYRef.current)
+          if (dx > 8 || dy > 8) {
+            clearTimeout(lpTimerRef.current)
+            lpTimerRef.current = null
+          }
+        }
+        return
+      }
+
+      e.preventDefault()
+
+      const deltaY = touch.clientY - dragStartYRef.current
+      const cardH  = dragCardHRef.current
+      const maxIdx = workingRef.current.length - 1
+      const newIdx = Math.max(0, Math.min(maxIdx, Math.round(dragStartIdxRef.current + deltaY / cardH)))
+
+      if (newIdx !== dragCurrentIdxRef.current) {
+        const oldIdx  = dragCurrentIdxRef.current
+        const dragged = workingRef.current[oldIdx]
+        workingRef.current.splice(oldIdx, 1)
+        workingRef.current.splice(newIdx, 0, dragged)
+        dragCurrentIdxRef.current = newIdx
+        haptic('tap')
+        flushSync(() => setDragCards([...workingRef.current]))
+      }
+
+      const cardEl = el.querySelector(`[data-card-id="${draggingIdRef.current}"]`) as HTMLElement | null
+      if (cardEl) {
+        const adj = deltaY - (dragCurrentIdxRef.current - dragStartIdxRef.current) * cardH
+        cardEl.style.transform  = `scale(1.04) translateY(${adj}px)`
+        cardEl.style.transition = 'none'
+      }
+    }
+
+    function onTouchEnd() {
+      if (lpTimerRef.current !== null) { clearTimeout(lpTimerRef.current); lpTimerRef.current = null }
+      if (!isDraggingRef.current) return
+
+      isDraggingRef.current    = false
+      draggingIdRef.current    = null
+      justEndedDragRef.current = true
+      setTimeout(() => { justEndedDragRef.current = false }, 300)
+
+      const finalOrder = [...workingRef.current]
+
+      el.querySelectorAll('[data-card-id]').forEach(node => {
+        const n = node as HTMLElement
+        n.style.transform  = ''
+        n.style.transition = ''
+      })
+
+      setDraggingId(null)
+      setCards(finalOrder)
+
+      const cached = pageCache.get<{ cards: Card[]; banks: Bank[] }>('wallet')
+      if (cached) pageCache.set('wallet', { ...cached, cards: finalOrder })
+
+      Promise.all(finalOrder.map((c, i) =>
+        supabase.from('cards').update({ sort_order: i }).eq('id', c.id)
+      ))
+    }
+
+    el.addEventListener('touchstart',  onTouchStart, { passive: true })
+    el.addEventListener('touchmove',   onTouchMove,  { passive: false })
+    el.addEventListener('touchend',    onTouchEnd)
+    el.addEventListener('touchcancel', onTouchEnd)
+    return () => {
+      el.removeEventListener('touchstart',  onTouchStart)
+      el.removeEventListener('touchmove',   onTouchMove)
+      el.removeEventListener('touchend',    onTouchEnd)
+      el.removeEventListener('touchcancel', onTouchEnd)
+    }
+  }, [supabase, tab])
 
   async function handleMakeDefault(cardId: string) {
     setCards(prev => prev.map(c => ({ ...c, is_default: c.id === cardId })))
@@ -252,20 +378,7 @@ export default function WalletPage() {
 
         <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
 
-        {/* ── Header ─────────────────────────────────────────────────────── */}
-        <div className="px-5 pt-12 pb-0 flex justify-end items-center gap-2">
-          {tab === 'Cards' && cards.length > 1 && (
-            <button
-              onClick={() => setReorderMode(v => !v)}
-              className={cn(
-                'h-8 px-3 rounded-full text-[11px] font-medium select-none transition-colors',
-                reorderMode ? 'bg-gold/20 text-gold' : 'bg-bg-overlay text-ink-muted'
-              )}
-            >
-              {reorderMode ? 'Done' : 'Reorder'}
-            </button>
-          )}
-        </div>
+        <div className="pt-12" />
 
         {/* ── Tab toggle ─────────────────────────────────────────────────── */}
         <div className="mx-4 mt-4">
@@ -283,37 +396,32 @@ export default function WalletPage() {
 
         {/* ── Cards ──────────────────────────────────────────────────────── */}
         {!loading && tab === 'Cards' && (
-          <div className="px-4 mt-5 flex flex-col gap-4">
+          <div ref={containerRef} className="px-4 mt-5 flex flex-col gap-4">
             {cards.length === 0 && (
               <div className="py-12 text-center text-ink-faint text-[13px]">
                 No cards yet — add your first one above.
               </div>
             )}
-            {cards.map((card, idx) => (
-              <div key={card.id}>
-                <SwipeToDelete onDelete={() => handleDeleteCard(card.id)} onTap={reorderMode ? undefined : () => setSelectedCard(card)} className="rounded-card">
-                  <div className={cn('transition-transform duration-75', !reorderMode && 'active:scale-[0.98]')}>
+            {(draggingId ? dragCards : cards).map(card => (
+              <div
+                key={card.id}
+                data-card-id={card.id}
+                style={{
+                  position:   'relative',
+                  opacity:    draggingId && draggingId !== card.id ? 0.6 : 1,
+                  transition: draggingId ? 'opacity 200ms ease' : undefined,
+                  zIndex:     draggingId === card.id ? 10 : undefined,
+                }}
+              >
+                <SwipeToDelete
+                  onDelete={() => handleDeleteCard(card.id)}
+                  onTap={() => { if (justEndedDragRef.current) return; setSelectedCard(card) }}
+                  className="rounded-card"
+                >
+                  <div className={cn('transition-transform duration-75', !draggingId && 'active:scale-[0.98]')}>
                     <CardVisual card={card} />
                   </div>
                 </SwipeToDelete>
-                {reorderMode && (
-                  <div className="flex justify-end gap-2 mt-2 pr-1">
-                    <button
-                      onClick={() => handleMoveCard(card.id, 'up')}
-                      disabled={idx === 0}
-                      className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center text-ink-muted disabled:opacity-30 select-none"
-                    >
-                      ↑
-                    </button>
-                    <button
-                      onClick={() => handleMoveCard(card.id, 'down')}
-                      disabled={idx === cards.length - 1}
-                      className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center text-ink-muted disabled:opacity-30 select-none"
-                    >
-                      ↓
-                    </button>
-                  </div>
-                )}
               </div>
             ))}
           </div>

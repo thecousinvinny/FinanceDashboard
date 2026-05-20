@@ -48,6 +48,7 @@ export function allDayEvent(summary: string, date: string, description?: string,
 }
 
 // Build a timed GCalEvent (times as "HH:MM", tz = IANA name).
+// Handles cross-midnight: if endTime < startTime, end is placed on the next calendar day.
 export function timedEvent(
   summary:   string,
   date:      string,
@@ -56,11 +57,17 @@ export function timedEvent(
   opts:      { description?: string; location?: string; timeZone?: string } = {},
 ): GCalEvent {
   const tz = opts.timeZone ?? 'America/Los_Angeles'
+  let endDate = date
+  if (endTime && startTime && endTime < startTime) {
+    const [y, m, d] = date.split('-').map(Number)
+    const next = new Date(y, m - 1, d + 1)
+    endDate = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`
+  }
   return {
     summary,
     description: opts.description,
     location:    opts.location,
-    start: { dateTime: `${date}T${startTime}:00`, timeZone: tz },
-    end:   { dateTime: `${date}T${endTime}:00`,   timeZone: tz },
+    start: { dateTime: `${date}T${startTime}:00`,   timeZone: tz },
+    end:   { dateTime: `${endDate}T${endTime}:00`,  timeZone: tz },
   }
 }

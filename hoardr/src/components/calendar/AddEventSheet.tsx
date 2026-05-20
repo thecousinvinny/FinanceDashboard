@@ -71,7 +71,6 @@ export function AddEventSheet({ open, defaultDate, defaultCalendarId, googleCals
         const place = (acRef.current as { getPlace: () => { formatted_address?: string; name?: string } }).getPlace()
         const addr  = place.formatted_address || place.name || ''
         setForm(f => ({ ...f, location: addr }))
-        if (locationRef.current) locationRef.current.value = addr
       })
     }
 
@@ -253,7 +252,7 @@ export function AddEventSheet({ open, defaultDate, defaultCalendarId, googleCals
               ref={locationRef}
               type="text"
               placeholder="Add location"
-              defaultValue={form.location}
+              value={form.location}
               onChange={e => set('location', e.target.value)}
               className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] pl-10 pr-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40"
             />

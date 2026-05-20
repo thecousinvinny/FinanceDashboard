@@ -346,11 +346,13 @@ export default function CalendarPage() {
       for (const i of inc  ?? []) push(String(i.date), { title: String(i.name), type: 'income',  amount: `+$${Number(i.amount).toFixed(2)}` })
       for (const s of subs ?? []) if (s.next_renewal) push(String(s.next_renewal), { title: String(s.name), type: 'sub', amount: `$${Number(s.cost).toFixed(2)}` })
       for (const c of cevs ?? []) {
-        const st         = c.start_time ? String(c.start_time) : ''
-        const et         = c.end_time   ? String(c.end_time)   : ''
+        // Slice to HH:MM — Postgres TIME returns 'HH:MM:SS' via PostgREST
+        const st         = c.start_time ? String(c.start_time).slice(0, 5) : ''
+        const et         = c.end_time   ? String(c.end_time).slice(0, 5)   : ''
         const baseDate   = String(c.date)
         const rrule      = c.recurrence_rule ? String(c.recurrence_rule) : null
         const exceptions = (c.recurrence_exceptions as string[] | null) ?? []
+        const isCrossMidnight = !!(st && et && et < st)
         const base: CalEvent = {
           id: String(c.id), title: String(c.title), type: 'custom',
           amount: st ? `${st}${et ? ` – ${et}` : ''}` : '',
@@ -359,12 +361,19 @@ export default function CalendarPage() {
           googleEventId: c.google_event_id ? String(c.google_event_id) : undefined,
           recurrenceRule: rrule ?? undefined,
         }
+        const nextDayOf = (ds: string) => {
+          const [y, m, d] = ds.split('-').map(Number)
+          const nd = new Date(y, m - 1, d + 1)
+          return `${nd.getFullYear()}-${String(nd.getMonth() + 1).padStart(2, '0')}-${String(nd.getDate()).padStart(2, '0')}`
+        }
         if (rrule) {
           for (const instanceDate of expandRRule(rrule, baseDate, expandStart, expandEnd, exceptions)) {
             push(instanceDate, { ...base, instanceDate })
+            if (isCrossMidnight) push(nextDayOf(instanceDate), { ...base, instanceDate })
           }
         } else {
           push(baseDate, { ...base, instanceDate: baseDate })
+          if (isCrossMidnight) push(nextDayOf(baseDate), { ...base, instanceDate: baseDate })
         }
       }
       setEventMap(map)
@@ -1182,7 +1191,11 @@ export default function CalendarPage() {
                                 {/* Single-day all-day events */}
                                 <div style={{ paddingLeft: 4, paddingRight: 4, display: 'flex', flexDirection: 'column' }}>
                                   {allDayEvs.slice(0, shownAllDay).map((ev, ei) => (
-                                    <div key={ei} style={{ background: notionColor(ev) + 'DD', borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, opacity: 0.85 }}>
+                                    <div
+                                      key={ei}
+                                      onClick={ev.id ? (e) => { e.stopPropagation(); handleOpenEdit(ev) } : undefined}
+                                      style={{ background: notionColor(ev) + 'DD', borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, opacity: 0.85, cursor: ev.id ? 'pointer' : 'default' }}
+                                    >
                                       <span style={{ fontSize: 10, color: '#fff', fontFamily: 'var(--font-montserrat)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
                                     </div>
                                   ))}
@@ -1193,7 +1206,11 @@ export default function CalendarPage() {
                                       ? ev.amount.split(' – ')[0].trim().replace(/^(\d{2}):(\d{2})$/, (_, hh, mm) => { const n = Number(hh); return `${n % 12 || 12}:${mm}${n >= 12 ? 'p' : 'a'}` })
                                       : null
                                     return (
-                                      <div key={ei} style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 2, height: 18, overflow: 'hidden', flexShrink: 0, opacity: 0.85 }}>
+                                      <div
+                                        key={ei}
+                                        onClick={ev.id ? (e) => { e.stopPropagation(); handleOpenEdit(ev) } : undefined}
+                                        style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 2, height: 18, overflow: 'hidden', flexShrink: 0, opacity: 0.85, cursor: ev.id ? 'pointer' : 'default' }}
+                                      >
                                         <div style={{ width: 3, height: '100%', borderRadius: 2, background: bar, flexShrink: 0 }} />
                                         <span style={{ fontSize: 10, color: '#fff', fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
                                           {timeStr && <span style={{ color: 'rgba(255,255,255,0.45)', marginRight: 3 }}>{timeStr}</span>}{ev.title}
