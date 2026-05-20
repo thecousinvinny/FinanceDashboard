@@ -267,8 +267,9 @@ export default function CalendarPage() {
   const v2Swipe        = useRef<{ x: number; y: number } | null>(null)
   const v3Swipe        = useRef<{ x: number; y: number } | null>(null)
   const rowSwipe       = useRef<{ x: number; y: number; ds: string } | null>(null)
-  const scrollToToday  = useRef(false)  // only center today when entering from View 1
+  const scrollToToday   = useRef(false)  // only center today when entering from View 1
   const suppressPrepend = useRef(false)  // block prepend rAF from clobbering scroll-to-today
+  const monthLblTapRef  = useRef<number>(0)  // timestamp of last tap on month label (double-tap detection)
 
   useEffect(() => { monthsRef.current = months }, [months])
   useEffect(() => { notionWeeksRef.current = notionWeeks }, [notionWeeks])
@@ -911,8 +912,25 @@ export default function CalendarPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <>
-    {/* Gold month label pinned to left viewport edge — shown only in View 2 */}
-    <div style={{ position: 'fixed', left: 6, top: 'env(safe-area-inset-top, 0px)', bottom: 72, width: 20, zIndex: 30, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: viewIndex === 1 ? 1 : 0, transition: 'opacity 0.25s ease' }}>
+    {/* Gold month label pinned to left viewport edge — shown only in View 2; double-tap scrolls to today */}
+    <div
+      style={{ position: 'fixed', left: 6, top: 'env(safe-area-inset-top, 0px)', bottom: 72, width: 20, zIndex: 30, pointerEvents: viewIndex === 1 ? 'auto' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: viewIndex === 1 ? 1 : 0, transition: 'opacity 0.25s ease', cursor: 'pointer' }}
+      onDoubleClick={() => {
+        const sc = scrollRef.current, el = dayRefs.current.get(todayStr)
+        if (sc && el) { const cR = sc.getBoundingClientRect(), eR = el.getBoundingClientRect(); sc.scrollTop = sc.scrollTop + eR.top - cR.top - sc.clientHeight / 2 + eR.height / 2 }
+      }}
+      onTouchEnd={(e) => {
+        e.preventDefault()
+        const now = Date.now()
+        if (now - monthLblTapRef.current < 350) {
+          monthLblTapRef.current = 0
+          const sc = scrollRef.current, el = dayRefs.current.get(todayStr)
+          if (sc && el) { const cR = sc.getBoundingClientRect(), eR = el.getBoundingClientRect(); sc.scrollTop = sc.scrollTop + eR.top - cR.top - sc.clientHeight / 2 + eR.height / 2 }
+        } else {
+          monthLblTapRef.current = now
+        }
+      }}
+    >
       <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 8, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 800, color: 'rgba(212,175,55,0.65)', userSelect: 'none', whiteSpace: 'nowrap' }}>
         {sideLbl}
       </span>
@@ -1193,8 +1211,8 @@ export default function CalendarPage() {
                                   {allDayEvs.slice(0, shownAllDay).map((ev, ei) => (
                                     <div
                                       key={ei}
-                                      onClick={ev.id ? (e) => { e.stopPropagation(); handleOpenEdit(ev) } : undefined}
-                                      style={{ background: notionColor(ev) + 'DD', borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, opacity: 0.85, cursor: ev.id ? 'pointer' : 'default' }}
+                                      onClick={ev.type === 'custom' && ev.id ? (e) => { e.stopPropagation(); handleOpenEdit(ev) } : undefined}
+                                      style={{ background: notionColor(ev) + 'DD', borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, opacity: 0.85, cursor: ev.type === 'custom' && ev.id ? 'pointer' : 'default' }}
                                     >
                                       <span style={{ fontSize: 10, color: '#fff', fontFamily: 'var(--font-montserrat)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
                                     </div>
@@ -1208,8 +1226,8 @@ export default function CalendarPage() {
                                     return (
                                       <div
                                         key={ei}
-                                        onClick={ev.id ? (e) => { e.stopPropagation(); handleOpenEdit(ev) } : undefined}
-                                        style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 2, height: 18, overflow: 'hidden', flexShrink: 0, opacity: 0.85, cursor: ev.id ? 'pointer' : 'default' }}
+                                        onClick={ev.type === 'custom' && ev.id ? (e) => { e.stopPropagation(); handleOpenEdit(ev) } : undefined}
+                                        style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 2, height: 18, overflow: 'hidden', flexShrink: 0, opacity: 0.85, cursor: ev.type === 'custom' && ev.id ? 'pointer' : 'default' }}
                                       >
                                         <div style={{ width: 3, height: '100%', borderRadius: 2, background: bar, flexShrink: 0 }} />
                                         <span style={{ fontSize: 10, color: '#fff', fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
@@ -1294,23 +1312,9 @@ export default function CalendarPage() {
             Right swipe anywhere → View 1
             Row swipe left       → View 3
         ═══════════════════════════════════════════════════════════════ */}
-        <div style={{ width: '100vw', height: '100%', flex: 'none', background: '#0a0a0a', display: 'flex', flexDirection: 'column', touchAction: 'pan-y', userSelect: 'none' }}
+        <div style={{ width: '100vw', height: '100%', flex: 'none', background: '#0a0a0a', display: 'flex', flexDirection: 'column', touchAction: 'pan-y', userSelect: 'none', paddingTop: SAFE_TOP, boxSizing: 'border-box' }}
           onTouchStart={v2Start} onTouchEnd={v2End}
           onMouseDown={v2MouseDown} onMouseUp={v2MouseUp} onMouseLeave={() => { v2Swipe.current = null }}>
-
-          {/* Compact header */}
-          <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingTop: SAFE_TOP, paddingBottom: 10, paddingLeft: 14, paddingRight: 14, gap: 6, background: '#0a0a0a', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-            <button onClick={() => { const sc = scrollRef.current; const el = dayRefs.current.get(todayStr); if (sc && el) { const cRect = sc.getBoundingClientRect(); const eRect = el.getBoundingClientRect(); sc.scrollTop = sc.scrollTop + eRect.top - cRect.top - sc.clientHeight / 2 + eRect.height / 2 } }}
-              style={{ height: 30, padding: '0 10px', borderRadius: 15, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.07)', fontSize: 11, color: '#D4AF37', fontWeight: 600, flexShrink: 0, cursor: 'pointer' }}>
-              Today
-            </button>
-            <button onClick={() => setSettingsOpen(true)} style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer' }}>
-              <SlidersHorizontal size={13} color="rgba(255,255,255,0.45)" />
-            </button>
-            <button onClick={() => setAddOpen(true)} style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#F7DF9E,#D4AF37,#A47F23)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer' }}>
-              <Plus size={15} color="white" />
-            </button>
-          </div>
 
           {/* ── Infinite Scroll List ─────────────────────────────────────── */}
           {(
@@ -1362,7 +1366,7 @@ export default function CalendarPage() {
                           ? (ev.amount ? getTimeRange(ev) : 'ALL DAY')
                           : (ev.amount || null)
                         return (
-                          <button key={idx} onClick={() => { setSelectedDay(ds); setViewIndex(2); navigator.vibrate?.(6) }}
+                          <button key={idx} onClick={() => { navigator.vibrate?.(6); if (ev.type === 'custom' && ev.id) { handleOpenEdit(ev) } else { setSelectedDay(ds); setViewIndex(2) } }}
                             style={{ display: 'flex', alignItems: 'stretch', width: '100%', background: 'none', border: 'none', padding: '10px 0', cursor: 'pointer', textAlign: 'left', gap: 9 }}>
                             {/* Vertical colored bar */}
                             <div style={{ width: 3, borderRadius: 2, background: bar, flexShrink: 0 }} />
@@ -1436,6 +1440,7 @@ export default function CalendarPage() {
                 })}
               </div>
             )}
+            <div style={{ height: 96 }} />
           </div>
 
           {/* ── Weather — pinned bottom, day-specific from 14-day forecast ── */}
@@ -1458,6 +1463,16 @@ export default function CalendarPage() {
 
       </div>{/* end sliding rail */}
     </div>{/* end root */}
+
+    {/* View 3 FAB — add event for the current day */}
+    {viewIndex === 2 && (
+      <button
+        onClick={() => { setAddDate(selectedDay ?? undefined); setAddOpen(true) }}
+        className="fixed gradient-gold rounded-full flex items-center justify-center text-white select-none"
+        style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, fontWeight: 300, zIndex: 40, boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)' }}
+        aria-label="Add event"
+      >+</button>
+    )}
 
     <AddEventSheet open={addOpen} defaultDate={addDate ?? selectedDay ?? gridSel ?? undefined} defaultCalendarId={prefs.defaultCalendarId} googleCals={googleCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => { setAddOpen(false); setTimeout(() => setAddDate(undefined), 300) }} onAdd={handleAddEvent} />
     <EditEventSheet open={!!editEvent} event={editEvent} googleCals={googleCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => setEditEvent(null)} onSave={handleEditEvent} onDelete={scope => { if (editEvent) { const ev: CalEvent = { id: editEvent.id, title: editEvent.title, type: 'custom', amount: editEvent.allDay ? '' : `${editEvent.startTime}${editEvent.endTime ? ` – ${editEvent.endTime}` : ''}`, recurrenceRule: editEvent.recurrenceRule || undefined, instanceDate: editEvent.instanceDate, googleEventId: editEvent.googleEventId }; handleDeleteEventWithScope(ev, scope) } setEditEvent(null) }} />

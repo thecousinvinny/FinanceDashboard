@@ -49,8 +49,8 @@ function getTexturePattern(texture: CardTexture, id: string): React.ReactElement
   )
 }
 
-export function CardVisual({ card }: { card: Card }) {
-  const { name, alias, type, last4, expires, cardholder, network, style, is_default } = card
+export function CardVisual({ card, expenseCount, subCount }: { card: Card; expenseCount?: number; subCount?: number }) {
+  const { name, alias, type, last4, expires, network, style, is_default } = card
   const texture  = card.texture ?? 'none'
   const def      = CARD_STYLE_DEFS[style] ?? CARD_STYLE_DEFS.black
   const patId    = `tex-${card.id}`
@@ -111,8 +111,12 @@ export function CardVisual({ card }: { card: Card }) {
       <div className="relative flex items-end justify-between mt-auto">
         <div className="flex gap-5">
           <div>
-            <p className="text-[7px] tracking-[0.1em] uppercase mb-0.5" style={{ color: def.textMuted }}>Cardholder</p>
-            <p className="text-[10px] font-medium tracking-wider" style={{ color: def.textPrimary }}>{cardholder ?? ''}</p>
+            <p className="text-[7px] tracking-[0.1em] uppercase mb-0.5" style={{ color: def.textMuted }}>Expenses</p>
+            <p className="text-[10px] font-medium" style={{ color: def.textPrimary }}>{expenseCount ?? 0}</p>
+          </div>
+          <div>
+            <p className="text-[7px] tracking-[0.1em] uppercase mb-0.5" style={{ color: def.textMuted }}>Subs</p>
+            <p className="text-[10px] font-medium" style={{ color: def.textPrimary }}>{subCount ?? 0}</p>
           </div>
           {expires && (
             <div>

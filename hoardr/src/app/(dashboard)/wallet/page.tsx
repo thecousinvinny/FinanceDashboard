@@ -52,6 +52,7 @@ export default function WalletPage() {
   const [cardExpenses,    setCardExpenses]  = useState<CardExpense[]>([])
   const [cardSubs,        setCardSubs]      = useState<CardSub[]>([])
   const [expLoading,      setExpLoading]    = useState(false)
+  const [cardStats,       setCardStats]     = useState<Record<string, { expenses: number; subs: number }>>({})
   const [draggingId,      setDraggingId]    = useState<string | null>(null)
   const [dragCards,       setDragCards]     = useState<Card[]>([])
 
@@ -80,7 +81,7 @@ export default function WalletPage() {
     abortRef.current = controller
     const gen = ++loadGen.current
     try {
-      const [{ data: cardsData }, { data: banksData }] = await Promise.all([
+      const [{ data: cardsData }, { data: banksData }, { data: expCardIds }, { data: subCardIds }] = await Promise.all([
         supabase
           .from('cards')
           .select('*, bank:banks(id, name, type, last4)')
@@ -93,12 +94,25 @@ export default function WalletPage() {
           .select('*')
           .order('created_at', { ascending: false })
           .abortSignal(controller.signal),
+        supabase.from('expenses').select('card_id').not('card_id', 'is', null).abortSignal(controller.signal),
+        supabase.from('subscriptions').select('card_id').not('card_id', 'is', null).abortSignal(controller.signal),
       ])
       const newCards = (cardsData ?? []) as Card[]
       const newBanks = (banksData  ?? []) as Bank[]
+      // Build per-card counts
+      const stats: Record<string, { expenses: number; subs: number }> = {}
+      for (const row of (expCardIds ?? []) as { card_id: string }[]) {
+        if (!stats[row.card_id]) stats[row.card_id] = { expenses: 0, subs: 0 }
+        stats[row.card_id].expenses++
+      }
+      for (const row of (subCardIds ?? []) as { card_id: string }[]) {
+        if (!stats[row.card_id]) stats[row.card_id] = { expenses: 0, subs: 0 }
+        stats[row.card_id].subs++
+      }
       if (gen !== loadGen.current) return
       setCards(newCards)
       setBanks(newBanks)
+      setCardStats(stats)
       pageCache.set('wallet', { cards: newCards, banks: newBanks })
       setLoading(false)
     } catch (err) {
@@ -419,7 +433,7 @@ export default function WalletPage() {
                   className="rounded-card"
                 >
                   <div className={cn('transition-transform duration-75', !draggingId && 'active:scale-[0.98]')}>
-                    <CardVisual card={card} />
+                    <CardVisual card={card} expenseCount={cardStats[card.id]?.expenses ?? 0} subCount={cardStats[card.id]?.subs ?? 0} />
                   </div>
                 </SwipeToDelete>
               </div>
