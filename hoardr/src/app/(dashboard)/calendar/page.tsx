@@ -157,11 +157,8 @@ function DayEventCard({ ev, dot, timeRange, amt, onDelete, onEdit }: {
 }) {
   const M = 'var(--font-montserrat)'
   const isEditable = ev.type === 'custom' && !!ev.id
-  return (
-    <div
-      onClick={() => { if (isEditable) onEdit(ev) }}
-      style={{ paddingTop: 24, paddingBottom: 24, borderBottom: '1px solid rgba(255,255,255,0.05)', textAlign: 'center', cursor: isEditable ? 'pointer' : 'default' }}
-    >
+  const inner = (
+    <>
       {/* Title + dot — centered as a group */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, marginBottom: 6 }}>
         <span style={{ width: 7, height: 7, borderRadius: '50%', background: dot, flexShrink: 0 }} />
@@ -179,10 +176,13 @@ function DayEventCard({ ev, dot, timeRange, amt, onDelete, onEdit }: {
         {amt         && <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.36)', fontFamily: M }}>{amt}</span>}
         {ev.location && <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.28)', fontFamily: M }}>{ev.location}</span>}
         {ev.notes    && <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.22)', fontFamily: M, lineHeight: 1.55 }}>{ev.notes}</span>}
-        {isEditable  && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.18)', fontFamily: M, letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 4 }}>Tap to edit</span>}
       </div>
-    </div>
+    </>
   )
+  const sharedStyle = { paddingTop: 24, paddingBottom: 24, borderBottom: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' as const, width: '100%' }
+  return isEditable
+    ? <button onClick={() => onEdit(ev)} style={{ ...sharedStyle, background: 'none', border: 'none', cursor: 'pointer', display: 'block' }}>{inner}</button>
+    : <div style={sharedStyle}>{inner}</div>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1455,13 +1455,17 @@ export default function CalendarPage() {
 
           {/* Airy event list */}
           <div style={{ flex: 1, overflowY: 'auto' }}>
-            {dayEvents.length === 0 ? (
+            {(() => {
+              // Prefer custom events over google duplicates (same event shows twice if dedup misfired)
+              const customGids = new Set(dayEvents.filter(e => e.type === 'custom' && e.googleEventId).map(e => e.googleEventId!))
+              const eventsToShow = dayEvents.filter(e => e.type !== 'google' || !e.id || !customGids.has(e.id))
+              return eventsToShow.length === 0 ? (
               <div style={{ paddingTop: 52, textAlign: 'center', color: 'rgba(255,255,255,0.15)', fontSize: 13, fontFamily: 'var(--font-montserrat)', letterSpacing: '0.06em' }}>
                 Nothing scheduled
               </div>
             ) : (
               <div style={{ padding: '0 32px' }}>
-                {dayEvents.map((ev, idx) => {
+                {eventsToShow.map((ev, idx) => {
                   const timeRange = getTimeRange(ev)
                   const dot = ev.color ?? DETAIL_DOT[ev.type]
                   const amt = ev.type !== 'custom' && ev.type !== 'google' ? ev.amount : null
@@ -1470,7 +1474,8 @@ export default function CalendarPage() {
                   )
                 })}
               </div>
-            )}
+            )
+            })()}
             <div style={{ height: 96 }} />
           </div>
 
