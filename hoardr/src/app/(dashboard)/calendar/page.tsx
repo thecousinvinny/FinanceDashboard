@@ -124,11 +124,11 @@ const SAFE_TOP = 'calc(max(env(safe-area-inset-top, 0px), 44px) + 12px)'
 const GRID_EXPANDED = 280  // px — compact month grid height in split view
 
 // ── Grid event row ─────────────────────────────────────────────────────────────
-function EventRow({ ev, onDelete }: { ev: CalEvent; onDelete: (ev: CalEvent) => void }) {
-  // For custom/google events, ev.amount holds raw "HH:MM – HH:MM" — convert to AM/PM
+function EventRow({ ev, onDelete, onEdit }: { ev: CalEvent; onDelete: (ev: CalEvent) => void; onEdit: (ev: CalEvent) => void }) {
   const displayAmt = ev.amount && (ev.type === 'custom' || ev.type === 'google')
     ? ev.amount.split(' – ').map(t => /^\d{2}:\d{2}$/.test(t.trim()) ? fmt12(t.trim()) : t).join(' – ')
     : ev.amount
+  const isEditable = ev.type === 'custom' && !!ev.id
   return (
     <div className="flex items-start gap-3 px-4 py-3.5">
       <span className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5" style={{ background: ev.color ?? DOT_COLOR[ev.type] }} />
@@ -137,12 +137,17 @@ function EventRow({ ev, onDelete }: { ev: CalEvent; onDelete: (ev: CalEvent) => 
         {ev.location && <p className="text-[11px] text-ink-muted mt-0.5 truncate">📍 {ev.location}</p>}
         {ev.notes    && <p className="text-[11px] text-ink-faint mt-0.5 line-clamp-2">{ev.notes}</p>}
       </div>
-      <div className="flex items-center gap-2 flex-shrink-0">
+      <div className="flex items-center gap-1.5 flex-shrink-0">
         {displayAmt && <span className={cn('text-[11px] font-semibold font-mono px-2 py-0.5 rounded-md', EVENT_COLOR[ev.type])}>{displayAmt}</span>}
-        {ev.type === 'custom' && (
-          <button onClick={() => onDelete(ev)} className="w-7 h-7 rounded-full bg-bg-overlay flex items-center justify-center" aria-label="Delete event">
-            <Trash2 size={12} className="text-ruby" />
-          </button>
+        {isEditable && (
+          <>
+            <button onClick={() => onEdit(ev)} className="w-7 h-7 rounded-full bg-bg-overlay flex items-center justify-center" aria-label="Edit event">
+              <Pencil size={11} className="text-ink-muted" />
+            </button>
+            <button onClick={() => onDelete(ev)} className="w-7 h-7 rounded-full bg-bg-overlay flex items-center justify-center" aria-label="Delete event">
+              <Trash2 size={11} className="text-ruby" />
+            </button>
+          </>
         )}
       </div>
     </div>
@@ -1228,7 +1233,7 @@ export default function CalendarPage() {
                   </div>
                   {gridSelEvents.length === 0
                     ? <div className="py-8 text-center text-ink-faint text-[13px]">Nothing on this day.</div>
-                    : <div className="divide-y divide-white/[0.04]">{gridSelEvents.map((ev, i) => <EventRow key={i} ev={ev} onDelete={handleDeleteCustomEvent} />)}</div>}
+                    : <div className="divide-y divide-white/[0.04]">{gridSelEvents.map((ev, i) => <EventRow key={i} ev={ev} onDelete={handleDeleteCustomEvent} onEdit={handleOpenEdit} />)}</div>}
                 </div>
               )}
               {!gridSelLabel && (
@@ -1392,16 +1397,18 @@ export default function CalendarPage() {
                         <div onClick={e => { if ((e.target as Element).closest('button')) return; setAddDate(ds); setAddOpen(true) }}
                           style={{ flex: 1, paddingLeft: 12, paddingRight: 14, paddingTop: 6, paddingBottom: 6, display: 'flex', flexDirection: 'column', gap: 2, minHeight: 112, background: stripe ? '#171717' : '#1e1e1e', cursor: 'text' }}>
                           {events.map((ev, idx) => {
-                            const bar = ev.color ?? DETAIL_DOT[ev.type]
-                            const M   = 'var(--font-montserrat)'
+                            const bar        = ev.color ?? DETAIL_DOT[ev.type]
+                            const M          = 'var(--font-montserrat)'
+                            const isEditable = ev.type === 'custom' && !!ev.id
                             const row2: string | null = (ev.type === 'custom' || ev.type === 'google')
                               ? (ev.amount ? getTimeRange(ev) : 'ALL DAY')
                               : (ev.amount || null)
                             return (
-                              <button key={idx} onClick={() => { navigator.vibrate?.(6); setSelectedDay(ds); setViewIndex(1) }}
-                                style={{ display: 'flex', alignItems: 'stretch', width: '100%', background: 'none', border: 'none', padding: '10px 0', cursor: 'pointer', textAlign: 'left', gap: 9 }}>
-                                <div style={{ width: 3, borderRadius: 2, background: bar, flexShrink: 0 }} />
-                                <div style={{ flex: 1, minWidth: 0 }}>
+                              <div key={idx} onClick={e => e.stopPropagation()}
+                                style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '10px 0', gap: 9 }}>
+                                <div style={{ width: 3, borderRadius: 2, background: bar, flexShrink: 0, alignSelf: 'stretch' }} />
+                                <button onClick={() => { navigator.vibrate?.(6); setSelectedDay(ds); setViewIndex(1) }}
+                                  style={{ flex: 1, minWidth: 0, background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer' }}>
                                   <p style={{ fontSize: 14, fontWeight: 500, color: isTod ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.82)', fontFamily: M, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.35 }}>
                                     {ev.title}
                                   </p>
@@ -1415,8 +1422,20 @@ export default function CalendarPage() {
                                       {ev.location}
                                     </p>
                                   )}
-                                </div>
-                              </button>
+                                </button>
+                                {isEditable && (
+                                  <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                                    <button onClick={() => { navigator.vibrate?.(6); handleOpenEdit(ev) }}
+                                      style={{ width: 28, height: 28, borderRadius: 14, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                      <Pencil size={11} color="rgba(255,255,255,0.45)" />
+                                    </button>
+                                    <button onClick={() => { navigator.vibrate?.(6); handleDeleteCustomEvent(ev) }}
+                                      style={{ width: 28, height: 28, borderRadius: 14, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                      <Trash2 size={11} color="#ef4444" />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             )
                           })}
                         </div>
