@@ -309,6 +309,11 @@ export default function HomePage() {
     })
   }
 
+  function handleSubPaid(sub: UpcomingSub) {
+    setSpent(prev => prev + sub.cost)
+    loadData()
+  }
+
   async function handleMarkArrived(id: string, name: string) {
     setEnRoute(prev => prev.filter(i => i.id !== id))
     const cached = pageCache.get<HomeCache>('home')
@@ -372,7 +377,7 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <UpcomingBills initial={upcoming} />
+          <UpcomingBills initial={upcoming} onPaid={handleSubPaid} />
 
           {/* ── En route ────────────────────────────────────────────────── */}
           {enRoute.length > 0 && (

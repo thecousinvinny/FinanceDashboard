@@ -1,7 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { RefreshCw, CheckCircle, XCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -31,9 +30,11 @@ function billingShort(b: BillingCycle) {
   }
 }
 
-export function UpcomingBills({ initial }: { initial: UpcomingSub[] }) {
+export function UpcomingBills({ initial, onPaid }: { initial: UpcomingSub[]; onPaid?: (sub: UpcomingSub) => void }) {
   const [items, setItems] = useState<UpcomingSub[]>(initial)
-  const router = useRouter()
+
+  // Sync when parent updates the upcoming list (e.g. after loadData fetches the next sub)
+  useEffect(() => { setItems(initial) }, [initial])
 
   async function handlePay(id: string) {
     const sub = items.find(s => s.id === id)
@@ -41,7 +42,9 @@ export function UpcomingBills({ initial }: { initial: UpcomingSub[] }) {
 
     const today      = localToday()
     const newRenewal = nextRenewalDate(sub.next_renewal ?? today, sub.billing)
-    setItems(prev => prev.map(s => s.id === id ? { ...s, next_renewal: newRenewal } : s))
+
+    // Remove immediately — parent will inject the next upcoming sub via the effect above
+    setItems(prev => prev.filter(s => s.id !== id))
     showToast(`${sub.name} paid`, { type: 'payment' })
 
     const supabase = createClient()
@@ -66,7 +69,8 @@ export function UpcomingBills({ initial }: { initial: UpcomingSub[] }) {
       supabase.from('subscriptions').update({ next_renewal: newRenewal }).eq('id', id),
     ])
 
-    router.refresh()
+    // Notify parent: bump spent hero + reload upcoming list from DB
+    onPaid?.(sub)
   }
 
   function handleCancel(id: string) {
