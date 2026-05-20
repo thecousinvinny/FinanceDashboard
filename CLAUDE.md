@@ -67,6 +67,7 @@ Key invariants carried over from the original app:
 - Income is a **first-class table** (not mixed into a master ledger). The `ledger` view provides the unified read layer
 - `commissions.cal_event_id` is set when a commission is Approved (creates a Google Calendar event); cleared and recreated on deadline changes
 - `wishlist_status` enum includes `'Ordered'` (added by migration `20260518_wishlist_ordered.sql`); `wishlist.ordered_at text` stores the purchase date. Do **not** spread non-existent columns into wishlist updates — the table has no `expense_id` column.
+- `cal_events` has three recurrence columns (added by migration `20260519_cal_events_recurrence.sql`): `recurrence_rule text` (RRULE string without the `RRULE:` prefix), `recurrence_exceptions text[] default '{}'` (dates to skip, `YYYY-MM-DD`), `recurrence_parent_id uuid references cal_events(id)` (unused for now; reserved for future child rows).
 
 ### Supabase clients
 
@@ -153,6 +154,8 @@ All six tabs are wired to live Supabase. `src/lib/data/transactions.ts` still ex
 - `plans/AddWishlistSheet.tsx` / `EditWishlistSheet.tsx` — exports `WishEdits`
 - `wallet/CardVisual.tsx` — renders a credit card from a `Card` prop using `CARD_STYLE_DEFS`; draws SVG texture overlay from `getTexturePattern` (defined inline); use this everywhere a card is displayed
 - `wallet/AddCardSheet.tsx` / `EditCardSheet.tsx` — card add/edit sheets with grouped 12-style color picker and 8-texture picker; `NewCard` and `CardEdits` interfaces both include `texture: CardTexture`
+- `calendar/RecurrencePicker.tsx` — bottom sheet for choosing/building a recurrence rule. Props: `{ open, date, value, onClose, onChange }`. Two views: preset list (7 options derived from the event date via `makePresets(dateStr)`) and a custom builder (frequency chips, interval stepper, weekday toggles, end condition). Renders at `z-[70]` above AddEventSheet/EditEventSheet (`z-[60]` backdrop).
+- `calendar/EditEventSheet.tsx` — edit an existing custom calendar event. Exports `EditableEvent` (the event to edit), `EventEdits` (the patch), and `RecurrenceScope = 'this' | 'following' | 'all'`. Two-step flow: a scope picker (shown only when `event.recurrenceRule` is set) then the full edit form matching AddEventSheet. Delete button opens a scope confirmation sheet at `z-[60]`/`z-[70]`.
 
 **Wallet sub stats** (Sub/Mo, Sub/Yr, All Time) are computed by cross-referencing actual paid expenses against subscription names via a case-insensitive `Set`: `new Set(cardSubs.map(s => s.name.toLowerCase()))`. The subscription name in the `subscriptions` table **must exactly match** the expense name (case-insensitive) for payments to be counted. A name mismatch silently drops those payments from the stats.
 - `home/SparkChart.tsx` — cumulative monthly sparkline with three series: `inc` (income), `exp` (non-sub expenses), `sub` (subscription payments). Values are **running totals from day 1 of the current month** — lines start at 0 on the 1st and climb to today. X-axis uses sparse absolute-positioned landmark labels (5 max) so it never squishes regardless of month length. `DayPoint { day, label, exp, inc, sub }` — all three fields are cumulative totals, not daily amounts.
@@ -277,6 +280,22 @@ Every page root `<div>` should include `tab-enter` for the mount animation. Each
 - Texture patterns are gold-tinted (`rgba(232,196,107,opacity)`) SVG `<pattern>` elements. `getTexturePattern` is defined inline in `CardVisual.tsx` (not in `cardStyles.ts`) since `.ts` files can't contain JSX.
 - `cards` DB table has a `texture text not null default 'none'` column (added by migration `20260512_cards_style_texture_fix.sql`). That migration also runs `alter column style type text` to remove any check constraint on style values.
 
+### RRULE expansion (`src/lib/rrule.ts`)
+
+- `expandRRule(rule, baseDate, rangeStart, rangeEnd, exceptions?)` — expands an RRULE string (without the `RRULE:` prefix) into an array of `YYYY-MM-DD` date strings within the given range, skipping any dates in `exceptions`. Supports: DAILY, WEEKLY (with BYDAY ordinals), MONTHLY (BYMONTHDAY, BYSETPOS+BYDAY, ordinal BYDAY), YEARLY; plus INTERVAL, UNTIL, COUNT.
+- `rruleLabel(rule, baseDate)` — returns a human-readable summary, e.g. `"Every week (on Tuesday)"`.
+- Calendar `loadData` expands recurring events over a **fixed ±3 year window** (`now.getFullYear() - 1` → `now.getFullYear() + 2`), computed fresh on every load — not tied to the scroll position of months/notionWeeks:
+  ```typescript
+  if (rrule) {
+    for (const instanceDate of expandRRule(rrule, baseDate, expandStart, expandEnd, exceptions)) {
+      push(instanceDate, { ...base, instanceDate })
+    }
+  } else {
+    push(baseDate, { ...base, instanceDate: baseDate })
+  }
+  ```
+  Each expanded instance carries `instanceDate` (the actual occurrence date) on the `CalEvent` object; the `date` field retains the original base date of the parent row.
+
 ### Key utilities (`src/lib/utils.ts`)
 
 - `$f(n)` — `$1,234` (whole dollars, rounds)
@@ -342,6 +361,8 @@ Module-level date helpers: `addWeeks(weekStart, n)` advances a Sunday date strin
 
 *Notion-style month grid* (month mode on large screens):
 - **180px sidebar** (`#1a1a1a`, `borderRight: 1px solid #2a2a2a`): mini month navigator (`sidebarYear`/`sidebarMonth` state, independent from the main grid), per-type legend toggles (`hiddenTypes: Set<EventType>` local state — clicking hides that type from the grid only), Today button scrolls main grid to today, Add Calendar button → settings sheet.
+  - **Per-type color customization** (`typeColors: Partial<Record<EventType, string>>`, persisted to `localStorage` key `'cal-type-colors'`): each legend row has a `<label>` wrapping the color dot + a hidden `<input type="color">` — clicking the dot opens the native color picker. A ✕ reset button appears next to the dot when a custom color is set. These overrides only affect Notion grid rendering (not Views 2/3).
+  - `notionColor(ev: CalEvent) => string` — inline helper: `ev.color ?? typeColors[ev.type] ?? DOT_COLOR[ev.type]`. Used for all pill/dot colors inside Notion grid cells.
 - **Main grid** (`#0d0d0d`): sticky DOW header + scrollable `<div ref={monthGridRef}>` containing a **single continuous week-based grid** — `notionWeeks.map(weekStart => ...)` with no month section breaks, no sticky month labels.
   - Each row: one week (`position: relative`, CSS Grid `repeat(7,1fr)`, `borderBottom: 1px solid #2a2a2a`, `minHeight: 140`).
   - When a cell's day is `1` (first of month), an inline gold month abbreviation appears to the left of the date number.
@@ -350,8 +371,19 @@ Module-level date helpers: `addWeeks(weekStart, n)` advances a Sunday date strin
   - `monthVisibleMap` = `visibleMap` additionally filtered by `hiddenTypes`.
 - Clicking a day cell opens `AddEventSheet` directly (stays on View 1, no navigation to View 3).
 - Clicking a day in the sidebar mini calendar scrolls `monthGridRef` to that cell using the same `getBoundingClientRect()` pattern.
+- Custom events in grid cells show a pencil icon (`<Pencil size={10}>`); clicking it calls `handleOpenEdit(ev)` which builds an `EditableEvent` and opens `EditEventSheet`.
 
-**Finance events** are merged into a unified `CalEvent[]` type: `type: 'expense' | 'income' | 'sub' | 'custom' | 'google'`. Dot/bar colors: gold = expense, emerald = income, ruby = sub, violet = custom, blue = Google. Google events use their own `color` field from the calendar API.
+**`DayEventCard`** (inline component in `calendar/page.tsx`) renders individual event pills in Views 2 and 3. It accepts `onEdit: (ev: CalEvent) => void` and shows a pencil button for custom events. Tapping trash on a recurring custom event routes to `deleteScopeEv` state (shows the scope picker) rather than deleting immediately.
+
+**Finance events** are merged into a unified `CalEvent[]` type: `type: 'expense' | 'income' | 'sub' | 'custom' | 'google'`. Dot/bar colors: gold = expense, emerald = income, ruby = sub, violet = custom, blue = Google. Google events use their own `color` field from the calendar API. Custom events additionally carry:
+- `recurrenceRule?: string` — the RRULE string (no `RRULE:` prefix) from the DB row
+- `instanceDate?: string` — the actual date of this occurrence after expansion (equals `date` for non-recurring events)
+
+**Recurring event edit/delete scopes** — `RecurrenceScope = 'this' | 'following' | 'all'`. The scope picker is shown in `EditEventSheet` and the delete confirmation sheet whenever the event has a `recurrenceRule`.
+- `'this'` — adds `instanceDate` to `recurrence_exceptions` on the parent row (optimistic: removes the instance from `visibleMap`)
+- `'following'` — truncates the parent rule by setting `UNTIL=<day before instanceDate>` (optimistic: removes all instances on or after that date)
+- `'all'` — deletes the parent row entirely (optimistic: removes all instances)
+All three use the deferred-delete toast pattern so the user gets a 5-second Undo.
 
 **Weather** — Open-Meteo 14-day forecast (no key, free). Fetched once on mount via geolocation; stored in `weatherMap: Record<string, DayWeather>`. View 3 renders day-specific weather at the bottom. Weather icons are Lucide: `Sun`, `CloudSun`, `Cloud`, `CloudFog`, `CloudDrizzle`, `CloudRain`, `CloudSnow`, `CloudLightning`.
 
@@ -381,3 +413,9 @@ Status transitions: `Pending → Approved → In Progress → Completed → Paid
 The Google Calendar integration is proxied through `src/app/api/calendar/route.ts` (keeps credentials server-side). Direct gapi calls from the client are not used in the new app.
 
 `AddEventSheet` accepts `googleCals?: GCalendar[]` and renders a native `<select>` dropdown for choosing which calendar to create the event in. The calendar page filters this list to only calendars enabled in settings (`prefs.googleCalendarIds`). The selected `calendarId` is passed to `createCalEvent()` which forwards it to the API route. The `EMPTY` form state defaults `allDay: false` — new events open with time pickers visible.
+
+`NewCalEvent` includes `recurrenceRule: string` (empty string = no recurrence). `AddEventSheet` renders a **Repeat** row (between time pickers and location) that opens `RecurrencePicker` and displays the human-readable label from `rruleLabel()`. When saving, `handleAddEvent` in `calendar/page.tsx` stores the rule in `cal_events.recurrence_rule` and passes `recurrence: ['RRULE:' + rule]` to the Google Calendar API.
+
+`GCalEvent` (in `src/lib/calendar.ts`) includes `recurrence?: string[]` for the Google Calendar recurring-event field.
+
+**`CalendarSettingsSheet`** (`CalPrefs`) includes `googleCalendarColors?: Record<string, string>` (calendarId → hex override). In the Google Calendars list, each row's color dot is a `<label>` wrapping a hidden `<input type="color">` — clicking the dot opens the native picker and stores the override in `local.googleCalendarColors`. A ✕ reset button appears when `isCustom`. These overrides are stored in `profiles.calendar_prefs` (Supabase) and apply to Google event rendering in all views.

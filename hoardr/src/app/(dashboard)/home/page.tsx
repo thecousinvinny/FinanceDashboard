@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import { HomeHero } from '@/components/home/HomeHero'
 import { UpcomingBills, type UpcomingSub } from '@/components/home/UpcomingBills'
-import { AddTransactionSheet } from '@/components/money/AddTransactionSheet'
+import { AddTransactionSheet, type CardOption, type BankOption } from '@/components/money/AddTransactionSheet'
 import { AddWishlistSheet, type NewWishItem } from '@/components/plans/AddWishlistSheet'
 import { pageCache } from '@/lib/page-cache'
 import { showToast } from '@/lib/toast'
@@ -61,6 +61,9 @@ export default function HomePage() {
   const [pickerOpen,    setPickerOpen]    = useState(false)
   const [expenseOpen,   setExpenseOpen]   = useState(false)
   const [wishlistOpen,  setWishlistOpen]  = useState(false)
+  const [cards,         setCards]         = useState<CardOption[]>([])
+  const [banks,         setBanks]         = useState<BankOption[]>([])
+  const [defaultCardId, setDefaultCardId] = useState<string | null>(null)
 
   const supabase = useMemo(() => createClient(), [])
   const loadGen  = useRef(0)
@@ -228,6 +231,27 @@ export default function HomePage() {
 
   useEffect(() => { loadData(); return () => { loadGen.current++; abortRef.current?.abort() } }, [loadData])
 
+  useEffect(() => {
+    let mounted = true
+    async function loadWallet() {
+      try {
+        const [{ data: c }, { data: b }] = await Promise.all([
+          supabase.from('cards').select('id, name, last4, is_default').order('is_default', { ascending: false }).order('created_at', { ascending: false }),
+          supabase.from('banks').select('id, name').order('created_at', { ascending: false }),
+        ])
+        if (!mounted) return
+        const cList = c ?? []
+        setDefaultCardId((cList as { is_default: boolean; id: string }[]).find(x => x.is_default)?.id ?? null)
+        setCards(cList.map(x => ({ id: String(x.id), name: String(x.name), last4: x.last4 ? String(x.last4) : null })))
+        setBanks((b ?? []).map(x => ({ id: String(x.id), name: String(x.name) })))
+      } catch (err) {
+        console.error('home loadWallet error:', err)
+      }
+    }
+    loadWallet()
+    return () => { mounted = false }
+  }, [supabase])
+
   const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } =
     usePullToRefresh(loadData)
 
@@ -285,10 +309,12 @@ export default function HomePage() {
     })
   }
 
-  function handleMarkArrived(id: string, name: string) {
+  async function handleMarkArrived(id: string, name: string) {
     setEnRoute(prev => prev.filter(i => i.id !== id))
+    const cached = pageCache.get<HomeCache>('home')
+    if (cached) pageCache.set('home', { ...cached, enRoute: cached.enRoute.filter(i => i.id !== id) })
     showToast(`${name} arrived`, { type: 'payment' })
-    supabase.from('wishlist').delete().eq('id', id)
+    await supabase.from('wishlist').delete().eq('id', id)
   }
 
   const saved       = earned - spent
@@ -479,6 +505,9 @@ export default function HomePage() {
       open={expenseOpen}
       onClose={() => setExpenseOpen(false)}
       onAdd={handleAdd}
+      cards={cards}
+      banks={banks}
+      defaultCardId={defaultCardId}
     />
     <AddWishlistSheet
       open={wishlistOpen}
