@@ -152,7 +152,7 @@ All six tabs are wired to live Supabase. `src/lib/data/transactions.ts` still ex
 - `money/EditTransactionSheet.tsx` — edit existing transaction; exports `TxEdits`
 - `plans/AddSubscriptionSheet.tsx` / `EditSubscriptionSheet.tsx` — exports `NewSub` / `SubEdits`
 - `plans/AddWishlistSheet.tsx` / `EditWishlistSheet.tsx` — exports `WishEdits`
-- `wallet/CardVisual.tsx` — renders a credit card from a `Card` prop using `CARD_STYLE_DEFS`; draws SVG texture overlay from `getTexturePattern` (defined inline); use this everywhere a card is displayed
+- `wallet/CardVisual.tsx` — renders a credit card from a `Card` prop using `CARD_STYLE_DEFS`; draws SVG texture overlay from `getTexturePattern` (defined inline); use this everywhere a card is displayed. Accepts optional `expenseCount?: number` and `subCount?: number` props — displayed bottom-left of the card face. The Wallet page computes these from the `expenses` and `subscriptions` tables (filtered by `card_id`) and passes them in.
 - `wallet/AddCardSheet.tsx` / `EditCardSheet.tsx` — card add/edit sheets with grouped 12-style color picker and 8-texture picker; `NewCard` and `CardEdits` interfaces both include `texture: CardTexture`
 - `calendar/RecurrencePicker.tsx` — bottom sheet for choosing/building a recurrence rule. Props: `{ open, date, value, onClose, onChange }`. Two views: preset list (7 options derived from the event date via `makePresets(dateStr)`) and a custom builder (frequency chips, interval stepper, weekday toggles, end condition). Renders at `z-[70]` above AddEventSheet/EditEventSheet (`z-[60]` backdrop).
 - `calendar/EditEventSheet.tsx` — edit an existing custom calendar event. Exports `EditableEvent` (the event to edit), `EventEdits` (the patch), and `RecurrenceScope = 'this' | 'following' | 'all'`. Two-step flow: a scope picker (shown only when `event.recurrenceRule` is set) then the full edit form matching AddEventSheet. Delete button opens a scope confirmation sheet at `z-[60]`/`z-[70]`.
@@ -328,39 +328,47 @@ To install on iPhone: Safari → Share → Add to Home Screen.
 
 ### Calendar page architecture
 
-The calendar page (`calendar/page.tsx`) is a single client component with three views on a horizontal sliding rail:
+The calendar page (`calendar/page.tsx`) is a single client component with two panels on a horizontal sliding rail:
 
 ```
-viewIndex 0 → View 1: month grid  (phone) / Notion grid (iPad+)
-viewIndex 1 → View 2: infinite vertical day list
-viewIndex 2 → View 3: full-screen day detail (Timepage style)
+viewIndex 0 → Panel 0 (mobile):  Fantastical split view — compact month grid + day list
+              Panel 0 (iPad+):   Notion-style infinite grid with sidebar
+viewIndex 1 → Panel 1:           Full-screen day detail (Timepage style)
 ```
 
-The rail uses `transform: translateX(-${viewIndex * 100}vw)` with a 320ms cubic-bezier transition. All three panels are always mounted.
+The rail uses `transform: translateX(-${viewIndex * 100}vw)` with a 320ms cubic-bezier transition. Both panels are always mounted. `viewIndex` type is `0 | 1`.
 
-**Swipe navigation** — touch and mouse drag both supported (same 60px threshold + `|dx| > |dy| × 1.5`):
-- V1 → V2: left swipe/drag. Sets `scrollToToday.current = true` + `suppressPrepend.current = true`.
-- V2 → V1: right swipe/drag. Preserves View 2 scroll position.
-- V2 row → V3: left swipe on a day row.
-- V3 → V2: right swipe/drag. Preserves View 2 scroll (does NOT re-center today).
+**Mobile Panel 0 — Fantastical split view:**
+- `const GRID_EXPANDED = 280` (module-level px constant) — max height of the compact month grid
+- `gridH: number` state — current grid height (0 to `GRID_EXPANDED`). Start at `GRID_EXPANDED`.
+- `isDraggingHandle: boolean` state — suppresses the CSS height transition during active drag for immediate feedback
+- **Drag handle**: sits between grid and list. Tap = toggle collapsed/expanded. Drag up/down adjusts `gridH` live; on `touchEnd` snaps to 0 or `GRID_EXPANDED` based on `> GRID_EXPANDED / 2` threshold.
+- **Grid month navigation**: swipe left/right on the compact grid (`gridSwipe` ref) calls `goToNext()`/`goToPrev()` — same 40px threshold, `|dx| > |dy| × 1.5`.
+- **Day tap**: tapping a cell in the compact grid sets `gridSel` (the highlighted day) and scrolls the list to that day using manual `scrollTop` (never `scrollIntoView`).
+- **Gold vertical month label**: visible only when `viewIndex === 0 && gridH === 0` (grid fully collapsed). Double-tap scrolls list to today.
+- `gridSel: string` state — the currently selected/highlighted day in the compact grid; used to pre-fill the FAB's AddEventSheet default date.
 
-**Scroll-to-today (View 2)** — **never use `scrollIntoView`**: it silently fails inside `position: fixed` overflow containers on iOS WKWebView. Use manual `scrollTop`:
+**Swipe navigation** — touch and mouse drag both supported (60px threshold, `|dx| > |dy| × 1.5`):
+- Day row → Panel 1: left swipe on a day row sets `setViewIndex(1)`
+- Panel 1 → Panel 0: right swipe/drag sets `setViewIndex(0)`. Preserves list scroll (does NOT re-center today).
+
+**Scroll-to-today** — **never use `scrollIntoView`**: silently fails inside `position: fixed` overflow containers on iOS WKWebView. Use manual `scrollTop`:
 ```typescript
 const cRect = sc.getBoundingClientRect()
 const eRect = el.getBoundingClientRect()
 sc.scrollTop = sc.scrollTop + eRect.top - cRect.top - sc.clientHeight / 2 + eRect.height / 2
 ```
-Fires 360ms after V1→V2 transition in a `useEffect` watching `viewIndex`.
+Runs once on mount (500ms delay) via a `useEffect` with `[todayStr]` deps. Also called by `scrollListToToday()` named helper (used by double-tap on month label / gold vertical label).
 
-**`suppressPrepend` ref**: the prepend IntersectionObserver fires immediately when View 2 enters at `scrollTop=0`, saving `prevH=0`. On iOS (slower renders) its double-`rAF` fires *after* the scroll-to-today, clobbering the position. Fix: set `suppressPrepend.current = true` before `setViewIndex(1)` in any swipe/drag handler; the prepend observer returns early if it's set; clear it after `scrollTop` is written.
+**`suppressPrepend` ref**: the prepend IntersectionObserver fires at `scrollTop=0` on initial mount, saving `prevH=0`. On iOS its double-`rAF` can fire *after* the initial scroll-to-today, clobbering the position. The prepend observer returns early if `suppressPrepend.current` is set; it's cleared after `scrollTop` is written.
 
-**`months: MonthKey[]` state** — used exclusively by View 2's infinite day list. Initial 9 months centered on today. View 2 has its own `topSentRef`/`botSentRef` IntersectionObservers (active only when `viewIndex === 1`).
+**`months: MonthKey[]` state** — drives the infinite day list in Panel 0 (mobile). Initial 9 months centered on today. `topSentRef`/`botSentRef` IntersectionObservers are active only when `!isLargeScreen` (iPad uses Notion grid, not this list).
 
 **`notionWeeks: string[]` state** — used exclusively by the Notion month grid on large screens. Array of Sunday date strings (`YYYY-MM-DD`), initialized to 48 weeks centered on today's Sunday. `monthGridTopSentRef`/`monthGridBotSentRef` IntersectionObservers (active only when `isLargeScreen && calView === 'month'`) append/prepend **8 weeks at a time** via `addWeeks(weekStart, n)` helper. `notionWeeksRef` syncs on every change (same pattern as `monthsRef`).
 
 Module-level date helpers: `addWeeks(weekStart, n)` advances a Sunday date string by `n` weeks using local `new Date(y, m-1, d + n*7)` (never UTC). `weekDays(weekStart)` returns 7 date strings for Sun–Sat of that week.
 
-**Large-screen calendar (≥768px)** — `isLargeScreen` boolean from a `resize` listener. View 1 shows a List/Month toggle in the header. `calView: 'list' | 'month'` is persisted to `localStorage`.
+**Large-screen calendar (≥768px)** — `isLargeScreen` boolean from a `resize` listener. Panel 0 shows a List/Month toggle in the header. `calView: 'list' | 'month'` is persisted to `localStorage`.
 
 *Notion-style month grid* (month mode on large screens):
 - **180px sidebar** (`#1a1a1a`, `borderRight: 1px solid #2a2a2a`): mini month navigator (`sidebarYear`/`sidebarMonth` state, independent from the main grid), per-type legend toggles (`hiddenTypes: Set<EventType>` local state — clicking hides that type from the grid only), Today button scrolls main grid to today, Add Calendar button → settings sheet.
@@ -372,11 +380,11 @@ Module-level date helpers: `addWeeks(weekStart, n)` advances a Sunday date strin
   - All event pills (all-day colored bars and timed/financial rows) are **18px tall**. Show up to 4 events per cell + `+N more` overflow.
   - `monthCellRefs: Map<string, HTMLElement>` — set for every cell (no `current` filter needed); used to scroll-to-day from the sidebar or on entry to month mode.
   - `monthVisibleMap` = `visibleMap` additionally filtered by `hiddenTypes`.
-- Clicking a day cell opens `AddEventSheet` directly (stays on View 1, no navigation to View 3).
+- Clicking a day cell opens `AddEventSheet` directly (stays on Panel 0, no navigation to Panel 1).
 - Clicking a day in the sidebar mini calendar scrolls `monthGridRef` to that cell using the same `getBoundingClientRect()` pattern.
 - Custom and Google event pills in grid cells are fully clickable (`onClick` + `e.stopPropagation()` so the parent cell's add-new handler doesn't fire); clicking calls `handleOpenEdit(ev)` which opens `EditEventSheet`. Financial event pills (expense/income/sub) have no `id` and are not interactive.
 
-**`DayEventCard`** (inline component in `calendar/page.tsx`) renders individual event pills in Views 2 and 3. It accepts `onEdit: (ev: CalEvent) => void` and shows a pencil button for custom events. Tapping trash on a recurring custom event routes to `deleteScopeEv` state (shows the scope picker) rather than deleting immediately.
+**`DayEventCard`** (inline component in `calendar/page.tsx`) renders individual event pills in the day list and day detail (Panel 1). It accepts `onEdit: (ev: CalEvent) => void` and shows a pencil button for custom events. Tapping trash on a recurring custom event routes to `deleteScopeEv` state (shows the scope picker) rather than deleting immediately.
 
 **Finance events** are merged into a unified `CalEvent[]` type: `type: 'expense' | 'income' | 'sub' | 'custom' | 'google'`. Dot/bar colors: gold = expense, emerald = income, ruby = sub, violet = custom, blue = Google. Google events use their own `color` field from the calendar API. Custom events additionally carry:
 - `recurrenceRule?: string` — the RRULE string (no `RRULE:` prefix) from the DB row
@@ -388,11 +396,11 @@ Module-level date helpers: `addWeeks(weekStart, n)` advances a Sunday date strin
 - `'all'` — deletes the parent row entirely (optimistic: removes all instances)
 All three use the deferred-delete toast pattern so the user gets a 5-second Undo.
 
-**Weather** — Open-Meteo 14-day forecast (no key, free). Fetched once on mount via geolocation; stored in `weatherMap: Record<string, DayWeather>`. View 3 renders day-specific weather at the bottom. Weather icons are Lucide: `Sun`, `CloudSun`, `Cloud`, `CloudFog`, `CloudDrizzle`, `CloudRain`, `CloudSnow`, `CloudLightning`.
+**Weather** — Open-Meteo 14-day forecast (no key, free). Fetched once on mount via geolocation; stored in `weatherMap: Record<string, DayWeather>`. Panel 1 (day detail) renders day-specific weather at the bottom. Weather icons are Lucide: `Sun`, `CloudSun`, `Cloud`, `CloudFog`, `CloudDrizzle`, `CloudRain`, `CloudSnow`, `CloudLightning`.
 
 ### FAB pattern
 
-The add (`+`) button on all six tabs (Home, Money, Plans, Wallet, Studio, Calendar) is a circular gold FAB fixed at `right: 16px, bottom: 80px` (8px above the 72px nav bar). It is rendered outside the scrolling content `<div>` (after the closing tag) but inside the page's fragment wrapper. Styling:
+The add (`+`) button on all six tabs (Home, Money, Plans, Wallet, Studio, Calendar) is a circular gold FAB fixed at `right: 16px, bottom: 80px` (8px above the 72px nav bar). It is rendered outside the scrolling content `<div>` (after the closing tag) but inside the page's fragment wrapper. Calendar is the only tab with two FABs — one in Panel 0 (mobile split view, pre-fills `gridSel`) and one in Panel 1 (day detail, pre-fills `selectedDay`); both are conditionally rendered by panel. Styling:
 
 ```tsx
 <button

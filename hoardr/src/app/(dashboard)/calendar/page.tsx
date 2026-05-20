@@ -218,7 +218,7 @@ export default function CalendarPage() {
   const [weatherMap,     setWeatherMap]     = useState<Record<string, DayWeather>>({})
   const [editEvent,      setEditEvent]      = useState<EditableEvent | null>(null)
   const [deleteScopeEv,    setDeleteScopeEv]    = useState<CalEvent | null>(null)
-  const [eventActionState, setEventActionState] = useState<{ ev: CalEvent; ds: string } | null>(null)
+  const [dataLoaded,       setDataLoaded]       = useState(false)
 
   // Infinite scroll
   const [months, setMonths] = useState<MonthKey[]>(() =>
@@ -269,7 +269,8 @@ export default function CalendarPage() {
   // Swipe gesture refs
   const v3Swipe        = useRef<{ x: number; y: number } | null>(null)
   const rowSwipe       = useRef<{ x: number; y: number; ds: string } | null>(null)
-  const suppressPrepend = useRef(true)  // true initially — cleared after scroll-to-today so prepend IO doesn't clobber initial position
+  const suppressPrepend   = useRef(true)   // true initially — cleared after scroll-to-today so prepend IO doesn't clobber initial position
+  const scrolledToToday   = useRef(false)
   const monthLblTapRef  = useRef<number>(0)
   const gridSwipe       = useRef<{ x: number; y: number } | null>(null)
   const handleDragRef   = useRef<{ startY: number; startH: number } | null>(null)
@@ -385,11 +386,12 @@ export default function CalendarPage() {
         }
       }
       setEventMap(map)
+      if (!isLargeScreen) setDataLoaded(true)
     } catch (err) {
       if ((err as Error)?.name === 'AbortError') return
       console.error('loadData error:', err)
     }
-  }, [supabase])
+  }, [supabase, isLargeScreen])
 
   useEffect(() => { loadData(); return () => { loadGen.current++; abortRef.current?.abort() } }, [loadData])
 
@@ -468,12 +470,20 @@ export default function CalendarPage() {
 
   const visibleMap = useMemo(() => {
     const m: Record<string, CalEvent[]> = {}
+    // Collect googleEventIds from custom events so we can deduplicate google mirror entries
+    const customGoogleIds = new Set<string>()
+    for (const evs of Object.values(eventMap)) {
+      for (const e of evs) { if (e.googleEventId) customGoogleIds.add(e.googleEventId) }
+    }
     for (const [date, evs] of Object.entries(eventMap)) {
       const f = evs.filter(e => prefs.visibleTypes.includes(e.type))
       if (f.length) m[date] = f
     }
     if (prefs.visibleTypes.includes('google'))
-      for (const [date, evs] of Object.entries(googleEvMap)) { if (!m[date]) m[date] = []; m[date].push(...evs) }
+      for (const [date, evs] of Object.entries(googleEvMap)) {
+        const deduped = evs.filter(e => !e.id || !customGoogleIds.has(e.id))
+        if (deduped.length) { if (!m[date]) m[date] = []; m[date].push(...deduped) }
+      }
     return m
   }, [eventMap, googleEvMap, prefs.visibleTypes])
 
@@ -698,20 +708,21 @@ export default function CalendarPage() {
     await loadData()
   }
 
-  // ── Scroll to today on initial mount ─────────────────────────────────────
+  // ── Scroll to today after first data load (not on a timeout — fires after row heights are final) ─
   useEffect(() => {
-    const t = setTimeout(() => {
+    if (!dataLoaded || scrolledToToday.current) return
+    requestAnimationFrame(() => requestAnimationFrame(() => {
       const sc = scrollRef.current
       const el = dayRefs.current.get(todayStr)
       if (sc && el) {
-        // offsetTop is always correct for direct children of a positioned scroll container;
+        // offsetTop is correct for direct children of a positioned scroll container;
         // getBoundingClientRect() misfires inside fixed+transform ancestors on iOS WKWebView
         sc.scrollTop = el.offsetTop - 20
       }
-      suppressPrepend.current = false  // allow prepend IO after initial position is set
-    }, 500)
-    return () => clearTimeout(t)
-  }, [todayStr])
+      scrolledToToday.current  = true
+      suppressPrepend.current  = false  // allow prepend IO after initial position is set
+    }))
+  }, [dataLoaded, todayStr])
 
   // Scroll month grid to today when entering month mode
   useEffect(() => {
@@ -1324,7 +1335,7 @@ export default function CalendarPage() {
             <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
               {/* Gold month label — visible only in full-list mode (gridH === 0) */}
               <div
-                style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 20, zIndex: 5,
+                style={{ position: 'absolute', left: 4, top: 0, bottom: 0, width: 20, zIndex: 5,
                          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
                          opacity: gridH === 0 ? 1 : 0,
                          pointerEvents: gridH === 0 ? 'auto' : 'none',
@@ -1388,7 +1399,7 @@ export default function CalendarPage() {
                               ? (ev.amount ? getTimeRange(ev) : 'ALL DAY')
                               : (ev.amount || null)
                             return (
-                              <button key={idx} onClick={() => { navigator.vibrate?.(6); setEventActionState({ ev, ds }) }}
+                              <button key={idx} onClick={() => { navigator.vibrate?.(6); if (ev.type === 'custom' && ev.id) { handleOpenEdit(ev) } else { setSelectedDay(ds); setViewIndex(1) } }}
                                 style={{ display: 'flex', alignItems: 'stretch', width: '100%', background: 'none', border: 'none', padding: '10px 0', cursor: 'pointer', textAlign: 'left', gap: 9 }}>
                                 <div style={{ width: 3, borderRadius: 2, background: bar, flexShrink: 0 }} />
                                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -1503,44 +1514,6 @@ export default function CalendarPage() {
         style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, fontWeight: 300, zIndex: 40, boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)' }}
         aria-label="Add event"
       >+</button>
-    )}
-
-    {/* Event action sheet — shown when tapping a custom event in the split view */}
-    {eventActionState && (
-      <>
-        <div className="fixed inset-0 z-[60]" style={{ background: 'rgba(0,0,0,0.72)' }} onClick={() => setEventActionState(null)} />
-        <div className="fixed inset-x-0 bottom-0 z-[70] rounded-t-[24px]" style={{ background: '#1a1a1a', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-          <div className="flex justify-center pt-3 pb-2">
-            <div className="w-9 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.2)' }} />
-          </div>
-          <div className="px-5 pb-3">
-            <p style={{ fontFamily: 'var(--font-montserrat)', fontSize: 15, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {eventActionState.ev.title}
-            </p>
-          </div>
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-            {eventActionState.ev.type === 'custom' && eventActionState.ev.id && (
-              <button
-                onClick={() => { handleOpenEdit(eventActionState.ev); setEventActionState(null) }}
-                className="w-full px-5 py-4 text-left"
-                style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'none', cursor: 'pointer' }}
-              >
-                <span style={{ fontFamily: 'var(--font-montserrat)', fontSize: 15, fontWeight: 500, color: '#fff' }}>Edit Event</span>
-              </button>
-            )}
-            <button
-              onClick={() => { setSelectedDay(eventActionState.ds); setViewIndex(1); setEventActionState(null) }}
-              className="w-full px-5 py-4 text-left"
-              style={{ background: 'none', cursor: 'pointer' }}
-            >
-              <span style={{ fontFamily: 'var(--font-montserrat)', fontSize: 15, fontWeight: 500, color: '#fff' }}>Open Day View</span>
-            </button>
-          </div>
-          <div className="px-5 py-4">
-            <button onClick={() => setEventActionState(null)} className="w-full py-3.5 rounded-[14px] text-[15px] font-medium text-ink-muted" style={{ background: 'rgba(255,255,255,0.06)' }}>Cancel</button>
-          </div>
-        </div>
-      </>
     )}
 
     <AddEventSheet open={addOpen} defaultDate={addDate ?? selectedDay ?? gridSel ?? undefined} defaultCalendarId={prefs.defaultCalendarId} googleCals={googleCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => { setAddOpen(false); setTimeout(() => setAddDate(undefined), 300) }} onAdd={handleAddEvent} />
