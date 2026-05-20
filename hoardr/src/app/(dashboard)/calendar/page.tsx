@@ -1322,10 +1322,13 @@ export default function CalendarPage() {
 
             {/* Infinite scroll list — same design as before */}
             <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-              {/* Gold month label — always visible in the list area, sits in the 20px left gutter */}
+              {/* Gold month label — visible only in full-list mode (gridH === 0) */}
               <div
                 style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 20, zIndex: 5,
-                         display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                         display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                         opacity: gridH === 0 ? 1 : 0,
+                         pointerEvents: gridH === 0 ? 'auto' : 'none',
+                         transition: isDraggingHandle ? 'none' : 'opacity 0.3s cubic-bezier(0.4,0,0.2,1)' }}
                 onDoubleClick={scrollListToToday}
                 onTouchEnd={(e) => {
                   e.preventDefault()
@@ -1362,10 +1365,12 @@ export default function CalendarPage() {
                         onMouseDown={e => rowMouseDown(e, ds)}
                         onMouseUp={rowMouseUp}
                         onMouseLeave={() => { rowSwipe.current = null }}
-                        style={{ display: 'flex', alignItems: 'stretch', paddingLeft: 20, background: '#111111', cursor: 'grab' }}
+                        style={{ display: 'flex', alignItems: 'stretch', paddingLeft: gridH === 0 ? 20 : 6, background: '#111111', cursor: 'grab',
+                                 transition: isDraggingHandle ? 'none' : 'padding-left 0.3s cubic-bezier(0.4,0,0.2,1)' }}
                       >
-                        {/* Day label */}
-                        <div style={{ width: 44, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#111111' }}>
+                        {/* Day label — width matches one grid column when split is open, original 44px in full-list mode */}
+                        <div style={{ width: gridH === 0 ? 44 : 'calc((100vw - 12px) / 7)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#111111',
+                                      transition: isDraggingHandle ? 'none' : 'width 0.3s cubic-bezier(0.4,0,0.2,1)' }}>
                           <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 9, letterSpacing: '0.09em', textTransform: 'uppercase', lineHeight: 1.2, userSelect: 'none', whiteSpace: 'nowrap' }}>
                             <span style={{ color: isTod ? '#D4AF37' : 'rgba(255,255,255,0.75)', fontWeight: 700 }}>{abbr}</span>
                             <span style={{ color: isTod ? '#c9a84c' : 'rgba(255,255,255,0.25)', fontWeight: 500 }}>{' '}{day}</span>
