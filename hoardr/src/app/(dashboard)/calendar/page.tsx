@@ -704,9 +704,9 @@ export default function CalendarPage() {
       const sc = scrollRef.current
       const el = dayRefs.current.get(todayStr)
       if (sc && el) {
-        const cRect = sc.getBoundingClientRect()
-        const eRect = el.getBoundingClientRect()
-        sc.scrollTop = sc.scrollTop + eRect.top - cRect.top - 20
+        // offsetTop is always correct for direct children of a positioned scroll container;
+        // getBoundingClientRect() misfires inside fixed+transform ancestors on iOS WKWebView
+        sc.scrollTop = el.offsetTop - 20
       }
       suppressPrepend.current = false  // allow prepend IO after initial position is set
     }, 500)
@@ -1383,7 +1383,7 @@ export default function CalendarPage() {
                               ? (ev.amount ? getTimeRange(ev) : 'ALL DAY')
                               : (ev.amount || null)
                             return (
-                              <button key={idx} onClick={() => { navigator.vibrate?.(6); if (ev.type === 'custom' && ev.id) { setEventActionState({ ev, ds }) } else { setSelectedDay(ds); setViewIndex(1) } }}
+                              <button key={idx} onClick={() => { navigator.vibrate?.(6); setEventActionState({ ev, ds }) }}
                                 style={{ display: 'flex', alignItems: 'stretch', width: '100%', background: 'none', border: 'none', padding: '10px 0', cursor: 'pointer', textAlign: 'left', gap: 9 }}>
                                 <div style={{ width: 3, borderRadius: 2, background: bar, flexShrink: 0 }} />
                                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -1514,13 +1514,15 @@ export default function CalendarPage() {
             </p>
           </div>
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-            <button
-              onClick={() => { handleOpenEdit(eventActionState.ev); setEventActionState(null) }}
-              className="w-full px-5 py-4 text-left"
-              style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'none', cursor: 'pointer' }}
-            >
-              <span style={{ fontFamily: 'var(--font-montserrat)', fontSize: 15, fontWeight: 500, color: '#fff' }}>Edit Event</span>
-            </button>
+            {eventActionState.ev.type === 'custom' && eventActionState.ev.id && (
+              <button
+                onClick={() => { handleOpenEdit(eventActionState.ev); setEventActionState(null) }}
+                className="w-full px-5 py-4 text-left"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'none', cursor: 'pointer' }}
+              >
+                <span style={{ fontFamily: 'var(--font-montserrat)', fontSize: 15, fontWeight: 500, color: '#fff' }}>Edit Event</span>
+              </button>
+            )}
             <button
               onClick={() => { setSelectedDay(eventActionState.ds); setViewIndex(1); setEventActionState(null) }}
               className="w-full px-5 py-4 text-left"
