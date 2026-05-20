@@ -209,11 +209,11 @@ function PlansPageInner() {
       .single()
     if (expErr) console.error('wishlist buy expense error:', JSON.stringify(expErr))
 
-    const { error } = await supabase
+    await supabase
       .from('wishlist')
       .update({ status: 'Ordered', bought_cost: paidCost, ordered_at: today })
       .eq('id', id)
-    if (error) { console.error('buy item error:', JSON.stringify(error)); await loadData() }
+    loadData()
   }
 
   async function handlePaySub(id: string) {
@@ -239,20 +239,18 @@ function PlansPageInner() {
       categoryId = created?.id ?? null
     }
 
-    await supabase.from('expenses').insert({
-      user_id:     user.id,
-      name:        sub.name,
-      cost:        sub.cost,
-      date:        today,
-      category_id: categoryId,
-      card_id:     sub.card_id,
-    })
-
-    const { error } = await supabase
-      .from('subscriptions')
-      .update({ next_renewal: newRenewal })
-      .eq('id', id)
-    if (error) { console.error('pay sub error:', JSON.stringify(error)); await loadData() }
+    await Promise.all([
+      supabase.from('expenses').insert({
+        user_id:     user.id,
+        name:        sub.name,
+        cost:        sub.cost,
+        date:        today,
+        category_id: categoryId,
+        card_id:     sub.card_id,
+      }),
+      supabase.from('subscriptions').update({ next_renewal: newRenewal }).eq('id', id),
+    ])
+    loadData()
   }
 
   async function handleCancelSub(id: string) {
