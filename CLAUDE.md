@@ -279,19 +279,22 @@ Every page root `<div>` should include `tab-enter` for the mount animation. Each
 - `STYLE_GROUPS` — 4 named groups (Neutral, Blue, Green, Warm) used to organize the color picker UI
 - Texture patterns are gold-tinted (`rgba(232,196,107,opacity)`) SVG `<pattern>` elements. `getTexturePattern` is defined inline in `CardVisual.tsx` (not in `cardStyles.ts`) since `.ts` files can't contain JSX.
 - `cards` DB table has a `texture text not null default 'none'` column (added by migration `20260512_cards_style_texture_fix.sql`). That migration also runs `alter column style type text` to remove any check constraint on style values.
+- `cards.sort_order int` controls card ordering. The Wallet page uses **long-press drag-to-reorder** (450ms timer, `haptic('tap')` on activation, native touch listeners with `passive: false` to block iOS scroll during drag, `flushSync` from `react-dom` for synchronous order updates, `sort_order` batch-written on touchend). There is no Reorder button — do not re-add one.
 
 ### RRULE expansion (`src/lib/rrule.ts`)
 
 - `expandRRule(rule, baseDate, rangeStart, rangeEnd, exceptions?)` — expands an RRULE string (without the `RRULE:` prefix) into an array of `YYYY-MM-DD` date strings within the given range, skipping any dates in `exceptions`. Supports: DAILY, WEEKLY (with BYDAY ordinals), MONTHLY (BYMONTHDAY, BYSETPOS+BYDAY, ordinal BYDAY), YEARLY; plus INTERVAL, UNTIL, COUNT.
 - `rruleLabel(rule, baseDate)` — returns a human-readable summary, e.g. `"Every week (on Tuesday)"`.
-- Calendar `loadData` expands recurring events over a **fixed ±3 year window** (`now.getFullYear() - 1` → `now.getFullYear() + 2`), computed fresh on every load — not tied to the scroll position of months/notionWeeks:
+- Calendar `loadData` expands recurring events over a **fixed ±3 year window** (`now.getFullYear() - 1` → `now.getFullYear() + 2`), computed fresh on every load — not tied to the scroll position of months/notionWeeks. **Postgres `TIME` columns** (`start_time`, `end_time`) are returned as `'HH:MM:SS'` by PostgREST — `loadData` slices them to 5 chars (`.slice(0, 5)`) before use; any regex expecting `HH:MM` will silently fail on unsliced values. **Cross-midnight events** (where `end_time < start_time`) are pushed to **both** the start date and the next day, both entries carrying `instanceDate = baseDate` so editing from either cell opens the correct start date/time:
   ```typescript
   if (rrule) {
     for (const instanceDate of expandRRule(rrule, baseDate, expandStart, expandEnd, exceptions)) {
       push(instanceDate, { ...base, instanceDate })
+      if (isCrossMidnight) push(nextDayOf(instanceDate), { ...base, instanceDate })
     }
   } else {
     push(baseDate, { ...base, instanceDate: baseDate })
+    if (isCrossMidnight) push(nextDayOf(baseDate), { ...base, instanceDate: baseDate })
   }
   ```
   Each expanded instance carries `instanceDate` (the actual occurrence date) on the `CalEvent` object; the `date` field retains the original base date of the parent row.
@@ -371,7 +374,7 @@ Module-level date helpers: `addWeeks(weekStart, n)` advances a Sunday date strin
   - `monthVisibleMap` = `visibleMap` additionally filtered by `hiddenTypes`.
 - Clicking a day cell opens `AddEventSheet` directly (stays on View 1, no navigation to View 3).
 - Clicking a day in the sidebar mini calendar scrolls `monthGridRef` to that cell using the same `getBoundingClientRect()` pattern.
-- Custom events in grid cells show a pencil icon (`<Pencil size={10}>`); clicking it calls `handleOpenEdit(ev)` which builds an `EditableEvent` and opens `EditEventSheet`.
+- Custom and Google event pills in grid cells are fully clickable (`onClick` + `e.stopPropagation()` so the parent cell's add-new handler doesn't fire); clicking calls `handleOpenEdit(ev)` which opens `EditEventSheet`. Financial event pills (expense/income/sub) have no `id` and are not interactive.
 
 **`DayEventCard`** (inline component in `calendar/page.tsx`) renders individual event pills in Views 2 and 3. It accepts `onEdit: (ev: CalEvent) => void` and shows a pencil button for custom events. Tapping trash on a recurring custom event routes to `deleteScopeEv` state (shows the scope picker) rather than deleting immediately.
 
@@ -416,6 +419,6 @@ The Google Calendar integration is proxied through `src/app/api/calendar/route.t
 
 `NewCalEvent` includes `recurrenceRule: string` (empty string = no recurrence). `AddEventSheet` renders a **Repeat** row (between time pickers and location) that opens `RecurrencePicker` and displays the human-readable label from `rruleLabel()`. When saving, `handleAddEvent` in `calendar/page.tsx` stores the rule in `cal_events.recurrence_rule` and passes `recurrence: ['RRULE:' + rule]` to the Google Calendar API.
 
-`GCalEvent` (in `src/lib/calendar.ts`) includes `recurrence?: string[]` for the Google Calendar recurring-event field.
+`GCalEvent` (in `src/lib/calendar.ts`) includes `recurrence?: string[]` for the Google Calendar recurring-event field. `timedEvent()` in that file auto-detects cross-midnight events (`endTime < startTime`) and advances the GCal end `dateTime` to the next calendar day — always use `timedEvent()`, never build GCal `dateTime` strings by hand.
 
 **`CalendarSettingsSheet`** (`CalPrefs`) includes `googleCalendarColors?: Record<string, string>` (calendarId → hex override). In the Google Calendars list, each row's color dot is a `<label>` wrapping a hidden `<input type="color">` — clicking the dot opens the native picker and stores the override in `local.googleCalendarColors`. A ✕ reset button appears when `isCustom`. These overrides are stored in `profiles.calendar_prefs` (Supabase) and apply to Google event rendering in all views.
