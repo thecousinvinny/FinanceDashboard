@@ -22,22 +22,22 @@ export async function createCalEvent(event: GCalEvent, calendarId?: string): Pro
   } catch { return null }
 }
 
-export async function updateCalEvent(eventId: string, event: GCalEvent): Promise<void> {
+export async function updateCalEvent(eventId: string, event: GCalEvent, calendarId?: string): Promise<void> {
   try {
     await fetch('/api/calendar', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ action: 'update', eventId, event }),
+      body:    JSON.stringify({ action: 'update', eventId, event, calendarId }),
     })
   } catch { /* best-effort */ }
 }
 
-export async function deleteCalEvent(eventId: string): Promise<void> {
+export async function deleteCalEvent(eventId: string, calendarId?: string): Promise<void> {
   try {
     await fetch('/api/calendar', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ action: 'delete', eventId }),
+      body:    JSON.stringify({ action: 'delete', eventId, calendarId }),
     })
   } catch { /* best-effort */ }
 }

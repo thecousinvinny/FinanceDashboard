@@ -107,14 +107,16 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'update' && eventId) {
-      const res  = await fetch(`${CAL_BASE}/${eventId}`, { method: 'PUT', headers, body: JSON.stringify(event) })
+      const calBase = `${GCAL_API}/calendars/${encodeURIComponent(calendarId ?? 'primary')}/events`
+      const res  = await fetch(`${calBase}/${eventId}`, { method: 'PUT', headers, body: JSON.stringify(event) })
       const json = await res.json() as { id?: string; error?: unknown }
       if (!res.ok) return NextResponse.json({ error: json.error }, { status: res.status })
       return NextResponse.json({ googleEventId: json.id })
     }
 
     if (action === 'delete' && eventId) {
-      const res = await fetch(`${CAL_BASE}/${eventId}`, { method: 'DELETE', headers })
+      const calBase = `${GCAL_API}/calendars/${encodeURIComponent(calendarId ?? 'primary')}/events`
+      const res = await fetch(`${calBase}/${eventId}`, { method: 'DELETE', headers })
       if (!res.ok && res.status !== 404 && res.status !== 410) {
         return NextResponse.json({ error: 'Delete failed' }, { status: res.status })
       }
