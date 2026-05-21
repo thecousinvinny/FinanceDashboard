@@ -262,6 +262,7 @@ export default function CalendarPage() {
   const rowSwipe       = useRef<{ x: number; y: number; ds: string } | null>(null)
   const suppressPrepend   = useRef(true)   // true initially — cleared after scroll-to-today so prepend IO doesn't clobber initial position
   const scrolledToToday   = useRef(false)
+  const googleRescrollDone = useRef(false) // prevents re-scroll after the first Google events load
   const monthLblTapRef  = useRef<number>(0)
   const gridSwipe       = useRef<{ x: number; y: number } | null>(null)
   const handleDragRef   = useRef<{ startY: number; startH: number } | null>(null)
@@ -749,6 +750,19 @@ export default function CalendarPage() {
     t1 = setTimeout(() => { if (!doScroll()) t2 = setTimeout(doScroll, 400) }, 300)
     return () => { clearTimeout(t1); clearTimeout(t2) }
   }, [dataLoaded, isLargeScreen, todayStr])
+
+  // After Google Calendar events load they can make days taller, shifting the viewport backward.
+  // Re-scroll to today once after the first Google events load, before the user has interacted.
+  useEffect(() => {
+    if (!scrolledToToday.current || googleRescrollDone.current || isLargeScreen) return
+    googleRescrollDone.current = true
+    requestAnimationFrame(() => {
+      const sc = scrollRef.current
+      const el = dayRefs.current.get(todayStr)
+      if (sc && el && el.offsetTop > 0) sc.scrollTop = el.offsetTop - 20
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [googleEvMap, isLargeScreen, todayStr])
 
   // Scroll month grid to today when entering month mode
   useEffect(() => {
