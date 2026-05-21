@@ -65,9 +65,11 @@ export default function HomePage() {
   const [banks,         setBanks]         = useState<BankOption[]>([])
   const [defaultCardId, setDefaultCardId] = useState<string | null>(null)
 
-  const supabase = useMemo(() => createClient(), [])
-  const loadGen  = useRef(0)
-  const abortRef = useRef<AbortController | null>(null)
+  const supabase          = useMemo(() => createClient(), [])
+  const loadGen           = useRef(0)
+  const abortRef          = useRef<AbortController | null>(null)
+  const pickerSheetRef    = useRef<HTMLDivElement>(null)
+  const pickerDragStartY  = useRef<number | null>(null)
 
   const loadData = useCallback(async () => {
     abortRef.current?.abort()
@@ -251,6 +253,37 @@ export default function HomePage() {
     loadWallet()
     return () => { mounted = false }
   }, [supabase])
+
+  useEffect(() => {
+    if (!pickerOpen) return
+    const prevent = (e: TouchEvent) => e.preventDefault()
+    document.addEventListener('touchmove', prevent, { passive: false })
+    return () => document.removeEventListener('touchmove', prevent)
+  }, [pickerOpen])
+
+  function onPickerDragStart(e: React.TouchEvent) { pickerDragStartY.current = e.touches[0].clientY }
+  function onPickerDragMove(e: React.TouchEvent) {
+    if (pickerDragStartY.current === null || !pickerSheetRef.current) return
+    const dy = Math.max(0, e.touches[0].clientY - pickerDragStartY.current)
+    pickerSheetRef.current.style.transform = `translateY(${dy}px)`
+    pickerSheetRef.current.style.transition = 'none'
+  }
+  function onPickerDragEnd(e: React.TouchEvent) {
+    if (!pickerSheetRef.current) return
+    const dy = pickerDragStartY.current !== null ? Math.max(0, e.changedTouches[0].clientY - pickerDragStartY.current) : 0
+    pickerDragStartY.current = null
+    if (dy > 80) {
+      pickerSheetRef.current.style.transition = 'transform 0.28s cubic-bezier(0.4,0,0.2,1)'
+      pickerSheetRef.current.style.transform  = 'translateY(100%)'
+      setTimeout(() => {
+        if (pickerSheetRef.current) { pickerSheetRef.current.style.transform = ''; pickerSheetRef.current.style.transition = '' }
+        setPickerOpen(false)
+      }, 280)
+    } else {
+      pickerSheetRef.current.style.transform = ''
+      pickerSheetRef.current.style.transition = ''
+    }
+  }
 
   const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } =
     usePullToRefresh(loadData)
@@ -472,10 +505,17 @@ export default function HomePage() {
       style={{ background: 'rgba(0,0,0,0.72)' }}
     />
     <div
+      ref={pickerSheetRef}
       className={`fixed inset-x-0 bottom-0 z-[60] rounded-t-[24px] bg-bg-surface transition-transform duration-300 ${pickerOpen ? 'translate-y-0' : 'translate-y-full'}`}
       style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
-      <div className="flex justify-center pt-3 pb-2">
+      <div
+        onTouchStart={onPickerDragStart}
+        onTouchMove={onPickerDragMove}
+        onTouchEnd={onPickerDragEnd}
+        className="flex justify-center pt-3 pb-2"
+        style={{ touchAction: 'none' }}
+      >
         <div className="w-9 h-1 rounded-full bg-white/20" />
       </div>
       <div className="px-4 pb-6 space-y-2">

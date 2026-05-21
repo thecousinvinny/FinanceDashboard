@@ -263,8 +263,68 @@ Detection pattern (used in Home, Money, and Wallet): load `subscriptions.name` w
 
 **Bottom sheet pattern**: fixed position, `translate-y-full` ↔ `translate-y-0` with `transition-transform duration-300`, `rgba(0,0,0,0.72)` backdrop, `rounded-t-[24px]` top corners, drag handle (`w-9 h-1 rounded-full bg-white/20`). Form state resets after close animation via `setTimeout(..., 300)` in a `useEffect` watching `open`.
 
+**Swipe-down dismiss + background scroll lock (canonical pattern for all non-calendar sheets):**
+
+```typescript
+const backdropRef = useRef<HTMLDivElement>(null)
+const sheetRef    = useRef<HTMLDivElement>(null)
+const dragStartY  = useRef<number | null>(null)
+
+// Background scroll lock — non-passive touchmove on backdrop (never body.overflow)
+useEffect(() => {
+  const el = backdropRef.current
+  if (!el || !open) return
+  const prevent = (e: TouchEvent) => e.preventDefault()
+  el.addEventListener('touchmove', prevent, { passive: false })
+  return () => el.removeEventListener('touchmove', prevent)
+}, [open])
+
+// Swipe-down dismiss — direct DOM mutation (no re-renders during drag)
+function onDragStart(e: React.TouchEvent) { dragStartY.current = e.touches[0].clientY }
+function onDragMove(e: React.TouchEvent) {
+  if (dragStartY.current === null || !sheetRef.current) return
+  const dy = Math.max(0, e.touches[0].clientY - dragStartY.current)
+  sheetRef.current.style.transform = `translateY(${dy}px)`
+  sheetRef.current.style.transition = 'none'
+}
+function onDragEnd(e: React.TouchEvent) {
+  if (!sheetRef.current) return
+  const dy = dragStartY.current !== null ? Math.max(0, e.changedTouches[0].clientY - dragStartY.current) : 0
+  dragStartY.current = null
+  if (dy > 80) {
+    sheetRef.current.style.transition = 'transform 0.28s cubic-bezier(0.4,0,0.2,1)'
+    sheetRef.current.style.transform  = 'translateY(100%)'
+    setTimeout(() => {
+      if (sheetRef.current) { sheetRef.current.style.transform = ''; sheetRef.current.style.transition = '' }
+      onClose()
+    }, 280)
+  } else {
+    sheetRef.current.style.transform = ''
+    sheetRef.current.style.transition = ''
+  }
+}
+```
+
+JSX structure — `ref={backdropRef}` on backdrop, `ref={sheetRef}` on sheet, drag handlers on handle:
+```tsx
+<div ref={backdropRef} onClick={onClose}
+  className={cn('fixed inset-0 z-[59] transition-opacity duration-300', open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none')}
+  style={{ background: 'rgba(0,0,0,0.72)' }}
+/>
+<div ref={sheetRef}
+  className={cn('fixed inset-x-0 bottom-0 z-[60] rounded-t-[24px] bg-bg-surface transition-transform duration-300', open ? 'translate-y-0' : 'translate-y-full')}
+  style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+>
+  <div onTouchStart={onDragStart} onTouchMove={onDragMove} onTouchEnd={onDragEnd}
+    className="flex justify-center pt-3 pb-3" style={{ touchAction: 'none' }}>
+    <div className="w-9 h-1 rounded-full bg-white/20" />
+  </div>
+```
+
+The Tailwind `translate-y-0/full` classes handle open/close; direct DOM mutation handles mid-drag. On dismiss, inline styles are cleared inside the `setTimeout` callback *before* `onClose()` fires so the next open doesn't start with a stale transform.
+
 **Critical iOS scroll rules for bottom sheets:**
-- **Never** set `document.body.style.overflow = 'hidden'` — this breaks touch scroll on all children in iOS Safari
+- **Never** set `document.body.style.overflow = 'hidden'` — this breaks touch scroll on all children in iOS Safari. Use the `backdropRef` non-passive listener above instead.
 - Use a static handle+header block, then a separate scrollable `<div>` with **inline styles** (not Tailwind): `style={{ maxHeight: '65vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}`
 - Outer sheet wrapper: `style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}`
 - Wrap `<input type="date">` and `<input type="time">` in an `overflow-hidden` container div — iOS Safari native controls don't clip to `border-radius` otherwise

@@ -40,14 +40,17 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
 
   const backdropRef = useRef<HTMLDivElement>(null)
   const sheetRef    = useRef<HTMLDivElement>(null)
-  const dragStartY  = useRef<number | null>(null)
+  const dragStartY    = useRef<number | null>(null)
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const el = backdropRef.current
-    if (!el || !open) return
-    const prevent = (e: TouchEvent) => e.preventDefault()
-    el.addEventListener('touchmove', prevent, { passive: false })
-    return () => el.removeEventListener('touchmove', prevent)
+    if (!open) return
+    const prevent = (e: TouchEvent) => {
+      if (scrollAreaRef.current?.contains(e.target as Node)) return
+      e.preventDefault()
+    }
+    document.addEventListener('touchmove', prevent, { passive: false })
+    return () => document.removeEventListener('touchmove', prevent)
   }, [open])
 
   function onDragStart(e: React.TouchEvent) { dragStartY.current = e.touches[0].clientY }
@@ -151,7 +154,7 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-[22px] text-ink-muted">×</button>
         </div>
 
-        <div className="px-5 space-y-5 overflow-y-auto" style={{ maxHeight: '65vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
+        <div ref={scrollAreaRef} className="px-5 space-y-5 overflow-y-auto" style={{ maxHeight: '65vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
 
           <PillGroup options={['Expense', 'Income'] as TxType[]} value={type} onChange={setType} />
 
