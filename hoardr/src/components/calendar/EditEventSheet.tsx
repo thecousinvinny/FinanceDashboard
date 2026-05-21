@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { MapPin, Clock, AlignLeft, X, ChevronDown, RefreshCw, Trash2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { rruleLabel } from '@/lib/rrule'
 import { RecurrencePicker } from './RecurrencePicker'
 import type { GCalendar } from './CalendarSettingsSheet'
@@ -54,8 +53,11 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
   const [saving, setSaving]         = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [recurrencePickerOpen, setRecurrencePickerOpen] = useState(false)
-  const locationRef = useRef<HTMLInputElement>(null)
-  const acRef       = useRef<unknown>(null)
+  const [dragY,              setDragY]              = useState(0)
+  const locationRef  = useRef<HTMLInputElement>(null)
+  const acRef        = useRef<unknown>(null)
+  const backdropRef  = useRef<HTMLDivElement>(null)
+  const dragStartY   = useRef<number | null>(null)
 
   useEffect(() => {
     if (open && event) {
@@ -109,6 +111,27 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
     return () => { acRef.current = null }
   }, [open, step])
 
+  // Lock background scroll while sheet is open
+  useEffect(() => {
+    const el = backdropRef.current
+    if (!el || !open) return
+    const prevent = (e: TouchEvent) => e.preventDefault()
+    el.addEventListener('touchmove', prevent, { passive: false })
+    return () => el.removeEventListener('touchmove', prevent)
+  }, [open])
+
+  useEffect(() => { if (!open) setDragY(0) }, [open])
+
+  function onDragStart(e: React.TouchEvent) { dragStartY.current = e.touches[0].clientY }
+  function onDragMove(e: React.TouchEvent) {
+    if (dragStartY.current === null) return
+    setDragY(Math.max(0, e.touches[0].clientY - dragStartY.current))
+  }
+  function onDragEnd() {
+    const dy = dragY; dragStartY.current = null; setDragY(0)
+    if (dy > 80) onClose()
+  }
+
   function set(k: keyof EventEdits, v: string | boolean) {
     setForm(f => f ? { ...f, [k]: v } : f)
   }
@@ -136,6 +159,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
     <>
       {/* Backdrop */}
       <div
+        ref={backdropRef}
         className={`fixed inset-0 z-40 transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         style={{ background: 'rgba(0,0,0,0.72)' }}
         onClick={onClose}
@@ -143,11 +167,22 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
 
       {/* Sheet */}
       <div
-        className={cn('fixed inset-x-0 bottom-0 z-50 rounded-t-[24px] bg-bg-surface transition-transform duration-300', open ? 'translate-y-0' : 'translate-y-full')}
-        style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        className="fixed inset-x-0 bottom-0 z-50 rounded-t-[24px] bg-bg-surface"
+        style={{
+          willChange: 'transform',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          transform: open ? `translateY(${dragY}px)` : 'translateY(100%)',
+          transition: dragY > 0 ? 'none' : 'transform 0.3s cubic-bezier(0.4,0,0.2,1)',
+        }}
       >
-        {/* Handle */}
-        <div className="flex justify-center pt-3 pb-2">
+        {/* Handle — drag target */}
+        <div
+          onTouchStart={onDragStart}
+          onTouchMove={onDragMove}
+          onTouchEnd={onDragEnd}
+          className="flex justify-center pt-3 pb-3"
+          style={{ touchAction: 'none' }}
+        >
           <div className="w-9 h-1 rounded-full bg-white/20" />
         </div>
 

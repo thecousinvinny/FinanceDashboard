@@ -377,12 +377,12 @@ export default function CalendarPage() {
         }
       }
       setEventMap(map)
-      if (!isLargeScreen) setDataLoaded(true)
+      setDataLoaded(true)
     } catch (err) {
       if ((err as Error)?.name === 'AbortError') return
       console.error('loadData error:', err)
     }
-  }, [supabase, isLargeScreen])
+  }, [supabase])
 
   useEffect(() => { loadData(); return () => { loadGen.current++; abortRef.current?.abort() } }, [loadData])
 
@@ -728,21 +728,21 @@ export default function CalendarPage() {
     await loadData()
   }
 
-  // ── Scroll to today after first data load (not on a timeout — fires after row heights are final) ─
+  // ── Scroll to today after first data load ────────────────────────────────
   useEffect(() => {
-    if (!dataLoaded || scrolledToToday.current) return
-    requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (!dataLoaded || scrolledToToday.current || isLargeScreen) return
+    // 150ms gives iOS time to finish layout after the large eventMap state update
+    const t = setTimeout(() => {
       const sc = scrollRef.current
       const el = dayRefs.current.get(todayStr)
       if (sc && el) {
-        // offsetTop is correct for direct children of a positioned scroll container;
-        // getBoundingClientRect() misfires inside fixed+transform ancestors on iOS WKWebView
         sc.scrollTop = el.offsetTop - 20
+        scrolledToToday.current = true
+        suppressPrepend.current = false
       }
-      scrolledToToday.current  = true
-      suppressPrepend.current  = false  // allow prepend IO after initial position is set
-    }))
-  }, [dataLoaded, todayStr])
+    }, 150)
+    return () => clearTimeout(t)
+  }, [dataLoaded, isLargeScreen, todayStr])
 
   // Scroll month grid to today when entering month mode
   useEffect(() => {
@@ -849,8 +849,32 @@ export default function CalendarPage() {
   while (gridCells.length % 7 !== 0) gridCells.push(null)
   const gridMonthLbl = new Date(gridYear, gridMonth, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
   const gds = (d: number) => `${gridYear}-${String(gridMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-  function goToPrev() { if (gridMonth === 0) { setGridMonth(11); setGridYear(y => y - 1) } else setGridMonth(m => m - 1); setGridSel(null) }
-  function goToNext() { if (gridMonth === 11) { setGridMonth(0); setGridYear(y => y + 1) } else setGridMonth(m => m + 1); setGridSel(null) }
+  function goToPrev() {
+    const newMonth = gridMonth === 0 ? 11 : gridMonth - 1
+    const newYear  = gridMonth === 0 ? gridYear - 1 : gridYear
+    if (gridMonth === 0) { setGridMonth(11); setGridYear(y => y - 1) } else setGridMonth(m => m - 1)
+    setGridSel(null)
+    if (!isLargeScreen) {
+      const firstDay = `${newYear}-${String(newMonth + 1).padStart(2, '0')}-01`
+      requestAnimationFrame(() => {
+        const sc = scrollRef.current, el = dayRefs.current.get(firstDay)
+        if (sc && el) sc.scrollTop = el.offsetTop - 20
+      })
+    }
+  }
+  function goToNext() {
+    const newMonth = gridMonth === 11 ? 0 : gridMonth + 1
+    const newYear  = gridMonth === 11 ? gridYear + 1 : gridYear
+    if (gridMonth === 11) { setGridMonth(0); setGridYear(y => y + 1) } else setGridMonth(m => m + 1)
+    setGridSel(null)
+    if (!isLargeScreen) {
+      const firstDay = `${newYear}-${String(newMonth + 1).padStart(2, '0')}-01`
+      requestAnimationFrame(() => {
+        const sc = scrollRef.current, el = dayRefs.current.get(firstDay)
+        if (sc && el) sc.scrollTop = el.offsetTop - 20
+      })
+    }
+  }
   function goToToday() { setGridYear(today.getFullYear()); setGridMonth(today.getMonth()); setGridSel(todayStr) }
   const gridSelEvents = gridSel ? (visibleMap[gridSel] ?? []) : []
   const gridSelLabel  = gridSel ? new Date(gridSel + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : null

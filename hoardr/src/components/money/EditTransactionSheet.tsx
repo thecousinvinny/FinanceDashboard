@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import {
   EXPENSE_CATEGORIES,
@@ -50,10 +50,41 @@ export function EditTransactionSheet({ tx, open, onClose, onSave, cards = [], ba
     }
   }, [tx])
 
+  const backdropRef = useRef<HTMLDivElement>(null)
+  const sheetRef    = useRef<HTMLDivElement>(null)
+  const dragStartY  = useRef<number | null>(null)
+
   useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : ''
-    return () => { document.body.style.overflow = '' }
+    const el = backdropRef.current
+    if (!el || !open) return
+    const prevent = (e: TouchEvent) => e.preventDefault()
+    el.addEventListener('touchmove', prevent, { passive: false })
+    return () => el.removeEventListener('touchmove', prevent)
   }, [open])
+
+  function onDragStart(e: React.TouchEvent) { dragStartY.current = e.touches[0].clientY }
+  function onDragMove(e: React.TouchEvent) {
+    if (dragStartY.current === null || !sheetRef.current) return
+    const dy = Math.max(0, e.touches[0].clientY - dragStartY.current)
+    sheetRef.current.style.transform = `translateY(${dy}px)`
+    sheetRef.current.style.transition = 'none'
+  }
+  function onDragEnd(e: React.TouchEvent) {
+    if (!sheetRef.current) return
+    const dy = dragStartY.current !== null ? Math.max(0, e.changedTouches[0].clientY - dragStartY.current) : 0
+    dragStartY.current = null
+    if (dy > 80) {
+      sheetRef.current.style.transition = 'transform 0.28s cubic-bezier(0.4,0,0.2,1)'
+      sheetRef.current.style.transform  = 'translateY(100%)'
+      setTimeout(() => {
+        if (sheetRef.current) { sheetRef.current.style.transform = ''; sheetRef.current.style.transition = '' }
+        onClose()
+      }, 280)
+    } else {
+      sheetRef.current.style.transform = ''
+      sheetRef.current.style.transition = ''
+    }
+  }
 
   useEffect(() => {
     if (!open) {
@@ -87,6 +118,7 @@ export function EditTransactionSheet({ tx, open, onClose, onSave, cards = [], ba
   return (
     <>
       <div
+        ref={backdropRef}
         onClick={onClose}
         className={cn(
           'fixed inset-0 z-[59] transition-opacity duration-300',
@@ -96,13 +128,20 @@ export function EditTransactionSheet({ tx, open, onClose, onSave, cards = [], ba
       />
 
       <div
+        ref={sheetRef}
         className={cn(
           'fixed inset-x-0 bottom-0 z-[60] rounded-t-[24px] bg-bg-surface transition-transform duration-300',
           open ? 'translate-y-0' : 'translate-y-full',
         )}
         style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
-        <div className="flex justify-center pt-3 pb-2">
+        <div
+          onTouchStart={onDragStart}
+          onTouchMove={onDragMove}
+          onTouchEnd={onDragEnd}
+          className="flex justify-center pt-3 pb-3"
+          style={{ touchAction: 'none' }}
+        >
           <div className="w-9 h-1 rounded-full bg-white/20" />
         </div>
 
