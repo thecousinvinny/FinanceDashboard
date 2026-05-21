@@ -13,6 +13,7 @@ export function usePullToRefresh(onRefresh: () => void) {
 
   useEffect(() => {
     const onTouchStart = (e: TouchEvent) => {
+      if (document.body.style.position === 'fixed') return
       if (window.scrollY === 0 && !refreshingRef.current) {
         startY.current = e.touches[0].clientY
       }

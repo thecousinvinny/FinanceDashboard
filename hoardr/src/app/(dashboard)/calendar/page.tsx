@@ -731,17 +731,23 @@ export default function CalendarPage() {
   // ── Scroll to today after first data load ────────────────────────────────
   useEffect(() => {
     if (!dataLoaded || scrolledToToday.current || isLargeScreen) return
-    // 150ms gives iOS time to finish layout after the large eventMap state update
-    const t = setTimeout(() => {
+    let t1: ReturnType<typeof setTimeout>
+    let t2: ReturnType<typeof setTimeout>
+    const doScroll = () => {
       const sc = scrollRef.current
       const el = dayRefs.current.get(todayStr)
-      if (sc && el) {
+      // Guard: offsetTop === 0 means layout isn't complete yet — don't mark done
+      if (sc && el && el.offsetTop > 0) {
         sc.scrollTop = el.offsetTop - 20
         scrolledToToday.current = true
         suppressPrepend.current = false
+        return true
       }
-    }, 150)
-    return () => clearTimeout(t)
+      return false
+    }
+    // 300ms initial wait; retry 400ms later if iOS layout isn't done yet
+    t1 = setTimeout(() => { if (!doScroll()) t2 = setTimeout(doScroll, 400) }, 300)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
   }, [dataLoaded, isLargeScreen, todayStr])
 
   // Scroll month grid to today when entering month mode
