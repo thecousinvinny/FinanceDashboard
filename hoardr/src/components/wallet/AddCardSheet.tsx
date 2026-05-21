@@ -45,16 +45,34 @@ export function AddCardSheet({ open, onClose, onAdd, banks }: Props) {
   const backdropRef = useRef<HTMLDivElement>(null)
   const sheetRef    = useRef<HTMLDivElement>(null)
   const dragStartY    = useRef<number | null>(null)
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     if (!open) return
     const scrollY = window.scrollY
     document.body.style.position = 'fixed'
     document.body.style.top = `-${scrollY}px`
     document.body.style.width = '100%'
+    document.documentElement.style.overscrollBehavior = 'none'
+    let lastY = 0
+    const onStart = (e: TouchEvent) => { lastY = e.touches[0].clientY }
+    const onMove = (e: TouchEvent) => {
+      const el = scrollAreaRef.current
+      if (!el?.contains(e.target as Node)) { e.preventDefault(); return }
+      const dy = e.touches[0].clientY - lastY
+      lastY = e.touches[0].clientY
+      const { scrollTop, scrollHeight, clientHeight } = el
+      if ((scrollTop <= 0 && dy > 0) || (scrollTop + clientHeight >= scrollHeight - 1 && dy < 0)) e.preventDefault()
+    }
+    document.addEventListener('touchstart', onStart, { passive: true })
+    document.addEventListener('touchmove', onMove, { passive: false })
     return () => {
       document.body.style.position = ''
       document.body.style.top = ''
       document.body.style.width = ''
+      document.documentElement.style.overscrollBehavior = ''
+      document.removeEventListener('touchstart', onStart)
+      document.removeEventListener('touchmove', onMove)
       window.scrollTo(0, scrollY)
     }
   }, [open])
@@ -144,7 +162,7 @@ export function AddCardSheet({ open, onClose, onAdd, banks }: Props) {
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-[22px] text-ink-muted">×</button>
         </div>
 
-        <div className="px-5 space-y-5 overflow-y-auto" style={{ maxHeight: '65vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
+        <div ref={scrollAreaRef} className="px-5 space-y-5 overflow-y-auto" style={{ maxHeight: '65vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
 
           {/* Style picker */}
           <div>
