@@ -53,16 +53,18 @@ export function EditTransactionSheet({ tx, open, onClose, onSave, cards = [], ba
   const backdropRef = useRef<HTMLDivElement>(null)
   const sheetRef    = useRef<HTMLDivElement>(null)
   const dragStartY    = useRef<number | null>(null)
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
-
   useEffect(() => {
     if (!open) return
-    const prevent = (e: TouchEvent) => {
-      if (scrollAreaRef.current?.contains(e.target as Node)) return
-      e.preventDefault()
+    const scrollY = window.scrollY
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${scrollY}px`
+    document.body.style.width = '100%'
+    return () => {
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.width = ''
+      window.scrollTo(0, scrollY)
     }
-    document.addEventListener('touchmove', prevent, { passive: false })
-    return () => document.removeEventListener('touchmove', prevent)
   }, [open])
 
   function onDragStart(e: React.TouchEvent) { dragStartY.current = e.touches[0].clientY }
@@ -163,7 +165,7 @@ export function EditTransactionSheet({ tx, open, onClose, onSave, cards = [], ba
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-[22px] text-ink-muted">×</button>
         </div>
 
-        <div ref={scrollAreaRef} className="px-5 space-y-5 overflow-y-auto" style={{ maxHeight: '65vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
+        <div className="px-5 space-y-5 overflow-y-auto" style={{ maxHeight: '65vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
 
           <div>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Amount</p>
