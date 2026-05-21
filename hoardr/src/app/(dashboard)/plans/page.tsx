@@ -70,10 +70,12 @@ function PlansPageInner() {
   const searchParams = useSearchParams()
   const initialTab   = (searchParams.get('tab') as Tab | null) ?? 'Subscriptions'
   const [tab,           setTab]          = useState<Tab>(initialTab)
-  type PlansCache = { subs: Sub[]; wishlist: WishItem[] }
+  type SubExp = { name: string; cost: number; date: string }
+  type PlansCache = { subs: Sub[]; wishlist: WishItem[]; subExps: SubExp[] }
   const cached = pageCache.get<PlansCache>('plans')
   const [subs,          setSubs]         = useState<Sub[]>(cached?.subs ?? [])
   const [wishlist,      setWishlist]     = useState<WishItem[]>(cached?.wishlist ?? [])
+  const [subExps,       setSubExps]      = useState<SubExp[]>(cached?.subExps ?? [])
   const [loading,       setLoading]      = useState(!cached)
   const [subSheet,      setSubSheet]     = useState(false)
   const [wishSheet,     setWishSheet]    = useState(false)
@@ -96,8 +98,9 @@ function PlansPageInner() {
     abortRef.current = controller
     const gen = ++loadGen.current
     try {
-      const yearStart = localToday().slice(0, 4) + '-01-01'
-      const [{ data: subsData }, { data: wishData }, { data: yrSavings }] = await Promise.all([
+      const yearStart  = localToday().slice(0, 4) + '-01-01'
+      const monthStart = localToday().slice(0, 7) + '-01'
+      const [{ data: subsData }, { data: wishData }, { data: yrSavings }, { data: expData }] = await Promise.all([
         supabase
           .from('subscriptions')
           .select('id, name, cost, billing, status, next_renewal, monthly_cost, annual_cost, card_id, category, cal_event_id')
@@ -111,6 +114,11 @@ function PlansPageInner() {
         supabase
           .from('expenses')
           .select('savings')
+          .gte('date', yearStart)
+          .abortSignal(controller.signal),
+        supabase
+          .from('expenses')
+          .select('name, cost, date')
           .gte('date', yearStart)
           .abortSignal(controller.signal),
       ])
@@ -142,12 +150,16 @@ function PlansPageInner() {
         const v = Number(e.savings ?? 0)
         return v > 0 ? s + v : s
       }, 0)
+      const newSubExps: SubExp[] = (expData ?? []).map(e => ({
+        name: String(e.name), cost: Number(e.cost), date: String(e.date),
+      }))
 
       if (gen !== loadGen.current) return
       setSubs(newSubs)
       setWishlist(newWish)
       setSavedYear(yrSaved)
-      pageCache.set('plans', { subs: newSubs, wishlist: newWish })
+      setSubExps(newSubExps)
+      pageCache.set('plans', { subs: newSubs, wishlist: newWish, subExps: newSubExps })
       setLoading(false)
     } catch (err) {
       if ((err as Error)?.name === 'AbortError') return
@@ -427,6 +439,18 @@ function PlansPageInner() {
     annual:  activeSubs.reduce((s, sub) => s + sub.annual_cost,  0),
   }), [activeSubs])
 
+  const paidTotals = useMemo(() => {
+    const now        = new Date()
+    const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+    const yearStart  = `${now.getFullYear()}-01-01`
+    const subNames   = new Set(activeSubs.map(s => s.name.toLowerCase()))
+    const matched    = subExps.filter(e => subNames.has(e.name.toLowerCase()))
+    return {
+      monthly: matched.filter(e => e.date >= monthStart).reduce((s, e) => s + e.cost, 0),
+      annual:  matched.filter(e => e.date >= yearStart ).reduce((s, e) => s + e.cost, 0),
+    }
+  }, [activeSubs, subExps])
+
   const interestedWish = useMemo(() => wishlist.filter(w => w.status === 'Interested'), [wishlist])
 
   const wishStats = useMemo(() => {
@@ -456,14 +480,16 @@ function PlansPageInner() {
               <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Per Month</p>
               <span className="text-[13px] text-gold">↻</span>
             </div>
-            <p className="text-[26px] font-bold tracking-tight text-ink" style={{ fontFamily: "var(--font-big-shoulders)" }}><SlotNumber value={totals.monthly} format={$fc} /></p>
+            <p className="text-[26px] font-bold tracking-tight text-ink" style={{ fontFamily: "var(--font-big-shoulders)" }}><SlotNumber value={paidTotals.monthly} format={$fc} /></p>
+            <p className="text-[11px] font-mono text-ink-faint mt-1">/ <SlotNumber value={totals.monthly} format={$fc} /></p>
           </div>
           <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
             <div className="flex items-center justify-between mb-3">
               <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Per Year</p>
               <span className="text-[13px] text-emerald">∞</span>
             </div>
-            <p className="text-[26px] font-bold tracking-tight text-ink" style={{ fontFamily: "var(--font-big-shoulders)" }}><SlotNumber value={totals.annual} format={$fc} /></p>
+            <p className="text-[26px] font-bold tracking-tight text-ink" style={{ fontFamily: "var(--font-big-shoulders)" }}><SlotNumber value={paidTotals.annual} format={$fc} /></p>
+            <p className="text-[11px] font-mono text-ink-faint mt-1">/ <SlotNumber value={totals.annual} format={$fc} /></p>
           </div>
         </div>
       )}

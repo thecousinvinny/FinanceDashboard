@@ -32,6 +32,7 @@ interface CardSub {
   cost:         number
   billing:      string
   monthly_cost: number
+  annual_cost:  number
   next_renewal: string | null
   category:     string | null
 }
@@ -146,7 +147,7 @@ export default function WalletPage() {
             .abortSignal(detailController.signal),
           supabase
             .from('subscriptions')
-            .select('id, name, cost, billing, monthly_cost, next_renewal, category')
+            .select('id, name, cost, billing, monthly_cost, annual_cost, next_renewal, category')
             .eq('card_id', selectedCard!.id)
             .order('next_renewal', { ascending: true })
             .abortSignal(detailController.signal),
@@ -159,6 +160,7 @@ export default function WalletPage() {
           cost:         Number(s.cost),
           billing:      String(s.billing),
           monthly_cost: Number(s.monthly_cost ?? 0),
+          annual_cost:  Number(s.annual_cost  ?? 0),
           next_renewal: s.next_renewal ? String(s.next_renewal) : null,
           category:     s.category ? String(s.category) : null,
         })))
@@ -560,6 +562,8 @@ export default function WalletPage() {
           const subMo      = subExp.filter(e => e.date >= monthStart).reduce((s, e) => s + Number(e.cost), 0)
           const subYr      = subExp.filter(e => e.date >= yearStart ).reduce((s, e) => s + Number(e.cost), 0)
           const subAllTime = subExp.reduce((s, e) => s + Number(e.cost), 0)
+          const estMo      = cardSubs.reduce((s, sub) => s + sub.monthly_cost, 0)
+          const estYr      = cardSubs.reduce((s, sub) => s + sub.annual_cost, 0)
           return (
             <>
               {/* Expense stats */}
@@ -574,14 +578,20 @@ export default function WalletPage() {
               {/* Sub stats */}
               {subAllTime > 0 && (
                 <div className="grid grid-cols-3 gap-2 px-5 mb-3">
-                  {[['Sub / Mo', subMo], ['Sub / Yr', subYr], ['All Time', subAllTime]].map(([label, val]) => (
-                    <div key={label as string} className="bg-bg-overlay rounded-[14px] px-3 py-3">
-                      <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-1">{label}</p>
-                      <p className="text-[14px] font-bold font-mono text-emerald">
-                        {$fk(val as number)}
-                      </p>
-                    </div>
-                  ))}
+                  <div className="bg-bg-overlay rounded-[14px] px-3 py-3">
+                    <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-1">Sub / Mo</p>
+                    <p className="text-[14px] font-bold font-mono text-ink">{$fk(subMo)}</p>
+                    {estMo > 0 && <p className="text-[10px] font-mono text-ink-faint mt-0.5">/ {$fk(estMo)}</p>}
+                  </div>
+                  <div className="bg-bg-overlay rounded-[14px] px-3 py-3">
+                    <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-1">Sub / Yr</p>
+                    <p className="text-[14px] font-bold font-mono text-ink">{$fk(subYr)}</p>
+                    {estYr > 0 && <p className="text-[10px] font-mono text-ink-faint mt-0.5">/ {$fk(estYr)}</p>}
+                  </div>
+                  <div className="bg-bg-overlay rounded-[14px] px-3 py-3">
+                    <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-1">All Time</p>
+                    <p className="text-[14px] font-bold font-mono text-ink">{$fk(subAllTime)}</p>
+                  </div>
                 </div>
               )}
             </>
