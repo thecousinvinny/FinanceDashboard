@@ -53,11 +53,13 @@ Next.js 15 App Router with two route groups:
 | `/home` | Net worth hero, sparkline, upcoming bills, recent activity |
 | `/money` | 30-day bar chart hero + combined expense/income feed with filter |
 | `/plans` | 30-day renewal strip hero + Subscriptions/Wishlist toggle |
-| `/settings` | Accounts (→ /wallet), Appearance (theme picker), App (sign out) |
+| `/settings` | Accounts (Cards & Banks → /wallet, Categories → /settings/categories), Calendar (filters + Google calendars), Appearance (theme picker), App (sign out) |
 | `/calendar` | Compact month grid (phone) / Notion-style infinite grid with sidebar (iPad+) |
 | `/studio` | Commission desk — Pending → Approved → In Progress → Completed → Paid flow |
 
 `/wallet` (Card visuals 12 styles + 8 textures, Banks) is accessible via Settings → Accounts → Cards & Banks, not in the nav directly.
+
+`/settings/categories` — category CRUD page. On load it probes for the `icon/color/tx_type` columns; if missing, shows a SQL migration prompt with a Retry button. After a successful probe, it upserts built-in categories (insert only, `ignoreDuplicates: true`), then runs a one-time batch UPDATE to apply curated icon/color to any rows still carrying the migration-default icon (`LayoutGrid`). This keeps user customizations intact after the first seeding pass.
 
 ### Data model
 
@@ -146,10 +148,11 @@ All six tabs are wired to live Supabase. `src/lib/data/transactions.ts` still ex
 
 ### UI components (`src/components/`)
 
-- `nav/BottomNav.tsx` — 6-tab fixed nav, 72px tall; active state via `usePathname()`. Tabs: Home, Money, Plans, Settings, Calendar, Studio.
+- `nav/BottomNav.tsx` — 6-tab fixed nav, 72px tall; active state via `usePathname()`. Tab order (left→right): Home, Money, Plans, Calendar, Studio, Settings.
+- `nav/TabSwipeNavigator.tsx` — mounted once in `(dashboard)/layout.tsx`. Listens for swipes starting within 35px of the left or right screen edge; right-swipe → prev tab, left-swipe → next tab. Skips `/calendar` entirely (the calendar page manages its own panel navigation). Guards against sheets being open (`document.body.style.position === 'fixed'`). Constants: `EDGE_PX = 35`, `MIN_DX = 60`, `H_RATIO = 1.5`.
 - `ui/ThemeToggle.tsx` — exports `ThemeToggle` (gear icon button, kept for any standalone use) and `SignOutButton`. Imports all theme logic from `@/lib/theme` — do not re-define `Theme`, `THEMES`, `applyTheme`, or `readTheme` locally. The full theme picker UI now lives on the `/settings` page.
 - `ui/Pill.tsx` — exports `Pill` (single) and `PillGroup<T>` (segmented control with gold active state)
-- `ui/CategoryIcon.tsx` — exports `CategoryIcon` (React component) and `getCategoryIcon` (returns a `LucideIcon`). Maps real Google Sheets category names (`Food`, `Fun`, `Tesla`, `Apparel`, `Tech`, `Home`, `Health`, `Travel`, `PC`, `Life`, `Gift`, `Insurance`, `Stocks`, `Other`, `Subscriptions` for expenses; `Repayment`, `Refund`, `Freelance`, `Projects`, `Stocks`, `Other` for income). Pass `className` to color the icon — use `text-gold` for expenses, `text-emerald` for income.
+- `ui/CategoryIcon.tsx` — exports `CategoryIcon` (React component) and `getCategoryIcon` (returns a `LucideIcon`). Checks `categoryMeta[name]` from `@/lib/category-meta` first (DB-backed custom icon/color); falls back to hardcoded defaults keyed by category name. Pass `className` to color the icon — use `text-gold` for expenses, `text-emerald` for income. When `categoryMeta` has a color for the category, it is applied via inline `style={{ color }}`, overriding the Tailwind className color.
 - `ui/SwipeToDelete.tsx` — swipe-left-to-delete with optional `onTap` (fires on clean tap when not swiped/revealed), `actionLabel`, and `actionBg` props. The `actionBg` default is `bg-ruby`; pass `'bg-amber-500'` for a cancel/restore action. Also accepts `onRight` / `rightLabel` / `rightBg` for a right-swipe confirm action (e.g. pay). Includes automatic press-scale animation (97%) and haptic feedback — no configuration needed.
 - `money/AddTransactionSheet.tsx` — canonical bottom sheet implementation; exports `CardOption` and `BankOption` interfaces used by all pickers
 - `money/EditTransactionSheet.tsx` — edit existing transaction; exports `TxEdits`
@@ -403,6 +406,15 @@ CSS variables per theme live in `globals.css` under `:root`, `html.charcoal-slat
 
 `src/app/layout.tsx` includes a pre-render inline script that applies the stored theme class and background before React hydrates, preventing a flash.
 
+### Category metadata (`src/lib/category-meta.ts`)
+
+- `ICON_REGISTRY: Record<string, LucideIcon>` — 48 named Lucide icons across 8 groups (Food & Drink, Shopping, Transport, Health, Entertainment, Home, Finance, Tech) plus `LayoutGrid` fallback. The registry keys are the icon component names (e.g. `'Utensils'`, `'Gamepad2'`).
+- `ICON_LIST: IconMeta[]` — ordered list of `{ name, group }` for the icon picker grid.
+- `COLOR_PALETTE: string[]` — 16 hex colors used in the color picker.
+- `categoryMeta: Record<string, CategoryMeta>` — module-level cache (name → `{ icon, color, tx_type }`). Populated by `setCategoryMeta(cats)` on the categories page load; consumed by `CategoryIcon` via a direct import. Not a React context — importing the object reference is enough.
+- `setCategoryMeta(cats)` — call after fetching or mutating categories to keep the cache current.
+- `BUILTIN_EXPENSE_CATEGORIES` / `BUILTIN_INCOME_CATEGORIES` — curated default icon/color per built-in category name; used for the initial DB seed.
+
 ### Key utilities (`src/lib/utils.ts`)
 
 - `$f(n)` — `$1,234` (whole dollars, rounds)
@@ -455,6 +467,8 @@ The rail uses `transform: translateX(-${viewIndex * 100}vw)` with a 320ms cubic-
 **Swipe navigation** — touch and mouse drag both supported (60px threshold, `|dx| > |dy| × 1.5`):
 - Day row → Panel 1: left swipe on a day row sets `setViewIndex(1)`
 - Panel 1 → Panel 0: right swipe/drag sets `setViewIndex(0)`. Preserves list scroll (does NOT re-center today).
+
+**Edge-zone inter-tab swipe (Panel 0 only)**: `TabSwipeNavigator` is excluded from `/calendar`. Instead, Panel 0's root div has `onTouchStart={p0Start} onTouchEnd={p0End}` handlers that detect 35px edge-zone swipes and call `router.push()` to adjacent tabs (Studio ← Calendar → Plans). This mirrors `TabSwipeNavigator` behavior but runs inside the calendar component so it can be gated behind `viewIndex === 0` and not conflict with panel-switching swipes.
 
 **Scroll-to-today** — **never use `scrollIntoView`**: silently fails inside `position: fixed` overflow containers on iOS WKWebView. Use manual `scrollTop`:
 ```typescript
@@ -529,7 +543,7 @@ The Google Calendar integration is proxied through `src/app/api/calendar/route.t
 
 `AddEventSheet` accepts `googleCals?: GCalendar[]` and renders a native `<select>` dropdown for choosing which calendar to create the event in. The calendar page filters this list to only calendars enabled in settings (`prefs.googleCalendarIds`). The selected `calendarId` is passed to `createCalEvent()` which forwards it to the API route. The `EMPTY` form state defaults `allDay: false` — new events open with time pickers visible.
 
-`NewCalEvent` includes `recurrenceRule: string` (empty string = no recurrence). `AddEventSheet` renders a **Repeat** row (between time pickers and location) that opens `RecurrencePicker` and displays the human-readable label from `rruleLabel()`. When saving, `handleAddEvent` in `calendar/page.tsx` stores the rule in `cal_events.recurrence_rule` and passes `recurrence: ['RRULE:' + rule]` to the Google Calendar API.
+`NewCalEvent` includes `recurrenceRule: string` (empty string = no recurrence). `AddEventSheet` auto-advances the end time to start+30min whenever the start time changes — end time is always at least 30 minutes after start. The user can still manually adjust end time after. `AddEventSheet` renders a **Repeat** row (between time pickers and location) that opens `RecurrencePicker` and displays the human-readable label from `rruleLabel()`. When saving, `handleAddEvent` in `calendar/page.tsx` stores the rule in `cal_events.recurrence_rule` and passes `recurrence: ['RRULE:' + rule]` to the Google Calendar API.
 
 `GCalEvent` (in `src/lib/calendar.ts`) includes `recurrence?: string[]` for the Google Calendar recurring-event field. `timedEvent()` in that file auto-detects cross-midnight events (`endTime < startTime`) and advances the GCal end `dateTime` to the next calendar day — always use `timedEvent()`, never build GCal `dateTime` strings by hand.
 
