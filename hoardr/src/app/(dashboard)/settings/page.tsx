@@ -38,7 +38,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!calOpen || googleCals.length > 0) return
     setCalsLoading(true)
-    fetch('/api/calendar?action=list')
+    fetch('/api/calendar?action=calendars')
       .then(r => r.json())
       .then(d => setGoogleCals(d.calendars ?? []))
       .catch(() => {})
