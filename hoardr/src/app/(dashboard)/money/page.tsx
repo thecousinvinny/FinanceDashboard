@@ -414,6 +414,7 @@ export default function MoneyPage() {
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2 min-w-0">
                     <CategoryIcon category={cat.name} type="Expense" size={12}
+                      isSub={subNames.has(cat.name.toLowerCase())}
                       className={subNames.has(cat.name.toLowerCase()) ? 'text-white/60' : 'text-gold'} />
                     <span className="text-[12px] font-medium text-ink truncate">{cat.name}</span>
                   </div>
@@ -493,6 +494,7 @@ export default function MoneyPage() {
                         <div className="flex items-center gap-3 px-4 py-3.5">
                           <div className="w-10 h-10 rounded-full bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
                             <CategoryIcon category={tx.category} type={tx.type} size={15}
+                              isSub={tx.type !== 'Income' && subNames.has(tx.name.toLowerCase())}
                               className={tx.type === 'Income' ? 'text-emerald' : subNames.has(tx.name.toLowerCase()) ? 'text-white/60' : 'text-gold'} />
                           </div>
                           <div className="flex-1 min-w-0">

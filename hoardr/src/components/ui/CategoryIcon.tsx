@@ -4,7 +4,7 @@ import {
   ArrowLeftRight, RotateCcw, Palette, RefreshCw,
   type LucideIcon,
 } from 'lucide-react'
-import { categoryMeta, ICON_REGISTRY } from '@/lib/category-meta'
+import { categoryMeta, ICON_REGISTRY, getIconColorMode } from '@/lib/category-meta'
 
 const EXPENSE_DEFAULTS: Record<string, LucideIcon> = {
   'Food':          Utensils,
@@ -43,13 +43,22 @@ export function getCategoryIcon(category: string, type: 'Expense' | 'Income'): L
 interface Props {
   category:     string
   type:         'Expense' | 'Income'
+  isSub?:       boolean
   size?:        number
   className?:   string
   strokeWidth?: number
 }
 
-export function CategoryIcon({ category, type, size = 16, className = 'text-ink-muted', strokeWidth = 1.75 }: Props) {
-  const Icon  = getCategoryIcon(category, type)
+export function CategoryIcon({ category, type, isSub = false, size = 16, className = 'text-ink-muted', strokeWidth = 1.75 }: Props) {
+  const Icon = getCategoryIcon(category, type)
+
+  if (getIconColorMode() === 'semantic') {
+    const color = isSub
+      ? 'rgba(255,255,255,0.6)'
+      : type === 'Income' ? '#22c55e' : '#ef4444'
+    return <Icon size={size} className={className} strokeWidth={strokeWidth} style={{ color }} />
+  }
+
   const color = categoryMeta[category]?.color
   return <Icon size={size} className={className} strokeWidth={strokeWidth} style={color ? { color } : undefined} />
 }

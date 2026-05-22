@@ -474,6 +474,7 @@ export default function HomePage() {
                       <CategoryIcon
                         category={row.category}
                         type={row.isIncome ? 'Income' : 'Expense'}
+                        isSub={row.isSub}
                         size={15}
                         className={row.isIncome ? 'text-emerald' : row.isSub ? 'text-white/60' : 'text-gold'}
                       />

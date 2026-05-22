@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { type Theme, THEMES, applyTheme, readTheme } from '@/lib/theme'
 import { CalendarSettingsSheet, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
+import { type IconColorMode, getIconColorMode, setIconColorMode } from '@/lib/category-meta'
 
 const DEFAULT_PREFS: CalPrefs = { visibleTypes: ['sub', 'custom', 'google'], googleCalendarIds: [] }
 
@@ -15,13 +16,14 @@ export default function SettingsPage() {
   const supabase  = useMemo(() => createClient(), [])
 
   const [theme,          setTheme]          = useState<Theme>('obsidian')
+  const [iconMode,       setIconMode]       = useState<IconColorMode>('category')
   const [email,          setEmail]          = useState<string | null>(null)
   const [calOpen,        setCalOpen]        = useState(false)
   const [prefs,          setPrefs]          = useState<CalPrefs>(DEFAULT_PREFS)
   const [googleCals,     setGoogleCals]     = useState<GCalendar[]>([])
   const [calsLoading,    setCalsLoading]    = useState(false)
 
-  useEffect(() => { setTheme(readTheme()) }, [])
+  useEffect(() => { setTheme(readTheme()); setIconMode(getIconColorMode()) }, [])
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => { setEmail(data.user?.email ?? null) })
@@ -46,6 +48,8 @@ export default function SettingsPage() {
   }, [calOpen, googleCals.length])
 
   function selectTheme(t: Theme) { setTheme(t); applyTheme(t) }
+
+  function selectIconMode(m: IconColorMode) { setIconMode(m); setIconColorMode(m) }
 
   async function savePrefs(p: CalPrefs) {
     setPrefs(p)
@@ -141,6 +145,38 @@ export default function SettingsPage() {
               </button>
             )
           })}
+        </div>
+
+        {/* Icon color mode */}
+        <div className="mt-4">
+          <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Icon Colors</p>
+          <div className="flex gap-2">
+            {([
+              { id: 'category' as IconColorMode, label: 'Category', sub: 'Custom per-category' },
+              { id: 'semantic' as IconColorMode, label: 'Type',     sub: 'Green / White / Red'  },
+            ]).map(opt => (
+              <button
+                key={opt.id}
+                onClick={() => selectIconMode(opt.id)}
+                className={cn(
+                  'flex-1 rounded-[14px] p-3 text-left border transition-colors',
+                  iconMode === opt.id ? 'border-gold/50 bg-bg-overlay' : 'border-white/[0.06] bg-bg-overlay'
+                )}
+              >
+                <div className="flex items-start justify-between gap-1">
+                  <div>
+                    <p className="text-[12px] font-semibold text-ink leading-tight">{opt.label}</p>
+                    <p className="text-[10px] text-ink-muted leading-tight mt-0.5">{opt.sub}</p>
+                  </div>
+                  {iconMode === opt.id && (
+                    <div className="w-[15px] h-[15px] rounded-full gradient-gold flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Check size={8} className="text-white" strokeWidth={2.5} />
+                    </div>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

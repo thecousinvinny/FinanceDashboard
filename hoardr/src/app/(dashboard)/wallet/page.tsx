@@ -618,6 +618,7 @@ export default function WalletPage() {
                         <CategoryIcon
                           category={exp.categories?.name ?? 'Other'}
                           type="Expense"
+                          isSub={isSub}
                           size={15}
                           className={isSub ? 'text-white/60' : 'text-gold'}
                         />

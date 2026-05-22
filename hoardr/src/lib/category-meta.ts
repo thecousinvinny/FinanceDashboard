@@ -130,6 +130,27 @@ export function setCategoryMeta(cats: { name: string; icon: string; color: strin
   for (const c of cats) categoryMeta[c.name] = { icon: c.icon, color: c.color, tx_type: c.tx_type }
 }
 
+// ── Icon color mode ───────────────────────────────────────────────────────────
+
+export type IconColorMode = 'category' | 'semantic'
+
+let _iconColorMode: IconColorMode = 'category'
+let _modeInit = false
+
+export function getIconColorMode(): IconColorMode {
+  if (!_modeInit && typeof window !== 'undefined') {
+    _iconColorMode = (localStorage.getItem('icon-color-mode') as IconColorMode) ?? 'category'
+    _modeInit = true
+  }
+  return _iconColorMode
+}
+
+export function setIconColorMode(mode: IconColorMode) {
+  _iconColorMode = mode
+  _modeInit = true
+  if (typeof window !== 'undefined') localStorage.setItem('icon-color-mode', mode)
+}
+
 // ── Built-in defaults (used for seeding + fallback) ───────────────────────────
 
 export const BUILTIN_EXPENSE_CATEGORIES: { name: string; icon: string; color: string }[] = [
