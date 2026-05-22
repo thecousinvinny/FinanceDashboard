@@ -243,7 +243,13 @@ export function AddEventSheet({ open, defaultDate, defaultCalendarId, googleCals
                   <input
                     type="time"
                     value={form.startTime}
-                    onChange={e => set('startTime', e.target.value)}
+                    onChange={e => {
+                      const start = e.target.value
+                      const [h, m] = start.split(':').map(Number)
+                      const tot = h * 60 + m + 30
+                      const end = `${String(Math.floor(tot / 60) % 24).padStart(2, '0')}:${String(tot % 60).padStart(2, '0')}`
+                      setForm(f => ({ ...f, startTime: start, endTime: end }))
+                    }}
                     className="w-full px-4 py-3 text-[15px] text-ink bg-transparent outline-none"
                     style={{ colorScheme: 'dark' }}
                   />
