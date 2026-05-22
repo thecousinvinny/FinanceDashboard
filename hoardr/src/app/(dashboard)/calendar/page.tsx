@@ -1344,10 +1344,6 @@ export default function CalendarPage() {
                   >
                     {gridMonthLbl}
                   </span>
-                  <button onClick={() => setSettingsOpen(true)}
-                    style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgb(var(--rgb-ink) / 0.06)', border: '1px solid rgb(var(--rgb-ink) / 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
-                    <SlidersHorizontal size={12} color="rgb(var(--rgb-ink) / 0.4)" />
-                  </button>
                 </div>
                 {/* DOW labels */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', paddingLeft: 8, paddingRight: 8, paddingBottom: 4, flexShrink: 0 }}>
