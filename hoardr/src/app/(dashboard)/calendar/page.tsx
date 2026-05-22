@@ -389,24 +389,42 @@ export default function CalendarPage() {
 
   useEffect(() => {
     if (!('geolocation' in navigator)) return
-    navigator.geolocation.getCurrentPosition(pos => {
-      const { latitude: lat, longitude: lon } = pos.coords
+
+    const LOC_KEY = 'cal-weather-loc'
+    const LOC_TTL = 24 * 60 * 60 * 1000 // re-fetch position once per day
+
+    function fetchWeather(lat: number, lon: number) {
       fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_probability_max,windspeed_10m_max&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=14`)
         .then(r => r.json())
         .then((d: { daily: { time: string[]; temperature_2m_max: number[]; temperature_2m_min: number[]; weathercode: number[]; precipitation_probability_max: number[]; windspeed_10m_max: number[] } }) => {
           const map: Record<string, DayWeather> = {}
           d.daily.time.forEach((date, i) => {
             map[date] = {
-              high:      Math.round(d.daily.temperature_2m_max[i]),
-              low:       Math.round(d.daily.temperature_2m_min[i]),
-              code:      d.daily.weathercode[i],
+              high:       Math.round(d.daily.temperature_2m_max[i]),
+              low:        Math.round(d.daily.temperature_2m_min[i]),
+              code:       d.daily.weathercode[i],
               precipProb: Math.round(d.daily.precipitation_probability_max[i] ?? 0),
-              wind:      Math.round(d.daily.windspeed_10m_max[i]),
+              wind:       Math.round(d.daily.windspeed_10m_max[i]),
             }
           })
           setWeatherMap(map)
         })
         .catch(() => {})
+    }
+
+    // Use cached coordinates if still fresh — avoids prompting for permission on every tab visit
+    try {
+      const raw = localStorage.getItem(LOC_KEY)
+      if (raw) {
+        const { lat, lon, ts } = JSON.parse(raw) as { lat: number; lon: number; ts: number }
+        if (Date.now() - ts < LOC_TTL) { fetchWeather(lat, lon); return }
+      }
+    } catch {}
+
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude: lat, longitude: lon } = pos.coords
+      try { localStorage.setItem(LOC_KEY, JSON.stringify({ lat, lon, ts: Date.now() })) } catch {}
+      fetchWeather(lat, lon)
     }, () => {})
   }, [])
 
