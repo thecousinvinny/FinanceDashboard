@@ -8,7 +8,6 @@ import { showToast } from '@/lib/toast'
 import { createCalEvent, allDayEvent } from '@/lib/calendar'
 import type { CommissionStatus } from '@/types'
 import { AddCommissionSheet, type NewCommission } from '@/components/studio/AddCommissionSheet'
-import { ThemeToggle, SignOutButton } from '@/components/ui/ThemeToggle'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { PullIndicator } from '@/components/ui/PullIndicator'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
@@ -203,13 +202,8 @@ export default function StudioPage() {
 
       <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
 
-      <div className="px-5 pt-12 flex justify-end gap-2">
-        <SignOutButton />
-        <ThemeToggle />
-      </div>
-
       {/* ── Ledger summary card ──────────────────────────────────────────── */}
-      <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card p-5">
+      <div className="mx-4 mt-14 bg-bg-surface border border-white/[0.06] rounded-card p-5">
         <div className="flex items-start justify-between mb-2">
           <p className="text-[9px] font-medium tracking-[0.14em] uppercase text-ink-faint">
             Matte Black Ledger

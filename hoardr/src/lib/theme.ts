@@ -1,0 +1,45 @@
+export type Theme = 'obsidian' | 'charcoal-slate' | 'cool-linen'
+
+export interface ThemeDef {
+  id:       Theme
+  label:    string
+  subtitle: string
+  swatches: [string, string, string]
+}
+
+export const THEMES: ThemeDef[] = [
+  { id: 'obsidian',       label: 'Obsidian',       subtitle: 'Dark',  swatches: ['#0A0A0B', '#16161B', '#1A1A1E'] },
+  { id: 'charcoal-slate', label: 'Charcoal Slate',  subtitle: 'Dark',  swatches: ['#191B1F', '#21242A', '#2A2D35'] },
+  { id: 'cool-linen',     label: 'Cool Linen',      subtitle: 'Light', swatches: ['#F0F2F5', '#E8EAEE', '#DFE2E7'] },
+]
+
+const THEME_BG: Record<Theme, string> = {
+  'obsidian':       '#0A0A0B',
+  'charcoal-slate': '#191B1F',
+  'cool-linen':     '#F0F2F5',
+}
+
+export function applyTheme(t: Theme) {
+  document.documentElement.classList.remove('charcoal-slate', 'cool-linen', 'light')
+  document.documentElement.style.colorScheme = ''
+
+  if (t === 'charcoal-slate') {
+    document.documentElement.classList.add('charcoal-slate')
+  } else if (t === 'cool-linen') {
+    document.documentElement.classList.add('cool-linen')
+    document.documentElement.style.colorScheme = 'light'
+  }
+
+  document.documentElement.style.background = THEME_BG[t]
+  const meta = document.querySelector('meta[name="theme-color"]')
+  if (meta) meta.setAttribute('content', THEME_BG[t])
+  localStorage.setItem('theme', t)
+}
+
+export function readTheme(): Theme {
+  if (typeof window === 'undefined') return 'obsidian'
+  const stored = localStorage.getItem('theme')
+  if (stored === 'charcoal-slate') return 'charcoal-slate'
+  if (stored === 'cool-linen')     return 'cool-linen'
+  return 'obsidian'
+}

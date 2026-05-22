@@ -4,70 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { Settings, LogOut, Check } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
-
-type Theme = 'obsidian' | 'charcoal-slate' | 'cool-linen'
-
-interface ThemeDef {
-  id:       Theme
-  label:    string
-  subtitle: string
-  swatches: [string, string, string]
-}
-
-const THEMES: ThemeDef[] = [
-  {
-    id:       'obsidian',
-    label:    'Obsidian',
-    subtitle: 'Dark',
-    swatches: ['#0A0A0B', '#16161B', '#1A1A1E'],
-  },
-  {
-    id:       'charcoal-slate',
-    label:    'Charcoal Slate',
-    subtitle: 'Dark',
-    swatches: ['#191B1F', '#21242A', '#2A2D35'],
-  },
-  {
-    id:       'cool-linen',
-    label:    'Cool Linen',
-    subtitle: 'Light',
-    swatches: ['#F0F2F5', '#E8EAEE', '#DFE2E7'],
-  },
-]
-
-const THEME_BG: Record<Theme, string> = {
-  'obsidian':       '#0A0A0B',
-  'charcoal-slate': '#191B1F',
-  'cool-linen':     '#F0F2F5',
-}
-
-function applyTheme(t: Theme) {
-  document.documentElement.classList.remove('charcoal-slate', 'cool-linen', 'light')
-  document.documentElement.style.colorScheme = ''
-
-  if (t === 'charcoal-slate') {
-    document.documentElement.classList.add('charcoal-slate')
-  } else if (t === 'cool-linen') {
-    document.documentElement.classList.add('cool-linen')
-    document.documentElement.style.colorScheme = 'light'
-  }
-
-  document.documentElement.style.background = THEME_BG[t]
-
-  // Update PWA theme-color for iOS status bar
-  const meta = document.querySelector('meta[name="theme-color"]')
-  if (meta) meta.setAttribute('content', THEME_BG[t])
-
-  localStorage.setItem('theme', t)
-}
-
-function readTheme(): Theme {
-  if (typeof window === 'undefined') return 'obsidian'
-  const stored = localStorage.getItem('theme')
-  if (stored === 'charcoal-slate') return 'charcoal-slate'
-  if (stored === 'cool-linen')     return 'cool-linen'
-  return 'obsidian'
-}
+import { type Theme, THEMES, applyTheme, readTheme } from '@/lib/theme'
 
 function SettingsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const sheetRef   = useRef<HTMLDivElement>(null)

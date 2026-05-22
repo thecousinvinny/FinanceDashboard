@@ -2,16 +2,16 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutGrid, ArrowLeftRight, Sparkles, Palette, CreditCard, CalendarDays } from 'lucide-react'
+import { LayoutGrid, ArrowLeftRight, Sparkles, Palette, SlidersHorizontal, CalendarDays } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const tabs = [
-  { href: '/home',     label: 'Home',     Icon: LayoutGrid     },
-  { href: '/money',    label: 'Money',    Icon: ArrowLeftRight },
-  { href: '/plans',    label: 'Plans',    Icon: Sparkles       },
-  { href: '/wallet',   label: 'Wallet',   Icon: CreditCard     },
-  { href: '/calendar', label: 'Calendar', Icon: CalendarDays   },
-  { href: '/studio',   label: 'Studio',   Icon: Palette        },
+  { href: '/home',     label: 'Home',     Icon: LayoutGrid        },
+  { href: '/money',    label: 'Money',    Icon: ArrowLeftRight    },
+  { href: '/plans',    label: 'Plans',    Icon: Sparkles          },
+  { href: '/settings', label: 'Settings', Icon: SlidersHorizontal },
+  { href: '/calendar', label: 'Calendar', Icon: CalendarDays      },
+  { href: '/studio',   label: 'Studio',   Icon: Palette           },
 ]
 
 export default function BottomNav() {
