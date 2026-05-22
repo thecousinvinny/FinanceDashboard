@@ -1,33 +1,61 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, ChevronRight, CreditCard, LogOut } from 'lucide-react'
+import { Check, ChevronRight, CreditCard, LogOut, CalendarDays } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { type Theme, THEMES, applyTheme, readTheme } from '@/lib/theme'
+import { CalendarSettingsSheet, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
+
+const DEFAULT_PREFS: CalPrefs = { visibleTypes: ['sub', 'custom', 'google'], googleCalendarIds: [] }
 
 export default function SettingsPage() {
-  const router = useRouter()
-  const [theme, setTheme]   = useState<Theme>('obsidian')
-  const [email, setEmail]   = useState<string | null>(null)
+  const router    = useRouter()
+  const supabase  = useMemo(() => createClient(), [])
+
+  const [theme,          setTheme]          = useState<Theme>('obsidian')
+  const [email,          setEmail]          = useState<string | null>(null)
+  const [calOpen,        setCalOpen]        = useState(false)
+  const [prefs,          setPrefs]          = useState<CalPrefs>(DEFAULT_PREFS)
+  const [googleCals,     setGoogleCals]     = useState<GCalendar[]>([])
+  const [calsLoading,    setCalsLoading]    = useState(false)
 
   useEffect(() => { setTheme(readTheme()) }, [])
 
   useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(({ data }) => {
-      setEmail(data.user?.email ?? null)
-    })
-  }, [])
+    supabase.auth.getUser().then(({ data }) => { setEmail(data.user?.email ?? null) })
+  }, [supabase])
 
-  function selectTheme(t: Theme) {
-    setTheme(t)
-    applyTheme(t)
+  // Load calendar prefs once
+  useEffect(() => {
+    supabase.from('profiles').select('calendar_prefs').single().then(({ data }) => {
+      if (data?.calendar_prefs) setPrefs(data.calendar_prefs as CalPrefs)
+    })
+  }, [supabase])
+
+  // Lazily load Google calendars when the sheet opens
+  useEffect(() => {
+    if (!calOpen || googleCals.length > 0) return
+    setCalsLoading(true)
+    fetch('/api/calendar?action=list')
+      .then(r => r.json())
+      .then(d => setGoogleCals(d.calendars ?? []))
+      .catch(() => {})
+      .finally(() => setCalsLoading(false))
+  }, [calOpen, googleCals.length])
+
+  function selectTheme(t: Theme) { setTheme(t); applyTheme(t) }
+
+  async function savePrefs(p: CalPrefs) {
+    setPrefs(p)
+    const { data } = await supabase.auth.getUser()
+    if (data.user?.id) {
+      await supabase.from('profiles').update({ calendar_prefs: p }).eq('id', data.user.id)
+    }
   }
 
   async function signOut() {
-    const supabase = createClient()
     await supabase.auth.signOut()
     window.location.href = '/login'
   }
@@ -77,7 +105,6 @@ export default function SettingsPage() {
                     : 'border-white/[0.06] bg-bg-overlay'
                 )}
               >
-                {/* Color swatches */}
                 <div className="flex gap-1 mb-2">
                   {t.swatches.map((color, i) => (
                     <div
@@ -101,6 +128,26 @@ export default function SettingsPage() {
               </button>
             )
           })}
+        </div>
+      </div>
+
+      {/* ── Calendar ───────────────────────────────────────────────────────── */}
+      <div className="px-5 mb-6">
+        <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Calendar</p>
+        <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden">
+          <button
+            onClick={() => setCalOpen(true)}
+            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity"
+          >
+            <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+              <CalendarDays size={15} className="text-gold" strokeWidth={1.75} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[14px] font-medium text-ink">Filters &amp; Google Calendars</p>
+              <p className="text-[11px] text-ink-muted">Event types, linked calendars</p>
+            </div>
+            <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
+          </button>
         </div>
       </div>
 
@@ -129,6 +176,15 @@ export default function SettingsPage() {
           </button>
         </div>
       </div>
+
+      <CalendarSettingsSheet
+        open={calOpen}
+        onClose={() => setCalOpen(false)}
+        prefs={prefs}
+        googleCals={googleCals}
+        calsLoading={calsLoading}
+        onSave={savePrefs}
+      />
     </div>
   )
 }
