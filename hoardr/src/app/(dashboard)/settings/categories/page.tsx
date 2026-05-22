@@ -281,12 +281,34 @@ export default function CategoriesPage() {
       return
     }
 
-    // Seed built-in categories (upsert so icon/color defaults are written on first visit)
+    // Insert any missing built-in categories without touching customized ones
     const builtins = [
       ...BUILTIN_EXPENSE_CATEGORIES.map(c => ({ ...c, tx_type: 'Expense', user_id: user.id })),
       ...BUILTIN_INCOME_CATEGORIES.map(c => ({ ...c, tx_type: 'Income',  user_id: user.id })),
     ]
     await supabase.from('categories').upsert(builtins, { onConflict: 'user_id,name', ignoreDuplicates: true })
+
+    // Apply curated icon/color to any built-in that still has the migration default icon.
+    // This is a one-time fix for rows created before icon/color columns existed.
+    const { data: existing } = await supabase
+      .from('categories')
+      .select('id, name, icon, tx_type')
+      .eq('user_id', user.id)
+      .eq('icon', 'LayoutGrid')
+
+    if (existing && existing.length > 0) {
+      const builtinMap = new Map(builtins.map(b => [b.name, b]))
+      const toUpdate = existing
+        .map(row => {
+          const b = builtinMap.get(row.name)
+          return b ? { id: row.id, icon: b.icon, color: b.color } : null
+        })
+        .filter(Boolean) as { id: string; icon: string; color: string }[]
+
+      await Promise.all(
+        toUpdate.map(u => supabase.from('categories').update({ icon: u.icon, color: u.color }).eq('id', u.id))
+      )
+    }
 
     const { data } = await supabase
       .from('categories')

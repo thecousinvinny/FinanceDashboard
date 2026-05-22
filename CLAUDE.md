@@ -53,9 +53,11 @@ Next.js 15 App Router with two route groups:
 | `/home` | Net worth hero, sparkline, upcoming bills, recent activity |
 | `/money` | 30-day bar chart hero + combined expense/income feed with filter |
 | `/plans` | 30-day renewal strip hero + Subscriptions/Wishlist toggle |
-| `/studio` | Commission desk — Pending → Approved → In Progress → Completed → Paid flow |
-| `/wallet` | Card visuals (12 styles, 8 textures) + Banks |
+| `/settings` | Accounts (→ /wallet), Appearance (theme picker), App (sign out) |
 | `/calendar` | Compact month grid (phone) / Notion-style infinite grid with sidebar (iPad+) |
+| `/studio` | Commission desk — Pending → Approved → In Progress → Completed → Paid flow |
+
+`/wallet` (Card visuals 12 styles + 8 textures, Banks) is accessible via Settings → Accounts → Cards & Banks, not in the nav directly.
 
 ### Data model
 
@@ -144,7 +146,8 @@ All six tabs are wired to live Supabase. `src/lib/data/transactions.ts` still ex
 
 ### UI components (`src/components/`)
 
-- `nav/BottomNav.tsx` — 6-tab fixed nav, 72px tall; active state via `usePathname()`
+- `nav/BottomNav.tsx` — 6-tab fixed nav, 72px tall; active state via `usePathname()`. Tabs: Home, Money, Plans, Settings, Calendar, Studio.
+- `ui/ThemeToggle.tsx` — exports `ThemeToggle` (gear icon button, kept for any standalone use) and `SignOutButton`. Imports all theme logic from `@/lib/theme` — do not re-define `Theme`, `THEMES`, `applyTheme`, or `readTheme` locally. The full theme picker UI now lives on the `/settings` page.
 - `ui/Pill.tsx` — exports `Pill` (single) and `PillGroup<T>` (segmented control with gold active state)
 - `ui/CategoryIcon.tsx` — exports `CategoryIcon` (React component) and `getCategoryIcon` (returns a `LucideIcon`). Maps real Google Sheets category names (`Food`, `Fun`, `Tesla`, `Apparel`, `Tech`, `Home`, `Health`, `Travel`, `PC`, `Life`, `Gift`, `Insurance`, `Stocks`, `Other`, `Subscriptions` for expenses; `Repayment`, `Refund`, `Freelance`, `Projects`, `Stocks`, `Other` for income). Pass `className` to color the icon — use `text-gold` for expenses, `text-emerald` for income.
 - `ui/SwipeToDelete.tsx` — swipe-left-to-delete with optional `onTap` (fires on clean tap when not swiped/revealed), `actionLabel`, and `actionBg` props. The `actionBg` default is `bg-ruby`; pass `'bg-amber-500'` for a cancel/restore action. Also accepts `onRight` / `rightLabel` / `rightBg` for a right-swipe confirm action (e.g. pay). Includes automatic press-scale animation (97%) and haptic feedback — no configuration needed.
@@ -388,6 +391,18 @@ Every page root `<div>` should include `tab-enter` for the mount animation. Each
   ```
   Each expanded instance carries `instanceDate` (the actual occurrence date) on the `CalEvent` object; the `date` field retains the original base date of the parent row.
 
+### Theme system (`src/lib/theme.ts`)
+
+Shared module — import from here, never re-define locally:
+- `Theme` type: `'obsidian' | 'charcoal-slate' | 'cool-linen'`
+- `THEMES: ThemeDef[]` — array of 3 theme definitions with `id`, `label`, `subtitle`, `swatches`
+- `applyTheme(t)` — sets html class, colorScheme, background, meta theme-color, localStorage
+- `readTheme()` — reads localStorage, returns `'obsidian'` as default
+
+CSS variables per theme live in `globals.css` under `:root`, `html.charcoal-slate`, `html.cool-linen`. Inline React `style={{}}` props should use `var(--color-bg-base/surface/elevated/ink/grid-border)` (solid `rgb()` string helpers) or `rgb(var(--rgb-X) / alpha)` for opacity variants. Never hardcode dark-mode hex colors (`#0A0A0B`, `#1c1c2a`, etc.) in inline styles — they break the light themes.
+
+`src/app/layout.tsx` includes a pre-render inline script that applies the stored theme class and background before React hydrates, preventing a flash.
+
 ### Key utilities (`src/lib/utils.ts`)
 
 - `$f(n)` — `$1,234` (whole dollars, rounds)
@@ -489,7 +504,7 @@ All three use the deferred-delete toast pattern so the user gets a 5-second Undo
 
 ### FAB pattern
 
-The add (`+`) button on all six tabs (Home, Money, Plans, Wallet, Studio, Calendar) is a circular gold FAB fixed at `right: 16px, bottom: 80px` (8px above the 72px nav bar). It is rendered outside the scrolling content `<div>` (after the closing tag) but inside the page's fragment wrapper. Calendar is the only tab with two FABs — one in Panel 0 (mobile split view, pre-fills `gridSel`) and one in Panel 1 (day detail, pre-fills `selectedDay`); both are conditionally rendered by panel. Styling:
+The add (`+`) button on tabs that have addable content (Home, Money, Plans, Wallet, Studio, Calendar) is a circular gold FAB fixed at `right: 16px, bottom: 80px` (8px above the 72px nav bar). The Settings page has no FAB. It is rendered outside the scrolling content `<div>` (after the closing tag) but inside the page's fragment wrapper. Calendar is the only tab with two FABs — one in Panel 0 (mobile split view, pre-fills `gridSel`) and one in Panel 1 (day detail, pre-fills `selectedDay`); both are conditionally rendered by panel. Styling:
 
 ```tsx
 <button
