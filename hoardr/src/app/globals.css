@@ -17,6 +17,20 @@
   --card-divider:    rgba(255,255,255,0.05);
 }
 
+html.charcoal-slate {
+  --rgb-bg-base:     25 27 31;
+  --rgb-bg-surface:  33 36 42;
+  --rgb-bg-elevated: 42 45 53;
+  --rgb-bg-overlay:  50 54 64;
+  --rgb-ink:         232 236 240;
+  --rgb-ink-muted:   107 114 128;
+  --rgb-ink-faint:   75 82 96;
+
+  --nav-bg:          rgba(25,27,31,0.92);
+  --card-border:     rgba(46,50,64,0.8);
+  --card-divider:    rgba(46,50,64,0.4);
+}
+
 html.light {
   --rgb-bg-base:     244 244 240;
   --rgb-bg-surface:  255 255 255;
@@ -176,6 +190,19 @@ html, body {
   filter: brightness(0) invert(0.5) !important;
 }
 .pac-logo::after { display: none !important; }
+
+/* ── Charcoal Slate border overrides ─────────────────────────────────────── */
+html.charcoal-slate .border-white\/\[0\.06\]  { border-color: rgba(46,50,64,0.8) !important; }
+html.charcoal-slate .border-white\/\[0\.04\]  { border-color: rgba(46,50,64,0.4) !important; }
+html.charcoal-slate .ring-white\/\[0\.06\]    { --tw-ring-color: rgba(46,50,64,0.8) !important; }
+html.charcoal-slate .divide-white\/\[0\.04\] > * + * { border-color: rgba(46,50,64,0.4) !important; }
+
+/* ── Charcoal Slate — Google Places Autocomplete ─────────────────────────── */
+html.charcoal-slate .pac-container { background-color: #2A2D35 !important; border-color: rgba(46,50,64,0.8) !important; }
+html.charcoal-slate .pac-item      { background-color: #2A2D35 !important; border-color: rgba(46,50,64,0.4) !important; color: #E8ECF0 !important; }
+html.charcoal-slate .pac-item:hover,
+html.charcoal-slate .pac-item-selected { background-color: #323640 !important; }
+html.charcoal-slate .pac-item-query { color: #E8ECF0 !important; }
 
 /* ── Light-mode border overrides ─────────────────────────────────────────── */
 html.light .border-white\/\[0\.06\]  { border-color: var(--card-border) !important; }

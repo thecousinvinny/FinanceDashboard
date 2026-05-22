@@ -265,18 +265,42 @@ Detection pattern (used in Home, Money, and Wallet): load `subscriptions.name` w
 
 **Swipe-down dismiss + background scroll lock (canonical pattern for all non-calendar sheets):**
 
+Three-layer lock used in every sheet (`AddTransactionSheet`, `EditTransactionSheet`, all plans/wallet sheets):
+
 ```typescript
-const backdropRef = useRef<HTMLDivElement>(null)
 const sheetRef    = useRef<HTMLDivElement>(null)
 const dragStartY  = useRef<number | null>(null)
+const scrollAreaRef = useRef<HTMLDivElement>(null)
 
-// Background scroll lock — non-passive touchmove on backdrop (never body.overflow)
+// Triple-lock: body position, html overscroll, direction-aware touchmove
 useEffect(() => {
-  const el = backdropRef.current
-  if (!el || !open) return
-  const prevent = (e: TouchEvent) => e.preventDefault()
-  el.addEventListener('touchmove', prevent, { passive: false })
-  return () => el.removeEventListener('touchmove', prevent)
+  if (!open) return
+  const scrollY = window.scrollY
+  document.body.style.position = 'fixed'
+  document.body.style.top = `-${scrollY}px`
+  document.body.style.width = '100%'
+  document.documentElement.style.overscrollBehavior = 'none'
+  let lastY = 0
+  const onStart = (e: TouchEvent) => { lastY = e.touches[0].clientY }
+  const onMove = (e: TouchEvent) => {
+    const el = scrollAreaRef.current
+    if (!el?.contains(e.target as Node)) { e.preventDefault(); return }
+    const dy = e.touches[0].clientY - lastY
+    lastY = e.touches[0].clientY
+    const { scrollTop, scrollHeight, clientHeight } = el
+    if ((scrollTop <= 0 && dy > 0) || (scrollTop + clientHeight >= scrollHeight - 1 && dy < 0)) e.preventDefault()
+  }
+  document.addEventListener('touchstart', onStart, { passive: true })
+  document.addEventListener('touchmove', onMove, { passive: false })
+  return () => {
+    document.body.style.position = ''
+    document.body.style.top = ''
+    document.body.style.width = ''
+    document.documentElement.style.overscrollBehavior = ''
+    document.removeEventListener('touchstart', onStart)
+    document.removeEventListener('touchmove', onMove)
+    window.scrollTo(0, scrollY)
+  }
 }, [open])
 
 // Swipe-down dismiss — direct DOM mutation (no re-renders during drag)
@@ -305,13 +329,10 @@ function onDragEnd(e: React.TouchEvent) {
 }
 ```
 
-JSX structure — `ref={backdropRef}` on backdrop, `ref={sheetRef}` on sheet, drag handlers on handle:
+JSX structure — `ref={sheetRef}` on sheet, `ref={scrollAreaRef}` on the scrollable content div, drag handlers on handle:
 ```tsx
-<div ref={backdropRef} onClick={onClose}
-  className={cn('fixed inset-0 z-[59] transition-opacity duration-300', open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none')}
-  style={{ background: 'rgba(0,0,0,0.72)' }}
-/>
-<div ref={sheetRef}
+<div
+  ref={sheetRef}
   className={cn('fixed inset-x-0 bottom-0 z-[60] rounded-t-[24px] bg-bg-surface transition-transform duration-300', open ? 'translate-y-0' : 'translate-y-full')}
   style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
 >
@@ -319,13 +340,21 @@ JSX structure — `ref={backdropRef}` on backdrop, `ref={sheetRef}` on sheet, dr
     className="flex justify-center pt-3 pb-3" style={{ touchAction: 'none' }}>
     <div className="w-9 h-1 rounded-full bg-white/20" />
   </div>
+  ...header...
+  <div ref={scrollAreaRef} className="px-5 space-y-5 overflow-y-auto"
+    style={{ maxHeight: '65vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
+    ...form fields...
+  </div>
+</div>
 ```
 
 The Tailwind `translate-y-0/full` classes handle open/close; direct DOM mutation handles mid-drag. On dismiss, inline styles are cleared inside the `setTimeout` callback *before* `onClose()` fires so the next open doesn't start with a stale transform.
 
+**`usePullToRefresh` + body-lock interaction (iOS):** The hook skips activation when `document.body.style.position === 'fixed'`. This is essential — when any sheet is open, the body is fixed (scrollY = 0 always), so every downward swipe inside the sheet would otherwise trigger the pull indicator and snap back. Do not remove this guard from the hook.
+
 **Critical iOS scroll rules for bottom sheets:**
-- **Never** set `document.body.style.overflow = 'hidden'` — this breaks touch scroll on all children in iOS Safari. Use the `backdropRef` non-passive listener above instead.
-- Use a static handle+header block, then a separate scrollable `<div>` with **inline styles** (not Tailwind): `style={{ maxHeight: '65vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}`
+- **Never** set `document.body.style.overflow = 'hidden'` — breaks touch scroll on all children in iOS Safari
+- Use a static handle+header block, then a separate scrollable `<div ref={scrollAreaRef}>` with **inline styles** (not Tailwind): `style={{ maxHeight: '65vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}`
 - Outer sheet wrapper: `style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}`
 - Wrap `<input type="date">` and `<input type="time">` in an `overflow-hidden` container div — iOS Safari native controls don't clip to `border-radius` otherwise
 - Use `style={{ colorScheme: 'dark' }}` on date/time inputs (not Tailwind `[color-scheme:dark]`)
