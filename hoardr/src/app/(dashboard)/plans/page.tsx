@@ -636,7 +636,7 @@ function PlansPageInner() {
               rightLabel={<CreditCard size={18} strokeWidth={1.5} className="text-white" />}
             >
               <div className="flex items-center gap-3 px-4 py-3.5">
-                <div className="w-10 h-10 rounded-full bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
                   <CategoryIcon category={item.category ?? 'Other'} type="Expense" size={15} className="text-gold" />
                 </div>
                 <div className="flex-1 min-w-0">

@@ -614,7 +614,7 @@ export default function WalletPage() {
                   const isSub = subNameSet.has(exp.name.toLowerCase())
                   return (
                     <div key={exp.id} className="flex items-center gap-3 px-4 py-3.5">
-                      <div className="w-10 h-10 rounded-full bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+                      <div className="w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
                         <CategoryIcon
                           category={exp.categories?.name ?? 'Other'}
                           type="Expense"

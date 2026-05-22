@@ -492,7 +492,7 @@ export default function MoneyPage() {
                     return (
                       <SwipeToDelete key={tx.id} onDelete={() => handleDelete(tx)} onTap={() => setEditTx(tx)}>
                         <div className="flex items-center gap-3 px-4 py-3.5">
-                          <div className="w-10 h-10 rounded-full bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+                          <div className="w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
                             <CategoryIcon category={tx.category} type={tx.type} size={15}
                               isSub={tx.type !== 'Income' && subNames.has(tx.name.toLowerCase())}
                               className={tx.type === 'Income' ? 'text-emerald' : subNames.has(tx.name.toLowerCase()) ? 'text-white/60' : 'text-gold'} />

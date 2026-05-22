@@ -188,7 +188,7 @@ function CategorySheet({
         >
           {/* Preview */}
           <div className="flex items-center gap-4 bg-bg-overlay border border-white/[0.06] rounded-[16px] px-4 py-3.5">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: color + '22' }}>
+            <div className="w-10 h-10 rounded-[12px] flex items-center justify-center flex-shrink-0" style={{ backgroundColor: color + '22' }}>
               <PreviewIcon size={18} strokeWidth={1.75} style={{ color }} />
             </div>
             <p className="text-[15px] font-semibold text-ink">{name || 'Category name'}</p>
@@ -382,7 +382,7 @@ export default function CategoriesPage() {
                 onTap={() => { haptic('tap'); setSheet({ mode: 'edit', cat }) }}
               >
                 <div className="flex items-center gap-3 px-4 py-3">
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: cat.color + '22' }}>
+                  <div className="w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0" style={{ backgroundColor: cat.color + '22' }}>
                     <Icon size={16} strokeWidth={1.75} style={{ color: cat.color }} />
                   </div>
                   <p className="text-[14px] font-medium text-ink flex-1">{cat.name}</p>
