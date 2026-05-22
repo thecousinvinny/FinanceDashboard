@@ -260,20 +260,33 @@ export default function CategoriesPage() {
   const router   = useRouter()
   const supabase = useMemo(() => createClient(), [])
 
-  const [categories, setCategories] = useState<Category[]>([])
-  const [loading,    setLoading]    = useState(true)
-  const [sheet,      setSheet]      = useState<SheetState | null>(null)
+  const [categories,   setCategories]   = useState<Category[]>([])
+  const [loading,      setLoading]      = useState(true)
+  const [needsMigration, setNeedsMigration] = useState(false)
+  const [sheet,        setSheet]        = useState<SheetState | null>(null)
 
   const loadAndSeed = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    // Upsert built-in categories so they appear with proper defaults
+    // Probe for the new columns — if they're missing the migration hasn't been run
+    const { error: probe } = await supabase
+      .from('categories')
+      .select('icon, color, tx_type')
+      .limit(1)
+
+    if (probe) {
+      setNeedsMigration(true)
+      setLoading(false)
+      return
+    }
+
+    // Seed built-in categories (upsert so icon/color defaults are written on first visit)
     const builtins = [
       ...BUILTIN_EXPENSE_CATEGORIES.map(c => ({ ...c, tx_type: 'Expense', user_id: user.id })),
       ...BUILTIN_INCOME_CATEGORIES.map(c => ({ ...c, tx_type: 'Income',  user_id: user.id })),
     ]
-    await supabase.from('categories').upsert(builtins, { onConflict: 'user_id,name', ignoreDuplicates: false })
+    await supabase.from('categories').upsert(builtins, { onConflict: 'user_id,name', ignoreDuplicates: true })
 
     const { data } = await supabase
       .from('categories')
@@ -378,6 +391,33 @@ export default function CategoriesPage() {
         {loading ? (
           <div className="px-5 space-y-2 mt-2">
             {[...Array(6)].map((_, i) => <div key={i} className="skeleton h-14 rounded-[14px]" />)}
+          </div>
+        ) : needsMigration ? (
+          <div className="px-5 mt-4">
+            <div className="bg-bg-surface border border-white/[0.06] rounded-card p-5">
+              <p className="text-[14px] font-semibold text-ink mb-2">Database migration required</p>
+              <p className="text-[13px] text-ink-muted mb-4 leading-relaxed">
+                Run this SQL in your Supabase dashboard (SQL Editor) to enable category icons and colors:
+              </p>
+              <div className="bg-bg-base rounded-[10px] p-3 mb-4">
+                <p className="text-[11px] font-mono text-ink-muted leading-relaxed whitespace-pre-wrap">{`alter table categories
+  add column if not exists icon text not null default 'LayoutGrid',
+  add column if not exists color text not null default '#D4AF37',
+  add column if not exists tx_type text not null default 'Expense';
+
+alter table categories
+  drop constraint if exists categories_user_id_name_key;
+
+alter table categories
+  add constraint categories_user_id_name_key unique (user_id, name);`}</p>
+              </div>
+              <button
+                onClick={() => { setLoading(true); setNeedsMigration(false); loadAndSeed() }}
+                className="w-full gradient-gold rounded-[12px] py-3 text-[14px] font-bold text-white"
+              >
+                Retry after running migration
+              </button>
+            </div>
           </div>
         ) : (
           <>
