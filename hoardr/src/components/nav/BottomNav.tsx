@@ -9,9 +9,9 @@ const tabs = [
   { href: '/home',     label: 'Home',     Icon: LayoutGrid        },
   { href: '/money',    label: 'Money',    Icon: ArrowLeftRight    },
   { href: '/plans',    label: 'Plans',    Icon: Sparkles          },
-  { href: '/settings', label: 'Settings', Icon: SlidersHorizontal },
   { href: '/calendar', label: 'Calendar', Icon: CalendarDays      },
   { href: '/studio',   label: 'Studio',   Icon: Palette           },
+  { href: '/settings', label: 'Settings', Icon: SlidersHorizontal },
 ]
 
 export default function BottomNav() {
