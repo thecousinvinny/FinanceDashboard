@@ -31,6 +31,22 @@ html.charcoal-slate {
   --card-divider:    rgba(46,50,64,0.4);
 }
 
+html.cool-linen {
+  color-scheme: light;
+
+  --rgb-bg-base:     240 242 245;
+  --rgb-bg-surface:  232 234 238;
+  --rgb-bg-elevated: 223 226 231;
+  --rgb-bg-overlay:  216 219 226;
+  --rgb-ink:         26 29 34;
+  --rgb-ink-muted:   136 146 160;
+  --rgb-ink-faint:   176 184 196;
+
+  --nav-bg:          rgba(232,234,238,0.92);
+  --card-border:     rgba(212,216,222,0.8);
+  --card-divider:    rgba(212,216,222,0.4);
+}
+
 html.light {
   --rgb-bg-base:     244 244 240;
   --rgb-bg-surface:  255 255 255;
@@ -203,6 +219,28 @@ html.charcoal-slate .pac-item      { background-color: #2A2D35 !important; borde
 html.charcoal-slate .pac-item:hover,
 html.charcoal-slate .pac-item-selected { background-color: #323640 !important; }
 html.charcoal-slate .pac-item-query { color: #E8ECF0 !important; }
+
+/* ── Cool Linen border overrides ─────────────────────────────────────────── */
+html.cool-linen .border-white\/\[0\.06\]  { border-color: rgba(212,216,222,0.8) !important; }
+html.cool-linen .border-white\/\[0\.04\]  { border-color: rgba(212,216,222,0.4) !important; }
+html.cool-linen .ring-white\/\[0\.06\]    { --tw-ring-color: rgba(212,216,222,0.8) !important; }
+html.cool-linen .divide-white\/\[0\.04\] > * + * { border-color: rgba(212,216,222,0.4) !important; }
+
+/* Drag handles and overlays — invert white-opacity to dark-opacity in light mode */
+html.cool-linen .bg-white\/20 { background-color: rgba(26,29,34,0.12) !important; }
+
+/* ── Cool Linen nav ───────────────────────────────────────────────────────── */
+html.cool-linen nav[class*="fixed bottom-0"] {
+  border-top: 0.8px solid #D4D8DE;
+}
+
+/* ── Cool Linen — Google Places Autocomplete ──────────────────────────────── */
+html.cool-linen .pac-container { background-color: #DFE2E7 !important; border-color: rgba(212,216,222,0.8) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.1) !important; }
+html.cool-linen .pac-item      { background-color: #DFE2E7 !important; border-color: rgba(212,216,222,0.4) !important; color: #1A1D22 !important; }
+html.cool-linen .pac-item:hover,
+html.cool-linen .pac-item-selected { background-color: #D4D8DE !important; }
+html.cool-linen .pac-item-query { color: #1A1D22 !important; }
+html.cool-linen .pac-icon       { filter: brightness(0) opacity(0.4) !important; }
 
 /* ── Light-mode border overrides ─────────────────────────────────────────── */
 html.light .border-white\/\[0\.06\]  { border-color: var(--card-border) !important; }

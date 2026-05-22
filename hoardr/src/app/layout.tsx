@@ -45,7 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var t=localStorage.getItem('theme');if(t==='charcoal-slate'){document.documentElement.classList.add('charcoal-slate');document.documentElement.style.background='#191B1F'}else if(t==='light')document.documentElement.classList.add('light')})()`,
+            __html: `(function(){var t=localStorage.getItem('theme');if(t==='charcoal-slate'){document.documentElement.classList.add('charcoal-slate');document.documentElement.style.background='#191B1F'}else if(t==='cool-linen'){document.documentElement.classList.add('cool-linen');document.documentElement.style.background='#F0F2F5';document.documentElement.style.colorScheme='light'}else if(t==='light')document.documentElement.classList.add('light')})()`,
           }}
         />
       </head>

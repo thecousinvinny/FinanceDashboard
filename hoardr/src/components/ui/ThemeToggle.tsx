@@ -5,28 +5,68 @@ import { Settings, LogOut, Check } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 
-type Theme = 'obsidian' | 'charcoal-slate'
+type Theme = 'obsidian' | 'charcoal-slate' | 'cool-linen'
 
-const THEMES: { id: Theme; label: string; bg: string; surface: string; elevated: string }[] = [
-  { id: 'obsidian',       label: 'Obsidian',       bg: '#0A0A0B', surface: '#16161B', elevated: '#1A1A1E' },
-  { id: 'charcoal-slate', label: 'Charcoal Slate',  bg: '#191B1F', surface: '#21242A', elevated: '#2A2D35' },
+interface ThemeDef {
+  id:       Theme
+  label:    string
+  subtitle: string
+  swatches: [string, string, string]
+}
+
+const THEMES: ThemeDef[] = [
+  {
+    id:       'obsidian',
+    label:    'Obsidian',
+    subtitle: 'Dark',
+    swatches: ['#0A0A0B', '#16161B', '#1A1A1E'],
+  },
+  {
+    id:       'charcoal-slate',
+    label:    'Charcoal Slate',
+    subtitle: 'Dark',
+    swatches: ['#191B1F', '#21242A', '#2A2D35'],
+  },
+  {
+    id:       'cool-linen',
+    label:    'Cool Linen',
+    subtitle: 'Light',
+    swatches: ['#F0F2F5', '#E8EAEE', '#DFE2E7'],
+  },
 ]
 
+const THEME_BG: Record<Theme, string> = {
+  'obsidian':       '#0A0A0B',
+  'charcoal-slate': '#191B1F',
+  'cool-linen':     '#F0F2F5',
+}
+
 function applyTheme(t: Theme) {
-  document.documentElement.classList.remove('charcoal-slate', 'light')
+  document.documentElement.classList.remove('charcoal-slate', 'cool-linen', 'light')
+  document.documentElement.style.colorScheme = ''
+
   if (t === 'charcoal-slate') {
     document.documentElement.classList.add('charcoal-slate')
-    document.documentElement.style.background = '#191B1F'
-  } else {
-    document.documentElement.style.background = ''
+  } else if (t === 'cool-linen') {
+    document.documentElement.classList.add('cool-linen')
+    document.documentElement.style.colorScheme = 'light'
   }
+
+  document.documentElement.style.background = THEME_BG[t]
+
+  // Update PWA theme-color for iOS status bar
+  const meta = document.querySelector('meta[name="theme-color"]')
+  if (meta) meta.setAttribute('content', THEME_BG[t])
+
   localStorage.setItem('theme', t)
 }
 
 function readTheme(): Theme {
   if (typeof window === 'undefined') return 'obsidian'
   const stored = localStorage.getItem('theme')
-  return stored === 'charcoal-slate' ? 'charcoal-slate' : 'obsidian'
+  if (stored === 'charcoal-slate') return 'charcoal-slate'
+  if (stored === 'cool-linen')     return 'cool-linen'
+  return 'obsidian'
 }
 
 function SettingsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -136,7 +176,7 @@ function SettingsSheet({ open, onClose }: { open: boolean; onClose: () => void }
         {/* Appearance */}
         <div className="px-5 pb-5">
           <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Appearance</p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-2.5">
             {THEMES.map(t => {
               const active = theme === t.id
               return (
@@ -144,23 +184,30 @@ function SettingsSheet({ open, onClose }: { open: boolean; onClose: () => void }
                   key={t.id}
                   onClick={() => selectTheme(t.id)}
                   className={cn(
-                    'rounded-[16px] p-3 text-left border transition-colors',
+                    'rounded-[14px] p-2.5 text-left border transition-colors',
                     active
                       ? 'border-gold/50 bg-bg-overlay'
                       : 'border-white/[0.06] bg-bg-overlay'
                   )}
                 >
                   {/* Color swatches */}
-                  <div className="flex gap-1.5 mb-2.5">
-                    <div className="w-9 h-9 rounded-[8px] flex-shrink-0" style={{ backgroundColor: t.bg }} />
-                    <div className="w-9 h-9 rounded-[8px] flex-shrink-0" style={{ backgroundColor: t.surface }} />
-                    <div className="w-9 h-9 rounded-[8px] flex-shrink-0" style={{ backgroundColor: t.elevated }} />
+                  <div className="flex gap-1 mb-2">
+                    {t.swatches.map((color, i) => (
+                      <div
+                        key={i}
+                        className="h-6 rounded-[5px] flex-1"
+                        style={{ backgroundColor: color, border: '1px solid rgba(0,0,0,0.08)' }}
+                      />
+                    ))}
                   </div>
-                  <div className="flex items-center justify-between gap-1">
-                    <p className="text-[12px] font-medium text-ink leading-tight">{t.label}</p>
+                  <div className="flex items-start justify-between gap-1">
+                    <div>
+                      <p className="text-[11px] font-semibold text-ink leading-tight">{t.label}</p>
+                      <p className="text-[9px] text-ink-muted leading-tight mt-0.5">{t.subtitle}</p>
+                    </div>
                     {active && (
-                      <div className="w-[18px] h-[18px] rounded-full gradient-gold flex items-center justify-center flex-shrink-0">
-                        <Check size={10} className="text-white" strokeWidth={2.5} />
+                      <div className="w-[15px] h-[15px] rounded-full gradient-gold flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Check size={8} className="text-white" strokeWidth={2.5} />
                       </div>
                     )}
                   </div>
