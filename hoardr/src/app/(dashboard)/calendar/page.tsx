@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -35,7 +35,7 @@ const DOT_COLOR: Record<EventType, string> = {
   expense: '#E8C46B', income: '#4ADE80', sub: '#F36369', custom: '#a78bfa', google: '#4285F4',
 }
 const DETAIL_DOT: Record<EventType, string> = {
-  expense: '#D4AF37', income: '#22c55e', sub: '#f97316', custom: '#a78bfa', google: '#ffffff',
+  expense: '#D4AF37', income: '#22c55e', sub: '#f97316', custom: '#a78bfa', google: '#4285F4',
 }
 const EVENT_COLOR: Record<EventType, string> = {
   expense: 'bg-gold/20 text-gold', income: 'bg-emerald/20 text-emerald',
@@ -159,18 +159,18 @@ function DayEventCard({ ev, dot, timeRange, amt, date, onDelete, onEdit }: {
       {/* Title + dot — centered as a group */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, marginBottom: 6 }}>
         <span style={{ width: 7, height: 7, borderRadius: '50%', background: dot, flexShrink: 0 }} />
-        <span style={{ fontSize: 18, fontWeight: 500, color: '#fff', fontFamily: M, lineHeight: 1.3 }}>{ev.title}</span>
+        <span style={{ fontSize: 18, fontWeight: 500, color: 'var(--color-ink)', fontFamily: M, lineHeight: 1.3 }}>{ev.title}</span>
       </div>
       {/* Sub-info — centered below */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {timeRange   && <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.36)', fontFamily: M }}>{timeRange}</span>}
-        {amt         && <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.36)', fontFamily: M }}>{amt}</span>}
-        {ev.location && <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.28)', fontFamily: M }}>{ev.location}</span>}
-        {ev.notes    && <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.22)', fontFamily: M, lineHeight: 1.55 }}>{ev.notes}</span>}
+        {timeRange   && <span style={{ fontSize: 13, color: 'rgb(var(--rgb-ink) / 0.36)', fontFamily: M }}>{timeRange}</span>}
+        {amt         && <span style={{ fontSize: 13, color: 'rgb(var(--rgb-ink) / 0.36)', fontFamily: M }}>{amt}</span>}
+        {ev.location && <span style={{ fontSize: 13, color: 'rgb(var(--rgb-ink) / 0.28)', fontFamily: M }}>{ev.location}</span>}
+        {ev.notes    && <span style={{ fontSize: 12, color: 'rgb(var(--rgb-ink) / 0.22)', fontFamily: M, lineHeight: 1.55 }}>{ev.notes}</span>}
       </div>
     </>
   )
-  const sharedStyle = { paddingTop: 24, paddingBottom: 24, borderBottom: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' as const, width: '100%' }
+  const sharedStyle = { paddingTop: 24, paddingBottom: 24, borderBottom: '1px solid rgb(var(--rgb-ink) / 0.05)', textAlign: 'center' as const, width: '100%' }
   return isEditable
     ? <button onClick={() => onEdit(ev, date)} style={{ ...sharedStyle, background: 'none', border: 'none', cursor: 'pointer', display: 'block' }}>{inner}</button>
     : <div style={sharedStyle}>{inner}</div>
@@ -971,20 +971,20 @@ export default function CalendarPage() {
         {isLargeScreen ? (
           /* ── iPad / Large screen: existing Notion grid layout ── */
           <div
-            style={{ width: '100vw', height: '100%', flex: 'none', display: 'flex', flexDirection: 'column', background: '#080810', userSelect: 'none', cursor: 'default' }}>
+            style={{ width: '100vw', height: '100%', flex: 'none', display: 'flex', flexDirection: 'column', background: 'var(--color-bg-base)', userSelect: 'none', cursor: 'default' }}>
 
             {/* Top bar */}
             <div style={{ paddingTop: calView === 'month' ? 8 : SAFE_TOP, flexShrink: 0 }}>
               <div className="px-5 pb-3 pt-0">
                 <div className="flex items-center gap-2">
                   {/* List / Month toggle */}
-                  <div style={{ display: 'flex', background: 'rgba(255,255,255,0.06)', borderRadius: 20, padding: 2, gap: 2 }}>
+                  <div style={{ display: 'flex', background: 'rgb(var(--rgb-ink) / 0.06)', borderRadius: 20, padding: 2, gap: 2 }}>
                     {(['list', 'month'] as const).map(v => (
                       <button key={v} onClick={() => switchCalView(v)} style={{
                         padding: '5px 14px', borderRadius: 18, border: 'none', cursor: 'pointer',
                         fontSize: 11, fontWeight: 600, fontFamily: 'var(--font-montserrat)', letterSpacing: '0.04em',
                         background: calView === v ? 'linear-gradient(135deg,#F7DF9E,#D4AF37,#A47F23)' : 'transparent',
-                        color: calView === v ? '#000' : 'rgba(255,255,255,0.4)',
+                        color: calView === v ? '#000' : 'rgb(var(--rgb-ink) / 0.4)',
                         transition: 'background 0.15s, color 0.15s',
                       }}>
                         {v === 'list' ? 'List' : 'Month'}
@@ -1017,7 +1017,7 @@ export default function CalendarPage() {
               <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
 
                 {/* Sidebar (180px) */}
-                <div style={{ width: 180, background: '#1a1a1a', display: 'flex', flexDirection: 'column', borderRight: '1px solid #2a2a2a', flexShrink: 0 }}>
+                <div style={{ width: 180, background: 'var(--color-bg-surface)', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--color-grid-border)', flexShrink: 0 }}>
                   {/* Mini month navigator */}
                   <div style={{ padding: '14px 10px 10px', flexShrink: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8, gap: 2 }}>
@@ -1032,7 +1032,7 @@ export default function CalendarPage() {
                     {/* DOW mini header */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', marginBottom: 2 }}>
                       {['S','M','T','W','T','F','S'].map((d, i) => (
-                        <div key={i} style={{ textAlign: 'center', fontSize: 8, fontWeight: 600, color: 'rgba(255,255,255,0.25)', fontFamily: 'var(--font-montserrat)', paddingBottom: 2 }}>{d}</div>
+                        <div key={i} style={{ textAlign: 'center', fontSize: 8, fontWeight: 600, color: 'rgb(var(--rgb-ink) / 0.25)', fontFamily: 'var(--font-montserrat)', paddingBottom: 2 }}>{d}</div>
                       ))}
                     </div>
                     {/* Mini day grid */}
@@ -1058,7 +1058,7 @@ export default function CalendarPage() {
                                   sc.scrollTop = sc.scrollTop + eRect.top - cRect.top - 120
                                 }
                               }} style={{ height: 20, borderRadius: '50%', background: isToday ? '#C9A84C' : 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, position: 'relative' }}>
-                                <span style={{ fontSize: 9, fontWeight: isToday ? 700 : 400, color: isToday ? '#000' : 'rgba(255,255,255,0.55)', fontFamily: 'var(--font-montserrat)' }}>{day}</span>
+                                <span style={{ fontSize: 9, fontWeight: isToday ? 700 : 400, color: isToday ? '#000' : 'rgb(var(--rgb-ink) / 0.55)', fontFamily: 'var(--font-montserrat)' }}>{day}</span>
                                 {hasEvs && !isToday && <span style={{ position: 'absolute', bottom: 1, left: '50%', transform: 'translateX(-50%)', width: 3, height: 3, borderRadius: '50%', background: '#C9A84C', opacity: 0.5 }} />}
                               </button>
                             )
@@ -1082,11 +1082,11 @@ export default function CalendarPage() {
                   </div>
 
                   {/* Divider */}
-                  <div style={{ height: 1, background: '#2a2a2a', flexShrink: 0 }} />
+                  <div style={{ height: 1, background: 'var(--color-grid-border)', flexShrink: 0 }} />
 
                   {/* Calendar legend toggles */}
                   <div style={{ padding: '12px 10px 8px', flexShrink: 0 }}>
-                    <p style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)', marginBottom: 8, fontFamily: 'var(--font-montserrat)' }}>CALENDARS</p>
+                    <p style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgb(var(--rgb-ink) / 0.25)', marginBottom: 8, fontFamily: 'var(--font-montserrat)' }}>CALENDARS</p>
                     {([
                       { type: 'expense' as EventType, label: 'Expenses',      color: DOT_COLOR.expense },
                       { type: 'income'  as EventType, label: 'Income',        color: DOT_COLOR.income  },
@@ -1107,11 +1107,11 @@ export default function CalendarPage() {
                           </label>
                           <button onClick={() => setHiddenTypes(prev => { const next = new Set(prev); if (next.has(item.type)) next.delete(item.type); else next.add(item.type); return next })}
                             style={{ background: 'none', border: 'none', cursor: 'pointer', flex: 1, textAlign: 'left', padding: 0 }}>
-                            <span style={{ fontSize: 11, color: hidden ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-montserrat)', fontWeight: 500, transition: 'color 0.15s' }}>{item.label}</span>
+                            <span style={{ fontSize: 11, color: hidden ? 'rgb(var(--rgb-ink) / 0.25)' : 'rgb(var(--rgb-ink) / 0.7)', fontFamily: 'var(--font-montserrat)', fontWeight: 500, transition: 'color 0.15s' }}>{item.label}</span>
                           </button>
                           {isCustom && (
                             <button onClick={() => setTypeColors(p => { const n = { ...p }; delete n[item.type]; return n })}
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', opacity: 0.35, flexShrink: 0, lineHeight: 1, fontSize: 9, color: '#fff' }} title="Reset to default">
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', opacity: 0.35, flexShrink: 0, lineHeight: 1, fontSize: 9, color: 'var(--color-ink)' }} title="Reset to default">
                               ✕
                             </button>
                           )}
@@ -1124,23 +1124,23 @@ export default function CalendarPage() {
 
                   {/* Add Calendar */}
                   <div style={{ padding: '8px 10px 16px', flexShrink: 0 }}>
-                    <button onClick={() => setSettingsOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, cursor: 'pointer', padding: '7px 8px' }}>
-                      <Plus size={11} color="rgba(255,255,255,0.35)" />
-                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-montserrat)', fontWeight: 500 }}>Add Calendar</span>
+                    <button onClick={() => setSettingsOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', background: 'transparent', border: '1px solid rgb(var(--rgb-ink) / 0.08)', borderRadius: 8, cursor: 'pointer', padding: '7px 8px' }}>
+                      <Plus size={11} color="rgb(var(--rgb-ink) / 0.35)" />
+                      <span style={{ fontSize: 11, color: 'rgb(var(--rgb-ink) / 0.35)', fontFamily: 'var(--font-montserrat)', fontWeight: 500 }}>Add Calendar</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Main Notion grid */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, background: '#0d0d0d' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, background: 'var(--color-bg-base)' }}>
                   {/* Sticky DOW header */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', background: '#0d0d0d', borderBottom: '1px solid #2a2a2a', flexShrink: 0 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', background: 'var(--color-bg-base)', borderBottom: '1px solid var(--color-grid-border)', flexShrink: 0 }}>
                     {['SUN','MON','TUE','WED','THU','FRI','SAT'].map(d => (
                       <div key={d} style={{ textAlign: 'center', padding: '4px 0 3px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#C9A84C', fontFamily: 'var(--font-montserrat)' }}>{d}</div>
                     ))}
                   </div>
                   {/* Scrollable weeks */}
-                  <div ref={monthGridRef} style={{ flex: 1, overflowY: 'auto', background: '#0d0d0d', position: 'relative' }}>
+                  <div ref={monthGridRef} style={{ flex: 1, overflowY: 'auto', background: 'var(--color-bg-base)', position: 'relative' }}>
                     <div ref={monthGridTopSentRef} style={{ height: 1 }} />
                     {notionWeeks.map(weekStart => {
                       const days      = weekDays(weekStart)
@@ -1149,7 +1149,7 @@ export default function CalendarPage() {
                       const SPAN_H = 18, SPAN_GAP = 2
                       const maxLanes  = spanLanes.length
                       return (
-                        <div key={weekStart} style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', borderBottom: '1px solid #2a2a2a' }}>
+                        <div key={weekStart} style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', borderBottom: '1px solid var(--color-grid-border)' }}>
                           {days.map((ds, ci) => {
                             const parts        = ds.split('-').map(Number)
                             const [cy, cm, cd] = parts
@@ -1173,10 +1173,10 @@ export default function CalendarPage() {
                                 onPointerLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
                                 onPointerCancel={e => { e.currentTarget.style.transform = 'scale(1)' }}
                                 className="group"
-                                style={{ minHeight: 140, borderRight: ci < 6 ? '1px solid #2a2a2a' : 'none', padding: '5px 0 4px', cursor: 'pointer', display: 'flex', flexDirection: 'column', background: isToday ? 'rgba(201,168,76,0.05)' : '#0d0d0d', position: 'relative' }}
+                                style={{ minHeight: 140, borderRight: ci < 6 ? '1px solid var(--color-grid-border)' : 'none', padding: '5px 0 4px', cursor: 'pointer', display: 'flex', flexDirection: 'column', background: isToday ? 'rgba(201,168,76,0.05)' : '#0d0d0d', position: 'relative' }}
                               >
-                                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none" style={{ background: 'rgba(255,255,255,0.03)' }} />
-                                <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-100 pointer-events-none flex items-center justify-center" style={{ width: 16, height: 16, color: 'rgba(255,255,255,0.28)', fontSize: 15, lineHeight: 1 }}>+</div>
+                                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none" style={{ background: 'rgb(var(--rgb-ink) / 0.03)' }} />
+                                <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-100 pointer-events-none flex items-center justify-center" style={{ width: 16, height: 16, color: 'rgb(var(--rgb-ink) / 0.28)', fontSize: 15, lineHeight: 1 }}>+</div>
                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', opacity: isPast ? 0.45 : 1, transition: 'opacity 0.15s' }}>
                                   {/* Date number row */}
                                   <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3, flexShrink: 0, paddingLeft: 4, paddingRight: 4 }}>
@@ -1186,7 +1186,7 @@ export default function CalendarPage() {
                                       </span>
                                     )}
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, minWidth: 22 }}>
-                                      <span style={{ fontSize: isToday ? 20 : 12, fontWeight: isToday ? 700 : 400, color: isToday ? '#C9A84C' : '#fff', fontFamily: 'var(--font-montserrat)', lineHeight: 1 }}>
+                                      <span style={{ fontSize: isToday ? 20 : 12, fontWeight: isToday ? 700 : 400, color: isToday ? '#C9A84C' : 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', lineHeight: 1 }}>
                                         {cd}
                                       </span>
                                     </div>
@@ -1230,17 +1230,17 @@ export default function CalendarPage() {
                                         <div
                                           key={ei}
                                           onClick={(ev.type === 'custom' || ev.type === 'google') && ev.id ? (e) => { e.stopPropagation(); handleOpenEdit(ev, ds) } : undefined}
-                                          style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 2, height: 18, overflow: 'hidden', flexShrink: 0, opacity: 0.85, cursor: (ev.type === 'custom' || ev.type === 'google') && ev.id ? 'pointer' : 'default' }}
+                                          style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 2, height: 18, overflow: 'hidden', flexShrink: 0, background: 'var(--color-bg-elevated)', borderRadius: 3, opacity: 0.9, cursor: (ev.type === 'custom' || ev.type === 'google') && ev.id ? 'pointer' : 'default' }}
                                         >
-                                          <div style={{ width: 3, height: '100%', borderRadius: 2, background: bar, flexShrink: 0 }} />
-                                          <span style={{ fontSize: 10, color: '#fff', fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
-                                            {timeStr && <span style={{ color: 'rgba(255,255,255,0.45)', marginRight: 3 }}>{timeStr}</span>}{ev.title}
+                                          <div style={{ width: 3, height: '100%', borderRadius: '3px 0 0 3px', background: bar, flexShrink: 0 }} />
+                                          <span style={{ fontSize: 10, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, paddingLeft: 4, paddingRight: 3 }}>
+                                            {timeStr && <span style={{ color: 'rgb(var(--rgb-ink) / 0.45)', marginRight: 3 }}>{timeStr}</span>}{ev.title}
                                           </span>
                                         </div>
                                       )
                                     })}
                                     {overflow > 0 && (
-                                      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-montserrat)', paddingLeft: 2 }}>+{overflow} more</div>
+                                      <div style={{ fontSize: 9, color: 'rgb(var(--rgb-ink) / 0.35)', fontFamily: 'var(--font-montserrat)', paddingLeft: 2 }}>+{overflow} more</div>
                                     )}
                                   </div>
                                 </div>
@@ -1307,15 +1307,15 @@ export default function CalendarPage() {
           </div>
         ) : (
           /* ── Mobile: Fantastical-style split view ── */
-          <div style={{ width: '100vw', height: '100%', flex: 'none', display: 'flex', flexDirection: 'column', background: '#0a0a0a', userSelect: 'none', paddingTop: SAFE_TOP, boxSizing: 'border-box' }}>
+          <div style={{ width: '100vw', height: '100%', flex: 'none', display: 'flex', flexDirection: 'column', background: 'var(--color-bg-base)', userSelect: 'none', paddingTop: SAFE_TOP, boxSizing: 'border-box' }}>
 
             {/* Compact month grid — collapsible */}
-            <div style={{ height: gridH, overflow: 'hidden', flexShrink: 0, transition: isDraggingHandle ? 'none' : 'height 0.3s cubic-bezier(0.4,0,0.2,1)', background: '#111' }}>
+            <div style={{ height: gridH, overflow: 'hidden', flexShrink: 0, transition: isDraggingHandle ? 'none' : 'height 0.3s cubic-bezier(0.4,0,0.2,1)', background: 'var(--color-bg-surface)' }}>
               <div style={{ height: GRID_EXPANDED, display: 'flex', flexDirection: 'column' }}>
                 {/* Month header */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 16, paddingRight: 12, paddingTop: 12, paddingBottom: 6, flexShrink: 0 }}>
                   <span
-                    style={{ fontSize: 16, fontWeight: 700, color: '#f0f0f8', fontFamily: 'var(--font-montserrat)', userSelect: 'none', cursor: 'pointer', letterSpacing: '-0.01em' }}
+                    style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', userSelect: 'none', cursor: 'pointer', letterSpacing: '-0.01em' }}
                     onDoubleClick={scrollListToToday}
                     onTouchEnd={(e) => {
                       e.preventDefault()
@@ -1327,8 +1327,8 @@ export default function CalendarPage() {
                     {gridMonthLbl}
                   </span>
                   <button onClick={() => setSettingsOpen(true)}
-                    style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
-                    <SlidersHorizontal size={12} color="rgba(255,255,255,0.4)" />
+                    style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgb(var(--rgb-ink) / 0.06)', border: '1px solid rgb(var(--rgb-ink) / 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+                    <SlidersHorizontal size={12} color="rgb(var(--rgb-ink) / 0.4)" />
                   </button>
                 </div>
                 {/* DOW labels */}
@@ -1370,7 +1370,7 @@ export default function CalendarPage() {
                         style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'none', cursor: 'pointer', outline: 'none', gap: 2, minWidth: 0 }}
                       >
                         <div style={{ width: 26, height: 26, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isToday ? '#D4AF37' : isSel ? 'rgba(212,175,55,0.15)' : 'transparent', flexShrink: 0 }}>
-                          <span style={{ fontSize: 12, fontWeight: isToday ? 700 : isSel ? 600 : 400, color: isToday ? '#000' : isSel ? '#D4AF37' : 'rgba(255,255,255,0.72)', fontFamily: 'var(--font-montserrat)', lineHeight: 1 }}>{day}</span>
+                          <span style={{ fontSize: 12, fontWeight: isToday ? 700 : isSel ? 600 : 400, color: isToday ? '#000' : isSel ? '#D4AF37' : 'rgb(var(--rgb-ink) / 0.72)', fontFamily: 'var(--font-montserrat)', lineHeight: 1 }}>{day}</span>
                         </div>
                         {dots.length > 0 && (
                           <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
@@ -1386,13 +1386,13 @@ export default function CalendarPage() {
 
             {/* Drag handle — tap to toggle, drag to resize */}
             <div
-              style={{ height: 22, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'row-resize', background: '#0a0a0a', borderTop: '1px solid rgba(255,255,255,0.05)' }}
+              style={{ height: 22, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'row-resize', background: 'var(--color-bg-base)', borderTop: '1px solid rgb(var(--rgb-ink) / 0.05)' }}
               onClick={() => { if (!handleDragRef.current) setGridH(g => g > 0 ? 0 : GRID_EXPANDED) }}
               onTouchStart={(e) => { e.stopPropagation(); handleDragRef.current = { startY: e.touches[0].clientY, startH: gridH }; setIsDraggingHandle(true) }}
               onTouchMove={(e) => { if (!handleDragRef.current) return; e.stopPropagation(); const dy = e.touches[0].clientY - handleDragRef.current.startY; setGridH(Math.max(0, Math.min(GRID_EXPANDED, handleDragRef.current.startH + dy))) }}
               onTouchEnd={(e) => { e.stopPropagation(); setIsDraggingHandle(false); handleDragRef.current = null; setGridH(g => g > GRID_EXPANDED / 2 ? GRID_EXPANDED : 0) }}
             >
-              <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.18)' }} />
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgb(var(--rgb-ink) / 0.18)' }} />
             </div>
 
             {/* Infinite scroll list — same design as before */}
@@ -1440,22 +1440,22 @@ export default function CalendarPage() {
                         onMouseDown={e => rowMouseDown(e, ds)}
                         onMouseUp={rowMouseUp}
                         onMouseLeave={() => { rowSwipe.current = null }}
-                        style={{ display: 'flex', alignItems: 'stretch', paddingLeft: gridH === 0 ? 20 : 6, background: '#111111', cursor: 'grab',
+                        style={{ display: 'flex', alignItems: 'stretch', paddingLeft: gridH === 0 ? 20 : 6, background: 'var(--color-bg-surface)', cursor: 'grab',
                                  transition: isDraggingHandle ? 'none' : 'padding-left 0.3s cubic-bezier(0.4,0,0.2,1)' }}
                       >
                         {/* Day label — width matches one grid column when split is open, original 44px in full-list mode */}
-                        <div style={{ width: gridH === 0 ? 44 : 'calc((100vw - 12px) / 7)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#111111',
+                        <div style={{ width: gridH === 0 ? 44 : 'calc((100vw - 12px) / 7)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-surface)',
                                       transition: isDraggingHandle ? 'none' : 'width 0.3s cubic-bezier(0.4,0,0.2,1)' }}>
                           <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 9, letterSpacing: '0.09em', textTransform: 'uppercase', lineHeight: 1.2, userSelect: 'none', whiteSpace: 'nowrap' }}>
-                            <span style={{ color: isTod ? '#D4AF37' : 'rgba(255,255,255,0.75)', fontWeight: 700 }}>{abbr}</span>
-                            <span style={{ color: isTod ? '#c9a84c' : 'rgba(255,255,255,0.25)', fontWeight: 500 }}>{' '}{day}</span>
+                            <span style={{ color: isTod ? '#D4AF37' : 'rgb(var(--rgb-ink) / 0.75)', fontWeight: 700 }}>{abbr}</span>
+                            <span style={{ color: isTod ? '#c9a84c' : 'rgb(var(--rgb-ink) / 0.25)', fontWeight: 500 }}>{' '}{day}</span>
                           </span>
                         </div>
                         {/* Vertical rule */}
-                        <div style={{ width: 1, flexShrink: 0, background: isTod ? 'rgba(201,168,76,0.35)' : 'rgba(255,255,255,0.04)', marginTop: 8, marginBottom: 8 }} />
+                        <div style={{ width: 1, flexShrink: 0, background: isTod ? 'rgba(201,168,76,0.35)' : 'rgb(var(--rgb-ink) / 0.04)', marginTop: 8, marginBottom: 8 }} />
                         {/* Events */}
                         <div onClick={e => { if ((e.target as Element).closest('button')) return; setAddDate(ds); setAddOpen(true) }}
-                          style={{ flex: 1, paddingLeft: 12, paddingRight: 14, paddingTop: 6, paddingBottom: 6, display: 'flex', flexDirection: 'column', gap: 2, minHeight: 112, background: stripe ? '#171717' : '#1e1e1e', cursor: 'text' }}>
+                          style={{ flex: 1, paddingLeft: 12, paddingRight: 14, paddingTop: 6, paddingBottom: 6, display: 'flex', flexDirection: 'column', gap: 2, minHeight: 112, background: stripe ? 'var(--color-bg-surface)' : 'var(--color-bg-elevated)', cursor: 'text' }}>
                           {events.map((ev, idx) => {
                             const bar  = ev.color ?? DETAIL_DOT[ev.type]
                             const M    = 'var(--font-montserrat)'
@@ -1467,16 +1467,16 @@ export default function CalendarPage() {
                                 style={{ display: 'flex', alignItems: 'stretch', width: '100%', background: 'none', border: 'none', padding: '10px 0', cursor: 'pointer', textAlign: 'left', gap: 9 }}>
                                 <div style={{ width: 3, borderRadius: 2, background: bar, flexShrink: 0 }} />
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                  <p style={{ fontSize: 14, fontWeight: 500, color: isTod ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.82)', fontFamily: M, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.35 }}>
+                                  <p style={{ fontSize: 14, fontWeight: 500, color: isTod ? 'rgb(var(--rgb-ink) / 0.95)' : 'rgb(var(--rgb-ink) / 0.82)', fontFamily: M, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.35 }}>
                                     {ev.title}
                                   </p>
                                   {row2 && (
-                                    <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.32)', fontFamily: M, margin: '3px 0 0', lineHeight: 1.3 }}>
+                                    <p style={{ fontSize: 11, color: 'rgb(var(--rgb-ink) / 0.32)', fontFamily: M, margin: '3px 0 0', lineHeight: 1.3 }}>
                                       {row2}
                                     </p>
                                   )}
                                   {ev.location && (
-                                    <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.26)', fontFamily: M, margin: '2px 0 0', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <p style={{ fontSize: 11, color: 'rgb(var(--rgb-ink) / 0.26)', fontFamily: M, margin: '2px 0 0', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                       {ev.location}
                                     </p>
                                   )}
@@ -1501,19 +1501,19 @@ export default function CalendarPage() {
             PANEL 1 — Daily Summary (Timepage style)
             Right swipe → Panel 0
         ═══════════════════════════════════════════════════════════════ */}
-        <div style={{ width: '100vw', height: '100%', flex: 'none', background: '#080810', display: 'flex', flexDirection: 'column', touchAction: 'pan-y', userSelect: 'none' }}
+        <div style={{ width: '100vw', height: '100%', flex: 'none', background: 'var(--color-bg-base)', display: 'flex', flexDirection: 'column', touchAction: 'pan-y', userSelect: 'none' }}
           onTouchStart={v3Start} onTouchEnd={v3End}
           onMouseDown={v3MouseDown} onMouseUp={v3MouseUp} onMouseLeave={() => { v3Swipe.current = null }}>
 
           {/* Centered date header */}
-          <div style={{ flexShrink: 0, paddingTop: SAFE_TOP, paddingBottom: 28, textAlign: 'center', background: '#080810' }}>
+          <div style={{ flexShrink: 0, paddingTop: SAFE_TOP, paddingBottom: 28, textAlign: 'center', background: 'var(--color-bg-base)' }}>
             <p style={{ fontSize: 10, letterSpacing: '0.26em', fontWeight: 700, textTransform: 'uppercase', color: 'rgba(212,175,55,0.65)', margin: '0 0 2px', fontFamily: 'var(--font-montserrat)' }}>
               {dayName}
             </p>
-            <p style={{ fontSize: 96, fontWeight: 800, color: 'rgba(255,255,255,0.95)', letterSpacing: '-0.02em', lineHeight: 0.95, margin: '0 0 8px', fontFamily: 'var(--font-big-shoulders)' }}>
+            <p style={{ fontSize: 96, fontWeight: 800, color: 'rgb(var(--rgb-ink) / 0.95)', letterSpacing: '-0.02em', lineHeight: 0.95, margin: '0 0 8px', fontFamily: 'var(--font-big-shoulders)' }}>
               {dayNum}
             </p>
-            <p style={{ fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', margin: 0, fontFamily: 'var(--font-montserrat)' }}>
+            <p style={{ fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgb(var(--rgb-ink) / 0.3)', margin: 0, fontFamily: 'var(--font-montserrat)' }}>
               {dayMonthYr}
             </p>
           </div>
@@ -1525,7 +1525,7 @@ export default function CalendarPage() {
               const customGids = new Set(dayEvents.filter(e => e.type === 'custom' && e.googleEventId).map(e => e.googleEventId!))
               const eventsToShow = dayEvents.filter(e => e.type !== 'google' || !e.id || !customGids.has(e.id))
               return eventsToShow.length === 0 ? (
-              <div style={{ paddingTop: 52, textAlign: 'center', color: 'rgba(255,255,255,0.15)', fontSize: 13, fontFamily: 'var(--font-montserrat)', letterSpacing: '0.06em' }}>
+              <div style={{ paddingTop: 52, textAlign: 'center', color: 'rgb(var(--rgb-ink) / 0.15)', fontSize: 13, fontFamily: 'var(--font-montserrat)', letterSpacing: '0.06em' }}>
                 Nothing scheduled
               </div>
             ) : (
@@ -1549,12 +1549,12 @@ export default function CalendarPage() {
             const w = weatherMap[selectedDay]!
             const { Icon: WeatherIcon, desc } = getWeatherInfo(w.code)
             return (
-              <div style={{ flexShrink: 0, textAlign: 'center', paddingTop: 18, paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 88px)', borderTop: '1px solid rgba(255,255,255,0.05)', background: '#080810' }}>
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}><WeatherIcon size={26} strokeWidth={1.25} color="rgba(255,255,255,0.45)" /></div>
-                <p style={{ fontSize: 30, fontWeight: 600, color: 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-montserrat)', margin: '0 0 5px', letterSpacing: '-0.01em' }}>
+              <div style={{ flexShrink: 0, textAlign: 'center', paddingTop: 18, paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 88px)', borderTop: '1px solid rgb(var(--rgb-ink) / 0.05)', background: 'var(--color-bg-base)' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}><WeatherIcon size={26} strokeWidth={1.25} color="rgb(var(--rgb-ink) / 0.45)" /></div>
+                <p style={{ fontSize: 30, fontWeight: 600, color: 'rgb(var(--rgb-ink) / 0.6)', fontFamily: 'var(--font-montserrat)', margin: '0 0 5px', letterSpacing: '-0.01em' }}>
                   {w.high}° / {w.low}°
                 </p>
-                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.04em', margin: 0 }}>
+                <p style={{ fontSize: 11, color: 'rgb(var(--rgb-ink) / 0.28)', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.04em', margin: 0 }}>
                   {desc}{w.precipProb > 0 ? ` · ${w.precipProb}% rain` : ''} · {w.wind}mph wind
                 </p>
               </div>
@@ -1593,15 +1593,15 @@ export default function CalendarPage() {
     {deleteScopeEv && (
       <>
         <div className="fixed inset-0 z-[60]" style={{ background: 'rgba(0,0,0,0.72)' }} onClick={() => setDeleteScopeEv(null)} />
-        <div className="fixed inset-x-0 bottom-0 z-[70] rounded-t-[24px]" style={{ background: '#1a1a1a', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        <div className="fixed inset-x-0 bottom-0 z-[70] rounded-t-[24px]" style={{ background: 'var(--color-bg-surface)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           <div className="flex justify-center pt-3 pb-2">
-            <div className="w-9 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.2)' }} />
+            <div className="w-9 h-1 rounded-full" style={{ background: 'rgb(var(--rgb-ink) / 0.2)' }} />
           </div>
           <div className="px-5 mb-4">
-            <h2 style={{ fontFamily: 'var(--font-montserrat)', fontSize: 17, fontWeight: 700, color: '#fff' }}>Delete Recurring Event</h2>
-            <p style={{ fontFamily: 'var(--font-montserrat)', fontSize: 13, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>Which events do you want to delete?</p>
+            <h2 style={{ fontFamily: 'var(--font-montserrat)', fontSize: 17, fontWeight: 700, color: 'var(--color-ink)' }}>Delete Recurring Event</h2>
+            <p style={{ fontFamily: 'var(--font-montserrat)', fontSize: 13, color: 'rgb(var(--rgb-ink) / 0.4)', marginTop: 4 }}>Which events do you want to delete?</p>
           </div>
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ borderTop: '1px solid rgb(var(--rgb-ink) / 0.06)' }}>
             {([
               { s: 'this'      as RecurrenceScope, label: 'This event',               danger: false },
               { s: 'following' as RecurrenceScope, label: 'This and following events', danger: false },
@@ -1609,8 +1609,8 @@ export default function CalendarPage() {
             ]).map(({ s, label, danger }, i) => (
               <button key={s} onClick={() => handleDeleteEventWithScope(deleteScopeEv, s)}
                 className="w-full px-5 py-4 text-left"
-                style={{ borderBottom: i < 2 ? '1px solid rgba(255,255,255,0.06)' : 'none', background: 'none', cursor: 'pointer' }}>
-                <span style={{ fontFamily: 'var(--font-montserrat)', fontSize: 15, fontWeight: 500, color: danger ? '#ef4444' : '#fff' }}>{label}</span>
+                style={{ borderBottom: i < 2 ? '1px solid rgb(var(--rgb-ink) / 0.06)' : 'none', background: 'none', cursor: 'pointer' }}>
+                <span style={{ fontFamily: 'var(--font-montserrat)', fontSize: 15, fontWeight: 500, color: danger ? '#ef4444' : 'var(--color-ink)' }}>{label}</span>
               </button>
             ))}
           </div>

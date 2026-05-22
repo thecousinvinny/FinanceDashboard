@@ -15,6 +15,13 @@
   --nav-bg:          rgba(10,10,11,0.92);
   --card-border:     rgba(255,255,255,0.08);
   --card-divider:    rgba(255,255,255,0.05);
+
+  /* Solid inline-style helpers (used where var(--rgb-*) syntax can't be used) */
+  --color-bg-base:     rgb(10, 10, 11);
+  --color-bg-surface:  rgb(22, 22, 27);
+  --color-bg-elevated: rgb(26, 26, 30);
+  --color-ink:         rgb(247, 247, 245);
+  --color-grid-border: rgb(42, 42, 42);
 }
 
 html.charcoal-slate {
@@ -29,6 +36,12 @@ html.charcoal-slate {
   --nav-bg:          rgba(25,27,31,0.92);
   --card-border:     rgba(46,50,64,0.8);
   --card-divider:    rgba(46,50,64,0.4);
+
+  --color-bg-base:     rgb(25, 27, 31);
+  --color-bg-surface:  rgb(33, 36, 42);
+  --color-bg-elevated: rgb(42, 45, 53);
+  --color-ink:         rgb(232, 236, 240);
+  --color-grid-border: rgb(46, 50, 64);
 }
 
 html.cool-linen {
@@ -45,6 +58,12 @@ html.cool-linen {
   --nav-bg:          rgba(232,234,238,0.92);
   --card-border:     rgba(212,216,222,0.8);
   --card-divider:    rgba(212,216,222,0.4);
+
+  --color-bg-base:     rgb(240, 242, 245);
+  --color-bg-surface:  rgb(232, 234, 238);
+  --color-bg-elevated: rgb(223, 226, 231);
+  --color-ink:         rgb(26, 29, 34);
+  --color-grid-border: rgb(212, 216, 222);
 }
 
 html.light {
@@ -59,6 +78,12 @@ html.light {
   --nav-bg:          rgba(255,255,255,0.92);
   --card-border:     rgba(0,0,0,0.08);
   --card-divider:    rgba(0,0,0,0.05);
+
+  --color-bg-base:     rgb(244, 244, 240);
+  --color-bg-surface:  rgb(255, 255, 255);
+  --color-bg-elevated: rgb(248, 248, 245);
+  --color-ink:         rgb(28, 28, 30);
+  --color-grid-border: rgb(200, 200, 198);
 }
 
 /* ── Reset ───────────────────────────────────────────────────────────────── */
