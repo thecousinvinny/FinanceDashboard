@@ -551,31 +551,36 @@ export default function OutPage() {
       <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
       <div className="pt-12" />
 
+      {/* ── Pills ────────────────────────────────────────────────────────── */}
+      <div className="mx-4 mt-4">
+        <PillGroup options={['Expenses', 'Subs', 'Wishlist'] as Tab[]} value={tab} onChange={setTab} />
+      </div>
+
       {/* ── Stat tiles ───────────────────────────────────────────────────── */}
       {!loading && tab === 'Expenses' && (
         <div className="mx-4 mt-4 flex gap-2">
-          <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-3">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[9px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Spent</p>
-              <span className="text-[11px] text-gold">↑</span>
+          <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Spent</p>
+              <span className="text-[13px] text-gold">↑</span>
             </div>
-            <p className="text-[22px] font-bold tracking-tight text-ink" style={{ fontFamily: 'var(--font-big-shoulders)' }}>
+            <p className="text-[26px] font-bold tracking-tight text-ink" style={{ fontFamily: 'var(--font-big-shoulders)' }}>
               <SlotNumber value={monthSpent} format={$fc} />
             </p>
           </div>
-          <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-3">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[9px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Saved</p>
-              <span className="text-[11px] text-emerald">✦</span>
+          <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Saved</p>
+              <span className="text-[13px] text-emerald">✦</span>
             </div>
-            <p className="text-[22px] font-bold tracking-tight text-emerald" style={{ fontFamily: 'var(--font-big-shoulders)' }}>
+            <p className="text-[26px] font-bold tracking-tight text-emerald" style={{ fontFamily: 'var(--font-big-shoulders)' }}>
               <SlotNumber value={savedMonth} format={$fc} />
             </p>
           </div>
         </div>
       )}
       {!loading && tab === 'Subs' && (
-        <div className="mx-4 mt-4 flex gap-3">
+        <div className="mx-4 mt-4 flex gap-2">
           <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
             <div className="flex items-center justify-between mb-3">
               <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Per Month</p>
@@ -599,7 +604,7 @@ export default function OutPage() {
         </div>
       )}
       {!loading && tab === 'Wishlist' && (
-        <div className="mx-4 mt-4 flex gap-3">
+        <div className="mx-4 mt-4 flex gap-2">
           <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
             <div className="flex items-center justify-between mb-3">
               <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">On List</p>
@@ -645,11 +650,6 @@ export default function OutPage() {
           </div>
         </div>
       )}
-
-      {/* ── Pills ────────────────────────────────────────────────────────── */}
-      <div className="mx-4 mt-4">
-        <PillGroup options={['Expenses', 'Subs', 'Wishlist'] as Tab[]} value={tab} onChange={setTab} />
-      </div>
 
       {/* ── Loading skeleton ─────────────────────────────────────────────── */}
       {loading && (
