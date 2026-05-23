@@ -149,6 +149,16 @@ html, body {
   50%       { border-color: rgba(243, 99, 105, 0.7); }
 }
 
+@keyframes hoardCoinFloat {
+  0%   { transform: translateY(0px);    opacity: 1; }
+  100% { transform: translateY(-80px);  opacity: 0; }
+}
+
+@keyframes hoardSparkle {
+  0%, 100% { opacity: 0;   transform: scale(0.3); }
+  50%       { opacity: 0.9; transform: scale(1.1); }
+}
+
 /* ── Utility classes ─────────────────────────────────────────────────────── */
 @layer utilities {
   .tab-enter {

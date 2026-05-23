@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { localToday, $fc, $fd, fmtDate } from '@/lib/utils'
+import { localToday, $fd, fmtDate } from '@/lib/utils'
 import Link from 'next/link'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import { HomeHero } from '@/components/home/HomeHero'
@@ -17,6 +17,7 @@ import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import type { DayPoint } from '@/components/home/SparkChart'
 import type { SeedTx } from '@/lib/data/transactions'
 import { Truck, Receipt, Star } from 'lucide-react'
+import { HoardChest } from '@/components/home/HoardChest'
 
 interface EnRouteItem {
   id:          string
@@ -36,14 +37,14 @@ interface ActivityRow {
 }
 
 interface HomeCache {
-  spent:         number
-  earned:        number
-  monthlySubs:   number
-  wishlistTotal: number
-  upcoming:      UpcomingSub[]
-  enRoute:       EnRouteItem[]
-  activity:      ActivityRow[]
-  sparkPoints:   DayPoint[]
+  spent:       number
+  earned:      number
+  monthlySubs: number
+  hoardTotal:  number
+  upcoming:    UpcomingSub[]
+  enRoute:     EnRouteItem[]
+  activity:    ActivityRow[]
+  sparkPoints: DayPoint[]
 }
 
 export default function HomePage() {
@@ -51,8 +52,8 @@ export default function HomePage() {
 
   const [spent,         setSpent]         = useState(cached?.spent ?? 0)
   const [earned,        setEarned]        = useState(cached?.earned ?? 0)
-  const [monthlySubs,   setMonthlySubs]   = useState(cached?.monthlySubs ?? 0)
-  const [wishlistTotal, setWishlistTotal] = useState(cached?.wishlistTotal ?? 0)
+  const [monthlySubs, setMonthlySubs] = useState(cached?.monthlySubs ?? 0)
+  const [hoardTotal,  setHoardTotal]  = useState(cached?.hoardTotal ?? 0)
   const [upcoming,      setUpcoming]      = useState<UpcomingSub[]>(cached?.upcoming ?? [])
   const [enRoute,       setEnRoute]       = useState<EnRouteItem[]>(cached?.enRoute ?? [])
   const [activity,      setActivity]      = useState<ActivityRow[]>(cached?.activity ?? [])
@@ -89,10 +90,11 @@ export default function HomePage() {
         { data: monthInc },
         { data: activeSubs },
         { data: upcomingData },
-        { data: wishlist },
         { data: enRouteData },
         { data: recentExp },
         { data: recentInc },
+        { data: allTimeExp },
+        { data: allTimeInc },
       ] = await Promise.all([
         supabase.from('expenses').select('cost, date, name').gte('date', monthStart).lte('date', monthEnd).abortSignal(sig),
         supabase.from('income').select('amount, date').gte('date', monthStart).lte('date', monthEnd).abortSignal(sig),
@@ -104,7 +106,6 @@ export default function HomePage() {
           .order('next_renewal', { ascending: true })
           .limit(3)
           .abortSignal(sig),
-        supabase.from('wishlist').select('original_cost').eq('status', 'Interested').abortSignal(sig),
         supabase.from('wishlist')
           .select('id, name, bought_cost, ordered_at')
           .eq('status', 'Ordered')
@@ -122,14 +123,18 @@ export default function HomePage() {
           .order('created_at', { ascending: false })
           .limit(5)
           .abortSignal(sig),
+        supabase.from('expenses').select('cost').abortSignal(sig),
+        supabase.from('income').select('amount').abortSignal(sig),
       ])
 
       if (gen !== loadGen.current) return
 
       const newSpent        = (monthExp    ?? []).reduce((s, e) => s + Number(e.cost),              0)
       const newEarned       = (monthInc    ?? []).reduce((s, i) => s + Number(i.amount),             0)
-      const newMonthlySubs  = (activeSubs  ?? []).reduce((s, r) => s + Number(r.monthly_cost ?? 0), 0)
-      const newWishlistTotal = (wishlist   ?? []).reduce((s, w) => s + Number(w.original_cost ?? 0), 0)
+      const newMonthlySubs  = (activeSubs ?? []).reduce((s, r) => s + Number(r.monthly_cost ?? 0), 0)
+      const newHoardIncome  = (allTimeInc ?? []).reduce((s, r) => s + Number(r.amount),            0)
+      const newHoardExpense = (allTimeExp ?? []).reduce((s, r) => s + Number(r.cost),              0)
+      const newHoardTotal   = newHoardIncome - newHoardExpense
 
       const newUpcoming: UpcomingSub[] = (upcomingData ?? []).map(s => ({
         id:           String(s.id),
@@ -211,7 +216,7 @@ export default function HomePage() {
 
       pageCache.set('home', {
         spent: newSpent, earned: newEarned,
-        monthlySubs: newMonthlySubs, wishlistTotal: newWishlistTotal,
+        monthlySubs: newMonthlySubs, hoardTotal: newHoardTotal,
         upcoming: newUpcoming, enRoute: newEnRoute, activity: newActivity,
         sparkPoints: newSparkPoints,
       })
@@ -219,7 +224,7 @@ export default function HomePage() {
       setSpent(newSpent)
       setEarned(newEarned)
       setMonthlySubs(newMonthlySubs)
-      setWishlistTotal(newWishlistTotal)
+      setHoardTotal(newHoardTotal)
       setUpcoming(newUpcoming)
       setEnRoute(newEnRoute)
       setActivity(newActivity)
@@ -382,11 +387,7 @@ export default function HomePage() {
       {loading && (
         <div className="mx-4 mt-5 flex flex-col gap-3">
           <div className="h-[220px] rounded-card bg-bg-surface border border-white/[0.06] animate-pulse" />
-          <div className="grid grid-cols-2 gap-3">
-            {[1, 2].map(i => (
-              <div key={i} className="h-[100px] rounded-card bg-bg-surface border border-white/[0.06] animate-pulse" />
-            ))}
-          </div>
+          <div className="h-[340px] rounded-card bg-bg-surface border border-white/[0.06] animate-pulse" />
         </div>
       )}
 
@@ -400,27 +401,8 @@ export default function HomePage() {
             points={sparkPoints}
           />
 
-          {/* ── Quick tiles ─────────────────────────────────────────────── */}
-          <div className="grid grid-cols-2 gap-3 mx-4 mt-3">
-            <Link href="/plans" className="block">
-              <div className="bg-bg-surface border border-white/[0.06] rounded-card p-4 flex flex-col gap-3 active:scale-[0.97] transition-transform">
-                <div className="w-8 h-8 rounded-[10px] bg-gold/10 flex items-center justify-center text-gold text-sm">↻</div>
-                <div>
-                  <p className="text-[22px] font-bold tracking-tight text-ink" style={{ fontFamily: "var(--font-big-shoulders)" }}>{$fc(monthlySubs)}</p>
-                  <p className="text-[11px] text-ink-muted mt-0.5">Monthly Subs</p>
-                </div>
-              </div>
-            </Link>
-            <Link href="/plans?tab=Wishlist" className="block">
-              <div className="bg-bg-surface border border-white/[0.06] rounded-card p-4 flex flex-col gap-3 active:scale-[0.97] transition-transform">
-                <div className="w-8 h-8 rounded-[10px] bg-emerald/10 flex items-center justify-center text-emerald text-sm">✦</div>
-                <div>
-                  <p className="text-[22px] font-bold tracking-tight text-ink" style={{ fontFamily: "var(--font-big-shoulders)" }}>{$fc(wishlistTotal)}</p>
-                  <p className="text-[11px] text-ink-muted mt-0.5">Wishlist</p>
-                </div>
-              </div>
-            </Link>
-          </div>
+          {/* ── Hoard pile ──────────────────────────────────────────────── */}
+          <HoardChest hoardTotal={hoardTotal} thisMonthNet={saved} />
 
           <UpcomingBills initial={upcoming} onPaid={handleSubPaid} />
 
