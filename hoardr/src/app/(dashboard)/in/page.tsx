@@ -13,7 +13,7 @@ import { CardVisual } from '@/components/wallet/CardVisual'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import type { Card, Bank } from '@/types'
-import { Banknote, ChevronRight, Coins, TrendingUp } from 'lucide-react'
+import { Banknote, ChevronRight, Coins, TrendingUp, CreditCard, Building2 } from 'lucide-react'
 import { cn, $fd, $fk, fmtDate, haptic, groupByMonth } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
 import { pageCache } from '@/lib/page-cache'
@@ -31,16 +31,18 @@ interface IncomeRow {
   id: string; name: string; amount: number; date: string; source: string | null; bank_id: string | null
 }
 
-type Tab = 'Cards' | 'Banks' | 'Income'
+type Tab = 'Income' | 'Cards' | 'Banks'
 
 export default function InPage() {
-  const [tab,           setTab]          = useState<Tab>('Cards')
+  const [tab,           setTab]          = useState<Tab>('Income')
   type InCache = { cards: Card[]; banks: Bank[] }
   const cached = pageCache.get<InCache>('in')
   const [cards,         setCards]        = useState<Card[]>(cached?.cards ?? [])
   const [banks,         setBanks]        = useState<Bank[]>(cached?.banks ?? [])
   const [loading,       setLoading]      = useState(!cached)
-  const [sheetOpen,     setSheetOpen]    = useState(false)
+  const [cardSheetOpen, setCardSheetOpen] = useState(false)
+  const [bankSheetOpen, setBankSheetOpen] = useState(false)
+  const [fabOpen,       setFabOpen]      = useState(false)
   const [streamOpen,    setStreamOpen]   = useState(false)
   const [editStream,    setEditStream]   = useState<RevenueStreamConfig | null>(null)
   const [depositOpen,   setDepositOpen]  = useState(false)
@@ -425,7 +427,7 @@ export default function InPage() {
         <div className="pt-12" />
 
         <div className="mx-4 mt-4">
-          <PillGroup options={['Cards', 'Banks', 'Income'] as Tab[]} value={tab} onChange={setTab} />
+          <PillGroup options={['Income', 'Cards', 'Banks'] as Tab[]} value={tab} onChange={setTab} />
         </div>
 
         {loading && (
@@ -601,31 +603,49 @@ export default function InPage() {
       </div>
 
       {/* ── FAB ─────────────────────────────────────────────────────────── */}
+      {fabOpen && (
+        <div className="fixed inset-0" style={{ zIndex: 39 }} onClick={() => setFabOpen(false)} />
+      )}
+      {fabOpen && (
+        <div className="fixed flex flex-col gap-3" style={{ right: 16, bottom: 148, zIndex: 41, alignItems: 'flex-end' }}>
+          <button onClick={() => { setFabOpen(false); setBankSheetOpen(true) }} className="flex items-center gap-2.5">
+            <span className="text-[13px] font-medium text-ink-muted bg-bg-surface border border-white/[0.1] rounded-full px-3 py-1.5 shadow-lg">Bank</span>
+            <div className="w-10 h-10 gradient-gold rounded-full flex items-center justify-center flex-shrink-0" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
+              <Building2 size={16} strokeWidth={1.75} className="text-white" />
+            </div>
+          </button>
+          <button onClick={() => { setFabOpen(false); setCardSheetOpen(true) }} className="flex items-center gap-2.5">
+            <span className="text-[13px] font-medium text-ink-muted bg-bg-surface border border-white/[0.1] rounded-full px-3 py-1.5 shadow-lg">Card</span>
+            <div className="w-10 h-10 gradient-gold rounded-full flex items-center justify-center flex-shrink-0" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
+              <CreditCard size={16} strokeWidth={1.75} className="text-white" />
+            </div>
+          </button>
+          <button onClick={() => { setFabOpen(false); setDepositOpen(true) }} className="flex items-center gap-2.5">
+            <span className="text-[13px] font-medium text-ink-muted bg-bg-surface border border-white/[0.1] rounded-full px-3 py-1.5 shadow-lg">Income</span>
+            <div className="w-10 h-10 gradient-gold rounded-full flex items-center justify-center flex-shrink-0" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
+              <Banknote size={16} strokeWidth={1.75} className="text-white" />
+            </div>
+          </button>
+        </div>
+      )}
       <button
-        onClick={() => {
-          if (tab === 'Income') { setEditStream(null); setStreamOpen(true) }
-          else setSheetOpen(true)
-        }}
+        onClick={() => setFabOpen(f => !f)}
         className="fixed gradient-gold rounded-full flex items-center justify-center text-white font-light select-none"
-        style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, zIndex: 40, boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)' }}
+        style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, zIndex: 40, boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)', transform: fabOpen ? 'rotate(45deg)' : undefined, transition: 'transform 0.2s ease' }}
         aria-label="Add"
       >+</button>
 
-      {tab === 'Cards' && (
-        <AddCardSheet
-          open={sheetOpen}
-          onClose={() => setSheetOpen(false)}
-          onAdd={handleAddCard}
-          banks={banks.map(b => ({ id: b.id, name: b.name }))}
-        />
-      )}
-      {tab === 'Banks' && (
-        <AddBankSheet
-          open={sheetOpen}
-          onClose={() => setSheetOpen(false)}
-          onAdd={handleAddBank}
-        />
-      )}
+      <AddCardSheet
+        open={cardSheetOpen}
+        onClose={() => setCardSheetOpen(false)}
+        onAdd={handleAddCard}
+        banks={banks.map(b => ({ id: b.id, name: b.name }))}
+      />
+      <AddBankSheet
+        open={bankSheetOpen}
+        onClose={() => setBankSheetOpen(false)}
+        onAdd={handleAddBank}
+      />
 
       <RevenueStreamSheet
         open={streamOpen}

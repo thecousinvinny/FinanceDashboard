@@ -19,7 +19,7 @@ import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { PullIndicator } from '@/components/ui/PullIndicator'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { createCalEvent, updateCalEvent, deleteCalEvent, allDayEvent } from '@/lib/calendar'
-import { RefreshCw, CreditCard, XCircle } from 'lucide-react'
+import { RefreshCw, CreditCard, XCircle, ShoppingBag, Heart } from 'lucide-react'
 import type { BillingCycle } from '@/types'
 
 type Tab = 'Expenses' | 'Subs' | 'Wishlist'
@@ -75,6 +75,7 @@ export default function OutPage() {
   const [sheetOpen,     setSheetOpen]    = useState(false)
   const [editTx,        setEditTx]       = useState<SeedTx | null>(null)
   const [savedMonth,    setSavedMonth]   = useState(0)
+  const [fabOpen,       setFabOpen]      = useState(false)
 
   // Subscriptions
   const [subs,          setSubs]         = useState<Sub[]>([])
@@ -836,14 +837,35 @@ export default function OutPage() {
     </div>
 
     {/* ── FAB ───────────────────────────────────────────────────────────── */}
+    {fabOpen && (
+      <div className="fixed inset-0" style={{ zIndex: 39 }} onClick={() => setFabOpen(false)} />
+    )}
+    {fabOpen && (
+      <div className="fixed flex flex-col gap-3" style={{ right: 16, bottom: 148, zIndex: 41, alignItems: 'flex-end' }}>
+        <button onClick={() => { setFabOpen(false); setWishSheet(true) }} className="flex items-center gap-2.5">
+          <span className="text-[13px] font-medium text-ink-muted bg-bg-surface border border-white/[0.1] rounded-full px-3 py-1.5 shadow-lg">Wishlist</span>
+          <div className="w-10 h-10 gradient-gold rounded-full flex items-center justify-center flex-shrink-0" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
+            <Heart size={16} strokeWidth={1.75} className="text-white" />
+          </div>
+        </button>
+        <button onClick={() => { setFabOpen(false); setSubSheet(true) }} className="flex items-center gap-2.5">
+          <span className="text-[13px] font-medium text-ink-muted bg-bg-surface border border-white/[0.1] rounded-full px-3 py-1.5 shadow-lg">Sub</span>
+          <div className="w-10 h-10 gradient-gold rounded-full flex items-center justify-center flex-shrink-0" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
+            <RefreshCw size={16} strokeWidth={1.75} className="text-white" />
+          </div>
+        </button>
+        <button onClick={() => { setFabOpen(false); setSheetOpen(true) }} className="flex items-center gap-2.5">
+          <span className="text-[13px] font-medium text-ink-muted bg-bg-surface border border-white/[0.1] rounded-full px-3 py-1.5 shadow-lg">Expense</span>
+          <div className="w-10 h-10 gradient-gold rounded-full flex items-center justify-center flex-shrink-0" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
+            <ShoppingBag size={16} strokeWidth={1.75} className="text-white" />
+          </div>
+        </button>
+      </div>
+    )}
     <button
-      onClick={() => {
-        if (tab === 'Subs')     setSubSheet(true)
-        else if (tab === 'Wishlist') setWishSheet(true)
-        else                    setSheetOpen(true)
-      }}
+      onClick={() => setFabOpen(f => !f)}
       className="fixed gradient-gold rounded-full flex items-center justify-center text-white font-light select-none"
-      style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, zIndex: 40, boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)' }}
+      style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, zIndex: 40, boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)', transform: fabOpen ? 'rotate(45deg)' : undefined, transition: 'transform 0.2s ease' }}
       aria-label="Add"
     >+</button>
 
@@ -863,22 +885,18 @@ export default function OutPage() {
       cards={cards}
       banks={banks}
     />
-    {tab === 'Subs' && (
-      <AddSubscriptionSheet
-        open={subSheet}
-        onClose={() => setSubSheet(false)}
-        onAdd={handleAddSub}
-        cards={cards}
-        defaultCardId={defaultCardId}
-      />
-    )}
-    {tab === 'Wishlist' && (
-      <AddWishlistSheet
-        open={wishSheet}
-        onClose={() => setWishSheet(false)}
-        onAdd={handleAddWish}
-      />
-    )}
+    <AddSubscriptionSheet
+      open={subSheet}
+      onClose={() => setSubSheet(false)}
+      onAdd={handleAddSub}
+      cards={cards}
+      defaultCardId={defaultCardId}
+    />
+    <AddWishlistSheet
+      open={wishSheet}
+      onClose={() => setWishSheet(false)}
+      onAdd={handleAddWish}
+    />
     <EditSubscriptionSheet
       sub={editSub}
       open={editSub !== null}
