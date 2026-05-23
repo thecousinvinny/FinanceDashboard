@@ -55,7 +55,7 @@ export function CategoryIcon({ category, type, isSub = false, size = 16, classNa
   if (getIconColorMode() === 'semantic') {
     const color = isSub
       ? 'rgba(255,255,255,0.6)'
-      : type === 'Income' ? '#22c55e' : '#ef4444'
+      : type === 'Income' ? '#22c55e' : '#D4AF37'
     return <Icon size={size} className={className} strokeWidth={strokeWidth} style={{ color }} />
   }
 

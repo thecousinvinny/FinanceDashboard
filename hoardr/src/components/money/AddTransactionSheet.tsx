@@ -170,7 +170,7 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
         </div>
 
         <div className="flex items-center justify-between px-5 mb-5">
-          <h2 className="text-[18px] font-bold tracking-tight text-ink">New Transaction</h2>
+          <h2 className="text-[18px] font-bold tracking-tight text-ink">{type === 'Income' ? 'New Income' : 'New Expense'}</h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-[22px] text-ink-muted">×</button>
         </div>
 

@@ -153,7 +153,7 @@ export default function SettingsPage() {
           <div className="flex gap-2">
             {([
               { id: 'category' as IconColorMode, label: 'Category', sub: 'Custom per-category' },
-              { id: 'semantic' as IconColorMode, label: 'Type',     sub: 'Green / White / Red'  },
+              { id: 'semantic' as IconColorMode, label: 'Type',     sub: 'Green / White / Gold'  },
             ]).map(opt => (
               <button
                 key={opt.id}
