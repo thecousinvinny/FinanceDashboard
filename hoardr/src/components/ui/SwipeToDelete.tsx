@@ -5,7 +5,6 @@ import { Trash2 } from 'lucide-react'
 import { cn, haptic } from '@/lib/utils'
 
 const REVEAL   = 80    // px to show action button
-const AUTO     = 200   // px to auto-confirm
 const TAP_SLOP = 10    // max movement still counted as a tap
 
 interface Props {
@@ -98,8 +97,8 @@ export function SwipeToDelete({
   function clampX(dx: number) {
     const base = revealed.current === 'right' ? REVEAL : revealed.current === 'left' ? -REVEAL : 0
     const raw  = base + dx
-    const minX = onDelete ? -(AUTO + 20) : 0
-    const maxX = onRight  ?  (AUTO + 20) : 0
+    const minX = onDelete ? -(REVEAL + 20) : 0
+    const maxX = onRight  ?  (REVEAL + 20) : 0
     return Math.min(maxX, Math.max(minX, raw))
   }
 
@@ -128,13 +127,9 @@ export function SwipeToDelete({
     clearPress()
     const x = curX.current
     dir.current = null
-    if (x >= AUTO && onRight) {
-      triggerRight()
-    } else if (x > REVEAL / 2 && onRight) {
+    if (x > REVEAL / 2 && onRight) {
       setPos(REVEAL, true)
       revealed.current = 'right'
-    } else if (x <= -AUTO && onDelete) {
-      triggerDelete()
     } else if (x < -(REVEAL / 2) && onDelete) {
       setPos(-REVEAL, true)
       revealed.current = 'left'
@@ -177,13 +172,9 @@ export function SwipeToDelete({
     clearPress()
     const x = curX.current
     dir.current = null
-    if (x >= AUTO && onRight) {
-      triggerRight()
-    } else if (x > REVEAL / 2 && onRight) {
+    if (x > REVEAL / 2 && onRight) {
       setPos(REVEAL, true)
       revealed.current = 'right'
-    } else if (x <= -AUTO && onDelete) {
-      triggerDelete()
     } else if (x < -(REVEAL / 2) && onDelete) {
       setPos(-REVEAL, true)
       revealed.current = 'left'
