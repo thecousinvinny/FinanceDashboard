@@ -6,14 +6,15 @@ import { createClient } from '@/lib/supabase/client'
 import { PillGroup } from '@/components/ui/Pill'
 import { AddCardSheet, type NewCard } from '@/components/wallet/AddCardSheet'
 import { AddBankSheet, type NewBank } from '@/components/wallet/AddBankSheet'
-import { PaycheckSheet } from '@/components/wallet/PaycheckSheet'
+import { RevenueStreamSheet, type RevenueStreamConfig } from '@/components/wallet/RevenueStreamSheet'
+import { ManualDepositSheet } from '@/components/wallet/ManualDepositSheet'
 import { EditCardSheet, type CardEdits } from '@/components/wallet/EditCardSheet'
 import { CardVisual } from '@/components/wallet/CardVisual'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 
 import type { Card, Bank } from '@/types'
-import { Banknote, ChevronRight } from 'lucide-react'
+import { Banknote, ChevronRight, Coins } from 'lucide-react'
 import { cn, $fd, $fk, fmtDate, haptic } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
 import { pageCache } from '@/lib/page-cache'
@@ -39,7 +40,7 @@ interface CardSub {
   category:     string | null
 }
 
-type Tab = 'Cards' | 'Banks'
+type Tab = 'Cards' | 'Banks' | 'Revenue'
 
 export default function WalletPage() {
   const [tab,             setTab]           = useState<Tab>('Cards')
@@ -48,9 +49,12 @@ export default function WalletPage() {
   const [cards,           setCards]         = useState<Card[]>(cached?.cards ?? [])
   const [banks,           setBanks]         = useState<Bank[]>(cached?.banks ?? [])
   const [loading,         setLoading]       = useState(!cached)
-  const [sheetOpen,       setSheetOpen]     = useState(false)
-  const [paycheckOpen,    setPaycheckOpen]  = useState(false)
-  const [selectedCard,    setSelectedCard]  = useState<Card | null>(null)
+  const [sheetOpen,    setSheetOpen]    = useState(false)
+  const [streamOpen,   setStreamOpen]   = useState(false)
+  const [editStream,   setEditStream]   = useState<RevenueStreamConfig | null>(null)
+  const [depositOpen,  setDepositOpen]  = useState(false)
+  const [revStreams,   setRevStreams]   = useState<RevenueStreamConfig[]>([])
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null)
   const [editCard,        setEditCard]      = useState<Card | null>(null)
   const [editSheetOpen,   setEditSheetOpen] = useState(false)
   const [cardExpenses,    setCardExpenses]  = useState<CardExpense[]>([])
@@ -130,6 +134,42 @@ export default function WalletPage() {
 
   const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } =
     usePullToRefresh(loadData)
+
+  // Revenue streams — stored in localStorage
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem('revenue-streams')
+      if (v) setRevStreams(JSON.parse(v))
+    } catch {}
+  }, [])
+
+  function saveStreams(streams: RevenueStreamConfig[]) {
+    try { localStorage.setItem('revenue-streams', JSON.stringify(streams)) } catch {}
+  }
+
+  function handleStreamDone(config: RevenueStreamConfig) {
+    setRevStreams(prev => {
+      const updated = prev.some(s => s.id === config.id)
+        ? prev.map(s => s.id === config.id ? config : s)
+        : [...prev, config]
+      saveStreams(updated)
+      return updated
+    })
+  }
+
+  function handleDeleteStream(id: string) {
+    const snapshot = revStreams.slice()
+    const updated  = revStreams.filter(s => s.id !== id)
+    setRevStreams(updated)
+    saveStreams(updated)
+    showToast('Stream removed', {
+      type: 'delete',
+      undo: {
+        onUndo:   () => { setRevStreams(snapshot); saveStreams(snapshot) },
+        onCommit: () => {},
+      },
+    })
+  }
 
   useEffect(() => {
     if (!selectedCard) { setCardExpenses([]); setCardSubs([]); return }
@@ -401,7 +441,7 @@ export default function WalletPage() {
 
         {/* ── Tab toggle ─────────────────────────────────────────────────── */}
         <div className="mx-4 mt-4">
-          <PillGroup options={['Cards', 'Banks'] as Tab[]} value={tab} onChange={setTab} />
+          <PillGroup options={['Cards', 'Banks', 'Revenue'] as Tab[]} value={tab} onChange={setTab} />
         </div>
 
         {/* ── Loading ────────────────────────────────────────────────────── */}
@@ -449,21 +489,6 @@ export default function WalletPage() {
         {/* ── Banks ──────────────────────────────────────────────────────── */}
         {!loading && tab === 'Banks' && (
           <div className="mx-4 mt-4">
-            {/* Paycheck Generator */}
-            <button
-              onClick={() => setPaycheckOpen(true)}
-              className="w-full flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-card mb-3 text-left active:opacity-70 transition-opacity"
-            >
-              <div className="w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
-                <Banknote size={16} className="text-emerald" strokeWidth={1.75} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[14px] font-medium text-ink">Paycheck Generator</p>
-                <p className="text-[11px] text-ink-muted">Auto-fill pay history</p>
-              </div>
-              <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
-            </button>
-
             {banks.length === 0 ? (
               <div className="py-12 text-center text-ink-faint text-[13px]">
                 No banks yet — add your first one above.
@@ -494,12 +519,74 @@ export default function WalletPage() {
           </div>
         )}
 
+        {/* ── Revenue ────────────────────────────────────────────────────── */}
+        {!loading && tab === 'Revenue' && (
+          <div className="mx-4 mt-4 space-y-3">
+
+            {/* Initialize Balance */}
+            <button
+              onClick={() => setDepositOpen(true)}
+              className="w-full flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-card text-left active:opacity-70 transition-opacity"
+            >
+              <div className="w-10 h-10 rounded-[12px] bg-emerald/10 flex items-center justify-center flex-shrink-0">
+                <Coins size={16} className="text-emerald" strokeWidth={1.75} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[14px] font-medium text-ink">Initialize Balance</p>
+                <p className="text-[11px] text-ink-muted">Add a lump sum to reflect your current funds</p>
+              </div>
+              <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
+            </button>
+
+            {/* Saved revenue streams */}
+            {revStreams.length > 0 && (
+              <>
+                <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint pt-2">Revenue Streams</p>
+                <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
+                  {revStreams.map(stream => (
+                    <SwipeToDelete
+                      key={stream.id}
+                      onDelete={() => handleDeleteStream(stream.id)}
+                      onTap={() => { setEditStream(stream); setStreamOpen(true) }}
+                    >
+                      <div className="flex items-center gap-3 px-4 py-3.5">
+                        <div className="w-10 h-10 rounded-[12px] bg-emerald/10 flex items-center justify-center flex-shrink-0">
+                          <Banknote size={15} className="text-emerald" strokeWidth={1.75} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[14px] font-medium text-ink truncate">{stream.name}</p>
+                          <p className="text-[11px] text-ink-muted">
+                            ${stream.amount.toLocaleString()} · {stream.freq}
+                            {banks.find(b => b.id === stream.bankId)
+                              ? ` · ${banks.find(b => b.id === stream.bankId)!.name}` : ''}
+                          </p>
+                        </div>
+                        <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
+                      </div>
+                    </SwipeToDelete>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {revStreams.length === 0 && (
+              <div className="py-10 text-center">
+                <p className="text-[13px] text-ink-faint">No revenue streams yet</p>
+                <p className="text-[11px] text-ink-faint/60 mt-1">Tap + to create your first income source</p>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="h-10" />
       </div>
 
       {/* ── FAB ─────────────────────────────────────────────────────── */}
       <button
-        onClick={() => setSheetOpen(true)}
+        onClick={() => {
+          if (tab === 'Revenue') { setEditStream(null); setStreamOpen(true) }
+          else setSheetOpen(true)
+        }}
         className="fixed gradient-gold rounded-full flex items-center justify-center text-white font-light select-none"
         style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, zIndex: 40, boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)' }}
         aria-label="Add"
@@ -523,9 +610,16 @@ export default function WalletPage() {
         />
       )}
 
-      <PaycheckSheet
-        open={paycheckOpen}
-        onClose={() => setPaycheckOpen(false)}
+      <RevenueStreamSheet
+        open={streamOpen}
+        onClose={() => setStreamOpen(false)}
+        banks={banks.map(b => ({ id: b.id, name: b.name }))}
+        onDone={handleStreamDone}
+        initial={editStream ?? undefined}
+      />
+      <ManualDepositSheet
+        open={depositOpen}
+        onClose={() => setDepositOpen(false)}
         banks={banks.map(b => ({ id: b.id, name: b.name }))}
         onDone={() => {}}
       />
