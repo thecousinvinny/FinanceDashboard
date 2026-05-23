@@ -292,11 +292,13 @@ export function EditTransactionSheet({ tx, open, onClose, onSave, cards = [], ba
 
           <div>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Date</p>
-            <input
-              type="date" value={date} onChange={e => setDate(e.target.value)}
-              style={{ colorScheme: 'dark' }}
-              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3.5 text-[15px] text-ink outline-none"
-            />
+            <div className="overflow-hidden rounded-[14px] bg-bg-overlay">
+              <input
+                type="date" value={date} onChange={e => setDate(e.target.value)}
+                style={{ colorScheme: 'dark' }}
+                className="w-full bg-transparent px-4 py-3.5 text-[15px] text-ink outline-none"
+              />
+            </div>
           </div>
 
           <button

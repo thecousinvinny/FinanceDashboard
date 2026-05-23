@@ -201,9 +201,11 @@ export function AddCommissionSheet({ open, onClose, onAdd }: Props) {
               <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
                 Deadline <span className="normal-case text-ink-faint/60">(opt.)</span>
               </p>
-              <input type="date" value={deadline} onChange={e => setDeadline(e.target.value)}
-                min={localToday()} style={{ colorScheme: 'dark' }}
-                className="w-full bg-bg-overlay rounded-[14px] px-3 py-3 text-[15px] text-ink outline-none" />
+              <div className="overflow-hidden rounded-[14px] bg-bg-overlay">
+                <input type="date" value={deadline} onChange={e => setDeadline(e.target.value)}
+                  min={localToday()} style={{ colorScheme: 'dark' }}
+                  className="w-full bg-transparent px-4 py-3.5 text-[15px] text-ink outline-none" />
+              </div>
             </div>
           </div>
 
