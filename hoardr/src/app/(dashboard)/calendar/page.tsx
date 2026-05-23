@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { getWeekStartsMonday } from '@/lib/week-start'
 import { cn } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
 import { Plus, SlidersHorizontal, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning, type LucideIcon } from 'lucide-react'
@@ -237,12 +238,15 @@ export default function CalendarPage() {
   })
   const [sidebarYear, setSidebarYear] = useState(today.getFullYear())
   const [sidebarMonth, setSidebarMonth] = useState(today.getMonth())
+  const [wsMon] = useState(() => getWeekStartsMonday())
+
   const [notionWeeks, setNotionWeeks] = useState<string[]>(() => {
-    const t = new Date()
-    const sun = new Date(t.getFullYear(), t.getMonth(), t.getDate() - t.getDay())
-    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-    const sunStr = fmt(sun)
-    return Array.from({ length: 48 }, (_, i) => addWeeks(sunStr, i - 24))
+    const t      = new Date()
+    const wm     = getWeekStartsMonday()
+    const offset = wm ? (t.getDay() + 6) % 7 : t.getDay()
+    const anchor = new Date(t.getFullYear(), t.getMonth(), t.getDate() - offset)
+    const fmt    = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return Array.from({ length: 48 }, (_, i) => addWeeks(fmt(anchor), i - 24))
   })
   const notionWeeksRef = useRef<string[]>([])
 
@@ -889,7 +893,7 @@ export default function CalendarPage() {
 
   // ── Grid helpers ───────────────────────────────────────────────────────────
   const gridDays  = getDaysInMonth(gridYear, gridMonth)
-  const firstDay  = new Date(gridYear, gridMonth, 1).getDay()
+  const firstDay  = wsMon ? (new Date(gridYear, gridMonth, 1).getDay() + 6) % 7 : new Date(gridYear, gridMonth, 1).getDay()
   const gridCells: (number | null)[] = [...Array(firstDay).fill(null), ...Array.from({ length: gridDays }, (_, i) => i + 1)]
   while (gridCells.length % 7 !== 0) gridCells.push(null)
   const gridMonthLbl = new Date(gridYear, gridMonth, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
@@ -1072,14 +1076,14 @@ export default function CalendarPage() {
                     </div>
                     {/* DOW mini header */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', marginBottom: 2 }}>
-                      {['S','M','T','W','T','F','S'].map((d, i) => (
+                      {(wsMon ? ['M','T','W','T','F','S','S'] : ['S','M','T','W','T','F','S']).map((d, i) => (
                         <div key={i} style={{ textAlign: 'center', fontSize: 8, fontWeight: 600, color: 'rgb(var(--rgb-ink) / 0.25)', fontFamily: 'var(--font-montserrat)', paddingBottom: 2 }}>{d}</div>
                       ))}
                     </div>
                     {/* Mini day grid */}
                     {(() => {
                       const dim      = getDaysInMonth(sidebarYear, sidebarMonth)
-                      const firstDow = new Date(sidebarYear, sidebarMonth, 1).getDay()
+                      const firstDow = wsMon ? (new Date(sidebarYear, sidebarMonth, 1).getDay() + 6) % 7 : new Date(sidebarYear, sidebarMonth, 1).getDay()
                       const cells: (number | null)[] = [...Array(firstDow).fill(null), ...Array.from({ length: dim }, (_, i) => i + 1)]
                       while (cells.length % 7 !== 0) cells.push(null)
                       return (
@@ -1176,7 +1180,7 @@ export default function CalendarPage() {
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, background: 'var(--color-bg-base)' }}>
                   {/* Sticky DOW header */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', background: 'var(--color-bg-base)', borderBottom: '1px solid var(--color-grid-border)', flexShrink: 0 }}>
-                    {['SUN','MON','TUE','WED','THU','FRI','SAT'].map(d => (
+                    {(wsMon ? ['MON','TUE','WED','THU','FRI','SAT','SUN'] : ['SUN','MON','TUE','WED','THU','FRI','SAT']).map(d => (
                       <div key={d} style={{ textAlign: 'center', padding: '4px 0 3px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#C9A84C', fontFamily: 'var(--font-montserrat)' }}>{d}</div>
                     ))}
                   </div>
@@ -1303,7 +1307,7 @@ export default function CalendarPage() {
             <div className="bg-bg-base overflow-y-auto flex-1">
               {/* Day-of-week row */}
               <div className="grid grid-cols-7 px-3 mb-1">
-                {['S','M','T','W','T','F','S'].map((d, i) => (
+                {(wsMon ? ['M','T','W','T','F','S','S'] : ['S','M','T','W','T','F','S']).map((d, i) => (
                   <div key={i} className="text-center text-[10px] font-medium tracking-[0.08em] uppercase text-ink-faint py-1">{d}</div>
                 ))}
               </div>
@@ -1370,7 +1374,7 @@ export default function CalendarPage() {
                 </div>
                 {/* DOW labels */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', paddingLeft: 8, paddingRight: 8, paddingBottom: 4, flexShrink: 0 }}>
-                  {['S','M','T','W','T','F','S'].map((d, i) => (
+                  {(wsMon ? ['M','T','W','T','F','S','S'] : ['S','M','T','W','T','F','S']).map((d, i) => (
                     <div key={i} style={{ textAlign: 'center', fontSize: 9, fontWeight: 700, color: 'rgba(212,175,55,0.55)', letterSpacing: '0.05em', fontFamily: 'var(--font-montserrat)' }}>{d}</div>
                   ))}
                 </div>
