@@ -19,7 +19,7 @@ import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { PullIndicator } from '@/components/ui/PullIndicator'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { createCalEvent, updateCalEvent, deleteCalEvent, allDayEvent } from '@/lib/calendar'
-import { RefreshCw, CreditCard, XCircle, ShoppingBag, Heart } from 'lucide-react'
+import { RefreshCw, CreditCard, XCircle } from 'lucide-react'
 import type { BillingCycle } from '@/types'
 import { useRouter } from 'next/navigation'
 import { usePillSwipe } from '@/hooks/usePillSwipe'
@@ -848,23 +848,14 @@ export default function OutPage() {
     )}
     {fabOpen && (
       <div className="fixed flex flex-col gap-3" style={{ right: 16, bottom: 148, zIndex: 41, alignItems: 'flex-end' }}>
-        <button onClick={() => { setFabOpen(false); setWishSheet(true) }} className="flex items-center gap-2.5">
-          <span className="text-[13px] font-medium text-ink-muted bg-bg-surface border border-white/[0.1] rounded-full px-3 py-1.5 shadow-lg">Wishlist</span>
-          <div className="w-10 h-10 gradient-gold rounded-full flex items-center justify-center flex-shrink-0" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
-            <Heart size={16} strokeWidth={1.75} className="text-white" />
-          </div>
+        <button onClick={() => { setFabOpen(false); setWishSheet(true) }}>
+          <span className="text-[13px] font-semibold text-gold bg-bg-surface border border-white/[0.1] rounded-full px-4 py-2 shadow-lg">Wishlist</span>
         </button>
-        <button onClick={() => { setFabOpen(false); setSubSheet(true) }} className="flex items-center gap-2.5">
-          <span className="text-[13px] font-medium text-ink-muted bg-bg-surface border border-white/[0.1] rounded-full px-3 py-1.5 shadow-lg">Sub</span>
-          <div className="w-10 h-10 gradient-gold rounded-full flex items-center justify-center flex-shrink-0" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
-            <RefreshCw size={16} strokeWidth={1.75} className="text-white" />
-          </div>
+        <button onClick={() => { setFabOpen(false); setSubSheet(true) }}>
+          <span className="text-[13px] font-semibold text-gold bg-bg-surface border border-white/[0.1] rounded-full px-4 py-2 shadow-lg">Sub</span>
         </button>
-        <button onClick={() => { setFabOpen(false); setSheetOpen(true) }} className="flex items-center gap-2.5">
-          <span className="text-[13px] font-medium text-ink-muted bg-bg-surface border border-white/[0.1] rounded-full px-3 py-1.5 shadow-lg">Expense</span>
-          <div className="w-10 h-10 gradient-gold rounded-full flex items-center justify-center flex-shrink-0" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
-            <ShoppingBag size={16} strokeWidth={1.75} className="text-white" />
-          </div>
+        <button onClick={() => { setFabOpen(false); setSheetOpen(true) }}>
+          <span className="text-[13px] font-semibold text-gold bg-bg-surface border border-white/[0.1] rounded-full px-4 py-2 shadow-lg">Expense</span>
         </button>
       </div>
     )}

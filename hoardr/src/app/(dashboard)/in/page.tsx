@@ -13,7 +13,7 @@ import { CardVisual } from '@/components/wallet/CardVisual'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import type { Card, Bank } from '@/types'
-import { Banknote, ChevronRight, Coins, TrendingUp, CreditCard, Building2 } from 'lucide-react'
+import { Banknote, ChevronRight, Coins, TrendingUp } from 'lucide-react'
 import { cn, $fd, $fk, fmtDate, haptic, groupByMonth } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
 import { useRouter } from 'next/navigation'
@@ -614,23 +614,14 @@ export default function InPage() {
       )}
       {fabOpen && (
         <div className="fixed flex flex-col gap-3" style={{ right: 16, bottom: 148, zIndex: 41, alignItems: 'flex-end' }}>
-          <button onClick={() => { setFabOpen(false); setBankSheetOpen(true) }} className="flex items-center gap-2.5">
-            <span className="text-[13px] font-medium text-ink-muted bg-bg-surface border border-white/[0.1] rounded-full px-3 py-1.5 shadow-lg">Bank</span>
-            <div className="w-10 h-10 gradient-gold rounded-full flex items-center justify-center flex-shrink-0" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
-              <Building2 size={16} strokeWidth={1.75} className="text-white" />
-            </div>
+          <button onClick={() => { setFabOpen(false); setBankSheetOpen(true) }}>
+            <span className="text-[13px] font-semibold text-gold bg-bg-surface border border-white/[0.1] rounded-full px-4 py-2 shadow-lg">Bank</span>
           </button>
-          <button onClick={() => { setFabOpen(false); setCardSheetOpen(true) }} className="flex items-center gap-2.5">
-            <span className="text-[13px] font-medium text-ink-muted bg-bg-surface border border-white/[0.1] rounded-full px-3 py-1.5 shadow-lg">Card</span>
-            <div className="w-10 h-10 gradient-gold rounded-full flex items-center justify-center flex-shrink-0" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
-              <CreditCard size={16} strokeWidth={1.75} className="text-white" />
-            </div>
+          <button onClick={() => { setFabOpen(false); setCardSheetOpen(true) }}>
+            <span className="text-[13px] font-semibold text-gold bg-bg-surface border border-white/[0.1] rounded-full px-4 py-2 shadow-lg">Card</span>
           </button>
-          <button onClick={() => { setFabOpen(false); setDepositOpen(true) }} className="flex items-center gap-2.5">
-            <span className="text-[13px] font-medium text-ink-muted bg-bg-surface border border-white/[0.1] rounded-full px-3 py-1.5 shadow-lg">Income</span>
-            <div className="w-10 h-10 gradient-gold rounded-full flex items-center justify-center flex-shrink-0" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
-              <Banknote size={16} strokeWidth={1.75} className="text-white" />
-            </div>
+          <button onClick={() => { setFabOpen(false); setDepositOpen(true) }}>
+            <span className="text-[13px] font-semibold text-gold bg-bg-surface border border-white/[0.1] rounded-full px-4 py-2 shadow-lg">Income</span>
           </button>
         </div>
       )}

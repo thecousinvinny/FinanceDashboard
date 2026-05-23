@@ -16,7 +16,7 @@ import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import type { DayPoint } from '@/components/home/SparkChart'
 import type { SeedTx } from '@/lib/data/transactions'
-import { Truck, Receipt, Star } from 'lucide-react'
+import { Truck } from 'lucide-react'
 import { HoardChest } from '@/components/home/HoardChest'
 
 interface EnRouteItem {
@@ -59,7 +59,7 @@ export default function HomePage() {
   const [activity,      setActivity]      = useState<ActivityRow[]>(cached?.activity ?? [])
   const [sparkPoints,   setSparkPoints]   = useState<DayPoint[]>(cached?.sparkPoints ?? [])
   const [loading,       setLoading]       = useState(!cached)
-  const [pickerOpen,    setPickerOpen]    = useState(false)
+  const [fabOpen,       setFabOpen]       = useState(false)
   const [expenseOpen,   setExpenseOpen]   = useState(false)
   const [wishlistOpen,  setWishlistOpen]  = useState(false)
   const [cards,         setCards]         = useState<CardOption[]>([])
@@ -69,8 +69,6 @@ export default function HomePage() {
   const supabase          = useMemo(() => createClient(), [])
   const loadGen           = useRef(0)
   const abortRef          = useRef<AbortController | null>(null)
-  const pickerSheetRef    = useRef<HTMLDivElement>(null)
-  const pickerDragStartY  = useRef<number | null>(null)
 
   const loadData = useCallback(async () => {
     abortRef.current?.abort()
@@ -259,49 +257,6 @@ export default function HomePage() {
     return () => { mounted = false }
   }, [supabase])
 
-  useEffect(() => {
-    if (!pickerOpen) return
-    const scrollY = window.scrollY
-    document.body.style.position = 'fixed'
-    document.body.style.top = `-${scrollY}px`
-    document.body.style.width = '100%'
-    document.documentElement.style.overscrollBehavior = 'none'
-    const prevent = (e: TouchEvent) => e.preventDefault()
-    document.addEventListener('touchmove', prevent, { passive: false })
-    return () => {
-      document.body.style.position = ''
-      document.body.style.top = ''
-      document.body.style.width = ''
-      document.documentElement.style.overscrollBehavior = ''
-      document.removeEventListener('touchmove', prevent)
-      window.scrollTo(0, scrollY)
-    }
-  }, [pickerOpen])
-
-  function onPickerDragStart(e: React.TouchEvent) { pickerDragStartY.current = e.touches[0].clientY }
-  function onPickerDragMove(e: React.TouchEvent) {
-    if (pickerDragStartY.current === null || !pickerSheetRef.current) return
-    const dy = Math.max(0, e.touches[0].clientY - pickerDragStartY.current)
-    pickerSheetRef.current.style.transform = `translateY(${dy}px)`
-    pickerSheetRef.current.style.transition = 'none'
-  }
-  function onPickerDragEnd(e: React.TouchEvent) {
-    if (!pickerSheetRef.current) return
-    const dy = pickerDragStartY.current !== null ? Math.max(0, e.changedTouches[0].clientY - pickerDragStartY.current) : 0
-    pickerDragStartY.current = null
-    if (dy > 80) {
-      pickerSheetRef.current.style.transition = 'transform 0.28s cubic-bezier(0.4,0,0.2,1)'
-      pickerSheetRef.current.style.transform  = 'translateY(100%)'
-      setTimeout(() => {
-        if (pickerSheetRef.current) { pickerSheetRef.current.style.transform = ''; pickerSheetRef.current.style.transition = '' }
-        setPickerOpen(false)
-      }, 280)
-    } else {
-      pickerSheetRef.current.style.transform = ''
-      pickerSheetRef.current.style.transition = ''
-    }
-  }
-
   const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } =
     usePullToRefresh(loadData)
 
@@ -484,62 +439,25 @@ export default function HomePage() {
     </div>
 
     {/* ── FAB ─────────────────────────────────────────────────────────── */}
+    {fabOpen && (
+      <div className="fixed inset-0" style={{ zIndex: 39 }} onClick={() => setFabOpen(false)} />
+    )}
+    {fabOpen && (
+      <div className="fixed flex flex-col gap-3" style={{ right: 16, bottom: 148, zIndex: 41, alignItems: 'flex-end' }}>
+        <button onClick={() => { setFabOpen(false); setWishlistOpen(true) }}>
+          <span className="text-[13px] font-semibold text-gold bg-bg-surface border border-white/[0.1] rounded-full px-4 py-2 shadow-lg">Wishlist</span>
+        </button>
+        <button onClick={() => { setFabOpen(false); setExpenseOpen(true) }}>
+          <span className="text-[13px] font-semibold text-gold bg-bg-surface border border-white/[0.1] rounded-full px-4 py-2 shadow-lg">Expense</span>
+        </button>
+      </div>
+    )}
     <button
-      onClick={() => setPickerOpen(true)}
+      onClick={() => setFabOpen(f => !f)}
       className="fixed gradient-gold rounded-full flex items-center justify-center text-white font-light select-none"
-      style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, zIndex: 40, boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)' }}
-      aria-label="Quick add"
-    >
-      +
-    </button>
-
-    {/* ── Quick-add picker ─────────────────────────────────────────────── */}
-    <div
-      onClick={() => setPickerOpen(false)}
-      className={`fixed inset-0 z-[59] transition-opacity duration-300 ${pickerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-      style={{ background: 'rgba(0,0,0,0.72)' }}
-    />
-    <div
-      ref={pickerSheetRef}
-      className={`fixed inset-x-0 bottom-0 z-[60] rounded-t-[24px] bg-bg-surface transition-transform duration-300 ${pickerOpen ? 'translate-y-0' : 'translate-y-full'}`}
-      style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-    >
-      <div
-        onTouchStart={onPickerDragStart}
-        onTouchMove={onPickerDragMove}
-        onTouchEnd={onPickerDragEnd}
-        className="flex justify-center pt-3 pb-2"
-        style={{ touchAction: 'none' }}
-      >
-        <div className="w-9 h-1 rounded-full bg-white/20" />
-      </div>
-      <div className="px-4 pb-6 space-y-2">
-        <button
-          onClick={() => { setPickerOpen(false); setTimeout(() => setExpenseOpen(true), 220) }}
-          className="w-full flex items-center gap-4 px-5 py-4 bg-bg-overlay rounded-[16px] active:scale-[0.98] transition-transform select-none"
-        >
-          <div className="w-10 h-10 rounded-full bg-gold/10 flex items-center justify-center flex-shrink-0">
-            <Receipt size={17} className="text-gold" strokeWidth={1.75} />
-          </div>
-          <div className="text-left">
-            <p className="text-[15px] font-semibold text-ink">Add Expense</p>
-            <p className="text-[11px] text-ink-muted">Log a purchase or payment</p>
-          </div>
-        </button>
-        <button
-          onClick={() => { setPickerOpen(false); setTimeout(() => setWishlistOpen(true), 220) }}
-          className="w-full flex items-center gap-4 px-5 py-4 bg-bg-overlay rounded-[16px] active:scale-[0.98] transition-transform select-none"
-        >
-          <div className="w-10 h-10 rounded-full bg-emerald/10 flex items-center justify-center flex-shrink-0">
-            <Star size={17} className="text-emerald" strokeWidth={1.75} />
-          </div>
-          <div className="text-left">
-            <p className="text-[15px] font-semibold text-ink">Add to Wishlist</p>
-            <p className="text-[11px] text-ink-muted">Save something for later</p>
-          </div>
-        </button>
-      </div>
-    </div>
+      style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, zIndex: 40, boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)', transform: fabOpen ? 'rotate(45deg)' : undefined, transition: 'transform 0.2s ease' }}
+      aria-label="Add"
+    >+</button>
 
     <AddTransactionSheet
       open={expenseOpen}
