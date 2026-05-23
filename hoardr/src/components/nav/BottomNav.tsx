@@ -2,11 +2,11 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutGrid, ArrowLeftRight, Sparkles, Palette, SlidersHorizontal, CalendarDays } from 'lucide-react'
+import { Coins, ArrowLeftRight, Sparkles, Palette, SlidersHorizontal, CalendarDays } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const tabs = [
-  { href: '/home',     label: 'Home',     Icon: LayoutGrid        },
+  { href: '/home',     label: 'Hoard',    Icon: Coins             },
   { href: '/money',    label: 'Money',    Icon: ArrowLeftRight    },
   { href: '/plans',    label: 'Plans',    Icon: Sparkles          },
   { href: '/calendar', label: 'Calendar', Icon: CalendarDays      },
