@@ -41,20 +41,21 @@ export default function BottomNav() {
             key={href}
             href={href}
             className={cn(
-              'flex flex-col items-center justify-center gap-[3px] flex-1 min-w-0 transition-colors duration-200 select-none',
+              'relative flex flex-col items-center justify-center gap-[3px] flex-1 min-w-0 transition-colors duration-200 select-none',
               active ? 'text-gold' : 'text-ink-faint',
             )}
           >
+            {/* Gold bar at top of tab */}
+            <span className={cn(
+              'absolute top-0 inset-x-3 h-[2px] rounded-full transition-all duration-200',
+              active ? 'bg-gold opacity-100' : 'opacity-0',
+            )} />
             <span className="transition-colors duration-200">
               <Icon size={22} strokeWidth={active ? 2 : 1.5} />
             </span>
             <span className="text-[9px] font-medium tracking-[0.07em] uppercase leading-none">
               {label}
             </span>
-            <span className={cn(
-              'w-1 h-1 rounded-full transition-all duration-200',
-              active ? 'bg-gold' : 'bg-transparent',
-            )} />
           </Link>
         )
       })}
