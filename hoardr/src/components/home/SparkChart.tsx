@@ -111,14 +111,20 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
             </linearGradient>
           </defs>
 
-          <path d={buildArea(expVals)} fill="url(#exp-grad)"/>
-          <path d={buildArea(incVals)} fill="url(#inc-grad)"/>
-          {totalSub > 0 && <path d={buildArea(subVals)} fill="url(#sub-grad)"/>}
-          <path d={buildPath(expVals)} fill="none" stroke="#E8C46B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
-          <path d={buildPath(incVals)} fill="none" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
-          {totalSub > 0 && (
-            <path d={buildPath(subVals)} fill="none" stroke="rgba(255,255,255,0.65)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
-          )}
+          {/* key forces remount (and animation restart) when data changes */}
+          <g key={`${n}-${Math.round((points[n-1]?.exp ?? 0) + (points[n-1]?.inc ?? 0))}`}>
+            <path d={buildArea(expVals)} fill="url(#exp-grad)" style={{ animation: 'spark-fade 0.5s ease 0.1s both' }}/>
+            <path d={buildArea(incVals)} fill="url(#inc-grad)" style={{ animation: 'spark-fade 0.5s ease 0s both' }}/>
+            {totalSub > 0 && <path d={buildArea(subVals)} fill="url(#sub-grad)" style={{ animation: 'spark-fade 0.5s ease 0.2s both' }}/>}
+            <path d={buildPath(expVals)} fill="none" stroke="#E8C46B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"
+              pathLength="1" strokeDasharray="1" style={{ animation: 'spark-draw 0.85s cubic-bezier(0.4,0,0.2,1) 0.05s both' }}/>
+            <path d={buildPath(incVals)} fill="none" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"
+              pathLength="1" strokeDasharray="1" style={{ animation: 'spark-draw 0.85s cubic-bezier(0.4,0,0.2,1) 0s both' }}/>
+            {totalSub > 0 && (
+              <path d={buildPath(subVals)} fill="none" stroke="rgba(255,255,255,0.65)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"
+                pathLength="1" strokeDasharray="1" style={{ animation: 'spark-draw 0.85s cubic-bezier(0.4,0,0.2,1) 0.1s both' }}/>
+            )}
+          </g>
 
           {hoverIdx !== null && (
             <>
