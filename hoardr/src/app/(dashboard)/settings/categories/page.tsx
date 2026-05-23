@@ -281,12 +281,31 @@ export default function CategoriesPage() {
       return
     }
 
-    // Upsert built-ins — always writes icon/color so the DB stays in sync with the defaults
     const builtins = [
       ...BUILTIN_EXPENSE_CATEGORIES.map(c => ({ ...c, tx_type: 'Expense', user_id: user.id })),
       ...BUILTIN_INCOME_CATEGORIES.map(c => ({ ...c, tx_type: 'Income',  user_id: user.id })),
     ]
-    await supabase.from('categories').upsert(builtins, { onConflict: 'user_id,name' })
+
+    // Insert any missing built-ins
+    await supabase.from('categories').upsert(builtins, { onConflict: 'user_id,name', ignoreDuplicates: true })
+
+    // Explicitly update icon/color for every built-in by name — upsert alone won't
+    // overwrite existing rows reliably via PostgREST, so we do it directly.
+    const builtinMap = new Map(builtins.map(b => [b.name, b]))
+    const { data: existing } = await supabase
+      .from('categories')
+      .select('id, name')
+      .eq('user_id', user.id)
+      .in('name', builtins.map(b => b.name))
+
+    if (existing?.length) {
+      await Promise.all(
+        existing.map(row => {
+          const b = builtinMap.get(row.name)!
+          return supabase.from('categories').update({ icon: b.icon, color: b.color }).eq('id', row.id)
+        })
+      )
+    }
 
     const { data } = await supabase
       .from('categories')
