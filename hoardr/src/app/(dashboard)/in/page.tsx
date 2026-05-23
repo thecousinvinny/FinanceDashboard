@@ -16,6 +16,8 @@ import type { Card, Bank } from '@/types'
 import { Banknote, ChevronRight, Coins, TrendingUp, CreditCard, Building2 } from 'lucide-react'
 import { cn, $fd, $fk, fmtDate, haptic, groupByMonth } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
+import { useRouter } from 'next/navigation'
+import { usePillSwipe } from '@/hooks/usePillSwipe'
 import { pageCache } from '@/lib/page-cache'
 import { PullIndicator } from '@/components/ui/PullIndicator'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
@@ -33,8 +35,12 @@ interface IncomeRow {
 
 type Tab = 'Income' | 'Cards' | 'Banks'
 
+const PILL_OPTIONS: Tab[] = ['Income', 'Cards', 'Banks']
+
 export default function InPage() {
+  const router = useRouter()
   const [tab,           setTab]          = useState<Tab>('Income')
+  usePillSwipe(tab, setTab, PILL_OPTIONS, '/money', '/calendar', router)
   type InCache = { cards: Card[]; banks: Bank[] }
   const cached = pageCache.get<InCache>('in')
   const [cards,         setCards]        = useState<Card[]>(cached?.cards ?? [])

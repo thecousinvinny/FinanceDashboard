@@ -21,6 +21,8 @@ import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { createCalEvent, updateCalEvent, deleteCalEvent, allDayEvent } from '@/lib/calendar'
 import { RefreshCw, CreditCard, XCircle, ShoppingBag, Heart } from 'lucide-react'
 import type { BillingCycle } from '@/types'
+import { useRouter } from 'next/navigation'
+import { usePillSwipe } from '@/hooks/usePillSwipe'
 
 type Tab = 'Expenses' | 'Subs' | 'Wishlist'
 
@@ -63,8 +65,12 @@ function billingShort(billing: BillingCycle) {
   }
 }
 
+const PILL_OPTIONS: Tab[] = ['Expenses', 'Subs', 'Wishlist']
+
 export default function OutPage() {
+  const router = useRouter()
   const [tab,           setTab]          = useState<Tab>('Expenses')
+  usePillSwipe(tab, setTab, PILL_OPTIONS, '/home', '/in', router)
 
   // Expenses
   const cachedTx = pageCache.get<SeedTx[]>('out')

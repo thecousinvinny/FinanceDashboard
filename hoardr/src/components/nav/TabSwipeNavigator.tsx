@@ -8,8 +8,8 @@ const EDGE_PX  = 35    // must start within this many px of the left or right ed
 const MIN_DX   = 60    // minimum horizontal travel to count as a swipe
 const H_RATIO  = 1.5   // |dx| must exceed |dy| × this (keeps it horizontal)
 
-// Calendar manages its own panel ↔ tab navigation — exclude it here.
-const EXCLUDED = ['/calendar']
+// Calendar, /money, and /in manage their own pill-aware swipe navigation.
+const EXCLUDED = ['/calendar', '/money', '/in']
 
 export function TabSwipeNavigator() {
   const pathname = usePathname()
