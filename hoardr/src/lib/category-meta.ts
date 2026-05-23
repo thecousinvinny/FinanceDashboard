@@ -4,9 +4,11 @@ import {
   Car, Plane, Bike, Train, Bus, Fuel,
   Heart, Activity, Dumbbell, Pill, Stethoscope, Syringe,
   Music, Film, Tv, Headphones, Gamepad2, BookOpen,
-  Home, Lightbulb, Hammer, Wrench, Bath, Sofa,
+  Home, Lightbulb, Hammer, Wrench, Bath, Sofa, Sparkles,
   DollarSign, CreditCard, Briefcase, PiggyBank, BarChart3, TrendingUp,
-  Laptop, Smartphone, Wifi, Monitor, Camera, Code,
+  Shield, ArrowLeftRight, RotateCcw, RefreshCw,
+  Laptop, Smartphone, Wifi, Monitor, Camera, Code, Zap,
+  Palette,
   LayoutGrid, type LucideIcon,
 } from 'lucide-react'
 
@@ -22,13 +24,14 @@ export const ICON_REGISTRY: Record<string, LucideIcon> = {
   // Health & Wellness
   Heart, Activity, Dumbbell, Pill, Stethoscope, Syringe,
   // Entertainment
-  Music, Film, Tv, Headphones, Gamepad2, BookOpen,
+  Music, Film, Tv, Headphones, Gamepad2, BookOpen, Palette,
   // Home & Living
-  Home, Lightbulb, Hammer, Wrench, Bath, Sofa,
+  Home, Lightbulb, Hammer, Wrench, Bath, Sofa, Sparkles,
   // Finance & Work
   DollarSign, CreditCard, Briefcase, PiggyBank, BarChart3, TrendingUp,
+  Shield, ArrowLeftRight, RotateCcw, RefreshCw,
   // Tech
-  Laptop, Smartphone, Wifi, Monitor, Camera, Code,
+  Laptop, Smartphone, Wifi, Monitor, Camera, Code, Zap,
   // Fallback
   LayoutGrid,
 }
@@ -74,6 +77,7 @@ export const ICON_LIST: IconMeta[] = [
   { name: 'Headphones',     group: 'Entertainment' },
   { name: 'Gamepad2',       group: 'Entertainment' },
   { name: 'BookOpen',       group: 'Entertainment' },
+  { name: 'Palette',        group: 'Entertainment' },
   // Home
   { name: 'Home',           group: 'Home' },
   { name: 'Lightbulb',      group: 'Home' },
@@ -81,6 +85,7 @@ export const ICON_LIST: IconMeta[] = [
   { name: 'Wrench',         group: 'Home' },
   { name: 'Bath',           group: 'Home' },
   { name: 'Sofa',           group: 'Home' },
+  { name: 'Sparkles',       group: 'Home' },
   // Finance
   { name: 'DollarSign',     group: 'Finance' },
   { name: 'CreditCard',     group: 'Finance' },
@@ -88,6 +93,10 @@ export const ICON_LIST: IconMeta[] = [
   { name: 'PiggyBank',      group: 'Finance' },
   { name: 'BarChart3',      group: 'Finance' },
   { name: 'TrendingUp',     group: 'Finance' },
+  { name: 'Shield',         group: 'Finance' },
+  { name: 'ArrowLeftRight', group: 'Finance' },
+  { name: 'RotateCcw',      group: 'Finance' },
+  { name: 'RefreshCw',      group: 'Finance' },
   // Tech
   { name: 'Laptop',         group: 'Tech' },
   { name: 'Smartphone',     group: 'Tech' },
@@ -95,6 +104,7 @@ export const ICON_LIST: IconMeta[] = [
   { name: 'Monitor',        group: 'Tech' },
   { name: 'Camera',         group: 'Tech' },
   { name: 'Code',           group: 'Tech' },
+  { name: 'Zap',            group: 'Tech' },
 ]
 
 export const COLOR_PALETTE = [
@@ -154,27 +164,27 @@ export function setIconColorMode(mode: IconColorMode) {
 // ── Built-in defaults (used for seeding + fallback) ───────────────────────────
 
 export const BUILTIN_EXPENSE_CATEGORIES: { name: string; icon: string; color: string }[] = [
-  { name: 'Food',         icon: 'Utensils',    color: '#f97316' },
-  { name: 'Fun',          icon: 'Gamepad2',    color: '#8b5cf6' },
-  { name: 'Apparel',      icon: 'Shirt',       color: '#ec4899' },
-  { name: 'Tech',         icon: 'Laptop',      color: '#0ea5e9' },
-  { name: 'Home',         icon: 'Home',        color: '#14b8a6' },
-  { name: 'Health',       icon: 'Heart',       color: '#ef4444' },
-  { name: 'Travel',       icon: 'Plane',       color: '#6366f1' },
-  { name: 'Tesla',        icon: 'Car',         color: '#64748b' },
-  { name: 'PC',           icon: 'Monitor',     color: '#3b82f6' },
-  { name: 'Life',         icon: 'Briefcase',   color: '#D4AF37' },
-  { name: 'Gift',         icon: 'Gift',        color: '#f43f5e' },
-  { name: 'Insurance',    icon: 'Stethoscope', color: '#84cc16' },
-  { name: 'Stocks',       icon: 'TrendingUp',  color: '#22c55e' },
-  { name: 'Other',        icon: 'LayoutGrid',  color: '#94a3b8' },
+  { name: 'Food',         icon: 'Utensils',       color: '#f97316' },
+  { name: 'Fun',          icon: 'Gamepad2',       color: '#8b5cf6' },
+  { name: 'Apparel',      icon: 'Shirt',          color: '#ec4899' },
+  { name: 'Tech',         icon: 'Laptop',         color: '#0ea5e9' },
+  { name: 'Home',         icon: 'Home',           color: '#14b8a6' },
+  { name: 'Health',       icon: 'Heart',          color: '#ef4444' },
+  { name: 'Travel',       icon: 'Plane',          color: '#6366f1' },
+  { name: 'Tesla',        icon: 'Zap',            color: '#64748b' },
+  { name: 'PC',           icon: 'Monitor',        color: '#3b82f6' },
+  { name: 'Life',         icon: 'Sparkles',       color: '#D4AF37' },
+  { name: 'Gift',         icon: 'Gift',           color: '#f43f5e' },
+  { name: 'Insurance',    icon: 'Shield',         color: '#84cc16' },
+  { name: 'Stocks',       icon: 'TrendingUp',     color: '#22c55e' },
+  { name: 'Other',        icon: 'LayoutGrid',     color: '#94a3b8' },
 ]
 
 export const BUILTIN_INCOME_CATEGORIES: { name: string; icon: string; color: string }[] = [
-  { name: 'Repayment', icon: 'DollarSign',  color: '#22c55e' },
-  { name: 'Refund',    icon: 'Package',     color: '#06b6d4' },
-  { name: 'Freelance', icon: 'Laptop',      color: '#D4AF37' },
-  { name: 'Projects',  icon: 'Briefcase',   color: '#8b5cf6' },
-  { name: 'Stocks',    icon: 'TrendingUp',  color: '#22c55e' },
-  { name: 'Other',     icon: 'LayoutGrid',  color: '#94a3b8' },
+  { name: 'Repayment', icon: 'ArrowLeftRight', color: '#22c55e' },
+  { name: 'Refund',    icon: 'RotateCcw',      color: '#06b6d4' },
+  { name: 'Freelance', icon: 'Laptop',         color: '#D4AF37' },
+  { name: 'Projects',  icon: 'Palette',        color: '#8b5cf6' },
+  { name: 'Stocks',    icon: 'TrendingUp',     color: '#22c55e' },
+  { name: 'Other',     icon: 'LayoutGrid',     color: '#94a3b8' },
 ]

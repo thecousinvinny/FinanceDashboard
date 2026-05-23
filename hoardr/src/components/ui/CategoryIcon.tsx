@@ -1,7 +1,7 @@
 import {
   Utensils, Gamepad2, Shirt, Laptop, Home, Heart, Plane,
-  Car, Monitor, Briefcase, Gift, Stethoscope, TrendingUp, LayoutGrid,
-  DollarSign, Package, RefreshCw,
+  Zap, Monitor, Sparkles, Gift, Shield, TrendingUp, LayoutGrid,
+  ArrowLeftRight, RotateCcw, Palette, RefreshCw,
   type LucideIcon,
 } from 'lucide-react'
 import { categoryMeta, ICON_REGISTRY, getIconColorMode } from '@/lib/category-meta'
@@ -14,21 +14,21 @@ const EXPENSE_DEFAULTS: Record<string, LucideIcon> = {
   'Home':          Home,
   'Health':        Heart,
   'Travel':        Plane,
-  'Tesla':         Car,
+  'Tesla':         Zap,
   'PC':            Monitor,
-  'Life':          Briefcase,
+  'Life':          Sparkles,
   'Gift':          Gift,
-  'Insurance':     Stethoscope,
+  'Insurance':     Shield,
   'Stocks':        TrendingUp,
   'Other':         LayoutGrid,
   'Subscriptions': RefreshCw,
 }
 
 const INCOME_DEFAULTS: Record<string, LucideIcon> = {
-  'Repayment': DollarSign,
-  'Refund':    Package,
+  'Repayment': ArrowLeftRight,
+  'Refund':    RotateCcw,
   'Freelance': Laptop,
-  'Projects':  Briefcase,
+  'Projects':  Palette,
   'Stocks':    TrendingUp,
   'Other':     LayoutGrid,
 }
