@@ -6,12 +6,14 @@ import { createClient } from '@/lib/supabase/client'
 import { PillGroup } from '@/components/ui/Pill'
 import { AddCardSheet, type NewCard } from '@/components/wallet/AddCardSheet'
 import { AddBankSheet, type NewBank } from '@/components/wallet/AddBankSheet'
+import { PaycheckSheet } from '@/components/wallet/PaycheckSheet'
 import { EditCardSheet, type CardEdits } from '@/components/wallet/EditCardSheet'
 import { CardVisual } from '@/components/wallet/CardVisual'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 
 import type { Card, Bank } from '@/types'
+import { Banknote, ChevronRight } from 'lucide-react'
 import { cn, $fd, $fk, fmtDate, haptic } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
 import { pageCache } from '@/lib/page-cache'
@@ -47,6 +49,7 @@ export default function WalletPage() {
   const [banks,           setBanks]         = useState<Bank[]>(cached?.banks ?? [])
   const [loading,         setLoading]       = useState(!cached)
   const [sheetOpen,       setSheetOpen]     = useState(false)
+  const [paycheckOpen,    setPaycheckOpen]  = useState(false)
   const [selectedCard,    setSelectedCard]  = useState<Card | null>(null)
   const [editCard,        setEditCard]      = useState<Card | null>(null)
   const [editSheetOpen,   setEditSheetOpen] = useState(false)
@@ -446,6 +449,21 @@ export default function WalletPage() {
         {/* ── Banks ──────────────────────────────────────────────────────── */}
         {!loading && tab === 'Banks' && (
           <div className="mx-4 mt-4">
+            {/* Paycheck Generator */}
+            <button
+              onClick={() => setPaycheckOpen(true)}
+              className="w-full flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-card mb-3 text-left active:opacity-70 transition-opacity"
+            >
+              <div className="w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+                <Banknote size={16} className="text-emerald" strokeWidth={1.75} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[14px] font-medium text-ink">Paycheck Generator</p>
+                <p className="text-[11px] text-ink-muted">Auto-fill pay history</p>
+              </div>
+              <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
+            </button>
+
             {banks.length === 0 ? (
               <div className="py-12 text-center text-ink-faint text-[13px]">
                 No banks yet — add your first one above.
@@ -504,6 +522,13 @@ export default function WalletPage() {
           onAdd={handleAddBank}
         />
       )}
+
+      <PaycheckSheet
+        open={paycheckOpen}
+        onClose={() => setPaycheckOpen(false)}
+        banks={banks.map(b => ({ id: b.id, name: b.name }))}
+        onDone={() => {}}
+      />
 
       <EditCardSheet
         card={editCard}
