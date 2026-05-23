@@ -117,13 +117,13 @@ export function AddSubscriptionSheet({ open, onClose, onAdd, cards = [], default
   }
 
   function handleAdd() {
-    const parsed = parseFloat(amount)
-    if (!parsed || !name.trim()) return
+    const parsed = parseFloat(amount) || 0
+    if (!name.trim()) return
     onAdd({ name: name.trim(), cost: parsed, billing, next_renewal: nextRenewal, card_id: cardId, category })
     onClose()
   }
 
-  const canAdd = !!parseFloat(amount) && !!name.trim()
+  const canAdd = !!name.trim()
 
   return (
     <>

@@ -136,8 +136,8 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave, cards = [] }
   }
 
   function handleSave() {
-    const parsed = parseFloat(amount)
-    if (!parsed || !name.trim() || !nextRenewal || !sub) return
+    const parsed = parseFloat(amount) || 0
+    if (!name.trim() || !nextRenewal || !sub) return
     const { monthly, annual } = calcSubCosts(parsed, billing)
     onSave(sub.id, {
       name: name.trim(), cost: parsed, billing, next_renewal: nextRenewal,
@@ -146,7 +146,7 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave, cards = [] }
     onClose()
   }
 
-  const canSave = !!parseFloat(amount) && !!name.trim() && !!nextRenewal
+  const canSave = !!name.trim() && !!nextRenewal
 
   return (
     <>
