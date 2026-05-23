@@ -22,6 +22,7 @@ export default function SettingsPage() {
   const [prefs,          setPrefs]          = useState<CalPrefs>(DEFAULT_PREFS)
   const [googleCals,     setGoogleCals]     = useState<GCalendar[]>([])
   const [calsLoading,    setCalsLoading]    = useState(false)
+  const [calsError,      setCalsError]      = useState(false)
 
   useEffect(() => { setTheme(readTheme()); setIconMode(getIconColorMode()) }, [])
 
@@ -40,10 +41,14 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!calOpen || googleCals.length > 0) return
     setCalsLoading(true)
+    setCalsError(false)
     fetch('/api/calendar?action=calendars')
-      .then(r => r.json())
-      .then(d => setGoogleCals(d.calendars ?? []))
-      .catch(() => {})
+      .then(async r => {
+        const d = await r.json() as { calendars?: unknown[]; error?: string }
+        if (!r.ok || d.error) throw new Error(d.error ?? 'no_token')
+        setGoogleCals((d.calendars ?? []) as typeof googleCals)
+      })
+      .catch(() => setCalsError(true))
       .finally(() => setCalsLoading(false))
   }, [calOpen, googleCals.length])
 
@@ -219,6 +224,7 @@ export default function SettingsPage() {
         prefs={prefs}
         googleCals={googleCals}
         calsLoading={calsLoading}
+        calsError={calsError}
         onSave={savePrefs}
       />
     </div>

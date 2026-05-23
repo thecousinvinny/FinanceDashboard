@@ -26,6 +26,7 @@ interface Props {
   prefs:       CalPrefs
   googleCals:  GCalendar[]
   calsLoading: boolean
+  calsError?:  boolean
   onSave:      (prefs: CalPrefs) => void
 }
 
@@ -37,7 +38,7 @@ const TYPE_META: { type: EventTypeFilter; label: string; color: string }[] = [
   { type: 'google',  label: 'Google Calendar',   color: '#4285F4' },
 ]
 
-export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLoading, onSave }: Props) {
+export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLoading, calsError, onSave }: Props) {
   const [local,  setLocal]  = useState<CalPrefs>(prefs)
   const [dragY,  setDragY]  = useState(0)
   const backdropRef = useRef<HTMLDivElement>(null)
@@ -160,9 +161,14 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
             <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] p-4 text-center text-ink-faint text-[13px]">
               Loading your calendars…
             </div>
+          ) : calsError ? (
+            <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] p-4 space-y-1">
+              <p className="text-[13px] font-medium text-ruby text-center">Calendar access not granted</p>
+              <p className="text-[11px] text-ink-faint text-center leading-relaxed">Go to <span className="text-ink">myaccount.google.com/permissions</span>, revoke Hoardr, then sign out and back in.</p>
+            </div>
           ) : googleCals.length === 0 ? (
             <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] p-4 text-center text-ink-faint text-[13px]">
-              Sign out and back in to grant calendar access.
+              No calendars found.
             </div>
           ) : (
             <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] overflow-hidden divide-y divide-white/[0.04]">

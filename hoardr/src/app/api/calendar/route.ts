@@ -43,8 +43,9 @@ export async function GET(req: NextRequest) {
 
     if (action === 'calendars') {
       const res  = await fetch(`${GCAL_API}/users/me/calendarList?minAccessRole=reader`, { headers })
-      const json = await res.json()
-      return NextResponse.json(json)
+      const json = await res.json() as { items?: unknown[]; error?: unknown }
+      if (!res.ok) return NextResponse.json({ error: json.error ?? 'Calendar API error' }, { status: res.status })
+      return NextResponse.json({ calendars: json.items ?? [] })
     }
 
     if (action === 'events') {
