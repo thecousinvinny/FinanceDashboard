@@ -2,20 +2,31 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Coins, ArrowLeftRight, Sparkles, Palette, SlidersHorizontal, CalendarDays } from 'lucide-react'
+import { Coins, TrendingDown, TrendingUp, Palette, SlidersHorizontal, CalendarDays } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const tabs = [
   { href: '/home',     label: 'Hoard',    Icon: Coins             },
-  { href: '/money',    label: 'Money',    Icon: ArrowLeftRight    },
-  { href: '/plans',    label: 'Plans',    Icon: Sparkles          },
+  { href: '/money',    label: 'Out',      Icon: TrendingDown      },
+  { href: '/in',       label: 'In',       Icon: TrendingUp        },
   { href: '/calendar', label: 'Calendar', Icon: CalendarDays      },
   { href: '/studio',   label: 'Studio',   Icon: Palette           },
   { href: '/settings', label: 'Settings', Icon: SlidersHorizontal },
 ]
 
+const N       = tabs.length
+// nav has px-2 (8px each side = 16px total). Each tab is (100% - 16px) / N wide.
+// Bar inset within each tab: 12px each side (Tailwind inset-x-3).
+// bar left  = 8px nav-pad + activeIdx * tabWidth + 12px inset
+//           = 20px + activeIdx * (100% - 16px) / N
+// bar width = tabWidth - 24px
+//           = (100% - 16px) / N - 24px
+const BAR_W = `calc((100% - 16px) / ${N} - 24px)`
+const barL  = (i: number) => `calc(20px + ${i} * (100% - 16px) / ${N})`
+
 export default function BottomNav() {
-  const pathname = usePathname()
+  const pathname  = usePathname()
+  const activeIdx = tabs.findIndex(t => pathname === t.href || pathname.startsWith(t.href + '/'))
 
   return (
     <nav
@@ -26,6 +37,7 @@ export default function BottomNav() {
         WebkitBackdropFilter: 'blur(32px) saturate(180%)',
       }}
     >
+      {/* Subtle separator line */}
       <div
         aria-hidden
         className="absolute top-0 inset-x-[8%] h-px pointer-events-none"
@@ -34,6 +46,19 @@ export default function BottomNav() {
         }}
       />
 
+      {/* Single sliding gold bar */}
+      {activeIdx >= 0 && (
+        <div
+          aria-hidden
+          className="absolute top-0 h-[2px] rounded-full bg-gold pointer-events-none"
+          style={{
+            width:      BAR_W,
+            left:       barL(activeIdx),
+            transition: 'left 280ms cubic-bezier(0.4,0,0.2,1)',
+          }}
+        />
+      )}
+
       {tabs.map(({ href, label, Icon }) => {
         const active = pathname === href || pathname.startsWith(href + '/')
         return (
@@ -41,15 +66,10 @@ export default function BottomNav() {
             key={href}
             href={href}
             className={cn(
-              'relative flex flex-col items-center justify-center gap-[3px] flex-1 min-w-0 transition-colors duration-200 select-none',
+              'flex flex-col items-center justify-center gap-[3px] flex-1 min-w-0 transition-colors duration-200 select-none',
               active ? 'text-gold' : 'text-ink-faint',
             )}
           >
-            {/* Gold bar at top of tab */}
-            <span className={cn(
-              'absolute top-0 inset-x-3 h-[2px] rounded-full transition-all duration-200',
-              active ? 'bg-gold opacity-100' : 'opacity-0',
-            )} />
             <span className="transition-colors duration-200">
               <Icon size={22} strokeWidth={active ? 2 : 1.5} />
             </span>

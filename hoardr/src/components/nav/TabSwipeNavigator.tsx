@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 
-const TABS     = ['/home', '/money', '/plans', '/calendar', '/studio', '/settings']
+const TABS     = ['/home', '/money', '/in', '/calendar', '/studio', '/settings']
 const EDGE_PX  = 35    // must start within this many px of the left or right edge
 const MIN_DX   = 60    // minimum horizontal travel to count as a swipe
 const H_RATIO  = 1.5   // |dx| must exceed |dy| × this (keeps it horizontal)

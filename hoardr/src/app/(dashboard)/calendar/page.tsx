@@ -179,7 +179,7 @@ function DayEventCard({ ev, dot, timeRange, amt, date, onDelete, onEdit }: {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-const TABS     = ['/home', '/money', '/plans', '/calendar', '/studio', '/settings']
+const TABS     = ['/home', '/money', '/in', '/calendar', '/studio', '/settings']
 const CAL_IDX  = TABS.indexOf('/calendar')
 const EDGE_PX  = 35
 

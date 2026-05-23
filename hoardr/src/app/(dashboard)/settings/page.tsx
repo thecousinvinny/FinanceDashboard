@@ -77,19 +77,6 @@ export default function SettingsPage() {
         <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Accounts</p>
         <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
           <button
-            onClick={() => router.push('/wallet')}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity"
-          >
-            <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
-              <CreditCard size={15} className="text-gold" strokeWidth={1.75} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-medium text-ink">Cards &amp; Banks</p>
-              <p className="text-[11px] text-ink-muted">Manage payment methods</p>
-            </div>
-            <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
-          </button>
-          <button
             onClick={() => router.push('/settings/categories')}
             className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity"
           >
