@@ -49,9 +49,10 @@ export default function SettingsPage() {
   const [settingsBanks,        setSettingsBanks]        = useState<SettingsBank[]>([])
   const [settingsBanksLoading, setSettingsBanksLoading] = useState(false)
 
-  const [defaultCatOpen,  setDefaultCatOpen]  = useState(false)
-  const [defaultExpCat,   setDefaultExpCat]   = useState<string | null>(null)
-  const [defaultBilling,  setDefaultBilling]  = useState<BillingCycle>('Monthly')
+  const [defaultCatOpen,     setDefaultCatOpen]     = useState(false)
+  const [defaultExpCat,      setDefaultExpCat]      = useState<string | null>(null)
+  const [defaultBillingOpen, setDefaultBillingOpen] = useState(false)
+  const [defaultBilling,     setDefaultBilling]     = useState<BillingCycle>('Monthly')
 
   useEffect(() => {
     setTheme(readTheme())
@@ -151,6 +152,7 @@ export default function SettingsPage() {
 
   function handleSetDefaultBilling(cycle: BillingCycle) {
     setDefaultBilling(cycle)
+    setDefaultBillingOpen(false)
     setAppPrefs({ defaultBilling: cycle })
   }
 
@@ -247,24 +249,19 @@ export default function SettingsPage() {
           </button>
 
           {/* Default Billing Cycle */}
-          <div className="px-4 py-3.5 flex items-center gap-3">
+          <button
+            onClick={() => setDefaultBillingOpen(true)}
+            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity"
+          >
             <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
               <CalendarDays size={15} className="text-gold" strokeWidth={1.75} />
             </div>
-            <p className="text-[14px] font-medium text-ink flex-1 min-w-0">Default Billing</p>
-            <div className="flex gap-1.5 overflow-x-auto flex-shrink-0" style={{ scrollbarWidth: 'none' }}>
-              {BILLING_OPTIONS.map(opt => (
-                <button
-                  key={opt}
-                  onClick={() => handleSetDefaultBilling(opt)}
-                  className={cn(
-                    'flex-shrink-0 px-2.5 py-1.5 rounded-[10px] text-[11px] font-semibold transition-colors select-none',
-                    defaultBilling === opt ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted border border-white/[0.06]'
-                  )}
-                >{BILLING_LABELS[opt]}</button>
-              ))}
+            <div className="flex-1 min-w-0">
+              <p className="text-[14px] font-medium text-ink">Default Billing</p>
+              <p className="text-[11px] text-ink-muted">{defaultBilling}</p>
             </div>
-          </div>
+            <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
+          </button>
         </div>
       </div>
 
@@ -423,6 +420,34 @@ export default function SettingsPage() {
         calsError={calsError}
         onSave={savePrefs}
       />
+
+      {/* ── Default Billing picker ─────────────────────────────────────────── */}
+      <div
+        onClick={() => setDefaultBillingOpen(false)}
+        className={cn('fixed inset-0 z-40 transition-opacity duration-300', defaultBillingOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none')}
+        style={{ background: 'rgba(0,0,0,0.72)' }}
+      />
+      <div
+        className={cn('fixed inset-x-0 bottom-0 z-50 rounded-t-[24px] bg-bg-surface transition-transform duration-300', defaultBillingOpen ? 'translate-y-0' : 'translate-y-full')}
+        style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
+        <div className="flex justify-center pt-3 pb-1"><div className="w-9 h-1 rounded-full bg-white/20" /></div>
+        <div className="flex items-center justify-between px-5 mb-4">
+          <h2 className="text-[18px] font-bold text-ink">Default Billing</h2>
+          <button onClick={() => setDefaultBillingOpen(false)} className="w-8 h-8 flex items-center justify-center text-[22px] text-ink-muted">×</button>
+        </div>
+        <div className="px-5" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 32px)' }}>
+          <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] overflow-hidden divide-y divide-white/[0.04]">
+            {BILLING_OPTIONS.map(opt => (
+              <button key={opt} onClick={() => handleSetDefaultBilling(opt)}
+                className="w-full flex items-center justify-between px-4 py-3.5 text-left active:opacity-70 transition-opacity">
+                <p className="text-[14px] font-medium text-ink">{BILLING_LABELS[opt]}</p>
+                {opt === defaultBilling && <div className="w-5 h-5 rounded-full gradient-gold flex items-center justify-center"><Check size={9} className="text-white" strokeWidth={2.5} /></div>}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* ── Default Bank picker ────────────────────────────────────────────── */}
       <div
