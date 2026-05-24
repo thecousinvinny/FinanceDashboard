@@ -440,12 +440,13 @@ export default function CalendarPage() {
   }, [])
 
   useEffect(() => {
-    if ((!settingsOpen && !addOpen) || googleCals.length > 0) return
+    if (googleCals.length > 0) return
+    if (!settingsOpen && !addOpen && prefs.googleCalendarIds.length === 0) return
     setCalsLoading(true)
     fetch('/api/calendar?action=calendars')
       .then(r => r.json()).then((d: { items?: GCalendar[] }) => setGoogleCals(d.items ?? []))
       .catch(() => {}).finally(() => setCalsLoading(false))
-  }, [settingsOpen, addOpen, googleCals.length])
+  }, [settingsOpen, addOpen, googleCals.length, prefs.googleCalendarIds.length])
 
   useEffect(() => {
     const calIds = prefs.googleCalendarIds
