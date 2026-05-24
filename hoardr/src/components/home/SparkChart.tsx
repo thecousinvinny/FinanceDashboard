@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { $fc, $fk } from '@/lib/utils'
 
 export interface DayPoint {
@@ -14,6 +14,9 @@ export interface DayPoint {
 export function SparkChart({ points }: { points: DayPoint[] }) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const expPathRef   = useRef<SVGPathElement>(null)
+  const incPathRef   = useRef<SVGPathElement>(null)
+  const subPathRef   = useRef<SVGPathElement>(null)
 
   const W = 300, H = 64, n = points.length
   if (n === 0) return null
@@ -47,6 +50,33 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
   const totalExp = expVals[n - 1] ?? 0
   const totalInc = incVals[n - 1] ?? 0
   const totalSub = subVals[n - 1] ?? 0
+
+  // Derive a key that changes when real data arrives or refreshes
+  const animKey = `${n}-${Math.round(totalExp + totalInc)}`
+
+  // JS-driven draw animation — getTotalLength() avoids the vectorEffect/pathLength mismatch
+  useEffect(() => {
+    if (n === 0) return
+    const entries: [React.RefObject<SVGPathElement | null>, number][] = [
+      [incPathRef, 0],
+      [expPathRef, 50],
+      ...(totalSub > 0 ? [[subPathRef, 100]] as [React.RefObject<SVGPathElement | null>, number][] : []),
+    ]
+    entries.forEach(([ref, delayMs]) => {
+      const path = ref.current
+      if (!path) return
+      const len = path.getTotalLength()
+      path.style.strokeDasharray  = `${len}`
+      path.style.strokeDashoffset = `${len}`
+      path.style.transition = 'none'
+      path.getBoundingClientRect() // force reflow so initial state is painted
+      requestAnimationFrame(() => {
+        path.style.transition       = `stroke-dashoffset 0.85s cubic-bezier(0.4,0,0.2,1) ${delayMs}ms`
+        path.style.strokeDashoffset = '0'
+      })
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [animKey])
 
   function pickIdx(clientX: number) {
     const rect = containerRef.current?.getBoundingClientRect()
@@ -111,20 +141,18 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
             </linearGradient>
           </defs>
 
-          {/* key forces remount (and animation restart) when data changes */}
-          <g key={`${n}-${Math.round((points[n-1]?.exp ?? 0) + (points[n-1]?.inc ?? 0))}`}>
+          {/* Area fills — keyed so CSS fade restarts when data changes */}
+          <g key={animKey}>
             <path d={buildArea(expVals)} fill="url(#exp-grad)" style={{ animation: 'spark-fade 0.5s ease 0.1s both' }}/>
             <path d={buildArea(incVals)} fill="url(#inc-grad)" style={{ animation: 'spark-fade 0.5s ease 0s both' }}/>
             {totalSub > 0 && <path d={buildArea(subVals)} fill="url(#sub-grad)" style={{ animation: 'spark-fade 0.5s ease 0.2s both' }}/>}
-            <path d={buildPath(expVals)} fill="none" stroke="#E8C46B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"
-              pathLength="1" strokeDasharray="1" style={{ animation: 'spark-draw 0.85s cubic-bezier(0.4,0,0.2,1) 0.05s both' }}/>
-            <path d={buildPath(incVals)} fill="none" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"
-              pathLength="1" strokeDasharray="1" style={{ animation: 'spark-draw 0.85s cubic-bezier(0.4,0,0.2,1) 0s both' }}/>
-            {totalSub > 0 && (
-              <path d={buildPath(subVals)} fill="none" stroke="rgba(255,255,255,0.65)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"
-                pathLength="1" strokeDasharray="1" style={{ animation: 'spark-draw 0.85s cubic-bezier(0.4,0,0.2,1) 0.1s both' }}/>
-            )}
           </g>
+          {/* Stroke paths — JS-animated via getTotalLength() to sidestep vectorEffect/pathLength mismatch */}
+          <path ref={expPathRef} d={buildPath(expVals)} fill="none" stroke="#E8C46B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
+          <path ref={incPathRef} d={buildPath(incVals)} fill="none" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
+          {totalSub > 0 && (
+            <path ref={subPathRef} d={buildPath(subVals)} fill="none" stroke="rgba(255,255,255,0.65)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
+          )}
 
           {hoverIdx !== null && (
             <>
