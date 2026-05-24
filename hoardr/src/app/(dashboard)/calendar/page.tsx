@@ -9,7 +9,7 @@ import { showToast } from '@/lib/toast'
 import { Plus, SlidersHorizontal, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning, type LucideIcon } from 'lucide-react'
 import { EditEventSheet, type EditableEvent, type EventEdits, type RecurrenceScope } from '@/components/calendar/EditEventSheet'
 import { CalendarSettingsSheet, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
-import { CalendarPopover, type PopoverFormData } from '@/components/calendar/CalendarPopover'
+import { CalendarPopover, defaultTimes, type PopoverFormData } from '@/components/calendar/CalendarPopover'
 import { createCalEvent, updateCalEvent, deleteCalEvent, type GCalEvent } from '@/lib/calendar'
 
 type EventType = 'income' | 'sub' | 'google'
@@ -538,7 +538,8 @@ export default function CalendarPage() {
       ?? googleCals.find(c => prefs.googleCalendarIds.includes(c.id))?.id
       ?? prefs.googleCalendarIds[0]
       ?? 'primary'
-    setPopover({ anchorRect, mode: 'create', data: { title: '', date, endDate: date, allDay: false, startTime: '09:00', endTime: '10:00', location: '', notes: '', recurrenceRule: '', calendarId: calId } })
+    const { startTime, endTime } = defaultTimes()
+    setPopover({ anchorRect, mode: 'create', data: { title: '', date, endDate: date, allDay: false, startTime, endTime, location: '', notes: '', recurrenceRule: '', calendarId: calId } })
   }
 
   function openEditPopover(anchorRect: DOMRect | null, ev: CalEvent, date: string) {
