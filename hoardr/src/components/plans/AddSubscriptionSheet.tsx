@@ -25,14 +25,15 @@ export interface NewSub {
 }
 
 interface Props {
-  open:           boolean
-  onClose:        () => void
-  onAdd:          (sub: NewSub) => void
-  cards?:         CardOption[]
-  defaultCardId?: string | null
+  open:             boolean
+  onClose:          () => void
+  onAdd:            (sub: NewSub) => void
+  cards?:           CardOption[]
+  defaultCardId?:   string | null
+  defaultBilling?:  BillingCycle
 }
 
-export function AddSubscriptionSheet({ open, onClose, onAdd, cards = [], defaultCardId }: Props) {
+export function AddSubscriptionSheet({ open, onClose, onAdd, cards = [], defaultCardId, defaultBilling }: Props) {
   const [name,        setName]        = useState('')
   const [amount,      setAmount]      = useState('')
   const [billing,     setBilling]     = useState<BillingCycle>('Monthly')
@@ -102,9 +103,10 @@ export function AddSubscriptionSheet({ open, onClose, onAdd, cards = [], default
   useEffect(() => {
     if (open) {
       setCardId(defaultCardId ?? null)
+      setBilling(defaultBilling ?? 'Monthly')
     } else {
       const t = setTimeout(() => {
-        setName(''); setAmount(''); setBilling('Monthly')
+        setName(''); setAmount(''); setBilling(defaultBilling ?? 'Monthly')
         setNextRenewal(localToday()); setCardId(defaultCardId ?? null); setCategory(null)
       }, 300)
       return () => clearTimeout(t)

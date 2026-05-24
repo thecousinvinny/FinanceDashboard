@@ -10,6 +10,7 @@ import { UpcomingBills, type UpcomingSub } from '@/components/home/UpcomingBills
 import { AddTransactionSheet, type CardOption, type BankOption } from '@/components/money/AddTransactionSheet'
 import { AddWishlistSheet, type NewWishItem } from '@/components/plans/AddWishlistSheet'
 import { pageCache } from '@/lib/page-cache'
+import { getAppPrefs } from '@/lib/app-prefs'
 import { showToast } from '@/lib/toast'
 import { PullIndicator } from '@/components/ui/PullIndicator'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
@@ -468,6 +469,7 @@ export default function HomePage() {
       cards={cards}
       banks={banks}
       defaultCardId={defaultCardId}
+      defaultCategory={getAppPrefs().defaultExpCat}
     />
     <AddWishlistSheet
       open={wishlistOpen}

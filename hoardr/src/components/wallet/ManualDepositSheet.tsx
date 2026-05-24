@@ -7,13 +7,14 @@ import { showToast } from '@/lib/toast'
 import { createClient } from '@/lib/supabase/client'
 
 interface Props {
-  open:    boolean
-  onClose: () => void
-  banks:   { id: string; name: string }[]
-  onDone:  () => void
+  open:           boolean
+  onClose:        () => void
+  banks:          { id: string; name: string }[]
+  onDone:         () => void
+  defaultBankId?: string | null
 }
 
-export function ManualDepositSheet({ open, onClose, banks, onDone }: Props) {
+export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId }: Props) {
   const supabase      = useMemo(() => createClient(), [])
   const sheetRef      = useRef<HTMLDivElement>(null)
   const dragStartY    = useRef<number | null>(null)
@@ -29,10 +30,10 @@ export function ManualDepositSheet({ open, onClose, banks, onDone }: Props) {
     if (open) {
       setLabel('Initial Balance')
       setAmount('')
-      setBankId(banks[0]?.id ?? null)
+      setBankId(defaultBankId ?? banks[0]?.id ?? null)
       setDate(localToday())
     }
-  }, [open, banks])
+  }, [open, banks, defaultBankId])
 
   // Body lock
   useEffect(() => {

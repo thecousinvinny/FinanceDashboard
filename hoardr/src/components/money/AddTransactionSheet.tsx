@@ -16,15 +16,16 @@ export interface CardOption { id: string; name: string; last4: string | null }
 export interface BankOption { id: string; name: string }
 
 interface Props {
-  open:           boolean
-  onClose:        () => void
-  onAdd:          (tx: SeedTx) => void
-  cards?:         CardOption[]
-  banks?:         BankOption[]
-  defaultCardId?: string | null
+  open:              boolean
+  onClose:           () => void
+  onAdd:             (tx: SeedTx) => void
+  cards?:            CardOption[]
+  banks?:            BankOption[]
+  defaultCardId?:    string | null
+  defaultCategory?:  string | null
 }
 
-export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = [], defaultCardId }: Props) {
+export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = [], defaultCardId, defaultCategory }: Props) {
   const [type,        setType]        = useState<TxType>('Expense')
   const [amount,      setAmount]      = useState('')
   const [name,        setName]        = useState('')
@@ -100,13 +101,14 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
   useEffect(() => {
     if (open) {
       setCardId(defaultCardId ?? null)
+      setCategory(defaultCategory ?? null)
     } else {
       const t = setTimeout(() => {
         setType('Expense')
         setAmount('')
         setName('')
         setDescription('')
-        setCategory(null)
+        setCategory(defaultCategory ?? null)
         setDate(localToday())
         setCardId(defaultCardId ?? null)
         setBankId(null)

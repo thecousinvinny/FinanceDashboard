@@ -18,6 +18,7 @@ import { cn, $fd, $fk, fmtDate, haptic, groupByMonth } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
 import { useRouter } from 'next/navigation'
 import { usePillSwipe } from '@/hooks/usePillSwipe'
+import { getAppPrefs } from '@/lib/app-prefs'
 import { pageCache } from '@/lib/page-cache'
 import { PullIndicator } from '@/components/ui/PullIndicator'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
@@ -659,6 +660,7 @@ export default function InPage() {
         onClose={() => setDepositOpen(false)}
         banks={banks.map(b => ({ id: b.id, name: b.name }))}
         onDone={() => setIncomeKey(k => k + 1)}
+        defaultBankId={getAppPrefs().defaultBankId}
       />
 
       <EditCardSheet

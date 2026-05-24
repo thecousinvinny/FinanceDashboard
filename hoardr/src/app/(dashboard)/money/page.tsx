@@ -23,6 +23,7 @@ import { RefreshCw, CreditCard, XCircle } from 'lucide-react'
 import type { BillingCycle } from '@/types'
 import { useRouter } from 'next/navigation'
 import { usePillSwipe } from '@/hooks/usePillSwipe'
+import { getAppPrefs } from '@/lib/app-prefs'
 
 type Tab = 'Expenses' | 'Subs' | 'Wishlist'
 
@@ -940,6 +941,7 @@ export default function OutPage() {
       cards={cards}
       banks={banks}
       defaultCardId={defaultCardId}
+      defaultCategory={getAppPrefs().defaultExpCat}
     />
     <EditTransactionSheet
       tx={editTx}
@@ -955,6 +957,7 @@ export default function OutPage() {
       onAdd={handleAddSub}
       cards={cards}
       defaultCardId={defaultCardId}
+      defaultBilling={getAppPrefs().defaultBilling as BillingCycle}
     />
     <AddWishlistSheet
       open={wishSheet}
