@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
 
-export type EventTypeFilter = 'expense' | 'income' | 'sub' | 'custom' | 'google'
+export type EventTypeFilter = 'income' | 'sub' | 'google'
 
 export interface CalPrefs {
   visibleTypes:           EventTypeFilter[]
@@ -31,11 +31,9 @@ interface Props {
 }
 
 const TYPE_META: { type: EventTypeFilter; label: string; color: string }[] = [
-  { type: 'expense', label: 'Expenses',         color: '#E8C46B' },
-  { type: 'income',  label: 'Income',            color: '#4ADE80' },
-  { type: 'sub',     label: 'Subscriptions',     color: '#F36369' },
-  { type: 'custom',  label: 'Events (this app)', color: '#a78bfa' },
-  { type: 'google',  label: 'Google Calendar',   color: '#4285F4' },
+  { type: 'income', label: 'Income',        color: '#4ADE80' },
+  { type: 'sub',    label: 'Subscriptions', color: '#F36369' },
+  { type: 'google', label: 'Google Calendar', color: '#4285F4' },
 ]
 
 export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLoading, calsError, onSave }: Props) {

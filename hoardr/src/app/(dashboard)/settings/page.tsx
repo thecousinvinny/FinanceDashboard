@@ -10,7 +10,7 @@ import { CalendarSettingsSheet, type CalPrefs, type GCalendar } from '@/componen
 import { type IconColorMode, getIconColorMode, setIconColorMode } from '@/lib/category-meta'
 import { getWeekStartsMonday, setWeekStartsMonday } from '@/lib/week-start'
 
-const DEFAULT_PREFS: CalPrefs = { visibleTypes: ['sub', 'custom', 'google'], googleCalendarIds: [] }
+const DEFAULT_PREFS: CalPrefs = { visibleTypes: ['sub', 'income', 'google'], googleCalendarIds: [] }
 
 interface SettingsCard { id: string; name: string; last4: string | null }
 
