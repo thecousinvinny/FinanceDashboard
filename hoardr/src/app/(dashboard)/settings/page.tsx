@@ -2,27 +2,17 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, ChevronRight, CreditCard, LogOut, CalendarDays, Tag, Landmark, LayoutGrid } from 'lucide-react'
+import { Check, ChevronRight, CreditCard, LogOut, CalendarDays, Tag, Settings2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { type Theme, THEMES, applyTheme, readTheme } from '@/lib/theme'
 import { CalendarSettingsSheet, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
 import { type IconColorMode, getIconColorMode, setIconColorMode } from '@/lib/category-meta'
 import { getWeekStartsMonday, setWeekStartsMonday } from '@/lib/week-start'
-import { getAppPrefs, setAppPrefs } from '@/lib/app-prefs'
-import { EXPENSE_CATEGORIES } from '@/lib/data/transactions'
-import { CategoryIcon } from '@/components/ui/CategoryIcon'
-import type { BillingCycle } from '@/types'
 
 const DEFAULT_PREFS: CalPrefs = { visibleTypes: ['sub', 'custom', 'google'], googleCalendarIds: [] }
 
 interface SettingsCard { id: string; name: string; last4: string | null }
-interface SettingsBank { id: string; name: string }
-
-const BILLING_OPTIONS: BillingCycle[] = ['Weekly', 'BiWeekly', 'Monthly', 'Quarterly', 'Annual']
-const BILLING_LABELS: Record<BillingCycle, string> = {
-  Weekly: 'Weekly', BiWeekly: 'Bi-wk', Monthly: 'Monthly', Quarterly: 'Qtrly', Annual: 'Annual',
-}
 
 export default function SettingsPage() {
   const router    = useRouter()
@@ -43,26 +33,11 @@ export default function SettingsPage() {
   const [settingsCards,        setSettingsCards]        = useState<SettingsCard[]>([])
   const [settingsCardsLoading, setSettingsCardsLoading] = useState(false)
 
-  const [defaultBankOpen,      setDefaultBankOpen]      = useState(false)
-  const [defaultBankId,        setDefaultBankId]        = useState<string | null>(null)
-  const [defaultBankName,      setDefaultBankName]      = useState<string | null>(null)
-  const [settingsBanks,        setSettingsBanks]        = useState<SettingsBank[]>([])
-  const [settingsBanksLoading, setSettingsBanksLoading] = useState(false)
-
-  const [defaultCatOpen,     setDefaultCatOpen]     = useState(false)
-  const [defaultExpCat,      setDefaultExpCat]      = useState<string | null>(null)
-  const [defaultBillingOpen, setDefaultBillingOpen] = useState(false)
-  const [defaultBilling,     setDefaultBilling]     = useState<BillingCycle>('Monthly')
 
   useEffect(() => {
     setTheme(readTheme())
     setIconMode(getIconColorMode())
     setWsMon(getWeekStartsMonday())
-    const prefs = getAppPrefs()
-    setDefaultBankId(prefs.defaultBankId)
-    setDefaultBankName(prefs.defaultBankName)
-    setDefaultExpCat(prefs.defaultExpCat)
-    setDefaultBilling((prefs.defaultBilling as BillingCycle) ?? 'Monthly')
   }, [])
 
   useEffect(() => {
@@ -93,17 +68,6 @@ export default function SettingsPage() {
       })
   }, [defaultCardOpen, settingsCards.length, supabase])
 
-  // Lazily load all banks when the picker opens
-  useEffect(() => {
-    if (!defaultBankOpen || settingsBanks.length > 0) return
-    setSettingsBanksLoading(true)
-    supabase.from('banks').select('id, name').order('created_at', { ascending: false })
-      .then(({ data }) => {
-        setSettingsBanks((data ?? []) as SettingsBank[])
-        setSettingsBanksLoading(false)
-      })
-  }, [defaultBankOpen, settingsBanks.length, supabase])
-
   // Lazily load Google calendars when the sheet opens
   useEffect(() => {
     if (!calOpen || googleCals.length > 0) return
@@ -119,20 +83,12 @@ export default function SettingsPage() {
       .finally(() => setCalsLoading(false))
   }, [calOpen, googleCals.length])
 
-  const anyPickerOpen = defaultCardOpen || defaultBankOpen || defaultCatOpen || defaultBillingOpen
+  const anyPickerOpen = defaultCardOpen
 
   useEffect(() => {
     if (!anyPickerOpen) return
-    const scrollY = window.scrollY
-    document.body.style.position = 'fixed'
-    document.body.style.top      = `-${scrollY}px`
-    document.body.style.width    = '100%'
-    return () => {
-      document.body.style.position = ''
-      document.body.style.top      = ''
-      document.body.style.width    = ''
-      window.scrollTo(0, scrollY)
-    }
+    document.documentElement.style.overflow = 'hidden'
+    return () => { document.documentElement.style.overflow = '' }
   }, [anyPickerOpen])
 
   function selectTheme(t: Theme) { setTheme(t); applyTheme(t) }
@@ -150,26 +106,6 @@ export default function SettingsPage() {
     if (!data.user) return
     await supabase.from('cards').update({ is_default: false }).eq('user_id', data.user.id)
     await supabase.from('cards').update({ is_default: true  }).eq('id', cardId)
-  }
-
-  function handleSetDefaultBank(bankId: string) {
-    const bank = settingsBanks.find(b => b.id === bankId)
-    setDefaultBankId(bankId)
-    setDefaultBankName(bank?.name ?? null)
-    setDefaultBankOpen(false)
-    setAppPrefs({ defaultBankId: bankId, defaultBankName: bank?.name ?? null })
-  }
-
-  function handleSetDefaultCat(cat: string) {
-    setDefaultExpCat(cat)
-    setDefaultCatOpen(false)
-    setAppPrefs({ defaultExpCat: cat })
-  }
-
-  function handleSetDefaultBilling(cycle: BillingCycle) {
-    setDefaultBilling(cycle)
-    setDefaultBillingOpen(false)
-    setAppPrefs({ defaultBilling: cycle })
   }
 
   async function savePrefs(p: CalPrefs) {
@@ -231,50 +167,16 @@ export default function SettingsPage() {
       <div className="px-5 mb-6">
         <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Defaults</p>
         <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
-
-          {/* Default Bank */}
           <button
-            onClick={() => setDefaultBankOpen(true)}
+            onClick={() => router.push('/settings/defaults')}
             className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity"
           >
             <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
-              <Landmark size={15} className="text-gold" strokeWidth={1.75} />
+              <Settings2 size={15} className="text-gold" strokeWidth={1.75} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-medium text-ink">Default Bank</p>
-              <p className="text-[11px] text-ink-muted">{defaultBankName ?? 'None set'}</p>
-            </div>
-            <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
-          </button>
-
-          {/* Default Expense Category */}
-          <button
-            onClick={() => setDefaultCatOpen(true)}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity"
-          >
-            <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
-              {defaultExpCat
-                ? <CategoryIcon category={defaultExpCat} type="Expense" size={15} className="text-gold" />
-                : <LayoutGrid size={15} className="text-gold" strokeWidth={1.75} />}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-medium text-ink">Default Category</p>
-              <p className="text-[11px] text-ink-muted">{defaultExpCat ?? 'None set'}</p>
-            </div>
-            <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
-          </button>
-
-          {/* Default Billing Cycle */}
-          <button
-            onClick={() => setDefaultBillingOpen(true)}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity"
-          >
-            <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
-              <CalendarDays size={15} className="text-gold" strokeWidth={1.75} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-medium text-ink">Default Billing</p>
-              <p className="text-[11px] text-ink-muted">{defaultBilling}</p>
+              <p className="text-[14px] font-medium text-ink">Form Defaults</p>
+              <p className="text-[11px] text-ink-muted">Card, bank, category, billing</p>
             </div>
             <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
           </button>
@@ -437,125 +339,14 @@ export default function SettingsPage() {
         onSave={savePrefs}
       />
 
-      {/* ── Default Billing picker ─────────────────────────────────────────── */}
-      <div
-        onClick={() => setDefaultBillingOpen(false)}
-        className={cn('fixed inset-0 z-40 transition-opacity duration-300', defaultBillingOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none')}
-        style={{ background: 'rgba(0,0,0,0.72)' }}
-      />
-      <div
-        className={cn('fixed inset-x-0 bottom-0 z-50 rounded-t-[24px] bg-bg-surface transition-transform duration-300', defaultBillingOpen ? 'translate-y-0' : 'translate-y-full')}
-        style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-      >
-        <div className="flex justify-center pt-3 pb-1"><div className="w-9 h-1 rounded-full bg-white/20" /></div>
-        <div className="flex items-center justify-between px-5 mb-4">
-          <h2 className="text-[18px] font-bold text-ink">Default Billing</h2>
-          <button onClick={() => setDefaultBillingOpen(false)} className="w-8 h-8 flex items-center justify-center text-[22px] text-ink-muted">×</button>
-        </div>
-        <div className="px-5" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 32px)' }}>
-          <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] overflow-hidden divide-y divide-white/[0.04]">
-            {BILLING_OPTIONS.map(opt => (
-              <button key={opt} onClick={() => handleSetDefaultBilling(opt)}
-                className="w-full flex items-center justify-between px-4 py-3.5 text-left active:opacity-70 transition-opacity">
-                <p className="text-[14px] font-medium text-ink">{BILLING_LABELS[opt]}</p>
-                {opt === defaultBilling && <div className="w-5 h-5 rounded-full gradient-gold flex items-center justify-center"><Check size={9} className="text-white" strokeWidth={2.5} /></div>}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Default Bank picker ────────────────────────────────────────────── */}
-      <div
-        onClick={() => setDefaultBankOpen(false)}
-        className={cn('fixed inset-0 z-40 transition-opacity duration-300', defaultBankOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none')}
-        style={{ background: 'rgba(0,0,0,0.72)' }}
-      />
-      <div
-        className={cn('fixed inset-x-0 bottom-0 z-50 rounded-t-[24px] bg-bg-surface transition-transform duration-300', defaultBankOpen ? 'translate-y-0' : 'translate-y-full')}
-        style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-      >
-        <div className="flex justify-center pt-3 pb-1"><div className="w-9 h-1 rounded-full bg-white/20" /></div>
-        <div className="flex items-center justify-between px-5 mb-4">
-          <h2 className="text-[18px] font-bold text-ink">Default Bank</h2>
-          <button onClick={() => setDefaultBankOpen(false)} className="w-8 h-8 flex items-center justify-center text-[22px] text-ink-muted">×</button>
-        </div>
-        <div className="px-5 overflow-y-auto" style={{ maxHeight: '60vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 32px)' }}>
-          {settingsBanksLoading ? (
-            <div className="py-10 text-center text-ink-faint text-[13px]">Loading…</div>
-          ) : settingsBanks.length === 0 ? (
-            <div className="py-10 text-center text-ink-faint text-[13px]">No banks yet — add one in the In tab.</div>
-          ) : (
-            <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] overflow-hidden divide-y divide-white/[0.04]">
-              <button
-                onClick={() => { setDefaultBankId(null); setDefaultBankName(null); setDefaultBankOpen(false); setAppPrefs({ defaultBankId: null, defaultBankName: null }) }}
-                className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity"
-              >
-                <div className="flex-1"><p className="text-[14px] font-medium text-ink-muted">None</p></div>
-                {defaultBankId === null && <div className="w-5 h-5 rounded-full gradient-gold flex items-center justify-center"><Check size={9} className="text-white" strokeWidth={2.5} /></div>}
-              </button>
-              {settingsBanks.map(bank => (
-                <button key={bank.id} onClick={() => handleSetDefaultBank(bank.id)}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity">
-                  <div className="w-8 h-8 rounded-[10px] bg-bg-surface ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0 text-base">🏦</div>
-                  <div className="flex-1 min-w-0"><p className="text-[14px] font-medium text-ink truncate">{bank.name}</p></div>
-                  {bank.id === defaultBankId && <div className="w-5 h-5 rounded-full gradient-gold flex items-center justify-center"><Check size={9} className="text-white" strokeWidth={2.5} /></div>}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Default Category picker ─────────────────────────────────────────── */}
-      <div
-        onClick={() => setDefaultCatOpen(false)}
-        className={cn('fixed inset-0 z-40 transition-opacity duration-300', defaultCatOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none')}
-        style={{ background: 'rgba(0,0,0,0.72)' }}
-      />
-      <div
-        className={cn('fixed inset-x-0 bottom-0 z-50 rounded-t-[24px] bg-bg-surface transition-transform duration-300', defaultCatOpen ? 'translate-y-0' : 'translate-y-full')}
-        style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-      >
-        <div className="flex justify-center pt-3 pb-1"><div className="w-9 h-1 rounded-full bg-white/20" /></div>
-        <div className="flex items-center justify-between px-5 mb-4">
-          <h2 className="text-[18px] font-bold text-ink">Default Category</h2>
-          <button onClick={() => setDefaultCatOpen(false)} className="w-8 h-8 flex items-center justify-center text-[22px] text-ink-muted">×</button>
-        </div>
-        <div className="px-5 overflow-y-auto" style={{ maxHeight: '65vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 32px)' }}>
-          <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] overflow-hidden divide-y divide-white/[0.04]">
-            <button
-              onClick={() => handleSetDefaultCat('')}
-              className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity"
-            >
-              <div className="w-8 h-8 rounded-[10px] bg-bg-surface ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
-                <LayoutGrid size={14} className="text-ink-faint" strokeWidth={1.75} />
-              </div>
-              <div className="flex-1"><p className="text-[14px] font-medium text-ink-muted">None</p></div>
-              {!defaultExpCat && <div className="w-5 h-5 rounded-full gradient-gold flex items-center justify-center"><Check size={9} className="text-white" strokeWidth={2.5} /></div>}
-            </button>
-            {EXPENSE_CATEGORIES.map(cat => (
-              <button key={cat.name} onClick={() => handleSetDefaultCat(cat.name)}
-                className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity">
-                <div className="w-8 h-8 rounded-[10px] bg-bg-surface ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
-                  <CategoryIcon category={cat.name} type="Expense" size={14} className="text-gold" />
-                </div>
-                <div className="flex-1 min-w-0"><p className="text-[14px] font-medium text-ink truncate">{cat.name}</p></div>
-                {cat.name === defaultExpCat && <div className="w-5 h-5 rounded-full gradient-gold flex items-center justify-center"><Check size={9} className="text-white" strokeWidth={2.5} /></div>}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Default Card picker ─────────────────────────────────────────────── */}
+      {/* ── Default Card picker (kept for direct card default from Accounts section) ── */}
       <div
         onClick={() => setDefaultCardOpen(false)}
-        className={cn('fixed inset-0 z-40 transition-opacity duration-300', defaultCardOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none')}
+        className={cn('fixed inset-0 z-[59] transition-opacity duration-300', defaultCardOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none')}
         style={{ background: 'rgba(0,0,0,0.72)' }}
       />
       <div
-        className={cn('fixed inset-x-0 bottom-0 z-50 rounded-t-[24px] bg-bg-surface transition-transform duration-300', defaultCardOpen ? 'translate-y-0' : 'translate-y-full')}
+        className={cn('fixed inset-x-0 bottom-0 z-[60] rounded-t-[24px] bg-bg-surface transition-transform duration-300', defaultCardOpen ? 'translate-y-0' : 'translate-y-full')}
         style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <div className="flex justify-center pt-3 pb-1">
