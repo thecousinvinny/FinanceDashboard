@@ -450,7 +450,7 @@ export default function CalendarPage() {
       for (const e of evs) { if (e.googleEventId) customGoogleIds.add(e.googleEventId) }
     }
     for (const [date, evs] of Object.entries(eventMap)) {
-      const f = evs.filter(e => prefs.visibleTypes.includes(e.type))
+      const f = evs.filter(e => e.type !== 'google' && prefs.visibleTypes.includes(e.type))
       if (f.length) m[date] = f
     }
     // Always include Google events — already filtered by googleCalendarIds at fetch time
