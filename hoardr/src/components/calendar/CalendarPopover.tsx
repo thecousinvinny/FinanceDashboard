@@ -264,6 +264,9 @@ export function CalendarPopover({
         const eh = (h + 1) % 24
         next.endTime = `${String(eh).padStart(2, '0')}:${String(m).padStart(2, '0')}`
       }
+      if (key === 'date' && typeof val === 'string' && next.endDate < val) {
+        next.endDate = val
+      }
       return next
     })
   }
@@ -472,27 +475,20 @@ export function CalendarPopover({
         {/* Scrollable body */}
         <div style={{ flex: 1, overflowY: 'auto', overscrollBehavior: 'contain' }}>
 
-          {/* Date row */}
+          {/* Date row — always FROM → TO */}
           <div style={rowStyle}>
             <Calendar size={16} color={MUTED} style={{ flexShrink: 0 }} />
-            {form.allDay ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
-                <div style={dateLabelWrap}>
-                  <span style={{ fontSize: 13, color: 'var(--color-ink)', cursor: 'pointer', userSelect: 'none' }}>{fmtDateLabel(form.date)}</span>
-                  <input type="date" value={form.date} onChange={e => setField('date', e.target.value)} style={hiddenDate} />
-                </div>
-                <span style={{ color: MUTED, fontSize: 13 }}>→</span>
-                <div style={dateLabelWrap}>
-                  <span style={{ fontSize: 13, color: 'var(--color-ink)', cursor: 'pointer', userSelect: 'none' }}>{fmtDateLabel(form.endDate)}</span>
-                  <input type="date" value={form.endDate} onChange={e => setField('endDate', e.target.value)} style={hiddenDate} />
-                </div>
-              </div>
-            ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
               <div style={dateLabelWrap}>
                 <span style={{ fontSize: 13, color: 'var(--color-ink)', cursor: 'pointer', userSelect: 'none' }}>{fmtDateLabel(form.date)}</span>
                 <input type="date" value={form.date} onChange={e => setField('date', e.target.value)} style={hiddenDate} />
               </div>
-            )}
+              <span style={{ color: MUTED, fontSize: 13 }}>→</span>
+              <div style={dateLabelWrap}>
+                <span style={{ fontSize: 13, color: form.endDate !== form.date ? GOLD : 'var(--color-ink)', cursor: 'pointer', userSelect: 'none' }}>{fmtDateLabel(form.endDate)}</span>
+                <input type="date" value={form.endDate} min={form.date} onChange={e => setField('endDate', e.target.value)} style={hiddenDate} />
+              </div>
+            </div>
           </div>
 
           {/* Time row — hidden when all-day */}

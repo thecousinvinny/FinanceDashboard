@@ -554,7 +554,7 @@ export default function CalendarPage() {
     try {
       const body: GCalEvent = data.allDay
         ? { summary: data.title, description: data.notes || undefined, location: data.location || undefined, start: { date: data.date }, end: { date: data.endDate || data.date } }
-        : { summary: data.title, description: data.notes || undefined, location: data.location || undefined, start: { dateTime: `${data.date}T${data.startTime}:00`, timeZone: 'America/Los_Angeles' }, end: { dateTime: `${data.date}T${data.endTime}:00`, timeZone: 'America/Los_Angeles' } }
+        : { summary: data.title, description: data.notes || undefined, location: data.location || undefined, start: { dateTime: `${data.date}T${data.startTime}:00`, timeZone: 'America/Los_Angeles' }, end: { dateTime: `${data.endDate || data.date}T${data.endTime}:00`, timeZone: 'America/Los_Angeles' } }
       if (data.recurrenceRule) body.recurrence = [`RRULE:${data.recurrenceRule}`]
       if (popover?.mode === 'create') {
         await createCalEvent(body, data.calendarId)
