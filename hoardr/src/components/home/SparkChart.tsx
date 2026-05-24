@@ -69,11 +69,14 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
       path.style.strokeDasharray  = `${len}`
       path.style.strokeDashoffset = `${len}`
       path.style.transition = 'none'
-      path.getBoundingClientRect() // force reflow so initial state is painted
-      requestAnimationFrame(() => {
-        path.style.transition       = `stroke-dashoffset 0.85s cubic-bezier(0.4,0,0.2,1) ${delayMs}ms`
+      // getComputedStyle flushes pending CSS — getBoundingClientRect only forces layout,
+      // not style recalculation, so WebKit won't register the dashoffset change otherwise
+      void getComputedStyle(path).strokeDashoffset
+      // Double rAF: first frame paints the hidden state, second starts the transition
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        path.style.transition       = `stroke-dashoffset 0.9s ease-out ${delayMs}ms`
         path.style.strokeDashoffset = '0'
-      })
+      }))
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animKey])
@@ -125,7 +128,7 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
         onTouchMove={e => { e.preventDefault(); pickIdx(e.touches[0].clientX) }}
         onTouchEnd={() => setHoverIdx(null)}
       >
-        <svg viewBox="0 0 300 64" className="w-full h-full" preserveAspectRatio="none">
+        <svg viewBox="0 0 300 64" className="w-full h-full" preserveAspectRatio="none" overflow="visible">
           <defs>
             <linearGradient id="inc-grad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#4ADE80" stopOpacity="0.22"/>
