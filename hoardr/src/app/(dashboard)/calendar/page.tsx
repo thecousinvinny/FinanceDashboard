@@ -1056,11 +1056,7 @@ export default function CalendarPage() {
                               <div
                                 key={ds}
                                 ref={el => { if (el) monthCellRefs.current.set(ds, el); else monthCellRefs.current.delete(ds) }}
-                                onClick={e => { navigator.vibrate?.(6); if (calView === 'month') openCreatePopover(e.currentTarget.getBoundingClientRect(), ds) }}
-                                onPointerDown={e => { const el = e.currentTarget; el.style.transition = 'transform 0.1s cubic-bezier(0.34,1.56,0.64,1)'; el.style.transform = 'scale(0.97)' }}
-                                onPointerUp={e => { e.currentTarget.style.transform = 'scale(1)' }}
-                                onPointerLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
-                                onPointerCancel={e => { e.currentTarget.style.transform = 'scale(1)' }}
+                                onDoubleClick={e => { navigator.vibrate?.(6); if (calView === 'month') openCreatePopover(e.currentTarget.getBoundingClientRect(), ds) }}
                                 className="group"
                                 style={{ minHeight: 140, borderRight: ci < 6 ? '1px solid var(--color-grid-border)' : 'none', padding: '5px 0 4px', cursor: 'pointer', display: 'flex', flexDirection: 'column', background: isToday ? 'rgba(201,168,76,0.05)' : '#0d0d0d', position: 'relative' }}
                               >
@@ -1339,6 +1335,7 @@ export default function CalendarPage() {
                         <div style={{ width: 1, flexShrink: 0, background: isTod ? 'rgba(201,168,76,0.35)' : 'rgb(var(--rgb-ink) / 0.04)', marginTop: 8, marginBottom: 8 }} />
                         {/* Events */}
                         <div
+                          onClick={() => { navigator.vibrate?.(6); openCreatePopover(null, ds) }}
                           style={{ flex: 1, paddingLeft: 12, paddingRight: 14, paddingTop: 6, paddingBottom: 6, display: 'flex', flexDirection: 'column', gap: 2, minHeight: 112, background: stripe ? 'var(--color-bg-surface)' : 'var(--color-bg-elevated)', cursor: 'text' }}>
                           {events.map((ev, idx) => {
                             const bar  = ev.color ?? DETAIL_DOT[ev.type]
@@ -1347,7 +1344,7 @@ export default function CalendarPage() {
                               ? (ev.amount ? getTimeRange(ev) : 'ALL DAY')
                               : (ev.amount || null)
                             return (
-                              <button key={idx} onClick={() => { navigator.vibrate?.(6); setSelectedDay(ds); setViewIndex(1) }}
+                              <button key={idx} onClick={e => { e.stopPropagation(); navigator.vibrate?.(6); if (ev.id) { handleOpenEdit(ev) } else { setSelectedDay(ds); setViewIndex(1) } }}
                                 style={{ display: 'flex', alignItems: 'stretch', width: '100%', background: 'none', border: 'none', padding: '10px 0', cursor: 'pointer', textAlign: 'left', gap: 9 }}>
                                 <div style={{ width: 3, borderRadius: 2, background: bar, flexShrink: 0 }} />
                                 <div style={{ flex: 1, minWidth: 0 }}>
