@@ -542,6 +542,28 @@ export default function OutPage() {
     return entries.map(([name, total]) => ({ name, total, pct: Math.round((total / top) * 100) }))
   }, [txList])
 
+  const subCatBreakdown = useMemo(() => {
+    const totals: Record<string, number> = {}
+    for (const s of activeSubs) {
+      const cat = s.category ?? 'Subscriptions'
+      totals[cat] = (totals[cat] ?? 0) + s.monthly_cost
+    }
+    const entries = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 5)
+    const top = entries[0]?.[1] ?? 1
+    return entries.map(([name, total]) => ({ name, total, pct: Math.round((total / top) * 100) }))
+  }, [activeSubs])
+
+  const wishCatBreakdown = useMemo(() => {
+    const totals: Record<string, number> = {}
+    for (const w of interestedWish) {
+      const cat = w.category ?? 'Other'
+      totals[cat] = (totals[cat] ?? 0) + (w.original_cost ?? 0)
+    }
+    const entries = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 5)
+    const top = entries[0]?.[1] ?? 1
+    return entries.map(([name, total]) => ({ name, total, pct: Math.round((total / top) * 100) }))
+  }, [interestedWish])
+
   const sorted = useMemo(() => [...txList].sort((a, b) => b.date.localeCompare(a.date)), [txList])
   const groups = useMemo(() =>
     groupByMonth(sorted).map(g => ({
@@ -632,7 +654,7 @@ export default function OutPage() {
         </div>
       )}
 
-      {/* ── Category breakdown (Expenses only) ───────────────────────────── */}
+      {/* ── Category breakdown ────────────────────────────────────────────── */}
       {!loading && tab === 'Expenses' && catBreakdown.length > 0 && (
         <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card px-4 py-3">
           <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">This Month</p>
@@ -644,6 +666,48 @@ export default function OutPage() {
                     <CategoryIcon category={cat.name} type="Expense" size={12}
                       isSub={subNames.has(cat.name.toLowerCase())}
                       className={subNames.has(cat.name.toLowerCase()) ? 'text-white/60' : 'text-gold'} />
+                    <span className="text-[12px] font-medium text-ink truncate">{cat.name}</span>
+                  </div>
+                  <span className="text-[12px] font-semibold text-ink ml-3 flex-shrink-0" style={{ fontFamily: 'var(--font-big-shoulders)' }}>{$fd(cat.total)}</span>
+                </div>
+                <div className="h-[3px] rounded-full bg-bg-overlay overflow-hidden">
+                  <div className="h-full rounded-full bg-gold/50 transition-all duration-500" style={{ width: `${cat.pct}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {!loading && tab === 'Subs' && subCatBreakdown.length > 0 && (
+        <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card px-4 py-3">
+          <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Per Month by Category</p>
+          <div className="space-y-2.5">
+            {subCatBreakdown.map(cat => (
+              <div key={cat.name}>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <CategoryIcon category={cat.name} type="Expense" size={12} className="text-gold" />
+                    <span className="text-[12px] font-medium text-ink truncate">{cat.name}</span>
+                  </div>
+                  <span className="text-[12px] font-semibold text-ink ml-3 flex-shrink-0" style={{ fontFamily: 'var(--font-big-shoulders)' }}>{$fd(cat.total)}</span>
+                </div>
+                <div className="h-[3px] rounded-full bg-bg-overlay overflow-hidden">
+                  <div className="h-full rounded-full bg-gold/50 transition-all duration-500" style={{ width: `${cat.pct}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {!loading && tab === 'Wishlist' && wishCatBreakdown.length > 0 && (
+        <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card px-4 py-3">
+          <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Wish List by Category</p>
+          <div className="space-y-2.5">
+            {wishCatBreakdown.map(cat => (
+              <div key={cat.name}>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <CategoryIcon category={cat.name} type="Expense" size={12} className="text-gold" />
                     <span className="text-[12px] font-medium text-ink truncate">{cat.name}</span>
                   </div>
                   <span className="text-[12px] font-semibold text-ink ml-3 flex-shrink-0" style={{ fontFamily: 'var(--font-big-shoulders)' }}>{$fd(cat.total)}</span>
