@@ -9,7 +9,8 @@ import { showToast } from '@/lib/toast'
 import { Plus, SlidersHorizontal, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning, type LucideIcon } from 'lucide-react'
 import { EditEventSheet, type EditableEvent, type EventEdits, type RecurrenceScope } from '@/components/calendar/EditEventSheet'
 import { CalendarSettingsSheet, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
-import { updateCalEvent, deleteCalEvent, type GCalEvent } from '@/lib/calendar'
+import { CalendarPopover, type PopoverFormData } from '@/components/calendar/CalendarPopover'
+import { createCalEvent, updateCalEvent, deleteCalEvent, type GCalEvent } from '@/lib/calendar'
 
 type EventType = 'income' | 'sub' | 'google'
 
@@ -205,6 +206,8 @@ export default function CalendarPage() {
   const [settingsOpen,   setSettingsOpen]   = useState(false)
   const [weatherMap,     setWeatherMap]     = useState<Record<string, DayWeather>>({})
   const [editEvent,      setEditEvent]      = useState<EditableEvent | null>(null)
+  const [popover,        setPopover]        = useState<{ anchorRect: DOMRect | null; mode: 'create' | 'edit'; data: PopoverFormData } | null>(null)
+  const [popoverSaving,  setPopoverSaving]  = useState(false)
   const [dataLoaded,     setDataLoaded]     = useState(false)
   const [gRefreshKey,    setGRefreshKey]    = useState(0)
 
@@ -434,7 +437,7 @@ export default function CalendarPage() {
             if (incl !== date) endDate = incl
           }
           if (!map[date]) map[date] = []
-          map[date].push({ id: ev.id, title: ev.summary ?? '(no title)', type: 'google', amount: st ? `${st}${et ? ` – ${et}` : ''}` : '', location: ev.location, color, endDate, calendarId: calId })
+          map[date].push({ id: ev.id, title: ev.summary ?? '(no title)', type: 'google', amount: st ? `${st}${et ? ` – ${et}` : ''}` : '', location: ev.location, color, endDate, calendarId: calId, instanceDate: date })
         }
       }
       setGoogleEvMap(map)
@@ -528,6 +531,53 @@ export default function CalendarPage() {
       googleEventId: ev.id,
       instanceDate: ev.instanceDate,
     })
+  }
+
+  function openCreatePopover(anchorRect: DOMRect | null, date: string) {
+    const calId = prefs.defaultCalendarId
+      ?? googleCals.find(c => prefs.googleCalendarIds.includes(c.id))?.id
+      ?? prefs.googleCalendarIds[0]
+      ?? 'primary'
+    setPopover({ anchorRect, mode: 'create', data: { title: '', date, endDate: date, allDay: false, startTime: '09:00', endTime: '10:00', location: '', notes: '', recurrenceRule: '', calendarId: calId } })
+  }
+
+  function openEditPopover(anchorRect: DOMRect | null, ev: CalEvent, date: string) {
+    if (!ev.id) return
+    const parts = ev.amount?.split(' – ').map(t => t.trim()) ?? []
+    const allDay = !ev.amount?.trim()
+    setPopover({ anchorRect, mode: 'edit', data: { eventId: ev.id, title: ev.title, date, endDate: date, allDay, startTime: !allDay && parts[0] ? parts[0] : '09:00', endTime: !allDay && parts[1] ? parts[1] : '10:00', location: ev.location ?? '', notes: ev.notes ?? '', recurrenceRule: '', calendarId: ev.calendarId ?? 'primary' } })
+  }
+
+  async function handlePopoverSave(data: PopoverFormData) {
+    setPopoverSaving(true)
+    try {
+      const body: GCalEvent = data.allDay
+        ? { summary: data.title, description: data.notes || undefined, location: data.location || undefined, start: { date: data.date }, end: { date: data.endDate || data.date } }
+        : { summary: data.title, description: data.notes || undefined, location: data.location || undefined, start: { dateTime: `${data.date}T${data.startTime}:00`, timeZone: 'America/Los_Angeles' }, end: { dateTime: `${data.date}T${data.endTime}:00`, timeZone: 'America/Los_Angeles' } }
+      if (data.recurrenceRule) body.recurrence = [`RRULE:${data.recurrenceRule}`]
+      if (popover?.mode === 'create') {
+        await createCalEvent(body, data.calendarId)
+        showToast('Event created', { type: 'add' })
+      } else if (data.eventId) {
+        await updateCalEvent(data.eventId, body, data.calendarId)
+        showToast('Event updated', { type: 'payment' })
+      }
+      setPopover(null)
+      setGRefreshKey(k => k + 1)
+    } catch { showToast('Failed to save', { type: 'delete' }) }
+    finally { setPopoverSaving(false) }
+  }
+
+  function handlePopoverDelete() {
+    if (!popover?.data.eventId) return
+    const eid = popover.data.eventId, calId = popover.data.calendarId
+    setPopover(null)
+    setGoogleEvMap(prev => {
+      const m = { ...prev }
+      for (const key of Object.keys(m)) { m[key] = m[key].filter(e => e.id !== eid); if (!m[key].length) delete m[key] }
+      return m
+    })
+    showToast('Event deleted', { type: 'delete', undo: { onUndo: () => setGRefreshKey(k => k + 1), onCommit: () => deleteCalEvent(eid, calId) } })
   }
 
   async function handleEditEvent(edits: EventEdits, _scope: RecurrenceScope) {
@@ -1005,7 +1055,7 @@ export default function CalendarPage() {
                               <div
                                 key={ds}
                                 ref={el => { if (el) monthCellRefs.current.set(ds, el); else monthCellRefs.current.delete(ds) }}
-                                onClick={() => { navigator.vibrate?.(6) }}
+                                onClick={e => { navigator.vibrate?.(6); if (calView === 'month') openCreatePopover(e.currentTarget.getBoundingClientRect(), ds) }}
                                 onPointerDown={e => { const el = e.currentTarget; el.style.transition = 'transform 0.1s cubic-bezier(0.34,1.56,0.64,1)'; el.style.transform = 'scale(0.97)' }}
                                 onPointerUp={e => { e.currentTarget.style.transform = 'scale(1)' }}
                                 onPointerLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
@@ -1039,7 +1089,7 @@ export default function CalendarPage() {
                                         const isEnd   = bar.endCol   === ci
                                         const bg = notionColor(bar.ev)
                                         return (
-                                          <div key={li} onClick={bar.ev.type === 'google' && bar.ev.id ? (e) => { e.stopPropagation(); handleOpenEdit(bar.ev) } : undefined}
+                                          <div key={li} onClick={bar.ev.type === 'google' && bar.ev.id ? (e) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), bar.ev, days[bar.startCol] ?? ds) } : undefined}
                                             style={{ height: SPAN_H, marginBottom: SPAN_GAP, marginLeft: isStart ? 2 : 0, marginRight: isEnd ? 2 : 0, borderRadius: isStart ? '4px 0 0 4px' : isEnd ? '0 4px 4px 0' : 0, background: bg + 'CC', display: 'flex', alignItems: 'center', paddingLeft: isStart ? 4 : 2, overflow: 'hidden', cursor: (bar.ev.type === 'google') && bar.ev.id ? 'pointer' : 'default' }}>
                                             {isStart && <span style={{ fontSize: 9, color: '#fff', fontFamily: 'var(--font-montserrat)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bar.ev.title}</span>}
                                           </div>
@@ -1052,7 +1102,7 @@ export default function CalendarPage() {
                                     {allDayEvs.slice(0, shownAllDay).map((ev, ei) => (
                                       <div
                                         key={ei}
-                                        onClick={ev.type === 'google' && ev.id ? (e) => { e.stopPropagation(); handleOpenEdit(ev) } : undefined}
+                                        onClick={ev.type === 'google' && ev.id ? (e) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), ev, ds) } : undefined}
                                         style={{ background: notionColor(ev) + 'DD', borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, opacity: 0.85, cursor: (ev.type === 'google') && ev.id ? 'pointer' : 'default' }}
                                       >
                                         <span style={{ fontSize: 10, color: '#fff', fontFamily: 'var(--font-montserrat)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
@@ -1067,7 +1117,7 @@ export default function CalendarPage() {
                                       return (
                                         <div
                                           key={ei}
-                                          onClick={ev.type === 'google' && ev.id ? (e) => { e.stopPropagation(); handleOpenEdit(ev) } : undefined}
+                                          onClick={ev.type === 'google' && ev.id ? (e) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), ev, ds) } : undefined}
                                           style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 2, height: 18, overflow: 'hidden', flexShrink: 0, background: 'var(--color-bg-elevated)', borderRadius: 3, opacity: 0.9, cursor: (ev.type === 'google') && ev.id ? 'pointer' : 'default' }}
                                         >
                                           <div style={{ width: 3, height: '100%', borderRadius: '3px 0 0 3px', background: bar, flexShrink: 0 }} />
@@ -1398,8 +1448,31 @@ export default function CalendarPage() {
       </div>{/* end sliding rail */}
     </div>{/* end root */}
 
+    {/* FAB — iPhone day view: create event */}
+    {!isLargeScreen && viewIndex === 1 && prefs.googleCalendarIds.length > 0 && (
+      <button
+        onClick={() => openCreatePopover(null, selectedDay ?? todayStr)}
+        className="fixed gradient-gold rounded-full flex items-center justify-center text-white font-light select-none"
+        style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, zIndex: 40, boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)' }}
+        aria-label="Add event"
+      >+</button>
+    )}
+
     <EditEventSheet open={!!editEvent} event={editEvent} googleCals={googleCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => setEditEvent(null)} onSave={handleEditEvent} onDelete={_scope => { if (editEvent) { const ev: CalEvent = { id: editEvent.id, title: editEvent.title, type: 'google', amount: '', calendarId: editEvent.calendarId }; handleDeleteCalEvent(ev) } setEditEvent(null) }} />
     <CalendarSettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} prefs={prefs} googleCals={googleCals} calsLoading={calsLoading} onSave={savePrefs} />
+    {popover && (
+      <CalendarPopover
+        anchorRect={popover.anchorRect}
+        mode={popover.mode}
+        initial={popover.data}
+        googleCals={googleCals.filter(c => prefs.googleCalendarIds.includes(c.id))}
+        googleCalendarColors={prefs.googleCalendarColors}
+        onClose={() => setPopover(null)}
+        onSave={handlePopoverSave}
+        onDelete={popover.mode === 'edit' ? handlePopoverDelete : undefined}
+        saving={popoverSaving}
+      />
+    )}
     </>
   )
 }
