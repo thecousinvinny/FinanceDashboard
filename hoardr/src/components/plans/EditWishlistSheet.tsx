@@ -11,6 +11,7 @@ interface WishSnapshot {
   original_cost: number | null
   category:      string | null
   url:           string | null
+  description:   string | null
 }
 
 export interface WishEdits {
@@ -18,6 +19,7 @@ export interface WishEdits {
   original_cost: number | null
   category:      string | null
   url:           string | null
+  description:   string | null
 }
 
 interface Props {
@@ -28,10 +30,11 @@ interface Props {
 }
 
 export function EditWishlistSheet({ item, open, onClose, onSave }: Props) {
-  const [name,     setName]     = useState('')
-  const [amount,   setAmount]   = useState('')
-  const [category, setCategory] = useState('')
-  const [url,      setUrl]      = useState('')
+  const [name,        setName]        = useState('')
+  const [amount,      setAmount]      = useState('')
+  const [category,    setCategory]    = useState('')
+  const [url,         setUrl]         = useState('')
+  const [description, setDescription] = useState('')
 
   useEffect(() => {
     if (item) {
@@ -39,6 +42,7 @@ export function EditWishlistSheet({ item, open, onClose, onSave }: Props) {
       setAmount(item.original_cost != null ? String(item.original_cost) : '')
       setCategory(item.category ?? '')
       setUrl(item.url ?? '')
+      setDescription(item.description ?? '')
     }
   }, [item])
 
@@ -103,7 +107,7 @@ export function EditWishlistSheet({ item, open, onClose, onSave }: Props) {
 
   useEffect(() => {
     if (!open) {
-      const t = setTimeout(() => { setName(''); setAmount(''); setCategory(''); setUrl('') }, 300)
+      const t = setTimeout(() => { setName(''); setAmount(''); setCategory(''); setUrl(''); setDescription('') }, 300)
       return () => clearTimeout(t)
     }
   }, [open])
@@ -116,6 +120,7 @@ export function EditWishlistSheet({ item, open, onClose, onSave }: Props) {
       original_cost: parsed > 0 ? parsed : null,
       category:      category.trim() || null,
       url:           url.trim() || null,
+      description:   description.trim() || null,
     })
     onClose()
   }
@@ -163,6 +168,17 @@ export function EditWishlistSheet({ item, open, onClose, onSave }: Props) {
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Item Name</p>
             <input
               type="text" value={name} onChange={e => setName(e.target.value)}
+              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none"
+            />
+          </div>
+
+          <div>
+            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
+              Description <span className="normal-case text-ink-faint/60">(optional)</span>
+            </p>
+            <input
+              type="text" placeholder="e.g. iPhone 17 Pro Max 256GB" value={description}
+              onChange={e => setDescription(e.target.value)}
               className="w-full bg-bg-overlay rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none"
             />
           </div>

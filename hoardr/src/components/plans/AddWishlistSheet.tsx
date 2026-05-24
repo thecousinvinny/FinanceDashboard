@@ -10,6 +10,7 @@ export interface NewWishItem {
   original_cost: number | null
   category:      string | null
   url:           string | null
+  description:   string | null
 }
 
 interface Props {
@@ -19,10 +20,11 @@ interface Props {
 }
 
 export function AddWishlistSheet({ open, onClose, onAdd }: Props) {
-  const [name,     setName]     = useState('')
-  const [amount,   setAmount]   = useState('')
-  const [category, setCategory] = useState('')
-  const [url,      setUrl]      = useState('')
+  const [name,        setName]        = useState('')
+  const [amount,      setAmount]      = useState('')
+  const [category,    setCategory]    = useState('')
+  const [url,         setUrl]         = useState('')
+  const [description, setDescription] = useState('')
 
   const backdropRef = useRef<HTMLDivElement>(null)
   const sheetRef    = useRef<HTMLDivElement>(null)
@@ -86,7 +88,7 @@ export function AddWishlistSheet({ open, onClose, onAdd }: Props) {
   useEffect(() => {
     if (!open) {
       const t = setTimeout(() => {
-        setName(''); setAmount(''); setCategory(''); setUrl('')
+        setName(''); setAmount(''); setCategory(''); setUrl(''); setDescription('')
       }, 300)
       return () => clearTimeout(t)
     }
@@ -104,6 +106,7 @@ export function AddWishlistSheet({ open, onClose, onAdd }: Props) {
       original_cost: parsed > 0 ? parsed : null,
       category:      category.trim() || null,
       url:           url.trim() || null,
+      description:   description.trim() || null,
     })
     onClose()
   }
@@ -150,8 +153,19 @@ export function AddWishlistSheet({ open, onClose, onAdd }: Props) {
           <div>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Item Name</p>
             <input
-              type="text" placeholder="e.g. Sony WH-1000XM5" value={name}
+              type="text" placeholder="e.g. iPhone" value={name}
               onChange={e => setName(e.target.value)}
+              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none"
+            />
+          </div>
+
+          <div>
+            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
+              Description <span className="normal-case text-ink-faint/60">(optional)</span>
+            </p>
+            <input
+              type="text" placeholder="e.g. iPhone 17 Pro Max 256GB" value={description}
+              onChange={e => setDescription(e.target.value)}
               className="w-full bg-bg-overlay rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none"
             />
           </div>

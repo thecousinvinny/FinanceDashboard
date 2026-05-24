@@ -49,6 +49,7 @@ interface WishItem {
   original_cost: number | null
   category:      string | null
   url:           string | null
+  description:   string | null
   bought_cost:   number | null
   ordered_at:    string | null
   status:        string
@@ -138,7 +139,7 @@ export default function OutPage() {
           .order('next_renewal', { ascending: true })
           .abortSignal(controller.signal),
         supabase.from('wishlist')
-          .select('id, name, original_cost, category, url, bought_cost, ordered_at, status')
+          .select('id, name, original_cost, category, url, description, bought_cost, ordered_at, status')
           .order('created_at', { ascending: false })
           .abortSignal(controller.signal),
         supabase.from('expenses')
@@ -183,6 +184,7 @@ export default function OutPage() {
         original_cost: w.original_cost != null ? Number(w.original_cost) : null,
         category:      w.category ? String(w.category) : null,
         url:           w.url ? String(w.url) : null,
+        description:   (w as { description?: unknown }).description ? String((w as { description?: unknown }).description) : null,
         bought_cost:   w.bought_cost != null ? Number(w.bought_cost) : null,
         ordered_at:    w.ordered_at ? String(w.ordered_at) : null,
         status:        String(w.status),
@@ -477,17 +479,17 @@ export default function OutPage() {
 
   async function handleAddWish(item: NewWishItem) {
     const tempId = `temp-${Date.now()}`
-    setWishlist(prev => [{ id: tempId, name: item.name, original_cost: item.original_cost, category: item.category, url: item.url, bought_cost: null, ordered_at: null, status: 'Interested' }, ...prev])
+    setWishlist(prev => [{ id: tempId, name: item.name, original_cost: item.original_cost, category: item.category, url: item.url, description: item.description, bought_cost: null, ordered_at: null, status: 'Interested' }, ...prev])
     showToast(`${item.name} added`, { type: 'add' })
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { await loadData(); return }
-    await supabase.from('wishlist').insert({ user_id: user.id, name: item.name, original_cost: item.original_cost, category: item.category, url: item.url, status: 'Interested' })
+    await supabase.from('wishlist').insert({ user_id: user.id, name: item.name, original_cost: item.original_cost, category: item.category, url: item.url, description: item.description, status: 'Interested' })
     await loadData()
   }
 
   async function handleEditWish(id: string, edits: WishEdits) {
     setWishlist(prev => prev.map(w => w.id === id ? { ...w, ...edits } : w))
-    const { error } = await supabase.from('wishlist').update({ name: edits.name, original_cost: edits.original_cost, category: edits.category, url: edits.url }).eq('id', id)
+    const { error } = await supabase.from('wishlist').update({ name: edits.name, original_cost: edits.original_cost, category: edits.category, url: edits.url, description: edits.description }).eq('id', id)
     if (error) { console.error('edit wish error:', JSON.stringify(error)); await loadData() }
   }
 
@@ -874,11 +876,13 @@ export default function OutPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-[14px] font-medium text-ink truncate">{item.name}</p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        {item.category && <p className="text-[11px] text-ink-muted">{item.category}</p>}
+                        {(item.description || item.category) && (
+                          <p className="text-[11px] text-ink-muted truncate">{item.description ?? item.category}</p>
+                        )}
                         {item.url && (
                           <a href={item.url} target="_blank" rel="noopener noreferrer"
                             onClick={e => e.stopPropagation()}
-                            className="text-[11px] font-semibold text-gold select-none">
+                            className="text-[11px] font-semibold text-gold flex-shrink-0 select-none">
                             View →
                           </a>
                         )}
