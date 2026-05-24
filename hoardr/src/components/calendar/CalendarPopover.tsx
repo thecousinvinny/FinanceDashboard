@@ -137,6 +137,8 @@ export function CalendarPopover({
   const endDropRef   = useRef<HTMLDivElement>(null)
   const calBtnRef    = useRef<HTMLButtonElement>(null)
   const calDropRef   = useRef<HTMLDivElement>(null)
+  const locationRef  = useRef<HTMLInputElement>(null)
+  const acRef        = useRef<unknown>(null)
 
   const isModal   = anchorRect === null
   const placement = anchorRect ? calcPlacement(anchorRect) : null
@@ -149,6 +151,51 @@ export function CalendarPopover({
   useEffect(() => {
     requestAnimationFrame(() => setVisible(true))
     setTimeout(() => titleRef.current?.focus(), 80)
+  }, [])
+
+  // Google Places Autocomplete — same pattern as AddEventSheet/EditEventSheet
+  useEffect(() => {
+    const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+    if (!key) return
+
+    function init() {
+      if (!locationRef.current) return
+      const g = (window as unknown as Record<string, unknown>).google as {
+        maps?: { places?: { Autocomplete: new (el: HTMLInputElement, opts: unknown) => {
+          addListener: (ev: string, fn: () => void) => void
+          getPlace:    () => { formatted_address?: string; name?: string }
+        } } }
+      } | undefined
+      if (!g?.maps?.places) return
+      acRef.current = new g.maps.places.Autocomplete(locationRef.current, {
+        types: ['geocode', 'establishment'],
+      })
+      ;(acRef.current as { addListener: (ev: string, fn: () => void) => void }).addListener('place_changed', () => {
+        const place = (acRef.current as { getPlace: () => { formatted_address?: string; name?: string } }).getPlace()
+        const addr  = place.formatted_address || place.name || ''
+        setField('location', addr)
+        if (locationRef.current) locationRef.current.value = addr
+      })
+    }
+
+    const g = (window as unknown as Record<string, unknown>).google as { maps?: { places?: unknown } } | undefined
+    if (g?.maps?.places) {
+      init()
+    } else {
+      const existing = document.getElementById('gmaps-script')
+      if (!existing) {
+        const s = document.createElement('script')
+        s.id    = 'gmaps-script'
+        s.src   = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`
+        s.async = true
+        s.onload = init
+        document.head.appendChild(s)
+      } else {
+        existing.addEventListener('load', init, { once: true })
+      }
+    }
+    return () => { acRef.current = null }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Main popover outside-click — ignore clicks inside any child dropdown
@@ -504,7 +551,14 @@ export function CalendarPopover({
           {/* Location */}
           <div style={rowStyle}>
             <MapPin size={16} color={MUTED} style={{ flexShrink: 0 }} />
-            <input type="text" placeholder="Location" value={form.location} onChange={e => setField('location', e.target.value)} style={{ ...inputStyle, flex: 1 }} />
+            <input
+              ref={locationRef}
+              type="text"
+              placeholder="Location"
+              defaultValue={form.location}
+              onChange={e => setField('location', e.target.value)}
+              style={{ ...inputStyle, flex: 1 }}
+            />
           </div>
 
           {/* Description */}
