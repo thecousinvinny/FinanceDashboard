@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { $fc, $fk } from '@/lib/utils'
 
 export interface DayPoint {
@@ -14,9 +14,6 @@ export interface DayPoint {
 export function SparkChart({ points }: { points: DayPoint[] }) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const expPathRef   = useRef<SVGPathElement>(null)
-  const incPathRef   = useRef<SVGPathElement>(null)
-  const subPathRef   = useRef<SVGPathElement>(null)
 
   const W = 300, H = 64, n = points.length
   if (n === 0) return null
@@ -51,35 +48,8 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
   const totalInc = incVals[n - 1] ?? 0
   const totalSub = subVals[n - 1] ?? 0
 
-  // Derive a key that changes when real data arrives or refreshes
+  // Changes when real data arrives — used to restart the clip animation
   const animKey = `${n}-${Math.round(totalExp + totalInc)}`
-
-  // JS-driven draw animation — getTotalLength() avoids the vectorEffect/pathLength mismatch
-  useEffect(() => {
-    if (n === 0) return
-    const entries: [React.RefObject<SVGPathElement | null>, number][] = [
-      [incPathRef, 0],
-      [expPathRef, 50],
-      ...(totalSub > 0 ? [[subPathRef, 100]] as [React.RefObject<SVGPathElement | null>, number][] : []),
-    ]
-    entries.forEach(([ref, delayMs]) => {
-      const path = ref.current
-      if (!path) return
-      const len = path.getTotalLength()
-      path.style.strokeDasharray  = `${len}`
-      path.style.strokeDashoffset = `${len}`
-      path.style.transition = 'none'
-      // getComputedStyle flushes pending CSS — getBoundingClientRect only forces layout,
-      // not style recalculation, so WebKit won't register the dashoffset change otherwise
-      void getComputedStyle(path).strokeDashoffset
-      // Double rAF: first frame paints the hidden state, second starts the transition
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        path.style.transition       = `stroke-dashoffset 0.9s ease-out ${delayMs}ms`
-        path.style.strokeDashoffset = '0'
-      }))
-    })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [animKey])
 
   function pickIdx(clientX: number) {
     const rect = containerRef.current?.getBoundingClientRect()
@@ -120,98 +90,95 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
         </div>
       </div>
 
-      <div
-        ref={containerRef}
-        className="h-16 w-full"
-        onMouseMove={e => pickIdx(e.clientX)}
-        onMouseLeave={() => setHoverIdx(null)}
-        onTouchMove={e => { e.preventDefault(); pickIdx(e.touches[0].clientX) }}
-        onTouchEnd={() => setHoverIdx(null)}
-      >
-        <svg viewBox="0 0 300 64" className="w-full h-full" preserveAspectRatio="none" overflow="visible">
-          <defs>
-            <linearGradient id="inc-grad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#4ADE80" stopOpacity="0.22"/>
-              <stop offset="100%" stopColor="#4ADE80" stopOpacity="0"/>
-            </linearGradient>
-            <linearGradient id="exp-grad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#E8C46B" stopOpacity="0.22"/>
-              <stop offset="100%" stopColor="#E8C46B" stopOpacity="0"/>
-            </linearGradient>
-            <linearGradient id="sub-grad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="rgba(255,255,255,0.18)"/>
-              <stop offset="100%" stopColor="rgba(255,255,255,0)"/>
-            </linearGradient>
-          </defs>
+      {/*
+        key={animKey} remounts this div when data changes, restarting the CSS animation.
+        clip-path: inset(0 X% 0 0) clips from the right — animating X from 100→0
+        reveals the chart left-to-right. Pure CSS, no path length math.
+      */}
+      <div key={animKey} style={{ animation: 'spark-clip-reveal 0.9s ease-out forwards' }}>
+        <div
+          ref={containerRef}
+          className="h-16 w-full"
+          onMouseMove={e => pickIdx(e.clientX)}
+          onMouseLeave={() => setHoverIdx(null)}
+          onTouchMove={e => { e.preventDefault(); pickIdx(e.touches[0].clientX) }}
+          onTouchEnd={() => setHoverIdx(null)}
+        >
+          <svg viewBox="0 0 300 64" className="w-full h-full" preserveAspectRatio="none" overflow="visible">
+            <defs>
+              <linearGradient id="inc-grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#4ADE80" stopOpacity="0.22"/>
+                <stop offset="100%" stopColor="#4ADE80" stopOpacity="0"/>
+              </linearGradient>
+              <linearGradient id="exp-grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#E8C46B" stopOpacity="0.22"/>
+                <stop offset="100%" stopColor="#E8C46B" stopOpacity="0"/>
+              </linearGradient>
+              <linearGradient id="sub-grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgba(255,255,255,0.18)"/>
+                <stop offset="100%" stopColor="rgba(255,255,255,0)"/>
+              </linearGradient>
+            </defs>
 
-          {/* Area fills — keyed so CSS fade restarts when data changes */}
-          <g key={animKey}>
-            <path d={buildArea(expVals)} fill="url(#exp-grad)" style={{ animation: 'spark-fade 0.5s ease 0.1s both' }}/>
-            <path d={buildArea(incVals)} fill="url(#inc-grad)" style={{ animation: 'spark-fade 0.5s ease 0s both' }}/>
-            {totalSub > 0 && <path d={buildArea(subVals)} fill="url(#sub-grad)" style={{ animation: 'spark-fade 0.5s ease 0.2s both' }}/>}
-          </g>
-          {/* Stroke paths — JS-animated via getTotalLength() to sidestep vectorEffect/pathLength mismatch */}
-          <path ref={expPathRef} d={buildPath(expVals)} fill="none" stroke="#E8C46B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
-          <path ref={incPathRef} d={buildPath(incVals)} fill="none" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
-          {totalSub > 0 && (
-            <path ref={subPathRef} d={buildPath(subVals)} fill="none" stroke="rgba(255,255,255,0.65)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
-          )}
+            <path d={buildArea(expVals)} fill="url(#exp-grad)"/>
+            <path d={buildArea(incVals)} fill="url(#inc-grad)"/>
+            {totalSub > 0 && <path d={buildArea(subVals)} fill="url(#sub-grad)"/>}
+            <path d={buildPath(expVals)} fill="none" stroke="#E8C46B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
+            <path d={buildPath(incVals)} fill="none" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
+            {totalSub > 0 && (
+              <path d={buildPath(subVals)} fill="none" stroke="rgba(255,255,255,0.65)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
+            )}
 
-          {hoverIdx !== null && (
-            <>
-              <line
-                x1={toX(hoverIdx)} y1={0} x2={toX(hoverIdx)} y2={H}
-                stroke="rgba(255,255,255,0.18)" strokeWidth="1"
-              />
-              <circle cx={toX(hoverIdx)} cy={toY(expVals[hoverIdx])} r="2.5" fill="#E8C46B"/>
-              <circle cx={toX(hoverIdx)} cy={toY(incVals[hoverIdx])} r="2.5" fill="#4ADE80"/>
-              {totalSub > 0 && (
-                <circle cx={toX(hoverIdx)} cy={toY(subVals[hoverIdx])} r="2.5" fill="rgba(255,255,255,0.8)"/>
-              )}
-            </>
-          )}
-        </svg>
-      </div>
+            {hoverIdx !== null && (
+              <>
+                <line x1={toX(hoverIdx)} y1={0} x2={toX(hoverIdx)} y2={H} stroke="rgba(255,255,255,0.18)" strokeWidth="1"/>
+                <circle cx={toX(hoverIdx)} cy={toY(expVals[hoverIdx])} r="2.5" fill="#E8C46B"/>
+                <circle cx={toX(hoverIdx)} cy={toY(incVals[hoverIdx])} r="2.5" fill="#4ADE80"/>
+                {totalSub > 0 && <circle cx={toX(hoverIdx)} cy={toY(subVals[hoverIdx])} r="2.5" fill="rgba(255,255,255,0.8)"/>}
+              </>
+            )}
+          </svg>
+        </div>
 
-      {/* Sparse absolute-positioned x-axis labels — no squish on any month length */}
-      <div className="relative mt-1" style={{ height: 12 }}>
-        {[...labelSet].sort((a, b) => a - b).map(i => {
-          const p      = points[i]
-          const isFirst = i === 0
-          const isLast  = i === n - 1
-          const pct    = n <= 1 ? 50 : (i / (n - 1)) * 100
-          return (
-            <span
-              key={i}
-              className={`absolute text-[8px] font-medium leading-none transition-colors ${
-                i === hoverIdx ? 'text-ink' : isLast ? 'text-gold' : 'text-ink-faint'
-              }`}
-              style={{
-                fontFamily: "var(--font-big-shoulders)",
-                ...(isFirst
-                  ? { left: 0 }
-                  : isLast
-                  ? { right: 0 }
-                  : { left: `${pct}%`, transform: 'translateX(-50%)' }),
-              }}
-            >
-              {p.day}
-            </span>
-          )
-        })}
-        {/* Show hovered day label even if not a landmark */}
-        {hoverIdx !== null && !labelSet.has(hoverIdx) && (() => {
-          const p   = points[hoverIdx]
-          const pct = (hoverIdx / (n - 1)) * 100
-          return (
-            <span
-              className="absolute text-[8px] font-medium leading-none text-ink"
-              style={{ fontFamily: "var(--font-big-shoulders)", left: `${pct}%`, transform: 'translateX(-50%)' }}
-            >
-              {p.day}
-            </span>
-          )
-        })()}
+        {/* Sparse absolute-positioned x-axis labels — no squish on any month length */}
+        <div className="relative mt-1" style={{ height: 12 }}>
+          {[...labelSet].sort((a, b) => a - b).map(i => {
+            const p       = points[i]
+            const isFirst = i === 0
+            const isLast  = i === n - 1
+            const pct     = n <= 1 ? 50 : (i / (n - 1)) * 100
+            return (
+              <span
+                key={i}
+                className={`absolute text-[8px] font-medium leading-none transition-colors ${
+                  i === hoverIdx ? 'text-ink' : isLast ? 'text-gold' : 'text-ink-faint'
+                }`}
+                style={{
+                  fontFamily: "var(--font-big-shoulders)",
+                  ...(isFirst
+                    ? { left: 0 }
+                    : isLast
+                    ? { right: 0 }
+                    : { left: `${pct}%`, transform: 'translateX(-50%)' }),
+                }}
+              >
+                {p.day}
+              </span>
+            )
+          })}
+          {hoverIdx !== null && !labelSet.has(hoverIdx) && (() => {
+            const p   = points[hoverIdx]
+            const pct = (hoverIdx / (n - 1)) * 100
+            return (
+              <span
+                className="absolute text-[8px] font-medium leading-none text-ink"
+                style={{ fontFamily: "var(--font-big-shoulders)", left: `${pct}%`, transform: 'translateX(-50%)' }}
+              >
+                {p.day}
+              </span>
+            )
+          })()}
+        </div>
       </div>
     </div>
   )
