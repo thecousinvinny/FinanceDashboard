@@ -119,6 +119,22 @@ export default function SettingsPage() {
       .finally(() => setCalsLoading(false))
   }, [calOpen, googleCals.length])
 
+  const anyPickerOpen = defaultCardOpen || defaultBankOpen || defaultCatOpen || defaultBillingOpen
+
+  useEffect(() => {
+    if (!anyPickerOpen) return
+    const scrollY = window.scrollY
+    document.body.style.position = 'fixed'
+    document.body.style.top      = `-${scrollY}px`
+    document.body.style.width    = '100%'
+    return () => {
+      document.body.style.position = ''
+      document.body.style.top      = ''
+      document.body.style.width    = ''
+      window.scrollTo(0, scrollY)
+    }
+  }, [anyPickerOpen])
+
   function selectTheme(t: Theme) { setTheme(t); applyTheme(t) }
 
   function selectIconMode(m: IconColorMode) { setIconMode(m); setIconColorMode(m) }
