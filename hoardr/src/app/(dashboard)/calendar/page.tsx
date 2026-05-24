@@ -1047,8 +1047,8 @@ export default function CalendarPage() {
                             const isPast       = ds < todayStr
                             const allEvs       = monthVisibleMap[ds] ?? []
                             const singleEvs    = allEvs.filter(ev => !ev.endDate)
-                            const allDayEvs    = singleEvs.filter(ev => (ev.type === 'google') && !ev.amount)
-                            const timedEvs     = singleEvs.filter(ev => !((ev.type === 'google') && !ev.amount))
+                            const allDayEvs    = singleEvs.filter(ev => ev.type !== 'google' || !ev.amount)
+                            const timedEvs     = singleEvs.filter(ev => ev.type === 'google' && !!ev.amount)
                             const shownAllDay  = Math.min(allDayEvs.length, 2)
                             const shownTimed   = Math.min(timedEvs.length, Math.max(0, 4 - shownAllDay))
                             const overflow     = singleEvs.length - shownAllDay - shownTimed
@@ -1058,7 +1058,7 @@ export default function CalendarPage() {
                                 ref={el => { if (el) monthCellRefs.current.set(ds, el); else monthCellRefs.current.delete(ds) }}
                                 onDoubleClick={e => { navigator.vibrate?.(6); if (calView === 'month') openCreatePopover(e.currentTarget.getBoundingClientRect(), ds) }}
                                 className="group"
-                                style={{ minHeight: 140, borderRight: ci < 6 ? '1px solid var(--color-grid-border)' : 'none', padding: '5px 0 4px', cursor: 'pointer', display: 'flex', flexDirection: 'column', background: isToday ? 'rgba(201,168,76,0.05)' : '#0d0d0d', position: 'relative' }}
+                                style={{ minHeight: 140, borderRight: ci < 6 ? '1px solid var(--color-grid-border)' : 'none', padding: '5px 0 4px', cursor: 'pointer', display: 'flex', flexDirection: 'column', background: isToday ? 'rgba(201,168,76,0.05)' : 'var(--color-bg-base)', position: 'relative' }}
                               >
                                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none" style={{ background: 'rgb(var(--rgb-ink) / 0.03)' }} />
                                 <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-100 pointer-events-none flex items-center justify-center" style={{ width: 16, height: 16, color: 'rgb(var(--rgb-ink) / 0.28)', fontSize: 15, lineHeight: 1 }}>+</div>
@@ -1115,7 +1115,7 @@ export default function CalendarPage() {
                                         <div
                                           key={ei}
                                           onClick={ev.type === 'google' && ev.id ? (e) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), ev, ds) } : undefined}
-                                          style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 2, height: 18, overflow: 'hidden', flexShrink: 0, background: 'var(--color-bg-elevated)', borderRadius: 3, opacity: 0.9, cursor: (ev.type === 'google') && ev.id ? 'pointer' : 'default' }}
+                                          style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 2, height: 18, overflow: 'hidden', flexShrink: 0, background: 'transparent', borderRadius: 3, opacity: 0.9, cursor: (ev.type === 'google') && ev.id ? 'pointer' : 'default' }}
                                         >
                                           <div style={{ width: 3, height: '100%', borderRadius: '3px 0 0 3px', background: bar, flexShrink: 0 }} />
                                           <span style={{ fontSize: 10, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, paddingLeft: 4, paddingRight: 3 }}>
