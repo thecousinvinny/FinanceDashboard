@@ -127,11 +127,12 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
           className="px-5 overflow-y-auto"
           style={{ maxHeight: '65vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}
         >
-          {/* ── Financial event types ──────────────────────────────── */}
+          {/* ── Show on Calendar ───────────────────────────────────── */}
           <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">
             Show on Calendar
           </p>
           <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] overflow-hidden divide-y divide-white/[0.04] mb-5">
+            {/* Income & Subscriptions */}
             {TYPE_META.map(({ type, label, color }) => {
               const on = local.visibleTypes.includes(type)
               return (
@@ -148,61 +149,45 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
                 </button>
               )
             })}
-          </div>
-
-          {/* ── Google Calendars ───────────────────────────────────── */}
-          <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">
-            Google Calendars
-          </p>
-
-          {calsLoading ? (
-            <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] p-4 text-center text-ink-faint text-[13px]">
-              Loading your calendars…
-            </div>
-          ) : calsError ? (
-            <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] p-4 space-y-1">
-              <p className="text-[13px] font-medium text-ruby text-center">Calendar access not granted</p>
-              <p className="text-[11px] text-ink-faint text-center leading-relaxed">Go to <span className="text-ink">myaccount.google.com/permissions</span>, revoke Hoardr, then sign out and back in.</p>
-            </div>
-          ) : googleCals.length === 0 ? (
-            <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] p-4 text-center text-ink-faint text-[13px]">
-              No calendars found.
-            </div>
-          ) : (
-            <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] overflow-hidden divide-y divide-white/[0.04]">
-              {googleCals.map(cal => {
-                const on           = local.googleCalendarIds.includes(cal.id)
-                const activeColor  = local.googleCalendarColors?.[cal.id] ?? cal.backgroundColor
-                const isCustom     = !!local.googleCalendarColors?.[cal.id]
-                return (
-                  <div key={cal.id} className="flex items-center gap-3 px-4 py-3.5 select-none">
-                    {/* Color dot — click opens native color picker */}
-                    <label className="relative flex-shrink-0 cursor-pointer flex items-center" style={{ width: 20, height: 20 }} title="Change color">
-                      <span className="w-2.5 h-2.5 rounded-full block" style={{ background: activeColor }} />
-                      <input type="color" value={activeColor}
-                        onChange={e => setLocal(p => ({ ...p, googleCalendarColors: { ...(p.googleCalendarColors ?? {}), [cal.id]: e.target.value } }))}
-                        className="absolute inset-0 opacity-0 w-full h-full cursor-pointer p-0 border-0" />
-                    </label>
-                    {/* Reset custom color */}
-                    {isCustom && (
-                      <button onClick={() => setLocal(p => { const cols = { ...(p.googleCalendarColors ?? {}) }; delete cols[cal.id]; return { ...p, googleCalendarColors: cols } })}
-                        className="flex-shrink-0 text-[9px] text-ink-faint leading-none" title="Reset to default">✕</button>
-                    )}
-                    {/* Name — click toggles enable/disable */}
-                    <button onClick={() => toggleCal(cal.id)} className="flex-1 text-left min-w-0">
-                      <span className="text-[14px] font-medium text-ink truncate block">
-                        {cal.summary}{cal.primary ? ' (primary)' : ''}
-                      </span>
-                    </button>
-                    {/* Toggle */}
-                    <span onClick={() => toggleCal(cal.id)} className={`w-11 h-6 rounded-full relative transition-colors flex-shrink-0 cursor-pointer ${on ? 'gradient-gold' : 'bg-bg-base border border-white/10'}`}>
-                      <span className={`absolute top-0.5 left-0 w-5 h-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+            {/* Individual Google calendars */}
+            {calsLoading && (
+              <div className="px-4 py-3.5 text-[13px] text-ink-faint">Loading calendars…</div>
+            )}
+            {calsError && (
+              <div className="px-4 py-3 space-y-0.5">
+                <p className="text-[13px] font-medium text-ruby">Calendar access not granted</p>
+                <p className="text-[11px] text-ink-faint leading-relaxed">Sign out and back in to grant access.</p>
+              </div>
+            )}
+            {!calsLoading && !calsError && googleCals.map(cal => {
+              const on          = local.googleCalendarIds.includes(cal.id)
+              const activeColor = local.googleCalendarColors?.[cal.id] ?? cal.backgroundColor
+              const isCustom    = !!local.googleCalendarColors?.[cal.id]
+              return (
+                <div key={cal.id} className="flex items-center gap-2 px-4 py-3.5 select-none">
+                  {/* Color dot — tap opens native color picker */}
+                  <label className="relative flex-shrink-0 cursor-pointer flex items-center justify-center" style={{ width: 20, height: 20 }} title="Change color">
+                    <span className="w-2.5 h-2.5 rounded-full block" style={{ background: activeColor }} />
+                    <input type="color" value={activeColor}
+                      onChange={e => setLocal(p => ({ ...p, googleCalendarColors: { ...(p.googleCalendarColors ?? {}), [cal.id]: e.target.value } }))}
+                      className="absolute inset-0 opacity-0 w-full h-full cursor-pointer p-0 border-0" />
+                  </label>
+                  {isCustom && (
+                    <button onClick={() => setLocal(p => { const c = { ...(p.googleCalendarColors ?? {}) }; delete c[cal.id]; return { ...p, googleCalendarColors: c } })}
+                      className="flex-shrink-0 text-[9px] text-ink-faint leading-none">✕</button>
+                  )}
+                  <button onClick={() => toggleCal(cal.id)} className="flex-1 text-left min-w-0">
+                    <span className="text-[14px] font-medium text-ink truncate block">
+                      {cal.summary}{cal.primary ? ' (primary)' : ''}
                     </span>
-                  </div>
-                )
-              })}
-            </div>
-          )}
+                  </button>
+                  <span onClick={() => toggleCal(cal.id)} className={`w-11 h-6 rounded-full relative transition-colors flex-shrink-0 cursor-pointer ${on ? 'gradient-gold' : 'bg-bg-base border border-white/10'}`}>
+                    <span className={`absolute top-0.5 left-0 w-5 h-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+                  </span>
+                </div>
+              )
+            })}
+          </div>
 
           {/* ── Default Calendar ───────────────────────────────── */}
           {(() => {

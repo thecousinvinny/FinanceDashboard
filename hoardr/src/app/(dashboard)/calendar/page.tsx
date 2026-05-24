@@ -37,7 +37,7 @@ const DOT_COLOR: Record<EventType, string> = {
 const DETAIL_DOT: Record<EventType, string> = {
   income: '#22c55e', sub: '#f97316', google: '#4285F4',
 }
-const DEFAULT_PREFS: CalPrefs = { visibleTypes: ['sub', 'income', 'google'], googleCalendarIds: [] }
+const DEFAULT_PREFS: CalPrefs = { visibleTypes: ['sub', 'income'], googleCalendarIds: [] }
 
 // ── Pure helpers ──────────────────────────────────────────────────────────────
 function addMonths(y: number, m: number, delta: number): MonthKey {
@@ -222,7 +222,8 @@ export default function CalendarPage() {
   const monthCellRefs       = useRef(new Map<string, HTMLElement>())
   const monthGridTopSentRef = useRef<HTMLDivElement>(null)
   const monthGridBotSentRef = useRef<HTMLDivElement>(null)
-  const [hiddenTypes,  setHiddenTypes]  = useState<Set<EventType>>(new Set())
+  const [hiddenTypes,       setHiddenTypes]       = useState<Set<EventType>>(new Set())
+  const [hiddenGoogleCals,  setHiddenGoogleCals]  = useState<Set<string>>(new Set())
   const [typeColors,   setTypeColors]   = useState<Partial<Record<EventType, string>>>(() => {
     try { const s = localStorage.getItem('cal-type-colors'); return s ? JSON.parse(s) : {} } catch { return {} }
   })
@@ -444,7 +445,6 @@ export default function CalendarPage() {
 
   const visibleMap = useMemo(() => {
     const m: Record<string, CalEvent[]> = {}
-    // Collect googleEventIds from custom events so we can deduplicate google mirror entries
     const customGoogleIds = new Set<string>()
     for (const evs of Object.values(eventMap)) {
       for (const e of evs) { if (e.googleEventId) customGoogleIds.add(e.googleEventId) }
@@ -453,35 +453,41 @@ export default function CalendarPage() {
       const f = evs.filter(e => prefs.visibleTypes.includes(e.type))
       if (f.length) m[date] = f
     }
-    if (prefs.visibleTypes.includes('google'))
-      for (const [date, evs] of Object.entries(googleEvMap)) {
-        const deduped = evs.filter(e => !e.id || !customGoogleIds.has(e.id))
-        if (deduped.length) { if (!m[date]) m[date] = []; m[date].push(...deduped) }
-      }
+    // Always include Google events — already filtered by googleCalendarIds at fetch time
+    for (const [date, evs] of Object.entries(googleEvMap)) {
+      const deduped = evs.filter(e => !e.id || !customGoogleIds.has(e.id))
+      if (deduped.length) { if (!m[date]) m[date] = []; m[date].push(...deduped) }
+    }
     return m
   }, [eventMap, googleEvMap, prefs.visibleTypes])
 
   const monthVisibleMap = useMemo(() => {
-    if (hiddenTypes.size === 0) return visibleMap
+    if (hiddenTypes.size === 0 && hiddenGoogleCals.size === 0) return visibleMap
     const m: Record<string, CalEvent[]> = {}
     for (const [date, evs] of Object.entries(visibleMap)) {
-      const f = evs.filter(e => !hiddenTypes.has(e.type))
+      const f = evs.filter(e => {
+        if (hiddenTypes.has(e.type)) return false
+        if (e.type === 'google' && e.calendarId && hiddenGoogleCals.has(e.calendarId)) return false
+        return true
+      })
       if (f.length) m[date] = f
     }
     return m
-  }, [visibleMap, hiddenTypes])
+  }, [visibleMap, hiddenTypes, hiddenGoogleCals])
 
   // Multi-day events for the spanning-bar overlay in the Notion month grid
   const multiDayEvents = useMemo(() => {
     const result: Array<{ startDate: string; endDate: string; ev: CalEvent }> = []
-    if (!prefs.visibleTypes.includes('google') || hiddenTypes.has('google')) return result
     for (const [date, evs] of Object.entries(googleEvMap)) {
       for (const ev of evs) {
-        if (ev.endDate && ev.endDate > date) result.push({ startDate: date, endDate: ev.endDate, ev })
+        if (ev.endDate && ev.endDate > date) {
+          if (ev.calendarId && hiddenGoogleCals.has(ev.calendarId)) continue
+          result.push({ startDate: date, endDate: ev.endDate, ev })
+        }
       }
     }
     return result
-  }, [googleEvMap, prefs.visibleTypes, hiddenTypes])
+  }, [googleEvMap, hiddenGoogleCals])
 
   async function savePrefs(p: CalPrefs) {
     setPrefs(p)
@@ -907,10 +913,10 @@ export default function CalendarPage() {
                   {/* Calendar legend toggles */}
                   <div style={{ padding: '12px 10px 8px', flexShrink: 0 }}>
                     <p style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgb(var(--rgb-ink) / 0.25)', marginBottom: 8, fontFamily: 'var(--font-montserrat)' }}>CALENDARS</p>
+                    {/* Income & Subscriptions */}
                     {([
                       { type: 'income' as EventType, label: 'Income',        color: DOT_COLOR.income },
                       { type: 'sub'    as EventType, label: 'Subscriptions', color: DOT_COLOR.sub    },
-                      { type: 'google' as EventType, label: 'Google',        color: DOT_COLOR.google },
                     ].map(item => {
                       const hidden      = hiddenTypes.has(item.type)
                       const activeColor = typeColors[item.type] ?? item.color
@@ -936,6 +942,20 @@ export default function CalendarPage() {
                         </div>
                       )
                     }))}
+                    {/* Per-Google-calendar rows */}
+                    {googleCals.filter(c => prefs.googleCalendarIds.includes(c.id)).map(cal => {
+                      const hidden      = hiddenGoogleCals.has(cal.id)
+                      const activeColor = prefs.googleCalendarColors?.[cal.id] ?? cal.backgroundColor
+                      return (
+                        <div key={cal.id} style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: '3px 0' }}>
+                          <span style={{ width: 10, height: 10, borderRadius: '50%', background: hidden ? 'transparent' : activeColor, border: `1.5px solid ${activeColor}`, display: 'block', transition: 'all 0.15s', opacity: hidden ? 0.4 : 1, flexShrink: 0 }} />
+                          <button onClick={() => setHiddenGoogleCals(prev => { const next = new Set(prev); if (next.has(cal.id)) next.delete(cal.id); else next.add(cal.id); return next })}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', flex: 1, textAlign: 'left', padding: 0 }}>
+                            <span style={{ fontSize: 11, color: hidden ? 'rgb(var(--rgb-ink) / 0.25)' : 'rgb(var(--rgb-ink) / 0.7)', fontFamily: 'var(--font-montserrat)', fontWeight: 500, transition: 'color 0.15s' }}>{cal.summary}</span>
+                          </button>
+                        </div>
+                      )
+                    })}
                   </div>
 
                   <div style={{ flex: 1 }} />
