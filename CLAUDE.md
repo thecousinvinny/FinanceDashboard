@@ -48,18 +48,22 @@ Next.js 15 App Router with two route groups:
 
 ### Six tabs
 
-| Route | Feature |
-|---|---|
-| `/home` | Net worth hero, sparkline, upcoming bills, recent activity |
-| `/money` | 30-day bar chart hero + combined expense/income feed with filter |
-| `/plans` | 30-day renewal strip hero + Subscriptions/Wishlist toggle |
-| `/settings` | Accounts (Cards & Banks → /wallet, Categories → /settings/categories), Calendar (filters + Google calendars), Appearance (theme picker), App (sign out) |
-| `/calendar` | Compact month grid (phone) / Notion-style infinite grid with sidebar (iPad+) |
-| `/studio` | Commission desk — Pending → Approved → In Progress → Completed → Paid flow |
+| Route | Label | Feature |
+|---|---|---|
+| `/home` | Hoard | Net worth hero, sparkline, upcoming bills, recent activity |
+| `/money` | Out | 30-day bar chart hero + combined expense/income feed with filter |
+| `/in` | In | Income list + Cards + Banks (three-tab PillGroup) |
+| `/calendar` | Calendar | Compact month grid (phone) / Notion-style infinite grid with sidebar (iPad+) |
+| `/studio` | Studio | Commission desk — Pending → Approved → In Progress → Completed → Paid flow |
+| `/settings` | Settings | Appearance (theme, icon mode, week start), Calendar (filters + Google calendars), Defaults (default card), App (sign out) |
 
-`/wallet` (Card visuals 12 styles + 8 textures, Banks) is accessible via Settings → Accounts → Cards & Banks, not in the nav directly.
+`/wallet` and `/plans` both redirect to `/in` — they are not standalone tabs.
+
+**`/in` page** — three-tab PillGroup (`Income | Cards | Banks`). Income tab shows grouped income rows. Cards tab is the full wallet (card visuals, drag-to-reorder, card detail with spend stats). Banks tab lists bank accounts. Revenue streams and manual deposits are managed here via `RevenueStreamSheet` and `ManualDepositSheet`. `usePillSwipe` handles inter-tab swipes and cross-route edge-zone swipes (left edge → `/money`, right edge → `/calendar`).
 
 `/settings/categories` — category CRUD page. On load it probes for the `icon/color/tx_type` columns; if missing, shows a SQL migration prompt with a Retry button. After a successful probe, it upserts built-in categories (insert only, `ignoreDuplicates: true`), then runs a one-time batch UPDATE to apply curated icon/color to any rows still carrying the migration-default icon (`LayoutGrid`). This keeps user customizations intact after the first seeding pass.
+
+`/settings/defaults` — app defaults page: default card (written to `cards.is_default`), default bank, default expense category, and default billing cycle. All stored via `AppPrefs` in `src/lib/app-prefs.ts`.
 
 ### Data model
 
@@ -118,7 +122,7 @@ If a page has a second `useEffect` for detail data (e.g. Wallet card detail), us
 
 ### pageCache (`src/lib/page-cache.ts`)
 
-Module-level in-memory cache (survives tab switches within a session, clears on hard reload). TTL = 60 seconds. Used by all six tabs (Home, Money, Plans, Studio, Wallet, Calendar) to show stale data instantly while the background refresh runs.
+Module-level in-memory cache (survives tab switches within a session, clears on hard reload). TTL = 60 seconds. Used by all tabs (Home, Money, In, Studio, Calendar) to show stale data instantly while the background refresh runs.
 
 - `pageCache.get<T>(key)` — returns `T | undefined` (undefined if missing or expired)
 - `pageCache.set(key, data)` — call after a successful load, before `setLoading(false)`
@@ -148,20 +152,22 @@ All six tabs are wired to live Supabase. `src/lib/data/transactions.ts` still ex
 
 ### UI components (`src/components/`)
 
-- `nav/BottomNav.tsx` — 6-tab fixed nav, 72px tall; active state via `usePathname()`. Tab order (left→right): Home, Money, Plans, Calendar, Studio, Settings.
-- `nav/TabSwipeNavigator.tsx` — mounted once in `(dashboard)/layout.tsx`. Listens for swipes starting within 35px of the left or right screen edge; right-swipe → prev tab, left-swipe → next tab. Skips `/calendar` entirely (the calendar page manages its own panel navigation). Guards against sheets being open (`document.body.style.position === 'fixed'`). Constants: `EDGE_PX = 35`, `MIN_DX = 60`, `H_RATIO = 1.5`.
+- `nav/BottomNav.tsx` — 6-tab fixed nav, 72px tall; active state via `usePathname()`. Tab order (left→right): Hoard (`/home`), Out (`/money`), In (`/in`), Calendar, Studio, Settings. Active tab gets a 2px sliding gold bar at the **top** of the nav (transitions `left` with 280ms cubic-bezier) — no dot below the label.
+- `nav/TabSwipeNavigator.tsx` — mounted once in `(dashboard)/layout.tsx`. Listens for swipes starting within 35px of the left or right screen edge; right-swipe → prev tab, left-swipe → next tab. `EXCLUDED = ['/calendar', '/money', '/in']` — these three pages manage their own inter-tab/pill swipe logic and must not receive duplicate navigation. Guards against sheets (`document.body.style.position === 'fixed'`). Constants: `EDGE_PX = 35`, `MIN_DX = 60`, `H_RATIO = 1.5`.
+- `hooks/usePillSwipe.ts` — extracted swipe hook used by `/money` and `/in`. Handles both internal pill-tab switching (when multiple options remain) and cross-route edge-zone navigation when at the first or last pill. Args: `(tab, setTab, options, prevRoute, nextRoute, router)`. Same constants as `TabSwipeNavigator`. Guards against sheets (`body.style.position === 'fixed'`).
 - `ui/ThemeToggle.tsx` — exports `ThemeToggle` (gear icon button, kept for any standalone use) and `SignOutButton`. Imports all theme logic from `@/lib/theme` — do not re-define `Theme`, `THEMES`, `applyTheme`, or `readTheme` locally. The full theme picker UI now lives on the `/settings` page.
 - `ui/Pill.tsx` — exports `Pill` (single) and `PillGroup<T>` (segmented control with gold active state)
 - `ui/CategoryIcon.tsx` — exports `CategoryIcon` (React component) and `getCategoryIcon` (returns a `LucideIcon`). Checks `categoryMeta[name]` from `@/lib/category-meta` first (DB-backed custom icon/color); falls back to hardcoded defaults keyed by category name. Pass `className` to color the icon — use `text-gold` for expenses, `text-emerald` for income. When `categoryMeta` has a color for the category, it is applied via inline `style={{ color }}`, overriding the Tailwind className color.
 - `ui/SwipeToDelete.tsx` — swipe-left-to-delete with optional `onTap` (fires on clean tap when not swiped/revealed), `actionLabel`, and `actionBg` props. The `actionBg` default is `bg-ruby`; pass `'bg-amber-500'` for a cancel/restore action. Also accepts `onRight` / `rightLabel` / `rightBg` for a right-swipe confirm action (e.g. pay). Includes automatic press-scale animation (97%) and haptic feedback — no configuration needed.
 - `money/AddTransactionSheet.tsx` — canonical bottom sheet implementation; exports `CardOption` and `BankOption` interfaces used by all pickers
 - `money/EditTransactionSheet.tsx` — edit existing transaction; exports `TxEdits`
-- `plans/AddSubscriptionSheet.tsx` / `EditSubscriptionSheet.tsx` — exports `NewSub` / `SubEdits`
-- `plans/AddWishlistSheet.tsx` / `EditWishlistSheet.tsx` — exports `WishEdits`
-- `wallet/CardVisual.tsx` — renders a credit card from a `Card` prop using `CARD_STYLE_DEFS`; draws SVG texture overlay from `getTexturePattern` (defined inline); use this everywhere a card is displayed. Accepts optional `expenseCount?: number` and `subCount?: number` props — displayed bottom-left of the card face. The Wallet page computes these from the `expenses` and `subscriptions` tables (filtered by `card_id`) and passes them in.
+- `wallet/RevenueStreamSheet.tsx` — add/edit a recurring income stream (`RevenueStreamConfig`: name, amount, frequency, bankId, startDate, lastGenerated). Frequencies: `Weekly | Biweekly | Semimonthly | Monthly`. Auto-generates income rows on open based on `lastGenerated`. Exports `RevenueStreamConfig` and `Frequency`.
+- `wallet/ManualDepositSheet.tsx` — one-off income deposit sheet, used on the `/in` page.
+- `wallet/CardVisual.tsx` — renders a credit card from a `Card` prop using `CARD_STYLE_DEFS`; draws SVG texture overlay from `getTexturePattern` (defined inline); use this everywhere a card is displayed. Accepts optional `expenseCount?: number` and `subCount?: number` props — displayed bottom-left of the card face. The `/in` Cards tab computes these from the `expenses` and `subscriptions` tables (filtered by `card_id`) and passes them in.
 - `wallet/AddCardSheet.tsx` / `EditCardSheet.tsx` — card add/edit sheets with grouped 12-style color picker and 8-texture picker; `NewCard` and `CardEdits` interfaces both include `texture: CardTexture`
 - `calendar/RecurrencePicker.tsx` — bottom sheet for choosing/building a recurrence rule. Props: `{ open, date, value, onClose, onChange }`. Two views: preset list (7 options derived from the event date via `makePresets(dateStr)`) and a custom builder (frequency chips, interval stepper, weekday toggles, end condition). Renders at `z-[70]` above AddEventSheet/EditEventSheet (`z-[60]` backdrop).
 - `calendar/EditEventSheet.tsx` — edit an existing custom calendar event. Exports `EditableEvent` (the event to edit), `EventEdits` (the patch), and `RecurrenceScope = 'this' | 'following' | 'all'`. Two-step flow: a scope picker (shown only when `event.recurrenceRule` is set) then the full edit form matching AddEventSheet. Delete button opens a scope confirmation sheet at `z-[60]`/`z-[70]`.
+- `calendar/CalendarPopover.tsx` — anchored Notion-style popover for creating/editing events on large screens (iPad/Mac). Falls back to a centered modal when `anchorRect === null` (iPhone). `calcPlacement(rect)` tries right → left → bottom. Exports `PopoverFormData`, `defaultTimes()` (current time rounded to nearest 30 min, end = start+1h). **Time picker**: clickable formatted time buttons (`9:00 AM`) toggle an inline scrollable 30-min-increment list (48 items, auto-scrolls to selection) below the date/time row. Dates use a clickable label overlaid with a hidden `<input type="date">`. **Calendar dropdown**: `[dot] [name] [ChevronDown]` button opens a `position: fixed` dropdown at `z-201` above the popover, listing all `googleCals` with colored dots and a gold ✓ on the selected item. The dropdown closes without closing the popover.
 
 **Wallet sub stats** (Sub/Mo, Sub/Yr, All Time) are computed by cross-referencing actual paid expenses against subscription names via a case-insensitive `Set`: `new Set(cardSubs.map(s => s.name.toLowerCase()))`. The subscription name in the `subscriptions` table **must exactly match** the expense name (case-insensitive) for payments to be counted. A name mismatch silently drops those payments from the stats.
 - `home/SparkChart.tsx` — cumulative monthly sparkline with three series: `inc` (income), `exp` (non-sub expenses), `sub` (subscription payments). Values are **running totals from day 1 of the current month** — lines start at 0 on the 1st and climb to today. X-axis uses sparse absolute-positioned landmark labels (5 max) so it never squishes regardless of month length. `DayPoint { day, label, exp, inc, sub }` — all three fields are cumulative totals, not daily amounts.
@@ -184,10 +190,9 @@ Wrap each list row in `<SwipeToDelete onDelete={...} onTap={() => setEditTarget(
 
 ### Inline hero components
 
-`DailyBarChart` (Money page) and `RenewalStrip` (Plans page) are defined as named functions in the same file as their page — they are **not** extracted to `src/components/`. Both are computed entirely from already-loaded page state (no new queries). Follow this pattern for page-specific visualizations.
+`DailyBarChart` (Money page) is defined as a named function in the same file as its page — it is **not** extracted to `src/components/`. It is computed entirely from already-loaded page state (no new queries). Follow this pattern for page-specific visualizations.
 
 - `DailyBarChart`: 30-day net bars, `requestAnimationFrame` triggers CSS height transition, emerald/gold/zero coloring (not ruby), gold dot for today
-- `RenewalStrip`: 30-day horizontal scrollable chip strip, `scrollIntoView` on mount, ruby pips for renewals, tap-to-expand detail panel
 
 ### Design system
 
@@ -213,7 +218,7 @@ Fonts are CSS variables loaded via `next/font/google` in `src/app/layout.tsx`:
 
 Utility classes defined in `globals.css`: `gradient-gold` (`135deg, #F7DF9E → #D4AF37 → #A47F23`), `gradient-emerald`, `glass`, `glow-green/gold/ruby`, `tab-enter` (page transition animation), `skeleton`.
 
-Active nav items get `text-gold` and a `w-1 h-1 rounded-full bg-gold` dot below the label — no glow pill or drop-shadow. The pill toggle (Subscriptions/Wishlist, Cards/Banks, filter pills) uses `gradient-gold` for the active state and `bg-bg-surface border border-white/[0.06]` for inactive.
+Active nav items get `text-gold`; the active indicator is a `2px` sliding gold bar at the **top** of the nav bar (not a dot below). The pill toggle (Cards/Banks, filter pills) uses `gradient-gold` for the active state and `bg-bg-surface border border-white/[0.06]` for inactive.
 
 When writing hardcoded gold hex values (SVG stroke colors, inline styles) use `#D4AF37` — never the old amber `#f59e0b`.
 
@@ -238,12 +243,14 @@ When writing hardcoded gold hex values (SVG stroke colors, inline styles) use `#
 
 ### Icon color rules
 
-CategoryIcon `className` follows a three-way rule applied consistently across Home, Money, and Wallet:
+CategoryIcon `className` follows a three-way rule applied consistently across Home, Money, and `/in`:
 - Income → `text-emerald`
 - Subscription payment (expense name matches an active subscription name, case-insensitive) → `text-white/60`
 - Regular expense → `text-gold`
 
-Detection pattern (used in Home, Money, and Wallet): load `subscriptions.name` where `status = 'Active'` once on mount; build `new Set(names.map(n => n.toLowerCase()))`; check `subNames.has(tx.name.toLowerCase())`.
+Detection pattern (used in Home, Money, and `/in`): load `subscriptions.name` where `status = 'Active'` once on mount; build `new Set(names.map(n => n.toLowerCase()))`; check `subNames.has(tx.name.toLowerCase())`.
+
+This is the **semantic** icon coloring mode. When `IconColorMode` is `'category'`, the DB-stored color per category name is used instead (via `categoryMeta`). The Settings page has a toggle between the two modes.
 
 ### Recurring layout patterns
 
@@ -374,7 +381,7 @@ Every page root `<div>` should include `tab-enter` for the mount animation. Each
 - `STYLE_GROUPS` — 4 named groups (Neutral, Blue, Green, Warm) used to organize the color picker UI
 - Texture patterns are gold-tinted (`rgba(232,196,107,opacity)`) SVG `<pattern>` elements. `getTexturePattern` is defined inline in `CardVisual.tsx` (not in `cardStyles.ts`) since `.ts` files can't contain JSX.
 - `cards` DB table has a `texture text not null default 'none'` column (added by migration `20260512_cards_style_texture_fix.sql`). That migration also runs `alter column style type text` to remove any check constraint on style values.
-- `cards.sort_order int` controls card ordering. The Wallet page uses **long-press drag-to-reorder** (450ms timer, `haptic('tap')` on activation, native touch listeners with `passive: false` to block iOS scroll during drag, `flushSync` from `react-dom` for synchronous order updates, `sort_order` batch-written on touchend). There is no Reorder button — do not re-add one.
+- `cards.sort_order int` controls card ordering. The `/in` Cards tab uses **long-press drag-to-reorder** (450ms timer, `haptic('tap')` on activation, native touch listeners with `passive: false` to block iOS scroll during drag, `flushSync` from `react-dom` for synchronous order updates, `sort_order` batch-written on touchend). There is no Reorder button — do not re-add one.
 
 ### RRULE expansion (`src/lib/rrule.ts`)
 
@@ -414,6 +421,7 @@ CSS variables per theme live in `globals.css` under `:root`, `html.charcoal-slat
 - `categoryMeta: Record<string, CategoryMeta>` — module-level cache (name → `{ icon, color, tx_type }`). Populated by `setCategoryMeta(cats)` on the categories page load; consumed by `CategoryIcon` via a direct import. Not a React context — importing the object reference is enough.
 - `setCategoryMeta(cats)` — call after fetching or mutating categories to keep the cache current.
 - `BUILTIN_EXPENSE_CATEGORIES` / `BUILTIN_INCOME_CATEGORIES` — curated default icon/color per built-in category name; used for the initial DB seed.
+- `IconColorMode = 'category' | 'semantic'` — controls how `CategoryIcon` colors icons. `'category'` uses the DB-stored color per category name; `'semantic'` uses the income/sub/expense three-way rule. Persisted to `localStorage('icon-color-mode')`. Toggle on the Settings page. Use `getIconColorMode()` / `setIconColorMode(mode)` to read/write.
 
 ### Key utilities (`src/lib/utils.ts`)
 
@@ -430,6 +438,14 @@ CSS variables per theme live in `globals.css` under `:root`, `html.charcoal-slat
 - `clamp(v, min, max)` — numeric clamp
 - `cn(...classes)` — Tailwind className joiner
 - `haptic(style)` — triggers `navigator.vibrate()` where supported (Android); silent on iOS. Styles: `'tap'` (6ms), `'confirm'` (10ms), `'delete'` (double-pulse). SwipeToDelete calls this automatically; call it manually on other destructive or confirming actions.
+
+### App preferences (`src/lib/app-prefs.ts`)
+
+`AppPrefs { defaultBankId, defaultBankName, defaultExpCat, defaultBilling }` — persisted to `localStorage('hoardr-app-prefs')`. Use `getAppPrefs()` to read and `setAppPrefs(patch)` to write (patch-merges). Set from `/settings/defaults`. Consumed by Add sheets to pre-fill pickers.
+
+### Week-start preference (`src/lib/week-start.ts`)
+
+`getWeekStartsMonday(): boolean` / `setWeekStartsMonday(v)` — persisted to `localStorage('week-start-monday')`. Toggle on the Settings page. The calendar page reads this to decide whether the compact month grid starts on Sunday or Monday.
 
 ### PWA / home screen install
 
@@ -468,7 +484,7 @@ The rail uses `transform: translateX(-${viewIndex * 100}vw)` with a 320ms cubic-
 - Day row → Panel 1: left swipe on a day row sets `setViewIndex(1)`
 - Panel 1 → Panel 0: right swipe/drag sets `setViewIndex(0)`. Preserves list scroll (does NOT re-center today).
 
-**Edge-zone inter-tab swipe (Panel 0 only)**: `TabSwipeNavigator` is excluded from `/calendar`. Instead, Panel 0's root div has `onTouchStart={p0Start} onTouchEnd={p0End}` handlers that detect 35px edge-zone swipes and call `router.push()` to adjacent tabs (Studio ← Calendar → Plans). This mirrors `TabSwipeNavigator` behavior but runs inside the calendar component so it can be gated behind `viewIndex === 0` and not conflict with panel-switching swipes.
+**Edge-zone inter-tab swipe (Panel 0 only)**: `TabSwipeNavigator` is excluded from `/calendar`. Instead, Panel 0's root div has `onTouchStart={p0Start} onTouchEnd={p0End}` handlers that detect 35px edge-zone swipes and call `router.push()` to adjacent tabs (Studio ← Calendar → In). This mirrors `TabSwipeNavigator` behavior but runs inside the calendar component so it can be gated behind `viewIndex === 0` and not conflict with panel-switching swipes.
 
 **Scroll-to-today** — **never use `scrollIntoView`**: silently fails inside `position: fixed` overflow containers on iOS WKWebView. Use manual `scrollTop`:
 ```typescript
@@ -518,7 +534,7 @@ All three use the deferred-delete toast pattern so the user gets a 5-second Undo
 
 ### FAB pattern
 
-The add (`+`) button on tabs that have addable content (Home, Money, Plans, Wallet, Studio, Calendar) is a circular gold FAB fixed at `right: 16px, bottom: 80px` (8px above the 72px nav bar). The Settings page has no FAB. It is rendered outside the scrolling content `<div>` (after the closing tag) but inside the page's fragment wrapper. Calendar is the only tab with two FABs — one in Panel 0 (mobile split view, pre-fills `gridSel`) and one in Panel 1 (day detail, pre-fills `selectedDay`); both are conditionally rendered by panel. Styling:
+The add (`+`) button on tabs that have addable content (Home, Money, In, Studio, Calendar) is a circular gold FAB fixed at `right: 16px, bottom: 80px` (8px above the 72px nav bar). The Settings page has no FAB. It is rendered outside the scrolling content `<div>` (after the closing tag) but inside the page's fragment wrapper. Calendar is the only tab with two FABs — one in Panel 0 (mobile split view, pre-fills `gridSel`) and one in Panel 1 (day detail, pre-fills `selectedDay`); both are conditionally rendered by panel. Styling:
 
 ```tsx
 <button
