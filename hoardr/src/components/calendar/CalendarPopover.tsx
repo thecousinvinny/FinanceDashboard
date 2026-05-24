@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { X, MapPin, AlignLeft, RefreshCw, Clock, ChevronDown } from 'lucide-react'
+import { X, MapPin, AlignLeft, RefreshCw, Clock, ChevronDown, Calendar } from 'lucide-react'
 import type { GCalendar } from './CalendarSettingsSheet'
 
 export interface PopoverFormData {
@@ -95,13 +95,13 @@ function fmtDateLabel(dateStr: string): string {
 }
 
 export function defaultTimes(): { startTime: string; endTime: string } {
-  const now        = new Date()
-  const totalMins  = now.getHours() * 60 + now.getMinutes()
-  const rounded    = Math.round(totalMins / 30) * 30
-  const sm         = rounded % (24 * 60)
-  const sh         = Math.floor(sm / 60)
-  const smin       = sm % 60
-  const eh         = (sh + 1) % 24
+  const now       = new Date()
+  const totalMins = now.getHours() * 60 + now.getMinutes()
+  const rounded   = Math.round(totalMins / 30) * 30
+  const sm        = rounded % (24 * 60)
+  const sh        = Math.floor(sm / 60)
+  const smin      = sm % 60
+  const eh        = (sh + 1) % 24
   return {
     startTime: `${String(sh).padStart(2, '0')}:${String(smin).padStart(2, '0')}`,
     endTime:   `${String(eh).padStart(2, '0')}:${String(smin).padStart(2, '0')}`,
@@ -113,22 +113,28 @@ const TIMES  = Array.from({ length: 48 }, (_, i) =>
 )
 const ITEM_H = 36
 
+type DropRect = { top: number; left: number; width: number }
+
 export function CalendarPopover({
   anchorRect, mode, initial, googleCals, googleCalendarColors,
   onClose, onSave, onDelete, saving,
 }: Props) {
-  const [form, setForm]             = useState<PopoverFormData>(initial)
-  const [repeatOpen, setRepeatOpen] = useState(false)
-  const [startOpen, setStartOpen]   = useState(false)
-  const [endOpen, setEndOpen]       = useState(false)
+  const [form, setForm]               = useState<PopoverFormData>(initial)
+  const [repeatOpen, setRepeatOpen]   = useState(false)
+  const [startOpen, setStartOpen]     = useState(false)
+  const [endOpen, setEndOpen]         = useState(false)
+  const [startDropRect, setStartDropRect] = useState<DropRect | null>(null)
+  const [endDropRect,   setEndDropRect]   = useState<DropRect | null>(null)
   const [calDropOpen, setCalDropOpen] = useState(false)
-  const [calDropRect, setCalDropRect] = useState<{ top: number; left: number; width: number } | null>(null)
-  const [visible, setVisible]       = useState(false)
+  const [calDropRect, setCalDropRect] = useState<DropRect | null>(null)
+  const [visible, setVisible]         = useState(false)
 
   const titleRef     = useRef<HTMLInputElement>(null)
   const popRef       = useRef<HTMLDivElement>(null)
-  const startListRef = useRef<HTMLDivElement>(null)
-  const endListRef   = useRef<HTMLDivElement>(null)
+  const startBtnRef  = useRef<HTMLButtonElement>(null)
+  const endBtnRef    = useRef<HTMLButtonElement>(null)
+  const startDropRef = useRef<HTMLDivElement>(null)
+  const endDropRef   = useRef<HTMLDivElement>(null)
   const calBtnRef    = useRef<HTMLButtonElement>(null)
   const calDropRef   = useRef<HTMLDivElement>(null)
 
@@ -145,26 +151,46 @@ export function CalendarPopover({
     setTimeout(() => titleRef.current?.focus(), 80)
   }, [])
 
-  // Main outside-click — close popover unless clicking the calendar dropdown
+  // Main popover outside-click — ignore clicks inside any child dropdown
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       if (
         popRef.current && !popRef.current.contains(e.target as Node) &&
-        !calDropRef.current?.contains(e.target as Node)
+        !calDropRef.current?.contains(e.target as Node) &&
+        !startDropRef.current?.contains(e.target as Node) &&
+        !endDropRef.current?.contains(e.target as Node)
       ) onClose()
     }
     const t = setTimeout(() => document.addEventListener('mousedown', onDown), 60)
     return () => { clearTimeout(t); document.removeEventListener('mousedown', onDown) }
   }, [onClose])
 
-  // Calendar dropdown outside-click — close dropdown only
+  // Individual dropdown outside-clicks
+  useEffect(() => {
+    if (!startOpen) return
+    const onDown = (e: MouseEvent) => {
+      if (!startDropRef.current?.contains(e.target as Node) && !startBtnRef.current?.contains(e.target as Node))
+        setStartOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [startOpen])
+
+  useEffect(() => {
+    if (!endOpen) return
+    const onDown = (e: MouseEvent) => {
+      if (!endDropRef.current?.contains(e.target as Node) && !endBtnRef.current?.contains(e.target as Node))
+        setEndOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [endOpen])
+
   useEffect(() => {
     if (!calDropOpen) return
     const onDown = (e: MouseEvent) => {
-      if (
-        !calDropRef.current?.contains(e.target as Node) &&
-        !calBtnRef.current?.contains(e.target as Node)
-      ) setCalDropOpen(false)
+      if (!calDropRef.current?.contains(e.target as Node) && !calBtnRef.current?.contains(e.target as Node))
+        setCalDropOpen(false)
     }
     document.addEventListener('mousedown', onDown)
     return () => document.removeEventListener('mousedown', onDown)
@@ -173,13 +199,15 @@ export function CalendarPopover({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (calDropOpen) { setCalDropOpen(false); return }
+        if (startOpen)  { setStartOpen(false);  return }
+        if (endOpen)    { setEndOpen(false);    return }
+        if (calDropOpen){ setCalDropOpen(false); return }
         onClose()
       }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose, calDropOpen])
+  }, [onClose, startOpen, endOpen, calDropOpen])
 
   function setField<K extends keyof PopoverFormData>(key: K, val: PopoverFormData[K]) {
     setForm(f => {
@@ -193,24 +221,36 @@ export function CalendarPopover({
     })
   }
 
-  function openStartPicker() {
+  function openStartDrop() {
+    if (startOpen) { setStartOpen(false); return }
+    const r = startBtnRef.current?.getBoundingClientRect()
+    if (!r) return
+    setStartDropRect({ top: r.bottom, left: r.left, width: r.width })
     setStartOpen(true)
     setEndOpen(false)
+    const target = form.startTime
     setTimeout(() => {
-      if (!startListRef.current) return
-      const idx = TIMES.indexOf(form.startTime)
-      if (idx >= 0) startListRef.current.scrollTop = Math.max(0, idx * ITEM_H - startListRef.current.clientHeight / 2 + ITEM_H / 2)
-    }, 10)
+      const el = startDropRef.current
+      if (!el) return
+      const idx = TIMES.indexOf(target)
+      if (idx >= 0) el.scrollTop = Math.max(0, idx * ITEM_H - el.clientHeight / 2 + ITEM_H / 2)
+    }, 20)
   }
 
-  function openEndPicker() {
+  function openEndDrop() {
+    if (endOpen) { setEndOpen(false); return }
+    const r = endBtnRef.current?.getBoundingClientRect()
+    if (!r) return
+    setEndDropRect({ top: r.bottom, left: r.left, width: r.width })
     setEndOpen(true)
     setStartOpen(false)
+    const target = form.endTime
     setTimeout(() => {
-      if (!endListRef.current) return
-      const idx = TIMES.indexOf(form.endTime)
-      if (idx >= 0) endListRef.current.scrollTop = Math.max(0, idx * ITEM_H - endListRef.current.clientHeight / 2 + ITEM_H / 2)
-    }, 10)
+      const el = endDropRef.current
+      if (!el) return
+      const idx = TIMES.indexOf(target)
+      if (idx >= 0) el.scrollTop = Math.max(0, idx * ITEM_H - el.clientHeight / 2 + ITEM_H / 2)
+    }, 20)
   }
 
   function openCalDrop() {
@@ -224,8 +264,6 @@ export function CalendarPopover({
   const calColor  = googleCalendarColors?.[form.calendarId] ?? activeCal?.backgroundColor ?? '#4285F4'
   const canSave   = !!form.title.trim()
 
-  const endDateDiffers = !form.allDay && form.date !== form.endDate
-
   const inputStyle: React.CSSProperties = {
     background: 'none', border: 'none', outline: 'none',
     color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)',
@@ -233,26 +271,47 @@ export function CalendarPopover({
   }
 
   const rowStyle: React.CSSProperties = {
-    display: 'flex', alignItems: 'center', gap: 8,
+    display: 'flex', alignItems: 'center', gap: 10,
     padding: '10px 14px', borderBottom: `0.5px solid ${DIV}`,
   }
 
   const timeBtnStyle = (active: boolean): React.CSSProperties => ({
-    background: active ? 'rgba(201,168,76,0.12)' : 'rgba(255,255,255,0.05)',
+    background: active ? 'rgba(201,168,76,0.12)' : 'rgba(255,255,255,0.06)',
     border: 'none', cursor: 'pointer', borderRadius: 6,
     fontSize: 13, color: active ? GOLD : 'var(--color-ink)',
-    fontFamily: 'var(--font-montserrat)', padding: '3px 7px',
-    transition: 'background 0.1s', flexShrink: 0,
+    fontFamily: 'var(--font-montserrat)', padding: '4px 10px',
+    transition: 'background 0.1s', flexShrink: 0, fontWeight: active ? 600 : 400,
   })
 
-  const dateLabelWrapper: React.CSSProperties = {
+  const nativeTimeStyle: React.CSSProperties = {
+    flex: 1, background: 'rgba(255,255,255,0.06)', border: 'none', outline: 'none',
+    borderRadius: 6, padding: '4px 8px', fontSize: 13,
+    color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)',
+    colorScheme: 'dark', minWidth: 0,
+  }
+
+  const dateLabelWrap: React.CSSProperties = {
     position: 'relative', display: 'inline-flex', alignItems: 'center', flexShrink: 0,
   }
 
-  const hiddenDateInput: React.CSSProperties = {
+  const hiddenDate: React.CSSProperties = {
     position: 'absolute', inset: 0, opacity: 0,
     cursor: 'pointer', width: '100%', height: '100%', colorScheme: 'dark',
   }
+
+  const timeDropStyle = (rect: DropRect): React.CSSProperties => ({
+    position: 'fixed',
+    top: rect.top + 4,
+    left: rect.left,
+    minWidth: Math.max(rect.width, 130),
+    maxHeight: 200,
+    overflowY: 'auto',
+    background: BG,
+    border: `1px solid ${DIV}`,
+    borderRadius: 10,
+    zIndex: 202,
+    boxShadow: '0 4px 20px rgba(0,0,0,0.55)',
+  })
 
   const popoverStyle: React.CSSProperties = {
     position: 'fixed',
@@ -277,49 +336,67 @@ export function CalendarPopover({
 
   return (
     <>
-      {/* Backdrop (modal/iPhone mode) */}
+      {/* Backdrop (modal) */}
       {isModal && (
-        <div
-          style={{ position: 'fixed', inset: 0, zIndex: 199, background: 'rgba(0,0,0,0.5)', opacity: visible ? 1 : 0, transition: 'opacity 0.15s' }}
-          onMouseDown={onClose}
-        />
+        <div style={{ position: 'fixed', inset: 0, zIndex: 199, background: 'rgba(0,0,0,0.5)', opacity: visible ? 1 : 0, transition: 'opacity 0.15s' }}
+          onMouseDown={onClose} />
       )}
 
-      {/* Arrow (anchored mode) */}
+      {/* Arrow (anchored) */}
       {!isModal && placement && (() => {
-        const a = placement.arrowAt
-        const s = placement.side
+        const a = placement.arrowAt, s = placement.side
         const base: React.CSSProperties = { position: 'fixed', zIndex: 199, width: 0, height: 0 }
-        if (s === 'right') return <div style={{ ...base, top: placement.top + a - ARROW, left: placement.left - ARROW * 2, borderTop: `${ARROW}px solid transparent`, borderBottom: `${ARROW}px solid transparent`, borderRight: `${ARROW * 2}px solid ${BG}` }} />
-        if (s === 'left')  return <div style={{ ...base, top: placement.top + a - ARROW, left: placement.left + W, borderTop: `${ARROW}px solid transparent`, borderBottom: `${ARROW}px solid transparent`, borderLeft: `${ARROW * 2}px solid ${BG}` }} />
-        return <div style={{ ...base, top: placement.top - ARROW * 2, left: placement.left + a - ARROW, borderLeft: `${ARROW}px solid transparent`, borderRight: `${ARROW}px solid transparent`, borderBottom: `${ARROW * 2}px solid ${BG}` }} />
+        if (s === 'right') return <div style={{ ...base, top: placement.top + a - ARROW, left: placement.left - ARROW*2, borderTop: `${ARROW}px solid transparent`, borderBottom: `${ARROW}px solid transparent`, borderRight: `${ARROW*2}px solid ${BG}` }} />
+        if (s === 'left')  return <div style={{ ...base, top: placement.top + a - ARROW, left: placement.left + W, borderTop: `${ARROW}px solid transparent`, borderBottom: `${ARROW}px solid transparent`, borderLeft: `${ARROW*2}px solid ${BG}` }} />
+        return <div style={{ ...base, top: placement.top - ARROW*2, left: placement.left + a - ARROW, borderLeft: `${ARROW}px solid transparent`, borderRight: `${ARROW}px solid transparent`, borderBottom: `${ARROW*2}px solid ${BG}` }} />
       })()}
 
-      {/* Calendar dropdown — fixed above button, z-201 */}
+      {/* Start time dropdown — fixed, doesn't disturb popover layout */}
+      {startOpen && startDropRect && (
+        <div ref={startDropRef} style={timeDropStyle(startDropRect)}>
+          {TIMES.map(t => {
+            const sel = t === form.startTime
+            return (
+              <button key={t} onClick={() => { setField('startTime', t); setStartOpen(false) }}
+                style={{ display: 'block', width: '100%', height: ITEM_H, padding: '0 14px', background: sel ? 'rgba(201,168,76,0.1)' : 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 13, color: sel ? GOLD : 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', fontWeight: sel ? 600 : 400 }}>
+                {fmt12(t)}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {/* End time dropdown */}
+      {endOpen && endDropRect && (
+        <div ref={endDropRef} style={timeDropStyle(endDropRect)}>
+          {TIMES.map(t => {
+            const sel = t === form.endTime
+            return (
+              <button key={t} onClick={() => { setField('endTime', t); setEndOpen(false) }}
+                style={{ display: 'block', width: '100%', height: ITEM_H, padding: '0 14px', background: sel ? 'rgba(201,168,76,0.1)' : 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 13, color: sel ? GOLD : 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', fontWeight: sel ? 600 : 400 }}>
+                {fmt12(t)}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Calendar dropdown — fixed above row, z-201 */}
       {calDropOpen && calDropRect && (
-        <div
-          ref={calDropRef}
-          style={{
-            position: 'fixed',
-            bottom: window.innerHeight - calDropRect.top,
-            left: calDropRect.left,
-            minWidth: Math.max(calDropRect.width, 200),
-            background: BG,
-            border: `1px solid ${DIV}`,
-            borderRadius: 10,
-            overflow: 'hidden',
-            zIndex: 201,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.55)',
-          }}
-        >
+        <div ref={calDropRef} style={{
+          position: 'fixed',
+          bottom: window.innerHeight - calDropRect.top,
+          left: calDropRect.left,
+          minWidth: Math.max(calDropRect.width, 200),
+          background: BG, border: `1px solid ${DIV}`, borderRadius: 10,
+          overflow: 'hidden', zIndex: 201, boxShadow: '0 4px 20px rgba(0,0,0,0.55)',
+        }}>
           {calList.map(cal => {
-            const color      = googleCalendarColors?.[cal.id] ?? cal.backgroundColor
+            const color = googleCalendarColors?.[cal.id] ?? cal.backgroundColor
             const isSelected = cal.id === (form.calendarId || calList[0]?.id)
             return (
-              <button key={cal.id}
-                onClick={() => { setField('calendarId', cal.id); setCalDropOpen(false) }}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', width: '100%', background: isSelected ? 'rgba(201,168,76,0.08)' : 'none', border: 'none', cursor: 'pointer' }}
-              >
+              <button key={cal.id} onClick={() => { setField('calendarId', cal.id); setCalDropOpen(false) }}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', width: '100%', background: isSelected ? 'rgba(201,168,76,0.08)' : 'none', border: 'none', cursor: 'pointer' }}>
                 <span style={{ width: 10, height: 10, borderRadius: 5, background: color, flexShrink: 0 }} />
                 <span style={{ flex: 1, fontSize: 13, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', textAlign: 'left' }}>
                   {cal.summary}{cal.primary ? ' (primary)' : ''}
@@ -334,17 +411,12 @@ export function CalendarPopover({
       {/* Popover card */}
       <div ref={popRef} style={popoverStyle}>
 
-        {/* Title row */}
+        {/* Title */}
         <div style={{ padding: '13px 14px 11px', borderBottom: `0.5px solid ${DIV}`, display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-          <input
-            ref={titleRef}
-            type="text"
-            placeholder="Title"
-            value={form.title}
+          <input ref={titleRef} type="text" placeholder="Title" value={form.title}
             onChange={e => setField('title', e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && canSave && !saving) onSave(form) }}
-            style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 18, fontWeight: 500, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', caretColor: GOLD }}
-          />
+            style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 18, fontWeight: 500, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', caretColor: GOLD }} />
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: MUTED, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
             <X size={15} />
           </button>
@@ -353,80 +425,46 @@ export function CalendarPopover({
         {/* Scrollable body */}
         <div style={{ flex: 1, overflowY: 'auto', overscrollBehavior: 'contain' }}>
 
-          {/* Date / time row */}
-          {form.allDay ? (
-            /* All-day: [start date] → [end date] */
+          {/* Date row */}
+          <div style={rowStyle}>
+            <Calendar size={16} color={MUTED} style={{ flexShrink: 0 }} />
+            {form.allDay ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+                <div style={dateLabelWrap}>
+                  <span style={{ fontSize: 13, color: 'var(--color-ink)', cursor: 'pointer', userSelect: 'none' }}>{fmtDateLabel(form.date)}</span>
+                  <input type="date" value={form.date} onChange={e => setField('date', e.target.value)} style={hiddenDate} />
+                </div>
+                <span style={{ color: MUTED, fontSize: 13 }}>→</span>
+                <div style={dateLabelWrap}>
+                  <span style={{ fontSize: 13, color: 'var(--color-ink)', cursor: 'pointer', userSelect: 'none' }}>{fmtDateLabel(form.endDate)}</span>
+                  <input type="date" value={form.endDate} onChange={e => setField('endDate', e.target.value)} style={hiddenDate} />
+                </div>
+              </div>
+            ) : (
+              <div style={dateLabelWrap}>
+                <span style={{ fontSize: 13, color: 'var(--color-ink)', cursor: 'pointer', userSelect: 'none' }}>{fmtDateLabel(form.date)}</span>
+                <input type="date" value={form.date} onChange={e => setField('date', e.target.value)} style={hiddenDate} />
+              </div>
+            )}
+          </div>
+
+          {/* Time row — hidden when all-day */}
+          {!form.allDay && (
             <div style={rowStyle}>
               <Clock size={16} color={MUTED} style={{ flexShrink: 0 }} />
-              <div style={dateLabelWrapper}>
-                <span style={{ fontSize: 13, color: 'var(--color-ink)', cursor: 'pointer', userSelect: 'none' }}>
-                  {fmtDateLabel(form.date)}
-                </span>
-                <input type="date" value={form.date} onChange={e => setField('date', e.target.value)} style={hiddenDateInput} />
-              </div>
-              <span style={{ color: MUTED, fontSize: 13 }}>→</span>
-              <div style={dateLabelWrapper}>
-                <span style={{ fontSize: 13, color: 'var(--color-ink)', cursor: 'pointer', userSelect: 'none' }}>
-                  {fmtDateLabel(form.endDate)}
-                </span>
-                <input type="date" value={form.endDate} onChange={e => setField('endDate', e.target.value)} style={hiddenDateInput} />
-              </div>
-            </div>
-          ) : (
-            /* Timed: [date] [clock] [start] → [end date if diff] [end] */
-            <div style={{ borderBottom: `0.5px solid ${DIV}` }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', flexWrap: 'wrap' }}>
-                <Clock size={16} color={MUTED} style={{ flexShrink: 0 }} />
-                <div style={dateLabelWrapper}>
-                  <span style={{ fontSize: 13, color: 'var(--color-ink)', cursor: 'pointer', userSelect: 'none' }}>
-                    {fmtDateLabel(form.date)}
-                  </span>
-                  <input type="date" value={form.date} onChange={e => setField('date', e.target.value)} style={hiddenDateInput} />
+              {isModal ? (
+                /* iPhone: native time inputs → iOS drum picker */
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+                  <input type="time" value={form.startTime} onChange={e => setField('startTime', e.target.value)} style={nativeTimeStyle} />
+                  <span style={{ color: MUTED, fontSize: 13, flexShrink: 0 }}>→</span>
+                  <input type="time" value={form.endTime} onChange={e => setField('endTime', e.target.value)} style={nativeTimeStyle} />
                 </div>
-                <button onClick={() => startOpen ? setStartOpen(false) : openStartPicker()} style={timeBtnStyle(startOpen)}>
-                  {fmt12(form.startTime)}
-                </button>
-                <span style={{ color: MUTED, fontSize: 13 }}>→</span>
-                {endDateDiffers && (
-                  <div style={dateLabelWrapper}>
-                    <span style={{ fontSize: 13, color: 'var(--color-ink)', cursor: 'pointer', userSelect: 'none' }}>
-                      {fmtDateLabel(form.endDate)}
-                    </span>
-                    <input type="date" value={form.endDate} onChange={e => setField('endDate', e.target.value)} style={hiddenDateInput} />
-                  </div>
-                )}
-                <button onClick={() => endOpen ? setEndOpen(false) : openEndPicker()} style={timeBtnStyle(endOpen)}>
-                  {fmt12(form.endTime)}
-                </button>
-              </div>
-              {/* Start time picker (inline expand) */}
-              {startOpen && (
-                <div ref={startListRef} style={{ maxHeight: 160, overflowY: 'auto', borderTop: `0.5px solid ${DIV}`, background: 'rgba(0,0,0,0.18)' }}>
-                  {TIMES.map(t => {
-                    const sel = t === form.startTime
-                    return (
-                      <button key={t}
-                        onClick={() => { setField('startTime', t); setStartOpen(false) }}
-                        style={{ display: 'block', width: '100%', height: ITEM_H, padding: '0 14px 0 42px', background: sel ? 'rgba(201,168,76,0.1)' : 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 13, color: sel ? GOLD : 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', fontWeight: sel ? 600 : 400 }}>
-                        {fmt12(t)}
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-              {/* End time picker (inline expand) */}
-              {endOpen && (
-                <div ref={endListRef} style={{ maxHeight: 160, overflowY: 'auto', borderTop: `0.5px solid ${DIV}`, background: 'rgba(0,0,0,0.18)' }}>
-                  {TIMES.map(t => {
-                    const sel = t === form.endTime
-                    return (
-                      <button key={t}
-                        onClick={() => { setField('endTime', t); setEndOpen(false) }}
-                        style={{ display: 'block', width: '100%', height: ITEM_H, padding: '0 14px 0 42px', background: sel ? 'rgba(201,168,76,0.1)' : 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 13, color: sel ? GOLD : 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', fontWeight: sel ? 600 : 400 }}>
-                        {fmt12(t)}
-                      </button>
-                    )
-                  })}
+              ) : (
+                /* Desktop: custom dropdown (fixed-position, won't push calendar out of view) */
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+                  <button ref={startBtnRef} onClick={openStartDrop} style={timeBtnStyle(startOpen)}>{fmt12(form.startTime)}</button>
+                  <span style={{ color: MUTED, fontSize: 13, flexShrink: 0 }}>→</span>
+                  <button ref={endBtnRef} onClick={openEndDrop} style={timeBtnStyle(endOpen)}>{fmt12(form.endTime)}</button>
                 </div>
               )}
             </div>
@@ -437,18 +475,15 @@ export function CalendarPopover({
             <span style={{ flex: 1, fontSize: 13, color: 'var(--color-ink)' }}>All day</span>
             <button
               onClick={() => { setField('allDay', !form.allDay); setStartOpen(false); setEndOpen(false) }}
-              style={{ width: 44, height: 24, borderRadius: 12, padding: '2px', background: form.allDay ? GOLD : 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', transition: 'background 0.15s', display: 'flex', alignItems: 'center', justifyContent: form.allDay ? 'flex-end' : 'flex-start', flexShrink: 0 }}
-            >
+              style={{ width: 44, height: 24, borderRadius: 12, padding: '2px', background: form.allDay ? GOLD : 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', transition: 'background 0.15s', display: 'flex', alignItems: 'center', justifyContent: form.allDay ? 'flex-end' : 'flex-start', flexShrink: 0 }}>
               <span style={{ width: 20, height: 20, borderRadius: 10, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
             </button>
           </div>
 
           {/* Repeat */}
           <div style={{ borderBottom: `0.5px solid ${DIV}` }}>
-            <button
-              onClick={() => setRepeatOpen(o => !o)}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', width: '100%', background: 'none', border: 'none', cursor: 'pointer' }}
-            >
+            <button onClick={() => setRepeatOpen(o => !o)}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', width: '100%', background: 'none', border: 'none', cursor: 'pointer' }}>
               <RefreshCw size={16} color={MUTED} style={{ flexShrink: 0 }} />
               <span style={{ flex: 1, fontSize: 13, color: form.recurrenceRule ? 'var(--color-ink)' : MUTED, fontFamily: 'var(--font-montserrat)', textAlign: 'left' }}>
                 {repeatLabel(form.recurrenceRule)}
@@ -457,8 +492,7 @@ export function CalendarPopover({
             {repeatOpen && (
               <div style={{ borderTop: `0.5px solid ${DIV}` }}>
                 {REPEAT_OPTIONS.map(opt => (
-                  <button key={opt.value}
-                    onClick={() => { setField('recurrenceRule', opt.value); setRepeatOpen(false) }}
+                  <button key={opt.value} onClick={() => { setField('recurrenceRule', opt.value); setRepeatOpen(false) }}
                     style={{ display: 'block', width: '100%', padding: '8px 14px 8px 40px', background: form.recurrenceRule === opt.value ? 'rgba(201,168,76,0.08)' : 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 13, color: form.recurrenceRule === opt.value ? GOLD : 'var(--color-ink)', fontFamily: 'var(--font-montserrat)' }}>
                     {opt.label}
                   </button>
@@ -476,22 +510,14 @@ export function CalendarPopover({
           {/* Description */}
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', borderBottom: `0.5px solid ${DIV}` }}>
             <AlignLeft size={16} color={MUTED} style={{ flexShrink: 0, marginTop: 2 }} />
-            <textarea
-              placeholder="Description"
-              value={form.notes}
-              onChange={e => setField('notes', e.target.value)}
-              rows={2}
-              style={{ ...inputStyle, flex: 1, resize: 'none', lineHeight: 1.5 }}
-            />
+            <textarea placeholder="Description" value={form.notes} onChange={e => setField('notes', e.target.value)}
+              rows={2} style={{ ...inputStyle, flex: 1, resize: 'none', lineHeight: 1.5 }} />
           </div>
 
           {/* Calendar selector */}
           {calList.length > 0 && (
-            <button
-              ref={calBtnRef}
-              onClick={openCalDrop}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', width: '100%', background: 'none', border: 'none', cursor: calList.length > 1 ? 'pointer' : 'default' }}
-            >
+            <button ref={calBtnRef} onClick={openCalDrop}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', width: '100%', background: 'none', border: 'none', cursor: calList.length > 1 ? 'pointer' : 'default' }}>
               <span style={{ width: 10, height: 10, borderRadius: 5, background: calColor, flexShrink: 0 }} />
               <span style={{ flex: 1, fontSize: 13, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', textAlign: 'left' }}>
                 {activeCal?.summary ?? 'Calendar'}{activeCal?.primary ? ' (primary)' : ''}
@@ -508,11 +534,8 @@ export function CalendarPopover({
               Delete
             </button>
           )}
-          <button
-            onClick={() => canSave && !saving && onSave(form)}
-            disabled={!canSave || saving}
-            style={{ background: canSave ? GOLD : 'rgba(255,255,255,0.08)', border: 'none', cursor: canSave ? 'pointer' : 'default', color: canSave ? '#fff' : MUTED, fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-montserrat)', padding: '6px 18px', borderRadius: 8, transition: 'all 0.12s' }}
-          >
+          <button onClick={() => canSave && !saving && onSave(form)} disabled={!canSave || saving}
+            style={{ background: canSave ? GOLD : 'rgba(255,255,255,0.08)', border: 'none', cursor: canSave ? 'pointer' : 'default', color: canSave ? '#fff' : MUTED, fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-montserrat)', padding: '6px 18px', borderRadius: 8, transition: 'all 0.12s' }}>
             {saving ? 'Saving…' : mode === 'create' ? 'Create' : 'Save'}
           </button>
         </div>
