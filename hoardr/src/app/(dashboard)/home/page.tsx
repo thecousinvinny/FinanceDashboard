@@ -446,11 +446,11 @@ export default function HomePage() {
       <div className="fixed flex flex-col gap-4" style={{ right: 16, bottom: 148, zIndex: 41, width: 104 }}>
         <button className="w-full" onClick={() => { setFabOpen(false); setWishlistOpen(true) }}
           style={{ animation: 'fab-item-in 0.32s cubic-bezier(0.34,1.56,0.64,1) 0.06s both' }}>
-          <span className="block w-full text-center text-[13px] font-semibold text-gold bg-bg-surface border border-white/[0.1] rounded-full py-2 shadow-lg">Wishlist</span>
+          <span className="block w-full text-center text-[13px] font-semibold text-white gradient-gold rounded-full py-2 shadow-lg">Wishlist</span>
         </button>
         <button className="w-full" onClick={() => { setFabOpen(false); setExpenseOpen(true) }}
           style={{ animation: 'fab-item-in 0.32s cubic-bezier(0.34,1.56,0.64,1) 0s both' }}>
-          <span className="block w-full text-center text-[13px] font-semibold text-gold bg-bg-surface border border-white/[0.1] rounded-full py-2 shadow-lg">Expense</span>
+          <span className="block w-full text-center text-[13px] font-semibold text-white gradient-gold rounded-full py-2 shadow-lg">Expense</span>
         </button>
       </div>
     )}
