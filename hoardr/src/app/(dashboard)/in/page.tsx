@@ -7,13 +7,13 @@ import { PillGroup } from '@/components/ui/Pill'
 import { AddCardSheet, type NewCard } from '@/components/wallet/AddCardSheet'
 import { AddBankSheet, type NewBank } from '@/components/wallet/AddBankSheet'
 import { RevenueStreamSheet, type RevenueStreamConfig } from '@/components/wallet/RevenueStreamSheet'
-import { ManualDepositSheet } from '@/components/wallet/ManualDepositSheet'
+import { ManualDepositSheet, type IncomeInitial } from '@/components/wallet/ManualDepositSheet'
 import { EditCardSheet, type CardEdits } from '@/components/wallet/EditCardSheet'
 import { CardVisual } from '@/components/wallet/CardVisual'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import type { Card, Bank } from '@/types'
-import { Banknote, ChevronRight, Coins, TrendingUp } from 'lucide-react'
+import { Banknote, ChevronRight, TrendingUp } from 'lucide-react'
 import { cn, $fd, $fk, fmtDate, haptic, groupByMonth } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
 import { useRouter } from 'next/navigation'
@@ -52,6 +52,7 @@ export default function InPage() {
   const [fabOpen,       setFabOpen]      = useState(false)
   const [streamOpen,    setStreamOpen]   = useState(false)
   const [incomeOpen,    setIncomeOpen]   = useState(false)
+  const [editIncome,    setEditIncome]   = useState<IncomeInitial | null>(null)
   const [editStream,    setEditStream]   = useState<RevenueStreamConfig | null>(null)
   const [revStreams,    setRevStreams]   = useState<RevenueStreamConfig[]>([])
   const [incomeList,    setIncomeList]   = useState<IncomeRow[]>([])
@@ -570,7 +571,7 @@ export default function InPage() {
                     </div>
                     <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
                       {(group.rows as IncomeRow[]).map(row => (
-                        <SwipeToDelete key={row.id} onDelete={() => handleDeleteIncome(row.id)}>
+                        <SwipeToDelete key={row.id} onDelete={() => handleDeleteIncome(row.id)} onTap={() => setEditIncome({ id: row.id, name: row.name, amount: row.amount, date: row.date, bank_id: row.bank_id })}>
                           <div className="flex items-center gap-3 px-4 py-3.5">
                             <div className="w-10 h-10 rounded-full bg-emerald/10 ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
                               <TrendingUp size={15} className="text-emerald" strokeWidth={1.75} />
@@ -648,7 +649,13 @@ export default function InPage() {
         banks={banks.map(b => ({ id: b.id, name: b.name }))}
         onDone={loadIncome}
         defaultBankId={getAppPrefs().defaultBankId}
-        mode="income"
+      />
+      <ManualDepositSheet
+        open={!!editIncome}
+        onClose={() => setEditIncome(null)}
+        banks={banks.map(b => ({ id: b.id, name: b.name }))}
+        onDone={loadIncome}
+        initial={editIncome}
       />
 
       <EditCardSheet

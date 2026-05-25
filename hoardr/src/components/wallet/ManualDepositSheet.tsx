@@ -6,17 +6,25 @@ import { cn, localToday, $fd } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
 import { createClient } from '@/lib/supabase/client'
 
+export interface IncomeInitial {
+  id:      string
+  name:    string
+  amount:  number
+  date:    string
+  bank_id: string | null
+}
+
 interface Props {
   open:           boolean
   onClose:        () => void
   banks:          { id: string; name: string }[]
   onDone:         () => void
   defaultBankId?: string | null
-  mode?:          'balance' | 'income'   // 'balance' = Initialize Balance (default), 'income' = Add Income
+  initial?:       IncomeInitial | null   // when set → edit mode
 }
 
-export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId, mode = 'balance' }: Props) {
-  const isIncome = mode === 'income'
+export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId, initial }: Props) {
+  const isEdit    = !!initial
   const supabase      = useMemo(() => createClient(), [])
   const sheetRef      = useRef<HTMLDivElement>(null)
   const dragStartY    = useRef<number | null>(null)
@@ -30,16 +38,26 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
 
   const banksRef     = useRef(banks)
   const defBankRef   = useRef(defaultBankId)
+  const initialRef   = useRef(initial)
   useEffect(() => { banksRef.current = banks }, [banks])
   useEffect(() => { defBankRef.current = defaultBankId }, [defaultBankId])
+  useEffect(() => { initialRef.current = initial }, [initial])
 
-  // Only reset when the sheet opens — not when `banks` reference changes mid-entry
+  // Only reset when the sheet opens — not when prop references change mid-entry
   useEffect(() => {
     if (!open) return
-    setLabel('')
-    setAmount('')
-    setBankId(defBankRef.current ?? banksRef.current[0]?.id ?? null)
-    setDate(localToday())
+    const ini = initialRef.current
+    if (ini) {
+      setLabel(ini.name)
+      setAmount(String(ini.amount))
+      setBankId(ini.bank_id)
+      setDate(ini.date)
+    } else {
+      setLabel('')
+      setAmount('')
+      setBankId(defBankRef.current ?? banksRef.current[0]?.id ?? null)
+      setDate(localToday())
+    }
   }, [open])
 
   // Body lock
@@ -91,22 +109,34 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
   const amt   = parseFloat(amount)
   const valid = date && !isNaN(amt) && amt > 0
 
-  async function handleAdd() {
+  async function handleSave() {
     if (!valid) return
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
     setSaving(true)
-    const { error } = await supabase.from('income').insert({
-      user_id: user.id,
-      name:    label.trim() || (isIncome ? 'Income' : 'Initial Balance'),
-      amount:  amt,
-      date,
-      source:  'Other',
-      bank_id: bankId ?? null,
-    })
-    setSaving(false)
-    if (error) { console.error('deposit insert error:', error); showToast('Failed to save — try again', { type: 'delete' }); return }
-    showToast(`${$fd(amt)} added`, { type: 'add' })
+    if (isEdit && initial) {
+      const { error } = await supabase.from('income').update({
+        name:    label.trim() || 'Income',
+        amount:  amt,
+        date,
+        bank_id: bankId ?? null,
+      }).eq('id', initial.id)
+      setSaving(false)
+      if (error) { console.error('income update error:', error); showToast('Failed to save — try again', { type: 'delete' }); return }
+      showToast('Income updated', { type: 'add' })
+    } else {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setSaving(false); return }
+      const { error } = await supabase.from('income').insert({
+        user_id: user.id,
+        name:    label.trim() || 'Income',
+        amount:  amt,
+        date,
+        source:  'Other',
+        bank_id: bankId ?? null,
+      })
+      setSaving(false)
+      if (error) { console.error('income insert error:', error); showToast('Failed to save — try again', { type: 'delete' }); return }
+      showToast(`${$fd(amt)} added`, { type: 'add' })
+    }
     onClose()
     onDone()
   }
@@ -128,10 +158,7 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
         </div>
 
         <div className="flex items-center justify-between px-5 mb-5">
-          <div>
-            <h2 className="text-[18px] font-bold text-ink">{isIncome ? 'Add Income' : 'Initialize Balance'}</h2>
-            {!isIncome && <p className="text-[11px] text-ink-muted mt-0.5">Add a deposit to reflect your actual funds</p>}
-          </div>
+          <h2 className="text-[18px] font-bold text-ink">{isEdit ? 'Edit Income' : 'Add Income'}</h2>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center">
             <X size={14} className="text-ink-muted" />
           </button>
@@ -143,7 +170,7 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
           {/* Label */}
           <div>
             <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Label</p>
-            <input type="text" value={label} onChange={e => setLabel(e.target.value)} placeholder={isIncome ? 'Venmo, Zelle, freelance…' : 'Initial Balance'}
+            <input type="text" value={label} onChange={e => setLabel(e.target.value)} placeholder="Venmo, Zelle, freelance…"
               className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40"/>
           </div>
 
@@ -182,7 +209,7 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
           <div>
             <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Date</p>
             <div className="overflow-hidden rounded-[14px]">
-              <input type="date" value={date} max={localToday()} onChange={e => setDate(e.target.value)}
+              <input type="date" value={date} onChange={e => setDate(e.target.value)}
                 className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink outline-none focus:border-gold/40"
                 style={{ colorScheme: 'dark' }}/>
             </div>
@@ -193,14 +220,14 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
             <div className="bg-bg-overlay border border-emerald/20 rounded-[14px] px-4 py-3.5 flex items-center gap-3">
               <Banknote size={18} className="text-emerald flex-shrink-0" strokeWidth={1.75} />
               <p className="text-[14px] font-semibold text-ink">
-                {$fd(amt)} added on {date}
+                {$fd(amt)} · {date}
               </p>
             </div>
           )}
 
-          <button onClick={handleAdd} disabled={!valid || saving}
+          <button onClick={handleSave} disabled={!valid || saving}
             className="w-full gradient-gold rounded-[14px] py-4 text-[15px] font-bold text-white disabled:opacity-40 transition-opacity">
-            {saving ? 'Adding…' : isIncome ? (valid ? `Add ${$fd(amt)}` : 'Add Income') : (valid ? `Add ${$fd(amt)} to Balance` : 'Add to Balance')}
+            {saving ? 'Saving…' : isEdit ? 'Save Changes' : (valid ? `Add ${$fd(amt)}` : 'Add Income')}
           </button>
         </div>
       </div>
