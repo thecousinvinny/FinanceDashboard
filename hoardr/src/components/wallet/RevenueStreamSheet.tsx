@@ -154,7 +154,7 @@ export function RevenueStreamSheet({ open, onClose, banks, onDone, initial }: Pr
       name:    trimmedName,
       amount:  amt,
       date,
-      source:  trimmedName,
+      source:  'Projects',
       bank_id: bankId ?? null,
     }))
     const { error } = await supabase.from('income').insert(rows)

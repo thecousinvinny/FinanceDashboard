@@ -53,7 +53,6 @@ export default function InPage() {
   const [streamOpen,    setStreamOpen]   = useState(false)
   const [incomeOpen,    setIncomeOpen]   = useState(false)
   const [editStream,    setEditStream]   = useState<RevenueStreamConfig | null>(null)
-  const [depositOpen,   setDepositOpen]  = useState(false)
   const [revStreams,    setRevStreams]   = useState<RevenueStreamConfig[]>([])
   const [incomeList,    setIncomeList]   = useState<IncomeRow[]>([])
   const [incomeLoading, setIncomeLoading] = useState(false)
@@ -512,21 +511,6 @@ export default function InPage() {
         {!loading && tab === 'Income' && (
           <div className="mx-4 mt-4 space-y-3">
 
-            {/* Initialize Balance */}
-            <button
-              onClick={() => setDepositOpen(true)}
-              className="w-full flex items-center gap-3 px-4 py-3.5 bg-bg-surface border border-white/[0.06] rounded-card text-left active:opacity-70 transition-opacity"
-            >
-              <div className="w-10 h-10 rounded-[12px] bg-emerald/10 flex items-center justify-center flex-shrink-0">
-                <Coins size={16} className="text-emerald" strokeWidth={1.75} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[14px] font-medium text-ink">Initialize Balance</p>
-                <p className="text-[11px] text-ink-muted">Add a lump sum to reflect your current funds</p>
-              </div>
-              <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
-            </button>
-
             {/* Revenue Streams */}
             {revStreams.length > 0 && (
               <>
@@ -657,13 +641,6 @@ export default function InPage() {
         banks={banks.map(b => ({ id: b.id, name: b.name }))}
         onDone={handleStreamDone}
         initial={editStream ?? undefined}
-      />
-      <ManualDepositSheet
-        open={depositOpen}
-        onClose={() => setDepositOpen(false)}
-        banks={banks.map(b => ({ id: b.id, name: b.name }))}
-        onDone={loadIncome}
-        defaultBankId={getAppPrefs().defaultBankId}
       />
       <ManualDepositSheet
         open={incomeOpen}
