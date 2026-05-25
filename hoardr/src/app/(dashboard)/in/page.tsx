@@ -8,6 +8,7 @@ import { AddCardSheet, type NewCard } from '@/components/wallet/AddCardSheet'
 import { AddBankSheet, type NewBank } from '@/components/wallet/AddBankSheet'
 import { RevenueStreamSheet, type RevenueStreamConfig } from '@/components/wallet/RevenueStreamSheet'
 import { ManualDepositSheet } from '@/components/wallet/ManualDepositSheet'
+import { PaycheckSheet } from '@/components/wallet/PaycheckSheet'
 import { EditCardSheet, type CardEdits } from '@/components/wallet/EditCardSheet'
 import { CardVisual } from '@/components/wallet/CardVisual'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
@@ -51,6 +52,7 @@ export default function InPage() {
   const [bankSheetOpen, setBankSheetOpen] = useState(false)
   const [fabOpen,       setFabOpen]      = useState(false)
   const [streamOpen,    setStreamOpen]   = useState(false)
+  const [paycheckOpen,  setPaycheckOpen] = useState(false)
   const [editStream,    setEditStream]   = useState<RevenueStreamConfig | null>(null)
   const [depositOpen,   setDepositOpen]  = useState(false)
   const [revStreams,    setRevStreams]   = useState<RevenueStreamConfig[]>([])
@@ -619,7 +621,7 @@ export default function InPage() {
             style={{ animation: 'fab-item-in 0.32s cubic-bezier(0.34,1.56,0.64,1) 0.06s both' }}>
             <span className="block w-full text-center text-[13px] font-semibold text-white gradient-gold rounded-full py-2 shadow-lg">Stream</span>
           </button>
-          <button className="w-full" onClick={() => { setFabOpen(false); setDepositOpen(true) }}
+          <button className="w-full" onClick={() => { setFabOpen(false); setPaycheckOpen(true) }}
             style={{ animation: 'fab-item-in 0.32s cubic-bezier(0.34,1.56,0.64,1) 0s both' }}>
             <span className="block w-full text-center text-[13px] font-semibold text-white gradient-gold rounded-full py-2 shadow-lg">Income</span>
           </button>
@@ -663,6 +665,12 @@ export default function InPage() {
         banks={banks.map(b => ({ id: b.id, name: b.name }))}
         onDone={() => setIncomeKey(k => k + 1)}
         defaultBankId={getAppPrefs().defaultBankId}
+      />
+      <PaycheckSheet
+        open={paycheckOpen}
+        onClose={() => setPaycheckOpen(false)}
+        banks={banks.map(b => ({ id: b.id, name: b.name }))}
+        onDone={() => setIncomeKey(k => k + 1)}
       />
 
       <EditCardSheet
