@@ -12,15 +12,17 @@ interface Props {
   banks:          { id: string; name: string }[]
   onDone:         () => void
   defaultBankId?: string | null
+  mode?:          'balance' | 'income'   // 'balance' = Initialize Balance (default), 'income' = Add Income
 }
 
-export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId }: Props) {
+export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId, mode = 'balance' }: Props) {
+  const isIncome = mode === 'income'
   const supabase      = useMemo(() => createClient(), [])
   const sheetRef      = useRef<HTMLDivElement>(null)
   const dragStartY    = useRef<number | null>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
 
-  const [label,   setLabel]   = useState('Initial Balance')
+  const [label,   setLabel]   = useState('')
   const [amount,  setAmount]  = useState('')
   const [bankId,  setBankId]  = useState<string | null>(null)
   const [date,    setDate]    = useState('')
@@ -28,7 +30,7 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
 
   useEffect(() => {
     if (open) {
-      setLabel('Initial Balance')
+      setLabel('')
       setAmount('')
       setBankId(defaultBankId ?? banks[0]?.id ?? null)
       setDate(localToday())
@@ -91,10 +93,10 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
     setSaving(true)
     const { error } = await supabase.from('income').insert({
       user_id: user.id,
-      name:    label.trim() || 'Initial Balance',
+      name:    label.trim() || (isIncome ? 'Income' : 'Initial Balance'),
       amount:  amt,
       date,
-      source:  'Manual',
+      source:  isIncome ? 'Income' : 'Manual',
       bank_id: bankId ?? null,
     })
     setSaving(false)
@@ -122,8 +124,8 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
 
         <div className="flex items-center justify-between px-5 mb-5">
           <div>
-            <h2 className="text-[18px] font-bold text-ink">Initialize Balance</h2>
-            <p className="text-[11px] text-ink-muted mt-0.5">Add a deposit to reflect your actual funds</p>
+            <h2 className="text-[18px] font-bold text-ink">{isIncome ? 'Add Income' : 'Initialize Balance'}</h2>
+            {!isIncome && <p className="text-[11px] text-ink-muted mt-0.5">Add a deposit to reflect your actual funds</p>}
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center">
             <X size={14} className="text-ink-muted" />
@@ -136,7 +138,7 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
           {/* Label */}
           <div>
             <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Label</p>
-            <input type="text" value={label} onChange={e => setLabel(e.target.value)} placeholder="Initial Balance"
+            <input type="text" value={label} onChange={e => setLabel(e.target.value)} placeholder={isIncome ? 'Venmo, Zelle, freelance…' : 'Initial Balance'}
               className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40"/>
           </div>
 
@@ -193,7 +195,7 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
 
           <button onClick={handleAdd} disabled={!valid || saving}
             className="w-full gradient-gold rounded-[14px] py-4 text-[15px] font-bold text-white disabled:opacity-40 transition-opacity">
-            {saving ? 'Adding…' : valid ? `Add ${$fd(amt)} to Balance` : 'Add to Balance'}
+            {saving ? 'Adding…' : isIncome ? (valid ? `Add ${$fd(amt)}` : 'Add Income') : (valid ? `Add ${$fd(amt)} to Balance` : 'Add to Balance')}
           </button>
         </div>
       </div>
