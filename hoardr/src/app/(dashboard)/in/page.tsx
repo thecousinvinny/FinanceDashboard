@@ -183,7 +183,7 @@ export default function InPage() {
       saveStreams(updated)
       return updated
     })
-    setIncomeKey(k => k + 1)
+    loadIncome()
   }
 
   function handleDeleteStream(id: string) {
@@ -662,14 +662,14 @@ export default function InPage() {
         open={depositOpen}
         onClose={() => setDepositOpen(false)}
         banks={banks.map(b => ({ id: b.id, name: b.name }))}
-        onDone={() => setIncomeKey(k => k + 1)}
+        onDone={loadIncome}
         defaultBankId={getAppPrefs().defaultBankId}
       />
       <ManualDepositSheet
         open={incomeOpen}
         onClose={() => setIncomeOpen(false)}
         banks={banks.map(b => ({ id: b.id, name: b.name }))}
-        onDone={() => setIncomeKey(k => k + 1)}
+        onDone={loadIncome}
         defaultBankId={getAppPrefs().defaultBankId}
         mode="income"
       />

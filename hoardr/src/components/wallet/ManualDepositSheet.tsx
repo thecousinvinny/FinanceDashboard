@@ -28,14 +28,19 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
   const [date,    setDate]    = useState('')
   const [saving,  setSaving]  = useState(false)
 
+  const banksRef     = useRef(banks)
+  const defBankRef   = useRef(defaultBankId)
+  useEffect(() => { banksRef.current = banks }, [banks])
+  useEffect(() => { defBankRef.current = defaultBankId }, [defaultBankId])
+
+  // Only reset when the sheet opens — not when `banks` reference changes mid-entry
   useEffect(() => {
-    if (open) {
-      setLabel('')
-      setAmount('')
-      setBankId(defaultBankId ?? banks[0]?.id ?? null)
-      setDate(localToday())
-    }
-  }, [open, banks, defaultBankId])
+    if (!open) return
+    setLabel('')
+    setAmount('')
+    setBankId(defBankRef.current ?? banksRef.current[0]?.id ?? null)
+    setDate(localToday())
+  }, [open])
 
   // Body lock
   useEffect(() => {
@@ -100,7 +105,7 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
       bank_id: bankId ?? null,
     })
     setSaving(false)
-    if (error) { console.error('deposit insert error:', error); return }
+    if (error) { console.error('deposit insert error:', error); showToast('Failed to add — check console', { type: 'delete' }); return }
     showToast(`${$fd(amt)} added`, { type: 'add' })
     onClose()
     onDone()

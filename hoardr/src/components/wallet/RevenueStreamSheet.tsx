@@ -71,20 +71,26 @@ export function RevenueStreamSheet({ open, onClose, banks, onDone, initial }: Pr
   const [startDate, setStartDate] = useState('')
   const [saving,    setSaving]    = useState(false)
 
+  const banksRef   = useRef(banks)
+  const initialRef = useRef(initial)
+  useEffect(() => { banksRef.current = banks },     [banks])
+  useEffect(() => { initialRef.current = initial }, [initial])
+
+  // Only reset when the sheet opens — not when `banks`/`initial` reference changes mid-entry
   useEffect(() => {
-    if (open) {
-      setName(initial?.name ?? 'Main Job')
-      setAmount(initial?.amount ? String(initial.amount) : '')
-      setFreq(initial?.freq ?? 'Biweekly')
-      setBankId(initial?.bankId ?? banks[0]?.id ?? null)
-      // If previously generated, default start to day after last run to avoid duplicates
-      setStartDate(
-        initial?.lastGenerated
-          ? addDay(initial.lastGenerated)
-          : (initial?.startDate ?? localToday())
-      )
-    }
-  }, [open, banks, initial])
+    if (!open) return
+    const ini = initialRef.current
+    const bk  = banksRef.current
+    setName(ini?.name ?? 'Main Job')
+    setAmount(ini?.amount ? String(ini.amount) : '')
+    setFreq(ini?.freq ?? 'Biweekly')
+    setBankId(ini?.bankId ?? bk[0]?.id ?? null)
+    setStartDate(
+      ini?.lastGenerated
+        ? addDay(ini.lastGenerated)
+        : (ini?.startDate ?? localToday())
+    )
+  }, [open])
 
   // Body lock
   useEffect(() => {
