@@ -49,7 +49,6 @@ export default function InPage() {
   const [loading,       setLoading]      = useState(!cached)
   const [cardSheetOpen, setCardSheetOpen] = useState(false)
   const [bankSheetOpen, setBankSheetOpen] = useState(false)
-  const [fabOpen,       setFabOpen]      = useState(false)
   const [streamOpen,    setStreamOpen]   = useState(false)
   const [editStream,    setEditStream]   = useState<RevenueStreamConfig | null>(null)
   const [depositOpen,   setDepositOpen]  = useState(false)
@@ -610,29 +609,14 @@ export default function InPage() {
       </div>
 
       {/* ── FAB ─────────────────────────────────────────────────────────── */}
-      {fabOpen && (
-        <div className="fixed inset-0" style={{ zIndex: 39 }} onClick={() => setFabOpen(false)} />
-      )}
-      {fabOpen && (
-        <div className="fixed flex flex-col gap-4" style={{ right: 16, bottom: 148, zIndex: 41, width: 104 }}>
-          <button className="w-full" onClick={() => { setFabOpen(false); setBankSheetOpen(true) }}
-            style={{ animation: 'fab-item-in 0.32s cubic-bezier(0.34,1.56,0.64,1) 0.12s both' }}>
-            <span className="block w-full text-center text-[13px] font-semibold text-white gradient-gold rounded-full py-2 shadow-lg">Bank</span>
-          </button>
-          <button className="w-full" onClick={() => { setFabOpen(false); setCardSheetOpen(true) }}
-            style={{ animation: 'fab-item-in 0.32s cubic-bezier(0.34,1.56,0.64,1) 0.06s both' }}>
-            <span className="block w-full text-center text-[13px] font-semibold text-white gradient-gold rounded-full py-2 shadow-lg">Card</span>
-          </button>
-          <button className="w-full" onClick={() => { setFabOpen(false); setDepositOpen(true) }}
-            style={{ animation: 'fab-item-in 0.32s cubic-bezier(0.34,1.56,0.64,1) 0s both' }}>
-            <span className="block w-full text-center text-[13px] font-semibold text-white gradient-gold rounded-full py-2 shadow-lg">Income</span>
-          </button>
-        </div>
-      )}
       <button
-        onClick={() => setFabOpen(f => !f)}
+        onClick={() => {
+          if (tab === 'Income') setStreamOpen(true)
+          else if (tab === 'Cards') setCardSheetOpen(true)
+          else setBankSheetOpen(true)
+        }}
         className="fixed gradient-gold rounded-full flex items-center justify-center text-white font-light select-none"
-        style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, zIndex: 40, boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)', transform: fabOpen ? 'rotate(45deg)' : undefined, transition: 'transform 0.2s ease' }}
+        style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, zIndex: 40, boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)' }}
         aria-label="Add"
       >+</button>
 
