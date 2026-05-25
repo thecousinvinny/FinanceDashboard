@@ -105,7 +105,7 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
       bank_id: bankId ?? null,
     })
     setSaving(false)
-    if (error) { console.error('deposit insert error:', error); showToast(`Insert failed: ${error.message}`, { type: 'delete' }); return }
+    if (error) { console.error('deposit insert error:', error); showToast('Failed to save — try again', { type: 'delete' }); return }
     showToast(`${$fd(amt)} added`, { type: 'add' })
     onClose()
     onDone()

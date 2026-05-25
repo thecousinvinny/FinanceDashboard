@@ -159,7 +159,7 @@ export function RevenueStreamSheet({ open, onClose, banks, onDone, initial }: Pr
     }))
     const { error } = await supabase.from('income').insert(rows)
     setSaving(false)
-    if (error) { console.error('revenue stream insert error:', error); showToast(`Insert failed: ${error.message}`, { type: 'delete' }); return }
+    if (error) { console.error('revenue stream insert error:', error); showToast('Failed to save — try again', { type: 'delete' }); return }
     showToast(`${dates.length} payments added`, { type: 'add' })
     const config: RevenueStreamConfig = {
       id:            initial?.id ?? crypto.randomUUID(),
