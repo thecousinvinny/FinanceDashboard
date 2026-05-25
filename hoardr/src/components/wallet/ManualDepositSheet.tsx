@@ -101,7 +101,7 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
       name:    label.trim() || (isIncome ? 'Income' : 'Initial Balance'),
       amount:  amt,
       date,
-      source:  isIncome ? 'Income' : 'Manual',
+      source:  'Manual',
       bank_id: bankId ?? null,
     })
     setSaving(false)
