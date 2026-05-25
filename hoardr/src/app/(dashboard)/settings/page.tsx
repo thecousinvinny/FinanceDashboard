@@ -122,6 +122,7 @@ export default function SettingsPage() {
   }
 
   return (
+    <>
     <div className="min-h-screen bg-bg-base tab-enter pb-28">
       {/* Header */}
       <div className="px-5 pt-14 pb-6">
@@ -329,6 +330,8 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      </div>
+
       <CalendarSettingsSheet
         open={calOpen}
         onClose={() => setCalOpen(false)}
@@ -339,7 +342,7 @@ export default function SettingsPage() {
         onSave={savePrefs}
       />
 
-      {/* ── Default Card picker (kept for direct card default from Accounts section) ── */}
+      {/* ── Default Card picker ── */}
       <div
         onClick={() => setDefaultCardOpen(false)}
         className={cn('fixed inset-0 z-[59] transition-opacity duration-300', defaultCardOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none')}
@@ -387,6 +390,6 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
-    </div>
+    </>
   )
 }
