@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, CalendarDays, Check, CreditCard, LayoutGrid, Landmark } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Check, ChevronRight, CreditCard, LayoutGrid, Landmark } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { getAppPrefs, setAppPrefs } from '@/lib/app-prefs'
@@ -107,6 +107,7 @@ export default function DefaultsPage() {
   }
 
   return (
+    <>
     <div className="min-h-screen bg-bg-base tab-enter pb-28">
       {/* Header */}
       <div className="px-5 pt-14 pb-6 flex items-center gap-3">
@@ -141,9 +142,7 @@ export default function DefaultsPage() {
               <p className="text-[14px] font-medium text-ink">Default Card</p>
               <p className="text-[11px] text-ink-muted">{defaultCardName ?? 'None set'}</p>
             </div>
-            <div className="w-5 h-5 rounded-full bg-bg-overlay flex items-center justify-center">
-              <div className="w-1.5 h-1.5 rounded-full bg-ink-faint" />
-            </div>
+            <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
           </button>
 
           <button
@@ -159,9 +158,7 @@ export default function DefaultsPage() {
               <p className="text-[14px] font-medium text-ink">Default Category</p>
               <p className="text-[11px] text-ink-muted">{defaultExpCat ?? 'None set'}</p>
             </div>
-            <div className="w-5 h-5 rounded-full bg-bg-overlay flex items-center justify-center">
-              <div className="w-1.5 h-1.5 rounded-full bg-ink-faint" />
-            </div>
+            <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
           </button>
         </div>
       </div>
@@ -181,9 +178,7 @@ export default function DefaultsPage() {
               <p className="text-[14px] font-medium text-ink">Default Billing</p>
               <p className="text-[11px] text-ink-muted">{BILLING_LABELS[defaultBilling]}</p>
             </div>
-            <div className="w-5 h-5 rounded-full bg-bg-overlay flex items-center justify-center">
-              <div className="w-1.5 h-1.5 rounded-full bg-ink-faint" />
-            </div>
+            <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
           </button>
         </div>
       </div>
@@ -203,11 +198,11 @@ export default function DefaultsPage() {
               <p className="text-[14px] font-medium text-ink">Default Bank</p>
               <p className="text-[11px] text-ink-muted">{defaultBankName ?? 'None set'}</p>
             </div>
-            <div className="w-5 h-5 rounded-full bg-bg-overlay flex items-center justify-center">
-              <div className="w-1.5 h-1.5 rounded-full bg-ink-faint" />
-            </div>
+            <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
           </button>
         </div>
+      </div>
+
       </div>
 
       {/* ── Default Card picker ──────────────────────────────────────────── */}
@@ -358,6 +353,6 @@ export default function DefaultsPage() {
           )}
         </div>
       </div>
-    </div>
+    </>
   )
 }

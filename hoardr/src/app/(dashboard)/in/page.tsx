@@ -599,24 +599,28 @@ export default function InPage() {
       {fabOpen && (
         <div className="fixed inset-0" style={{ zIndex: 39 }} onClick={() => setFabOpen(false)} />
       )}
-      {fabOpen && tab === 'Income' && (
+      {fabOpen && (
         <div className="fixed flex flex-col gap-3" style={{ right: 16, bottom: 148, zIndex: 41, width: 120 }}>
           <button className="w-full" onClick={() => { setFabOpen(false); setStreamOpen(true) }}
-            style={{ animation: 'fab-item-in 0.32s cubic-bezier(0.34,1.56,0.64,1) 0.06s both' }}>
+            style={{ animation: 'fab-item-in 0.32s cubic-bezier(0.34,1.56,0.64,1) 0.18s both' }}>
             <span className="block w-full text-center text-[13px] font-semibold text-white gradient-gold rounded-full py-2 shadow-lg">Stream</span>
           </button>
           <button className="w-full" onClick={() => { setFabOpen(false); setIncomeOpen(true) }}
-            style={{ animation: 'fab-item-in 0.32s cubic-bezier(0.34,1.56,0.64,1) 0s both' }}>
+            style={{ animation: 'fab-item-in 0.32s cubic-bezier(0.34,1.56,0.64,1) 0.12s both' }}>
             <span className="block w-full text-center text-[13px] font-semibold text-white gradient-gold rounded-full py-2 shadow-lg">Income</span>
+          </button>
+          <button className="w-full" onClick={() => { setFabOpen(false); setCardSheetOpen(true) }}
+            style={{ animation: 'fab-item-in 0.32s cubic-bezier(0.34,1.56,0.64,1) 0.06s both' }}>
+            <span className="block w-full text-center text-[13px] font-semibold text-white gradient-gold rounded-full py-2 shadow-lg">Card</span>
+          </button>
+          <button className="w-full" onClick={() => { setFabOpen(false); setBankSheetOpen(true) }}
+            style={{ animation: 'fab-item-in 0.32s cubic-bezier(0.34,1.56,0.64,1) 0s both' }}>
+            <span className="block w-full text-center text-[13px] font-semibold text-white gradient-gold rounded-full py-2 shadow-lg">Bank</span>
           </button>
         </div>
       )}
       <button
-        onClick={() => {
-          if (tab === 'Income') { setFabOpen(f => !f); return }
-          if (tab === 'Cards') setCardSheetOpen(true)
-          else setBankSheetOpen(true)
-        }}
+        onClick={() => setFabOpen(f => !f)}
         className="fixed gradient-gold rounded-full flex items-center justify-center text-white font-light select-none"
         style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, zIndex: 40,
                  boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)',
