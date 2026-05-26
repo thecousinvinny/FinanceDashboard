@@ -309,6 +309,7 @@ export default function HomePage() {
       user_id:       user.id,
       name:          item.name,
       original_cost: item.original_cost,
+      description:   item.description,
       category:      item.category,
       url:           item.url,
       status:        'Interested',

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { MapPin, Clock, AlignLeft, X, ChevronDown, RefreshCw } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, localToday } from '@/lib/utils'
 import { rruleLabel } from '@/lib/rrule'
 import { RecurrencePicker } from './RecurrencePicker'
 import type { GCalendar } from './CalendarSettingsSheet'
@@ -281,7 +281,7 @@ export function AddEventSheet({ open, defaultDate, defaultCalendarId, googleCals
               <span className="text-[14px] text-ink">Repeat</span>
             </div>
             <span className="text-[13px] text-ink-muted">
-              {form.recurrenceRule ? rruleLabel(form.recurrenceRule, form.date || new Date().toISOString().slice(0,10)) : 'Never'}
+              {form.recurrenceRule ? rruleLabel(form.recurrenceRule, form.date || localToday()) : 'Never'}
             </span>
           </button>
 
@@ -323,7 +323,7 @@ export function AddEventSheet({ open, defaultDate, defaultCalendarId, googleCals
       </div>
       <RecurrencePicker
         open={recurrencePickerOpen}
-        date={form.date || new Date().toISOString().slice(0, 10)}
+        date={form.date || localToday()}
         value={form.recurrenceRule}
         onClose={() => setRecurrencePickerOpen(false)}
         onChange={rule => set('recurrenceRule', rule)}
