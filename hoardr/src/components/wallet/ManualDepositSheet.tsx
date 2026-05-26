@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useMemo } from 'react'
 import { X, Banknote } from 'lucide-react'
 import { cn, localToday, $fd } from '@/lib/utils'
+import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import { showToast } from '@/lib/toast'
 import { createClient } from '@/lib/supabase/client'
 
@@ -213,12 +214,15 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
           {/* Category */}
           <div>
             <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Category</p>
-            <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+            <div className="grid grid-cols-4 gap-2">
               {(['Other', 'Projects', 'Repayment', 'Refund'] as const).map(s => (
                 <button key={s} onClick={() => setSource(s)}
-                  className={cn('flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all select-none',
-                    source === s ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
-                  {s}
+                  className={cn(
+                    'flex flex-col items-center gap-1.5 py-3 rounded-[14px] transition-all select-none',
+                    source === s ? 'bg-gold/15 ring-1 ring-gold/40' : 'bg-bg-overlay',
+                  )}>
+                  <CategoryIcon category={s} type="Income" size={18} className={source === s ? 'text-gold' : 'text-ink-muted'} />
+                  <span className="text-[9px] font-medium text-ink-muted leading-tight text-center px-0.5">{s}</span>
                 </button>
               ))}
             </div>
