@@ -12,6 +12,7 @@ export interface IncomeInitial {
   amount:  number
   date:    string
   bank_id: string | null
+  source:  string | null
 }
 
 interface Props {
@@ -32,6 +33,7 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
 
   const [label,   setLabel]   = useState('')
   const [amount,  setAmount]  = useState('')
+  const [source,  setSource]  = useState<string>('Other')
   const [bankId,  setBankId]  = useState<string | null>(null)
   const [date,    setDate]    = useState('')
   const [saving,  setSaving]  = useState(false)
@@ -50,11 +52,13 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
     if (ini) {
       setLabel(ini.name)
       setAmount(String(ini.amount))
+      setSource(ini.source ?? 'Other')
       setBankId(ini.bank_id)
       setDate(ini.date)
     } else {
       setLabel('')
       setAmount('')
+      setSource('Other')
       setBankId(defBankRef.current ?? banksRef.current[0]?.id ?? null)
       setDate(localToday())
     }
@@ -117,6 +121,7 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
         name:    label.trim() || 'Income',
         amount:  amt,
         date,
+        source,
         bank_id: bankId ?? null,
       }).eq('id', initial.id)
       setSaving(false)
@@ -130,7 +135,7 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
         name:    label.trim() || 'Income',
         amount:  amt,
         date,
-        source:  'Other',
+        source,
         bank_id: bankId ?? null,
       })
       setSaving(false)
@@ -204,6 +209,20 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
               </div>
             </div>
           )}
+
+          {/* Category */}
+          <div>
+            <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Category</p>
+            <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+              {(['Other', 'Projects', 'Repayment', 'Refund'] as const).map(s => (
+                <button key={s} onClick={() => setSource(s)}
+                  className={cn('flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all select-none',
+                    source === s ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Date */}
           <div>
