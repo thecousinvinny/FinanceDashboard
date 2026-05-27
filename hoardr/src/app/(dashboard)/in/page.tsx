@@ -56,6 +56,38 @@ function advanceStream(date: string, freq: Frequency): string {
   return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
 }
 
+function StatCard({ label, value, sub, loading }: { label: string; value: number; sub?: string; loading: boolean }) {
+  const [display, setDisplay] = useState(0)
+  const rafRef = useRef<number | null>(null)
+  useEffect(() => {
+    if (loading) return
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    const target = value
+    const start  = performance.now()
+    function step(now: number) {
+      const t    = Math.min((now - start) / 700, 1)
+      const ease = 1 - Math.pow(1 - t, 3)
+      setDisplay(target * ease)
+      if (t < 1) rafRef.current = requestAnimationFrame(step)
+      else        setDisplay(target)
+    }
+    rafRef.current = requestAnimationFrame(step)
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
+  }, [value, loading])
+  return (
+    <div className="bg-bg-surface border border-white/[0.06] rounded-[16px] px-3 py-3">
+      <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-1.5">{label}</p>
+      {loading
+        ? <div className="h-6 w-14 rounded-[6px] skeleton" />
+        : <p className="text-[17px] font-bold font-mono text-emerald leading-none" style={{ fontFamily: 'var(--font-big-shoulders)' }}>
+            {'$' + Math.round(display).toLocaleString()}
+          </p>
+      }
+      {sub && !loading && <p className="text-[10px] text-ink-muted mt-1 truncate">{sub}</p>}
+    </div>
+  )
+}
+
 // Module-level: survives tab switches (component remounts), resets only on hard reload
 let sessionAutoGenDone = false
 
@@ -77,7 +109,7 @@ export default function InPage() {
   const [editStream,    setEditStream]   = useState<RevenueStreamConfig | null>(null)
   const [revStreams,    setRevStreams]   = useState<RevenueStreamConfig[]>([])
   const [incomeList,    setIncomeList]   = useState<IncomeRow[]>([])
-  const [incomeLoading, setIncomeLoading] = useState(false)
+  const [incomeLoading, setIncomeLoading] = useState(true)
   const [interestBank,  setInterestBank] = useState<Bank | null>(null)
   const [bankCfg,       setBankCfg]      = useState<Record<string, BankCfgEntry>>({})
   const [intBalance,    setIntBalance]   = useState('')
@@ -195,10 +227,9 @@ export default function InPage() {
   useEffect(() => { banksRef.current = banks }, [banks])
 
   useEffect(() => {
-    if (tab !== 'History') return
     loadIncome()
     return () => { incomeGen.current++; incomeAbortRef.current?.abort() }
-  }, [tab, loadIncome])
+  }, [loadIncome])
 
   const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } = usePullToRefresh(loadData)
 
@@ -572,13 +603,40 @@ export default function InPage() {
     })),
   [incomeList])
 
+  const statThisMonth = useMemo(() => {
+    const d = new Date()
+    const start = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
+    return incomeList.filter(r => r.date >= start).reduce((s, r) => s + r.amount, 0)
+  }, [incomeList])
+
+  const statThisYear = useMemo(() => {
+    return incomeList.filter(r => r.date >= `${new Date().getFullYear()}-01-01`).reduce((s, r) => s + r.amount, 0)
+  }, [incomeList])
+
+  const statNextIn = useMemo(() => {
+    const today = localToday()
+    return [...revStreams]
+      .filter(s => s.nextPayDate >= today)
+      .sort((a, b) => a.nextPayDate.localeCompare(b.nextPayDate))[0] ?? null
+  }, [revStreams])
+
   return (
     <>
       <div className="min-h-screen bg-bg-base tab-enter">
         <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
         <div className="pt-12" />
 
-        <div className="mx-4 mt-4">
+        <div className={`mx-4 mt-4 grid gap-2 ${statNextIn ? 'grid-cols-3' : 'grid-cols-2'}`}>
+          <StatCard label="This Month" value={statThisMonth} loading={incomeLoading} />
+          <StatCard label="This Year"  value={statThisYear}  loading={incomeLoading} />
+          {statNextIn && (
+            <StatCard label="Next In" value={statNextIn.amount}
+              sub={daysUntilLabel(statNextIn.nextPayDate)}
+              loading={incomeLoading} />
+          )}
+        </div>
+
+        <div className="mx-4 mt-3">
           <PillGroup options={['History', 'Streams', 'Accounts'] as Tab[]} value={tab} onChange={setTab} />
         </div>
 
