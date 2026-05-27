@@ -36,7 +36,7 @@ interface IncomeRow {
 }
 
 type Tab = 'History' | 'Streams' | 'Accounts'
-type BankCfgEntry = { apy: number; balance: number; lastInterestMonth?: string }
+type BankCfgEntry = { apy: number; balance: number; nextInterestDate?: string; interestFreq?: 'Monthly' | 'Quarterly' }
 
 const PILL_OPTIONS: Tab[] = ['History', 'Streams', 'Accounts']
 
@@ -62,6 +62,13 @@ function getPayDates(startDate: string, freq: Frequency): string[] {
   }
   return dates
 }
+function advanceByFreq(date: string, freq: 'Monthly' | 'Quarterly'): string {
+  const [y, m, d] = date.split('-').map(Number)
+  const months    = freq === 'Quarterly' ? 3 : 1
+  const next      = new Date(y, m - 1 + months, d)
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`
+}
+
 function nextPayDate(lastGenerated: string, freq: Frequency): string {
   const [y, m, d] = lastGenerated.split('-').map(Number)
   let next: Date
@@ -98,7 +105,7 @@ export default function InPage() {
   const [intBalance,    setIntBalance]   = useState('')
   const [intApy,        setIntApy]       = useState('')
   const [intDate,       setIntDate]      = useState('')
-  const [intSaving,     setIntSaving]    = useState(false)
+  const [intFreq,       setIntFreq]      = useState<'Monthly' | 'Quarterly'>('Monthly')
   const [selectedCard,  setSelectedCard] = useState<Card | null>(null)
   const [editCard,      setEditCard]     = useState<Card | null>(null)
   const [editSheetOpen, setEditSheetOpen] = useState(false)
@@ -184,6 +191,7 @@ export default function InPage() {
       const { data } = await supabase
         .from('income')
         .select('id, name, amount, date, source, bank_id')
+        .lte('date', localToday())
         .order('date', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(200)
@@ -234,7 +242,8 @@ export default function InPage() {
     const cfg = bankCfg[interestBank.id]
     setIntBalance(cfg?.balance ? String(cfg.balance) : '')
     setIntApy(cfg?.apy ? String(cfg.apy) : '')
-    setIntDate(localToday())
+    setIntFreq(cfg?.interestFreq ?? 'Monthly')
+    setIntDate(cfg?.nextInterestDate ?? localToday())
   }, [interestBank])
 
   async function autoGenerateStreams(userId: string) {
@@ -260,18 +269,21 @@ export default function InPage() {
     const cfg: Record<string, BankCfgEntry> = (() => {
       try { return JSON.parse(localStorage.getItem('bank-cfg') ?? '{}') } catch { return {} }
     })()
-    const currentMonth = localToday().slice(0, 7)
-    const next = { ...cfg }
+    const today = localToday()
+    const next  = { ...cfg }
     let changed = false
     for (const [bankId, conf] of Object.entries(cfg)) {
-      if (!conf.apy || !conf.balance || conf.lastInterestMonth === currentMonth) continue
-      const monthly = parseFloat((conf.balance * conf.apy / 100 / 12).toFixed(2))
-      const bank = banksRef.current.find(b => b.id === bankId)
+      if (!conf.apy || !conf.balance || !conf.nextInterestDate) continue
+      if (conf.nextInterestDate > today) continue
+      const freq    = conf.interestFreq ?? 'Monthly'
+      const divisor = freq === 'Quarterly' ? 4 : 12
+      const amount  = parseFloat((conf.balance * conf.apy / 100 / divisor).toFixed(2))
+      const bank    = banksRef.current.find(b => b.id === bankId)
       const { error } = await supabase.from('income').insert({
         user_id: userId, name: `${bank?.name ?? 'Bank'} Interest`,
-        amount: monthly, date: localToday(), source: 'Other', bank_id: bankId,
+        amount, date: conf.nextInterestDate, source: 'Other', bank_id: bankId,
       })
-      if (!error) { next[bankId] = { ...conf, lastInterestMonth: currentMonth }; changed = true }
+      if (!error) { next[bankId] = { ...conf, nextInterestDate: advanceByFreq(conf.nextInterestDate, freq) }; changed = true }
     }
     if (changed) { saveBankCfg(next); loadIncome() }
   }
@@ -373,34 +385,22 @@ export default function InPage() {
     })
   }
 
-  function saveBankCfg(next: Record<string, { apy: number; balance: number }>) {
+  function saveBankCfg(next: Record<string, BankCfgEntry>) {
     setBankCfg(next)
     try { localStorage.setItem('bank-cfg', JSON.stringify(next)) } catch {}
   }
 
-  async function handleAddInterest() {
+  function handleSaveInterestConfig() {
     if (!interestBank) return
     const bal = parseFloat(intBalance)
     const apy = parseFloat(intApy)
-    if (isNaN(bal) || bal <= 0 || isNaN(apy) || apy <= 0) return
-    const monthly = parseFloat((bal * (apy / 100) / 12).toFixed(2))
-    saveBankCfg({ ...bankCfg, [interestBank.id]: { apy, balance: bal } })
-    setIntSaving(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setIntSaving(false); return }
-    const { error } = await supabase.from('income').insert({
-      user_id: user.id,
-      name:    `${interestBank.name} Interest`,
-      amount:  monthly,
-      date:    intDate || localToday(),
-      source:  'Other',
-      bank_id: interestBank.id,
+    if (isNaN(bal) || bal <= 0 || isNaN(apy) || apy <= 0 || !intDate) return
+    saveBankCfg({
+      ...bankCfg,
+      [interestBank.id]: { ...bankCfg[interestBank.id], apy, balance: bal, interestFreq: intFreq, nextInterestDate: intDate },
     })
-    setIntSaving(false)
-    if (error) { showToast('Failed to add interest', { type: 'delete' }); return }
-    showToast(`+${$fd(monthly)} interest added`, { type: 'add' })
+    showToast('Interest scheduled', { type: 'add' })
     setInterestBank(null)
-    loadIncome()
   }
 
   async function handleAddCard(newCard: NewCard) {
@@ -667,26 +667,25 @@ export default function InPage() {
                     .map(([bankId, cfg]) => {
                       const bank    = banks.find(b => b.id === bankId)
                       if (!bank) return null
-                      const monthly = parseFloat((cfg.balance * cfg.apy / 100 / 12).toFixed(2))
-                      const lastMo  = cfg.lastInterestMonth
-                      const nextMo  = (() => {
-                        if (!lastMo) return 'this month'
-                        const [y, m] = lastMo.split('-').map(Number)
-                        const next = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`
-                        return next === localToday().slice(0, 7) ? 'this month ✓' : next
-                      })()
+                      const freq    = cfg.interestFreq ?? 'Monthly'
+                      const divisor = freq === 'Quarterly' ? 4 : 12
+                      const amount  = parseFloat((cfg.balance * cfg.apy / 100 / divisor).toFixed(2))
                       return (
-                        <div key={bankId} className="flex items-center gap-3 px-4 py-3.5">
-                          <div className="w-10 h-10 rounded-[12px] bg-emerald/10 flex items-center justify-center text-lg flex-shrink-0">🏦</div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[14px] font-medium text-ink truncate">{bank.name} Interest</p>
-                            <p className="text-[11px] text-ink-muted">{cfg.apy}% APY · Monthly</p>
+                        <SwipeToDelete key={bankId} onDelete={() => {
+                          const next = { ...bankCfg }; delete next[bankId]; saveBankCfg(next)
+                        }} onTap={() => setInterestBank(bank)}>
+                          <div className="flex items-center gap-3 px-4 py-3.5">
+                            <div className="w-10 h-10 rounded-[12px] bg-emerald/10 flex items-center justify-center text-lg flex-shrink-0">🏦</div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[14px] font-medium text-ink truncate">{bank.name} Interest</p>
+                              <p className="text-[11px] text-ink-muted">{cfg.apy}% APY · {freq}</p>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className="text-[13px] font-semibold font-mono text-emerald">+{$fd(amount)}</p>
+                              <p className="text-[10px] text-ink-faint">{cfg.nextInterestDate ? daysUntilLabel(cfg.nextInterestDate) : 'not scheduled'}</p>
+                            </div>
                           </div>
-                          <div className="text-right flex-shrink-0">
-                            <p className="text-[13px] font-semibold font-mono text-emerald">+{$fd(monthly)}</p>
-                            <p className="text-[10px] text-ink-faint">{nextMo}</p>
-                          </div>
-                        </div>
+                        </SwipeToDelete>
                       )
                     })}
                 </div>
@@ -850,7 +849,7 @@ export default function InPage() {
         </div>
         <div className="flex items-center justify-between px-5 mb-5">
           <div>
-            <h2 className="text-[18px] font-bold text-ink">Interest</h2>
+            <h2 className="text-[18px] font-bold text-ink">Interest Settings</h2>
             {interestBank && <p className="text-[12px] text-ink-muted mt-0.5">{interestBank.name}</p>}
           </div>
           <button onClick={() => setInterestBank(null)} className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center">
@@ -878,9 +877,22 @@ export default function InPage() {
               <span className="text-[22px] font-light text-ink-muted font-mono">%</span>
             </div>
           </div>
-          {/* Date */}
+          {/* Frequency */}
           <div>
-            <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Date interest posted</p>
+            <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Frequency</p>
+            <div className="flex gap-2">
+              {(['Monthly', 'Quarterly'] as const).map(f => (
+                <button key={f} onClick={() => setIntFreq(f)}
+                  className={cn('flex-1 py-2.5 rounded-full text-[12px] font-semibold transition-all select-none',
+                    intFreq === f ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
+                  {f}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Next payment date */}
+          <div>
+            <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Next payment date</p>
             <div className="overflow-hidden rounded-[14px]">
               <input type="date" value={intDate} onChange={e => setIntDate(e.target.value)}
                 className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink outline-none focus:border-gold/40"
@@ -889,24 +901,25 @@ export default function InPage() {
           </div>
 
           {/* Preview */}
-          {parseFloat(intBalance) > 0 && parseFloat(intApy) > 0 && (() => {
-            const monthly = parseFloat(intBalance) * (parseFloat(intApy) / 100) / 12
+          {parseFloat(intBalance) > 0 && parseFloat(intApy) > 0 && intDate && (() => {
+            const divisor = intFreq === 'Quarterly' ? 4 : 12
+            const amount  = parseFloat(intBalance) * (parseFloat(intApy) / 100) / divisor
             return (
               <div className="bg-bg-overlay border border-emerald/20 rounded-[14px] px-4 py-3.5 flex items-center gap-3">
                 <Banknote size={18} className="text-emerald flex-shrink-0" strokeWidth={1.75} />
                 <div>
-                  <p className="text-[14px] font-semibold text-ink">+{$fd(monthly)} this month</p>
-                  <p className="text-[11px] text-ink-muted">{parseFloat(intApy)}% APY on {$fd(parseFloat(intBalance))}</p>
+                  <p className="text-[14px] font-semibold text-ink">+{$fd(amount)} on {intDate}</p>
+                  <p className="text-[11px] text-ink-muted">{parseFloat(intApy)}% APY · {intFreq.toLowerCase()}</p>
                 </div>
               </div>
             )
           })()}
           <button
-            onClick={handleAddInterest}
-            disabled={!(parseFloat(intBalance) > 0 && parseFloat(intApy) > 0) || intSaving}
+            onClick={handleSaveInterestConfig}
+            disabled={!(parseFloat(intBalance) > 0 && parseFloat(intApy) > 0 && intDate)}
             className="w-full gradient-gold rounded-[14px] py-4 text-[15px] font-bold text-white disabled:opacity-40 transition-opacity"
           >
-            {intSaving ? 'Adding…' : 'Add Interest to Income'}
+            Schedule Interest
           </button>
         </div>
       </div>
