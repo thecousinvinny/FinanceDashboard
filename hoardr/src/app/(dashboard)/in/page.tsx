@@ -216,6 +216,8 @@ export default function InPage() {
 
   const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } = usePullToRefresh(loadData)
 
+  useEffect(() => { setFabOpen(false) }, [tab])
+
   useEffect(() => {
     try {
       const v = localStorage.getItem('revenue-streams')
@@ -778,11 +780,15 @@ export default function InPage() {
         </div>
       )}
       <button
-        onClick={() => setFabOpen(f => !f)}
+        onClick={() => {
+          if (tab === 'History')  { setIncomeOpen(true); return }
+          if (tab === 'Streams')  { setEditStream(null); setStreamOpen(true); return }
+          setFabOpen(f => !f)
+        }}
         className="fixed gradient-gold rounded-full flex items-center justify-center text-white font-light select-none"
         style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, zIndex: 40,
                  boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)',
-                 transform: fabOpen ? 'rotate(45deg)' : undefined, transition: 'transform 0.2s ease' }}
+                 transform: tab === 'Accounts' && fabOpen ? 'rotate(45deg)' : undefined, transition: 'transform 0.2s ease' }}
         aria-label="Add"
       >+</button>
 
