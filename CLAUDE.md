@@ -59,7 +59,7 @@ Next.js 15 App Router with two route groups:
 
 `/wallet` and `/plans` both redirect to `/in` — they are not standalone tabs.
 
-**`/in` page** — three-tab PillGroup (`Income | Cards | Banks`). Income tab shows grouped income rows. Cards tab is the full wallet (card visuals, drag-to-reorder, card detail with spend stats). Banks tab lists bank accounts. Revenue streams and manual deposits are managed here via `RevenueStreamSheet` and `ManualDepositSheet`. `usePillSwipe` handles inter-tab swipes and cross-route edge-zone swipes (left edge → `/money`, right edge → `/calendar`).
+**`/in` page** — three-tab PillGroup (`History | Streams | Accounts`). Each tab has its own pair of `SlotNumber`-animated stat tiles (see Inline hero components). **History**: grouped income rows with month totals; `loadIncome` runs on mount (not gated to tab) and filters `date <= today` so future-dated income never appears. **Streams**: revenue streams list + interest streams. `autoGenerateStreams` runs once per session (guarded by module-level `let sessionAutoGenDone = false`) inside `loadData` — it inserts an income row for each stream where `nextPayDate <= today`, then advances `nextPayDate` by one cycle. `autoGenerateInterest` does the same for bank interest entries. **Accounts**: bank list (tap to configure balance/APY via Balance & Interest sheet) + card visuals with long-press drag-to-reorder. Revenue streams and manual deposits are managed here via `RevenueStreamSheet` and `ManualDepositSheet`. `usePillSwipe` handles inter-tab swipes and cross-route edge-zone swipes (left edge → `/money`, right edge → `/calendar`).
 
 `/settings/categories` — category CRUD page. On load it probes for the `icon/color/tx_type` columns; if missing, shows a SQL migration prompt with a Retry button. After a successful probe, it upserts built-in categories (insert only, `ignoreDuplicates: true`), then runs a one-time batch UPDATE to apply curated icon/color to any rows still carrying the migration-default icon (`LayoutGrid`). This keeps user customizations intact after the first seeding pass.
 
@@ -146,6 +146,8 @@ showToast('Thing deleted', {                        // 5s, ruby dot + Undo butto
 
 **Deferred delete pattern**: remove from local state optimistically, capture a snapshot in the `onUndo` closure to restore it, fire the actual DB delete only in `onCommit`. This gives the user a 5-second undo window with zero latency on the optimistic removal.
 
+**Exception — `income` table**: uses immediate DB delete (fires `supabase.delete()` at swipe time, before the toast resolves). A `pendingDeleteIds = useRef(new Set<string>())` ref prevents `loadIncome` from re-inserting mid-delete rows into state. `onUndo` re-inserts to DB and clears the id; `onCommit` just clears it. This is intentional — the deferred pattern loses the commit when the user navigates away before the toast expires.
+
 ### Data phase
 
 All six tabs are wired to live Supabase. `src/lib/data/transactions.ts` still exists but is only used as a type source — `SeedTx` is kept as the in-memory row shape in `money/page.tsx` (Supabase rows are normalized into it on load). `SEED_TRANSACTIONS` is unused and can be deleted.
@@ -161,7 +163,7 @@ All six tabs are wired to live Supabase. `src/lib/data/transactions.ts` still ex
 - `ui/SwipeToDelete.tsx` — swipe-left-to-delete with optional `onTap` (fires on clean tap when not swiped/revealed), `actionLabel`, and `actionBg` props. The `actionBg` default is `bg-ruby`; pass `'bg-amber-500'` for a cancel/restore action. Also accepts `onRight` / `rightLabel` / `rightBg` for a right-swipe confirm action (e.g. pay). Includes automatic press-scale animation (97%) and haptic feedback — no configuration needed.
 - `money/AddTransactionSheet.tsx` — canonical bottom sheet implementation; exports `CardOption` and `BankOption` interfaces used by all pickers
 - `money/EditTransactionSheet.tsx` — edit existing transaction; exports `TxEdits`
-- `wallet/RevenueStreamSheet.tsx` — add/edit a recurring income stream (`RevenueStreamConfig`: name, amount, frequency, bankId, startDate, lastGenerated). Frequencies: `Weekly | Biweekly | Semimonthly | Monthly`. Auto-generates income rows on open based on `lastGenerated`. Exports `RevenueStreamConfig` and `Frequency`.
+- `wallet/RevenueStreamSheet.tsx` — add/edit a recurring income stream. `RevenueStreamConfig`: `{ id, name, amount, freq, bankId, nextPayDate }` where `nextPayDate` is the next upcoming payment date (any date, past or future). Legacy fields `startDate?` / `lastGenerated?` kept for migration only. Frequencies: `Weekly | Biweekly | Semimonthly | Monthly`. **Does no DB operations** — calls `onDone(config)` synchronously; all income insertion is handled by `autoGenerateStreams` on the `/in` page. Exports `RevenueStreamConfig` and `Frequency`.
 - `wallet/ManualDepositSheet.tsx` — one-off income deposit sheet, used on the `/in` page.
 - `wallet/CardVisual.tsx` — renders a credit card from a `Card` prop using `CARD_STYLE_DEFS`; draws SVG texture overlay from `getTexturePattern` (defined inline); use this everywhere a card is displayed. Accepts optional `expenseCount?: number` and `subCount?: number` props — displayed bottom-left of the card face. The `/in` Cards tab computes these from the `expenses` and `subscriptions` tables (filtered by `card_id`) and passes them in.
 - `wallet/AddCardSheet.tsx` / `EditCardSheet.tsx` — card add/edit sheets with grouped 12-style color picker and 8-texture picker; `NewCard` and `CardEdits` interfaces both include `texture: CardTexture`
@@ -193,6 +195,7 @@ Wrap each list row in `<SwipeToDelete onDelete={...} onTap={() => setEditTarget(
 `DailyBarChart` (Money page) is defined as a named function in the same file as its page — it is **not** extracted to `src/components/`. It is computed entirely from already-loaded page state (no new queries). Follow this pattern for page-specific visualizations.
 
 - `DailyBarChart`: 30-day net bars, `requestAnimationFrame` triggers CSS height transition, emerald/gold/zero coloring (not ruby), gold dot for today
+- `StatCard` (inline in `/in` page): `SlotNumber`-animated income stat tile. Matches Out tab tile style (`flex-1`, `rounded-[22px] p-4`, `text-[26px] font-bold`, `$f` format). Tab-specific: History → This Month / This Year (actual DB income + projected future stream payments via `projectStreamPayments`) / Next In; Streams → Per Month / Per Year (all stream frequencies normalized: Weekly ×52/12, Biweekly ×26/12, Semimonthly ×24/12, plus interest); Accounts → Total Saved / Int Per Year from `bankCfg`.
 
 ### Design system
 
@@ -438,6 +441,11 @@ CSS variables per theme live in `globals.css` under `:root`, `html.charcoal-slat
 - `clamp(v, min, max)` — numeric clamp
 - `cn(...classes)` — Tailwind className joiner
 - `haptic(style)` — triggers `navigator.vibrate()` where supported (Android); silent on iOS. Styles: `'tap'` (6ms), `'confirm'` (10ms), `'delete'` (double-pulse). SwipeToDelete calls this automatically; call it manually on other destructive or confirming actions.
+
+### `/in` page localStorage
+
+- `'revenue-streams'` → `RevenueStreamConfig[]` — recurring income streams. `nextPayDate` is the canonical next-payment anchor; `autoGenerateStreams` migrates old streams that only have `lastGenerated` by computing `nextPayDate` on first run. Streams config is saved via `saveStreams()` helper; never write directly with `localStorage.setItem` in other files.
+- `'bank-cfg'` → `Record<bankId, BankCfgEntry>` where `BankCfgEntry = { apy: number; balance: number; nextInterestDate?: string; interestFreq?: 'Monthly' | 'Quarterly' }`. Written via `saveBankCfg()`. Bank balance does **not** auto-update when income lands — it is set manually via the Balance & Interest sheet. `autoGenerateInterest` inserts an income row when `nextInterestDate <= today` and advances it by one cycle.
 
 ### App preferences (`src/lib/app-prefs.ts`)
 
