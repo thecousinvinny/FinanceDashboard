@@ -14,9 +14,10 @@ import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import type { Card, Bank } from '@/types'
 import { Banknote, ChevronRight, X } from 'lucide-react'
-import { cn, $fd, $fk, fmtDate, haptic, groupByMonth, localToday, daysUntilLabel } from '@/lib/utils'
+import { cn, $f, $fd, $fk, fmtDate, haptic, groupByMonth, localToday, daysUntilLabel } from '@/lib/utils'
 import type { Frequency } from '@/components/wallet/RevenueStreamSheet'
 import { showToast } from '@/lib/toast'
+import { SlotNumber } from '@/components/ui/SlotNumber'
 import { useRouter } from 'next/navigation'
 import { usePillSwipe } from '@/hooks/usePillSwipe'
 import { getAppPrefs } from '@/lib/app-prefs'
@@ -64,33 +65,18 @@ function advanceStream(date: string, freq: Frequency): string {
 }
 
 function StatCard({ label, value, sub, loading }: { label: string; value: number; sub?: string; loading: boolean }) {
-  const [display, setDisplay] = useState(0)
-  const rafRef = useRef<number | null>(null)
-  useEffect(() => {
-    if (loading) return
-    if (rafRef.current) cancelAnimationFrame(rafRef.current)
-    const target = value
-    const start  = performance.now()
-    function step(now: number) {
-      const t    = Math.min((now - start) / 700, 1)
-      const ease = 1 - Math.pow(1 - t, 3)
-      setDisplay(target * ease)
-      if (t < 1) rafRef.current = requestAnimationFrame(step)
-      else        setDisplay(target)
-    }
-    rafRef.current = requestAnimationFrame(step)
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
-  }, [value, loading])
   return (
-    <div className="bg-bg-surface border border-white/[0.06] rounded-[16px] px-3 py-3">
-      <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-1.5">{label}</p>
+    <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint">{label}</p>
+      </div>
       {loading
-        ? <div className="h-6 w-14 rounded-[6px] skeleton" />
-        : <p className="text-[17px] font-bold font-mono text-emerald leading-none" style={{ fontFamily: 'var(--font-big-shoulders)' }}>
-            {'$' + Math.round(display).toLocaleString()}
+        ? <div className="h-8 w-20 rounded-[6px] skeleton" />
+        : <p className="text-[26px] font-bold tracking-tight text-emerald leading-none">
+            <SlotNumber value={Math.round(value)} format={$f} />
           </p>
       }
-      {sub && !loading && <p className="text-[10px] text-ink-muted mt-1 truncate">{sub}</p>}
+      {sub && !loading && <p className="text-[11px] font-mono text-ink-faint mt-1">{sub}</p>}
     </div>
   )
 }
@@ -641,7 +627,11 @@ export default function InPage() {
         <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
         <div className="pt-12" />
 
-        <div className={`mx-4 mt-4 grid gap-2 ${statNextIn ? 'grid-cols-3' : 'grid-cols-2'}`}>
+        <div className="mx-4 mt-4">
+          <PillGroup options={['History', 'Streams', 'Accounts'] as Tab[]} value={tab} onChange={setTab} />
+        </div>
+
+        <div className="mx-4 mt-4 flex gap-2">
           <StatCard label="This Month" value={statThisMonth} loading={incomeLoading} />
           <StatCard label="This Year"  value={statThisYear}  loading={incomeLoading} />
           {statNextIn && (
@@ -649,10 +639,6 @@ export default function InPage() {
               sub={daysUntilLabel(statNextIn.nextPayDate)}
               loading={incomeLoading} />
           )}
-        </div>
-
-        <div className="mx-4 mt-3">
-          <PillGroup options={['History', 'Streams', 'Accounts'] as Tab[]} value={tab} onChange={setTab} />
         </div>
 
         {loading && (
