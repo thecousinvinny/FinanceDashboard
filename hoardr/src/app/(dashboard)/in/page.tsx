@@ -123,6 +123,7 @@ export default function InPage() {
   const detailAbortRef    = useRef<AbortController | null>(null)
   const incomeGen         = useRef(0)
   const incomeAbortRef    = useRef<AbortController | null>(null)
+  const pendingDeleteIds  = useRef(new Set<string>())
   const containerRef      = useRef<HTMLDivElement | null>(null)
   const cardsRef          = useRef<Card[]>(cards)
   const banksRef          = useRef<Bank[]>(banks)
@@ -197,7 +198,7 @@ export default function InPage() {
         .limit(200)
         .abortSignal(controller.signal)
       if (gen !== incomeGen.current) return
-      setIncomeList((data ?? []).map(i => ({
+      setIncomeList((data ?? []).filter(i => !pendingDeleteIds.current.has(String(i.id))).map(i => ({
         id:      String(i.id),
         name:    String(i.name),
         amount:  Number(i.amount),
@@ -318,12 +319,22 @@ export default function InPage() {
     const row = incomeList.find(i => i.id === id)
     if (!row) return
     const snapshot = incomeList.slice()
+    pendingDeleteIds.current.add(id)
     setIncomeList(prev => prev.filter(i => i.id !== id))
+    // Delete immediately so navigating away doesn't lose the commit
+    supabase.from('income').delete().eq('id', id)
     showToast(`${row.name} deleted`, {
       type: 'delete',
       undo: {
-        onUndo:   () => setIncomeList(snapshot),
-        onCommit: () => { supabase.from('income').delete().eq('id', id) },
+        onUndo: () => {
+          pendingDeleteIds.current.delete(id)
+          setIncomeList(snapshot)
+          supabase.from('income').insert({
+            id, name: row.name, amount: row.amount, date: row.date,
+            source: row.source, bank_id: row.bank_id,
+          })
+        },
+        onCommit: () => { pendingDeleteIds.current.delete(id) },
       },
     })
   }
