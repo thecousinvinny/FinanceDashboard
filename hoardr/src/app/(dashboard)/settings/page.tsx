@@ -2,14 +2,13 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, ChevronRight, CreditCard, LogOut, CalendarDays, Tag, Settings2, Landmark } from 'lucide-react'
+import { Check, ChevronRight, CreditCard, LogOut, CalendarDays, Tag, Settings2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { cn, localToday } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import { type Theme, THEMES, applyTheme, readTheme } from '@/lib/theme'
 import { CalendarSettingsSheet, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
 import { type IconColorMode, getIconColorMode, setIconColorMode } from '@/lib/category-meta'
 import { getWeekStartsMonday, setWeekStartsMonday } from '@/lib/week-start'
-import { ManualDepositSheet } from '@/components/wallet/ManualDepositSheet'
 
 const DEFAULT_PREFS: CalPrefs = { visibleTypes: ['sub', 'income'], googleCalendarIds: [] }
 
@@ -33,8 +32,6 @@ export default function SettingsPage() {
   const [defaultCardName,      setDefaultCardName]      = useState<string | null>(null)
   const [settingsCards,        setSettingsCards]        = useState<SettingsCard[]>([])
   const [settingsCardsLoading, setSettingsCardsLoading] = useState(false)
-  const [settingsBanks,        setSettingsBanks]        = useState<{ id: string; name: string }[]>([])
-  const [initBankTarget,       setInitBankTarget]       = useState<{ id: string; name: string } | null>(null)
 
   useEffect(() => {
     setTheme(readTheme())
@@ -57,12 +54,6 @@ export default function SettingsPage() {
   useEffect(() => {
     supabase.from('cards').select('id, name').eq('is_default', true).single()
       .then(({ data }) => { if (data) { setDefaultCardId(data.id as string); setDefaultCardName(data.name as string) } })
-  }, [supabase])
-
-  // Load banks for initialization section
-  useEffect(() => {
-    supabase.from('banks').select('id, name').order('created_at', { ascending: false })
-      .then(({ data }) => setSettingsBanks((data ?? []) as { id: string; name: string }[]))
   }, [supabase])
 
   // Lazily load all cards when the picker opens
@@ -171,31 +162,6 @@ export default function SettingsPage() {
           </button>
         </div>
       </div>
-
-      {/* ── Banks ──────────────────────────────────────────────────────────── */}
-      {settingsBanks.length > 0 && (
-        <div className="px-5 mb-6">
-          <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Bank Balances</p>
-          <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
-            {settingsBanks.map(bank => (
-              <button
-                key={bank.id}
-                onClick={() => setInitBankTarget(bank)}
-                className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity"
-              >
-                <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
-                  <Landmark size={15} className="text-gold" strokeWidth={1.75} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[14px] font-medium text-ink">{bank.name}</p>
-                  <p className="text-[11px] text-ink-muted">Initialize starting balance</p>
-                </div>
-                <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* ── Defaults ───────────────────────────────────────────────────────── */}
       <div className="px-5 mb-6">
@@ -364,15 +330,6 @@ export default function SettingsPage() {
       </div>
 
       </div>
-
-      <ManualDepositSheet
-        open={!!initBankTarget}
-        onClose={() => setInitBankTarget(null)}
-        banks={settingsBanks}
-        onDone={() => {}}
-        defaultBankId={initBankTarget?.id ?? null}
-        defaultLabel="Opening Balance"
-      />
 
       <CalendarSettingsSheet
         open={calOpen}

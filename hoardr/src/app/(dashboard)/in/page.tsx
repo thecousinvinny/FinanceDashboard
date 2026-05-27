@@ -14,7 +14,8 @@ import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import type { Card, Bank } from '@/types'
 import { Banknote, ChevronRight, X } from 'lucide-react'
-import { cn, $fd, $fk, fmtDate, haptic, groupByMonth, localToday } from '@/lib/utils'
+import { cn, $fd, $fk, fmtDate, haptic, groupByMonth, localToday, daysUntilLabel } from '@/lib/utils'
+import type { Frequency } from '@/components/wallet/RevenueStreamSheet'
 import { showToast } from '@/lib/toast'
 import { useRouter } from 'next/navigation'
 import { usePillSwipe } from '@/hooks/usePillSwipe'
@@ -34,13 +35,48 @@ interface IncomeRow {
   id: string; name: string; amount: number; date: string; source: string | null; bank_id: string | null
 }
 
-type Tab = 'Income' | 'Cards' | 'Banks'
+type Tab = 'History' | 'Streams' | 'Accounts'
+type BankCfgEntry = { apy: number; balance: number; lastInterestMonth?: string }
 
-const PILL_OPTIONS: Tab[] = ['Income', 'Cards', 'Banks']
+const PILL_OPTIONS: Tab[] = ['History', 'Streams', 'Accounts']
+
+// ── local date helpers (mirrors RevenueStreamSheet logic) ──────────────────
+function addDay(s: string): string {
+  const [y, m, d] = s.split('-').map(Number)
+  const dt = new Date(y, m - 1, d + 1)
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+}
+function getPayDates(startDate: string, freq: Frequency): string[] {
+  const [y, m, d] = startDate.split('-').map(Number)
+  let cur = new Date(y, m - 1, d)
+  const today = new Date(); today.setHours(23, 59, 59, 999)
+  const dates: string[] = []
+  while (cur <= today) {
+    dates.push(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`)
+    switch (freq) {
+      case 'Weekly':       cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + 7);  break
+      case 'Biweekly':    cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + 14); break
+      case 'Semimonthly': cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + 15); break
+      case 'Monthly':     cur = new Date(cur.getFullYear(), cur.getMonth() + 1, cur.getDate());  break
+    }
+  }
+  return dates
+}
+function nextPayDate(lastGenerated: string, freq: Frequency): string {
+  const [y, m, d] = lastGenerated.split('-').map(Number)
+  let next: Date
+  switch (freq) {
+    case 'Weekly':       next = new Date(y, m - 1, d + 7);  break
+    case 'Biweekly':    next = new Date(y, m - 1, d + 14); break
+    case 'Semimonthly': next = new Date(y, m - 1, d + 15); break
+    case 'Monthly':     next = new Date(y, m, d);           break
+  }
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`
+}
 
 export default function InPage() {
   const router = useRouter()
-  const [tab,           setTab]          = useState<Tab>('Income')
+  const [tab,           setTab]          = useState<Tab>('History')
   usePillSwipe(tab, setTab, PILL_OPTIONS, '/money', '/calendar', router)
   type InCache = { cards: Card[]; banks: Bank[] }
   const cached = pageCache.get<InCache>('in')
@@ -57,9 +93,8 @@ export default function InPage() {
   const [revStreams,    setRevStreams]   = useState<RevenueStreamConfig[]>([])
   const [incomeList,    setIncomeList]   = useState<IncomeRow[]>([])
   const [incomeLoading, setIncomeLoading] = useState(false)
-  const [incomeKey,     setIncomeKey]    = useState(0)
   const [interestBank,  setInterestBank] = useState<Bank | null>(null)
-  const [bankCfg,       setBankCfg]      = useState<Record<string, { apy: number; balance: number }>>({})
+  const [bankCfg,       setBankCfg]      = useState<Record<string, BankCfgEntry>>({})
   const [intBalance,    setIntBalance]   = useState('')
   const [intApy,        setIntApy]       = useState('')
   const [intDate,       setIntDate]      = useState('')
@@ -83,6 +118,8 @@ export default function InPage() {
   const incomeAbortRef    = useRef<AbortController | null>(null)
   const containerRef      = useRef<HTMLDivElement | null>(null)
   const cardsRef          = useRef<Card[]>(cards)
+  const banksRef          = useRef<Bank[]>(banks)
+  const autoGenRan        = useRef(false)
   const draggingIdRef     = useRef<string | null>(null)
   const isDraggingRef     = useRef(false)
   const justEndedDragRef  = useRef(false)
@@ -123,6 +160,14 @@ export default function InPage() {
       setCardStats(stats)
       pageCache.set('in', { cards: newCards, banks: newBanks })
       setLoading(false)
+      if (!autoGenRan.current) {
+        autoGenRan.current = true
+        supabase.auth.getUser().then(({ data: { user } }) => {
+          if (!user) return
+          autoGenerateStreams(user.id)
+          autoGenerateInterest(user.id)
+        })
+      }
     } catch (err) {
       if ((err as Error)?.name === 'AbortError') return
       console.error('loadData error:', err)
@@ -161,12 +206,13 @@ export default function InPage() {
 
   useEffect(() => { loadData(); return () => { loadGen.current++; abortRef.current?.abort() } }, [loadData])
   useEffect(() => { cardsRef.current = cards }, [cards])
+  useEffect(() => { banksRef.current = banks }, [banks])
 
   useEffect(() => {
-    if (tab !== 'Income') return
+    if (tab !== 'History') return
     loadIncome()
     return () => { incomeGen.current++; incomeAbortRef.current?.abort() }
-  }, [tab, loadIncome, incomeKey])
+  }, [tab, loadIncome])
 
   const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } = usePullToRefresh(loadData)
 
@@ -188,6 +234,45 @@ export default function InPage() {
     setIntApy(cfg?.apy ? String(cfg.apy) : '')
     setIntDate(localToday())
   }, [interestBank])
+
+  async function autoGenerateStreams(userId: string) {
+    const streams: RevenueStreamConfig[] = (() => {
+      try { return JSON.parse(localStorage.getItem('revenue-streams') ?? '[]') } catch { return [] }
+    })()
+    let updated = [...streams]
+    let changed = false
+    for (let i = 0; i < updated.length; i++) {
+      const s = updated[i]
+      if (!s.lastGenerated) continue
+      const newDates = getPayDates(addDay(s.lastGenerated), s.freq)
+      if (!newDates.length) continue
+      const { error } = await supabase.from('income').insert(
+        newDates.map(date => ({ user_id: userId, name: s.name, amount: s.amount, date, source: 'Projects', bank_id: s.bankId ?? null }))
+      )
+      if (!error) { updated[i] = { ...s, lastGenerated: newDates[newDates.length - 1] }; changed = true }
+    }
+    if (changed) { setRevStreams(updated); try { localStorage.setItem('revenue-streams', JSON.stringify(updated)) } catch {} ; loadIncome() }
+  }
+
+  async function autoGenerateInterest(userId: string) {
+    const cfg: Record<string, BankCfgEntry> = (() => {
+      try { return JSON.parse(localStorage.getItem('bank-cfg') ?? '{}') } catch { return {} }
+    })()
+    const currentMonth = localToday().slice(0, 7)
+    const next = { ...cfg }
+    let changed = false
+    for (const [bankId, conf] of Object.entries(cfg)) {
+      if (!conf.apy || !conf.balance || conf.lastInterestMonth === currentMonth) continue
+      const monthly = parseFloat((conf.balance * conf.apy / 100 / 12).toFixed(2))
+      const bank = banksRef.current.find(b => b.id === bankId)
+      const { error } = await supabase.from('income').insert({
+        user_id: userId, name: `${bank?.name ?? 'Bank'} Interest`,
+        amount: monthly, date: localToday(), source: 'Other', bank_id: bankId,
+      })
+      if (!error) { next[bankId] = { ...conf, lastInterestMonth: currentMonth }; changed = true }
+    }
+    if (changed) { saveBankCfg(next); loadIncome() }
+  }
 
   function saveStreams(streams: RevenueStreamConfig[]) {
     try { localStorage.setItem('revenue-streams', JSON.stringify(streams)) } catch {}
@@ -483,7 +568,7 @@ export default function InPage() {
         <div className="pt-12" />
 
         <div className="mx-4 mt-4">
-          <PillGroup options={['Income', 'Cards', 'Banks'] as Tab[]} value={tab} onChange={setTab} />
+          <PillGroup options={['History', 'Streams', 'Accounts'] as Tab[]} value={tab} onChange={setTab} />
         </div>
 
         {loading && (
@@ -494,116 +579,9 @@ export default function InPage() {
           </div>
         )}
 
-        {/* ── Cards ──────────────────────────────────────────────────────── */}
-        {!loading && tab === 'Cards' && (
-          <div ref={containerRef} className="px-4 mt-5 flex flex-col gap-4">
-            {cards.length === 0 && (
-              <div className="py-12 text-center text-ink-faint text-[13px]">No cards yet — tap + to add one.</div>
-            )}
-            {(draggingId ? dragCards : cards).map(card => (
-              <div
-                key={card.id}
-                data-card-id={card.id}
-                style={{
-                  position:   'relative',
-                  opacity:    draggingId && draggingId !== card.id ? 0.6 : 1,
-                  transition: draggingId ? 'opacity 200ms ease' : undefined,
-                  zIndex:     draggingId === card.id ? 10 : undefined,
-                }}
-              >
-                <SwipeToDelete
-                  onDelete={() => handleDeleteCard(card.id)}
-                  onTap={() => { if (justEndedDragRef.current) return; setSelectedCard(card) }}
-                  className="rounded-card"
-                >
-                  <div className={cn('transition-transform duration-75', !draggingId && 'active:scale-[0.98]')}>
-                    <CardVisual card={card} expenseCount={cardStats[card.id]?.expenses ?? 0} subCount={cardStats[card.id]?.subs ?? 0} />
-                  </div>
-                </SwipeToDelete>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* ── Banks ──────────────────────────────────────────────────────── */}
-        {!loading && tab === 'Banks' && (
-          <div className="mx-4 mt-4">
-            {banks.length === 0 ? (
-              <div className="py-12 text-center text-ink-faint text-[13px]">No banks yet — tap + to add one.</div>
-            ) : (
-              <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
-                {banks.map(bank => {
-                  const linked = cards.filter(c => c.bank_id === bank.id)
-                  const cfg    = bankCfg[bank.id]
-                  return (
-                    <SwipeToDelete key={bank.id} onDelete={() => handleDeleteBank(bank.id)} onTap={() => setInterestBank(bank)}>
-                      <div className="flex items-center gap-3 px-4 py-4 bg-bg-surface">
-                        <div className="w-10 h-10 rounded-[10px] bg-bg-overlay flex items-center justify-center text-lg flex-shrink-0">🏦</div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[14px] font-medium text-ink">{bank.name}</p>
-                          <p className="text-[11px] text-ink-muted">
-                            {bank.type ?? 'Bank'}{bank.last4 ? ` · ••••${bank.last4}` : ''}
-                            {cfg?.apy ? ` · ${cfg.apy}% APY` : ''}
-                          </p>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className="text-[12px] text-ink-faint">{linked.length} {linked.length === 1 ? 'card' : 'cards'}</p>
-                          {cfg?.balance ? <p className="text-[11px] text-emerald font-mono">{$fd(cfg.balance)}</p> : null}
-                        </div>
-                      </div>
-                    </SwipeToDelete>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Income ─────────────────────────────────────────────────────── */}
-        {!loading && tab === 'Income' && (
-          <div className="mx-4 mt-4 space-y-3">
-
-            {/* Revenue Streams */}
-            {revStreams.length > 0 && (
-              <>
-                <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint pt-2">Revenue Streams</p>
-                <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
-                  {revStreams.map(stream => (
-                    <SwipeToDelete
-                      key={stream.id}
-                      onDelete={() => handleDeleteStream(stream.id)}
-                      onTap={() => { setEditStream(stream); setStreamOpen(true) }}
-                    >
-                      <div className="flex items-center gap-3 px-4 py-3.5">
-                        <div className="w-10 h-10 rounded-[12px] bg-emerald/10 flex items-center justify-center flex-shrink-0">
-                          <Banknote size={15} className="text-emerald" strokeWidth={1.75} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[14px] font-medium text-ink truncate">{stream.name}</p>
-                          <p className="text-[11px] text-ink-muted">
-                            ${stream.amount.toLocaleString()} · {stream.freq}
-                            {banks.find(b => b.id === stream.bankId)
-                              ? ` · ${banks.find(b => b.id === stream.bankId)!.name}` : ''}
-                          </p>
-                        </div>
-                        <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
-                      </div>
-                    </SwipeToDelete>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {revStreams.length === 0 && (
-              <div className="py-4 text-center">
-                <p className="text-[13px] text-ink-faint">No revenue streams yet</p>
-                <p className="text-[11px] text-ink-faint/60 mt-1">Tap + to create your first income source</p>
-              </div>
-            )}
-
-            {/* Income History */}
-            <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint pt-2">Income History</p>
-
+        {/* ── History ────────────────────────────────────────────────────── */}
+        {!loading && tab === 'History' && (
+          <div className="mx-4 mt-4 space-y-5">
             {incomeLoading ? (
               <div className="space-y-2">
                 {[1, 2, 3].map(i => (
@@ -611,9 +589,9 @@ export default function InPage() {
                 ))}
               </div>
             ) : incomeGroups.length === 0 ? (
-              <div className="py-8 text-center text-ink-faint text-[13px]">No income recorded yet.</div>
+              <div className="py-12 text-center text-ink-faint text-[13px]">No income recorded yet — tap + to add.</div>
             ) : (
-              <div className="space-y-5">
+              <>
                 {incomeGroups.map(group => (
                   <div key={group.key}>
                     <div className="flex items-center justify-between mb-3">
@@ -638,7 +616,144 @@ export default function InPage() {
                     </div>
                   </div>
                 ))}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ── Streams ────────────────────────────────────────────────────── */}
+        {!loading && tab === 'Streams' && (
+          <div className="mx-4 mt-4 space-y-5">
+            {/* Revenue Streams */}
+            {revStreams.length > 0 && (
+              <div>
+                <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Revenue Streams</p>
+                <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
+                  {revStreams.map(stream => {
+                    const next = stream.lastGenerated ? nextPayDate(stream.lastGenerated, stream.freq) : stream.startDate
+                    return (
+                      <SwipeToDelete key={stream.id} onDelete={() => handleDeleteStream(stream.id)} onTap={() => { setEditStream(stream); setStreamOpen(true) }}>
+                        <div className="flex items-center gap-3 px-4 py-3.5">
+                          <div className="w-10 h-10 rounded-[12px] bg-emerald/10 flex items-center justify-center flex-shrink-0">
+                            <Banknote size={15} className="text-emerald" strokeWidth={1.75} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[14px] font-medium text-ink truncate">{stream.name}</p>
+                            <p className="text-[11px] text-ink-muted">
+                              {$fd(stream.amount)} · {stream.freq}
+                              {banks.find(b => b.id === stream.bankId) ? ` · ${banks.find(b => b.id === stream.bankId)!.name}` : ''}
+                            </p>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-[11px] text-ink-muted">{daysUntilLabel(next)}</p>
+                          </div>
+                        </div>
+                      </SwipeToDelete>
+                    )
+                  })}
+                </div>
               </div>
+            )}
+
+            {/* Interest Streams */}
+            {Object.entries(bankCfg).filter(([, c]) => c.apy && c.balance).length > 0 && (
+              <div>
+                <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Interest</p>
+                <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
+                  {Object.entries(bankCfg)
+                    .filter(([, c]) => c.apy && c.balance)
+                    .map(([bankId, cfg]) => {
+                      const bank    = banks.find(b => b.id === bankId)
+                      if (!bank) return null
+                      const monthly = parseFloat((cfg.balance * cfg.apy / 100 / 12).toFixed(2))
+                      const lastMo  = cfg.lastInterestMonth
+                      const nextMo  = (() => {
+                        if (!lastMo) return 'this month'
+                        const [y, m] = lastMo.split('-').map(Number)
+                        const next = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`
+                        return next === localToday().slice(0, 7) ? 'this month ✓' : next
+                      })()
+                      return (
+                        <div key={bankId} className="flex items-center gap-3 px-4 py-3.5">
+                          <div className="w-10 h-10 rounded-[12px] bg-emerald/10 flex items-center justify-center text-lg flex-shrink-0">🏦</div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[14px] font-medium text-ink truncate">{bank.name} Interest</p>
+                            <p className="text-[11px] text-ink-muted">{cfg.apy}% APY · Monthly</p>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-[13px] font-semibold font-mono text-emerald">+{$fd(monthly)}</p>
+                            <p className="text-[10px] text-ink-faint">{nextMo}</p>
+                          </div>
+                        </div>
+                      )
+                    })}
+                </div>
+              </div>
+            )}
+
+            {revStreams.length === 0 && !Object.values(bankCfg).some(c => c.apy) && (
+              <div className="py-12 text-center">
+                <p className="text-[13px] text-ink-faint">No streams yet — tap + to add one.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Accounts ───────────────────────────────────────────────────── */}
+        {!loading && tab === 'Accounts' && (
+          <div className="mx-4 mt-4 space-y-5">
+            {/* Banks */}
+            {banks.length > 0 && (
+              <div>
+                <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Banks</p>
+                <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
+                  {banks.map(bank => {
+                    const linked = cards.filter(c => c.bank_id === bank.id)
+                    const cfg    = bankCfg[bank.id]
+                    return (
+                      <SwipeToDelete key={bank.id} onDelete={() => handleDeleteBank(bank.id)} onTap={() => setInterestBank(bank)}>
+                        <div className="flex items-center gap-3 px-4 py-4 bg-bg-surface">
+                          <div className="w-10 h-10 rounded-[10px] bg-bg-overlay flex items-center justify-center text-lg flex-shrink-0">🏦</div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[14px] font-medium text-ink">{bank.name}</p>
+                            <p className="text-[11px] text-ink-muted">
+                              {bank.type ?? 'Bank'}{bank.last4 ? ` · ••••${bank.last4}` : ''}
+                              {cfg?.apy ? ` · ${cfg.apy}% APY` : ''}
+                            </p>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-[12px] text-ink-faint">{linked.length} {linked.length === 1 ? 'card' : 'cards'}</p>
+                            {cfg?.balance ? <p className="text-[12px] font-mono text-emerald">{$fd(cfg.balance)}</p> : null}
+                          </div>
+                        </div>
+                      </SwipeToDelete>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Cards */}
+            {cards.length > 0 && (
+              <div>
+                <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Cards</p>
+                <div ref={containerRef} className="flex flex-col gap-4">
+                  {(draggingId ? dragCards : cards).map(card => (
+                    <div key={card.id} data-card-id={card.id}
+                      style={{ position: 'relative', opacity: draggingId && draggingId !== card.id ? 0.6 : 1, transition: draggingId ? 'opacity 200ms ease' : undefined, zIndex: draggingId === card.id ? 10 : undefined }}>
+                      <SwipeToDelete onDelete={() => handleDeleteCard(card.id)} onTap={() => { if (justEndedDragRef.current) return; setSelectedCard(card) }} className="rounded-card">
+                        <div className={cn('transition-transform duration-75', !draggingId && 'active:scale-[0.98]')}>
+                          <CardVisual card={card} expenseCount={cardStats[card.id]?.expenses ?? 0} subCount={cardStats[card.id]?.subs ?? 0} />
+                        </div>
+                      </SwipeToDelete>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {banks.length === 0 && cards.length === 0 && (
+              <div className="py-12 text-center text-ink-faint text-[13px]">No accounts yet — tap + to add a bank or card.</div>
             )}
           </div>
         )}
@@ -647,26 +762,18 @@ export default function InPage() {
       </div>
 
       {/* ── FAB ─────────────────────────────────────────────────────────── */}
-      {fabOpen && (
+      {tab === 'Accounts' && fabOpen && (
         <div className="fixed inset-0" style={{ zIndex: 39 }} onClick={() => setFabOpen(false)} />
       )}
-      {fabOpen && (
+      {tab === 'Accounts' && fabOpen && (
         <div className="fixed flex flex-col gap-3" style={{ right: 16, bottom: 148, zIndex: 41, width: 120 }}>
           <button className="w-full" onClick={() => { setFabOpen(false); setBankSheetOpen(true) }}
-            style={{ animation: 'fab-item-in 0.32s cubic-bezier(0.34,1.56,0.64,1) 0.18s both' }}>
+            style={{ animation: 'fab-item-in 0.32s cubic-bezier(0.34,1.56,0.64,1) 0.06s both' }}>
             <span className="block w-full text-center text-[13px] font-semibold text-white gradient-gold rounded-full py-2 shadow-lg">Bank</span>
           </button>
           <button className="w-full" onClick={() => { setFabOpen(false); setCardSheetOpen(true) }}
-            style={{ animation: 'fab-item-in 0.32s cubic-bezier(0.34,1.56,0.64,1) 0.12s both' }}>
-            <span className="block w-full text-center text-[13px] font-semibold text-white gradient-gold rounded-full py-2 shadow-lg">Card</span>
-          </button>
-          <button className="w-full" onClick={() => { setFabOpen(false); setStreamOpen(true) }}
-            style={{ animation: 'fab-item-in 0.32s cubic-bezier(0.34,1.56,0.64,1) 0.06s both' }}>
-            <span className="block w-full text-center text-[13px] font-semibold text-white gradient-gold rounded-full py-2 shadow-lg">Stream</span>
-          </button>
-          <button className="w-full" onClick={() => { setFabOpen(false); setIncomeOpen(true) }}
             style={{ animation: 'fab-item-in 0.32s cubic-bezier(0.34,1.56,0.64,1) 0s both' }}>
-            <span className="block w-full text-center text-[13px] font-semibold text-white gradient-gold rounded-full py-2 shadow-lg">Income</span>
+            <span className="block w-full text-center text-[13px] font-semibold text-white gradient-gold rounded-full py-2 shadow-lg">Card</span>
           </button>
         </div>
       )}
