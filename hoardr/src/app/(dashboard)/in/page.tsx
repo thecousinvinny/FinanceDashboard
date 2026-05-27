@@ -13,8 +13,8 @@ import { CardVisual } from '@/components/wallet/CardVisual'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import type { Card, Bank } from '@/types'
-import { Banknote, ChevronRight } from 'lucide-react'
-import { cn, $fd, $fk, fmtDate, haptic, groupByMonth } from '@/lib/utils'
+import { Banknote, ChevronRight, X } from 'lucide-react'
+import { cn, $fd, $fk, fmtDate, haptic, groupByMonth, localToday } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
 import { useRouter } from 'next/navigation'
 import { usePillSwipe } from '@/hooks/usePillSwipe'
@@ -58,6 +58,11 @@ export default function InPage() {
   const [incomeList,    setIncomeList]   = useState<IncomeRow[]>([])
   const [incomeLoading, setIncomeLoading] = useState(false)
   const [incomeKey,     setIncomeKey]    = useState(0)
+  const [interestBank,  setInterestBank] = useState<Bank | null>(null)
+  const [bankCfg,       setBankCfg]      = useState<Record<string, { apy: number; balance: number }>>({})
+  const [intBalance,    setIntBalance]   = useState('')
+  const [intApy,        setIntApy]       = useState('')
+  const [intSaving,     setIntSaving]    = useState(false)
   const [selectedCard,  setSelectedCard] = useState<Card | null>(null)
   const [editCard,      setEditCard]     = useState<Card | null>(null)
   const [editSheetOpen, setEditSheetOpen] = useState(false)
@@ -169,7 +174,18 @@ export default function InPage() {
       const v = localStorage.getItem('revenue-streams')
       if (v) setRevStreams(JSON.parse(v))
     } catch {}
+    try {
+      const v = localStorage.getItem('bank-cfg')
+      if (v) setBankCfg(JSON.parse(v))
+    } catch {}
   }, [])
+
+  useEffect(() => {
+    if (!interestBank) return
+    const cfg = bankCfg[interestBank.id]
+    setIntBalance(cfg?.balance ? String(cfg.balance) : '')
+    setIntApy(cfg?.apy ? String(cfg.apy) : '')
+  }, [interestBank])
 
   function saveStreams(streams: RevenueStreamConfig[]) {
     try { localStorage.setItem('revenue-streams', JSON.stringify(streams)) } catch {}
@@ -266,6 +282,36 @@ export default function InPage() {
       type: 'delete',
       undo: { onUndo: () => setBanks(snapshot), onCommit: () => { supabase.from('banks').delete().eq('id', id) } },
     })
+  }
+
+  function saveBankCfg(next: Record<string, { apy: number; balance: number }>) {
+    setBankCfg(next)
+    try { localStorage.setItem('bank-cfg', JSON.stringify(next)) } catch {}
+  }
+
+  async function handleAddInterest() {
+    if (!interestBank) return
+    const bal = parseFloat(intBalance)
+    const apy = parseFloat(intApy)
+    if (isNaN(bal) || bal <= 0 || isNaN(apy) || apy <= 0) return
+    const monthly = parseFloat((bal * (apy / 100) / 12).toFixed(2))
+    saveBankCfg({ ...bankCfg, [interestBank.id]: { apy, balance: bal } })
+    setIntSaving(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setIntSaving(false); return }
+    const { error } = await supabase.from('income').insert({
+      user_id: user.id,
+      name:    `${interestBank.name} Interest`,
+      amount:  monthly,
+      date:    localToday(),
+      source:  'Other',
+      bank_id: interestBank.id,
+    })
+    setIntSaving(false)
+    if (error) { showToast('Failed to add interest', { type: 'delete' }); return }
+    showToast(`+${$fd(monthly)} interest added`, { type: 'add' })
+    setInterestBank(null)
+    loadIncome()
   }
 
   async function handleAddCard(newCard: NewCard) {
@@ -486,19 +532,22 @@ export default function InPage() {
               <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
                 {banks.map(bank => {
                   const linked = cards.filter(c => c.bank_id === bank.id)
+                  const cfg    = bankCfg[bank.id]
                   return (
-                    <SwipeToDelete key={bank.id} onDelete={() => handleDeleteBank(bank.id)}>
+                    <SwipeToDelete key={bank.id} onDelete={() => handleDeleteBank(bank.id)} onTap={() => setInterestBank(bank)}>
                       <div className="flex items-center gap-3 px-4 py-4 bg-bg-surface">
                         <div className="w-10 h-10 rounded-[10px] bg-bg-overlay flex items-center justify-center text-lg flex-shrink-0">🏦</div>
                         <div className="flex-1 min-w-0">
                           <p className="text-[14px] font-medium text-ink">{bank.name}</p>
                           <p className="text-[11px] text-ink-muted">
                             {bank.type ?? 'Bank'}{bank.last4 ? ` · ••••${bank.last4}` : ''}
+                            {cfg?.apy ? ` · ${cfg.apy}% APY` : ''}
                           </p>
                         </div>
-                        <p className="text-[12px] text-ink-faint flex-shrink-0">
-                          {linked.length} {linked.length === 1 ? 'card' : 'cards'}
-                        </p>
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-[12px] text-ink-faint">{linked.length} {linked.length === 1 ? 'card' : 'cards'}</p>
+                          {cfg?.balance ? <p className="text-[11px] text-emerald font-mono">{$fd(cfg.balance)}</p> : null}
+                        </div>
                       </div>
                     </SwipeToDelete>
                   )
@@ -670,6 +719,72 @@ export default function InPage() {
         onMakeDefault={handleMakeDefault}
         banks={banks.map(b => ({ id: b.id, name: b.name }))}
       />
+
+      {/* ── Bank interest sheet ─────────────────────────────────────────── */}
+      <div
+        onClick={() => setInterestBank(null)}
+        className={cn('fixed inset-0 z-[59] transition-opacity duration-300', interestBank ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none')}
+        style={{ background: 'rgba(0,0,0,0.72)' }}
+      />
+      <div
+        className={cn('fixed inset-x-0 bottom-0 z-[60] rounded-t-[24px] bg-bg-surface transition-transform duration-300', interestBank ? 'translate-y-0' : 'translate-y-full')}
+        style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
+        <div className="flex justify-center pt-3 pb-2">
+          <div className="w-9 h-1 rounded-full bg-white/20" />
+        </div>
+        <div className="flex items-center justify-between px-5 mb-5">
+          <div>
+            <h2 className="text-[18px] font-bold text-ink">Interest</h2>
+            {interestBank && <p className="text-[12px] text-ink-muted mt-0.5">{interestBank.name}</p>}
+          </div>
+          <button onClick={() => setInterestBank(null)} className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center">
+            <X size={14} className="text-ink-muted" />
+          </button>
+        </div>
+        <div className="px-5 space-y-5" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 32px)' }}>
+          {/* Balance */}
+          <div>
+            <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Current Balance</p>
+            <div className="flex items-center gap-1.5 bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 focus-within:border-gold/40">
+              <span className="text-[22px] font-light text-ink-muted font-mono">$</span>
+              <input type="number" inputMode="decimal" placeholder="0.00" value={intBalance}
+                onChange={e => setIntBalance(e.target.value)}
+                className="flex-1 bg-transparent text-[22px] font-mono text-ink outline-none placeholder:text-ink-faint" />
+            </div>
+          </div>
+          {/* APY */}
+          <div>
+            <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">APY (%)</p>
+            <div className="flex items-center gap-1.5 bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 focus-within:border-gold/40">
+              <input type="number" inputMode="decimal" placeholder="4.30" value={intApy}
+                onChange={e => setIntApy(e.target.value)}
+                className="flex-1 bg-transparent text-[22px] font-mono text-ink outline-none placeholder:text-ink-faint" />
+              <span className="text-[22px] font-light text-ink-muted font-mono">%</span>
+            </div>
+          </div>
+          {/* Preview */}
+          {parseFloat(intBalance) > 0 && parseFloat(intApy) > 0 && (() => {
+            const monthly = parseFloat(intBalance) * (parseFloat(intApy) / 100) / 12
+            return (
+              <div className="bg-bg-overlay border border-emerald/20 rounded-[14px] px-4 py-3.5 flex items-center gap-3">
+                <Banknote size={18} className="text-emerald flex-shrink-0" strokeWidth={1.75} />
+                <div>
+                  <p className="text-[14px] font-semibold text-ink">+{$fd(monthly)} this month</p>
+                  <p className="text-[11px] text-ink-muted">{parseFloat(intApy)}% APY on {$fd(parseFloat(intBalance))}</p>
+                </div>
+              </div>
+            )
+          })()}
+          <button
+            onClick={handleAddInterest}
+            disabled={!(parseFloat(intBalance) > 0 && parseFloat(intApy) > 0) || intSaving}
+            className="w-full gradient-gold rounded-[14px] py-4 text-[15px] font-bold text-white disabled:opacity-40 transition-opacity"
+          >
+            {intSaving ? 'Adding…' : 'Add Interest to Income'}
+          </button>
+        </div>
+      </div>
 
       {/* ── Card detail sheet ────────────────────────────────────────────── */}
       <div

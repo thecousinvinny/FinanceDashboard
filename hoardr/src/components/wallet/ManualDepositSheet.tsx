@@ -22,10 +22,11 @@ interface Props {
   banks:          { id: string; name: string }[]
   onDone:         () => void
   defaultBankId?: string | null
+  defaultLabel?:  string
   initial?:       IncomeInitial | null   // when set → edit mode
 }
 
-export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId, initial }: Props) {
+export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId, defaultLabel, initial }: Props) {
   const isEdit    = !!initial
   const supabase      = useMemo(() => createClient(), [])
   const sheetRef      = useRef<HTMLDivElement>(null)
@@ -41,9 +42,11 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
 
   const banksRef     = useRef(banks)
   const defBankRef   = useRef(defaultBankId)
+  const defLabelRef  = useRef(defaultLabel)
   const initialRef   = useRef(initial)
   useEffect(() => { banksRef.current = banks }, [banks])
   useEffect(() => { defBankRef.current = defaultBankId }, [defaultBankId])
+  useEffect(() => { defLabelRef.current = defaultLabel }, [defaultLabel])
   useEffect(() => { initialRef.current = initial }, [initial])
 
   // Only reset when the sheet opens — not when prop references change mid-entry
@@ -57,7 +60,7 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
       setBankId(ini.bank_id)
       setDate(ini.date)
     } else {
-      setLabel('')
+      setLabel(defLabelRef.current ?? '')
       setAmount('')
       setSource('Other')
       setBankId(defBankRef.current ?? banksRef.current[0]?.id ?? null)
