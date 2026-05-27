@@ -339,9 +339,12 @@ export default function InPage() {
         onUndo: () => {
           pendingDeleteIds.current.delete(id)
           setIncomeList(snapshot)
-          supabase.from('income').insert({
-            id, name: row.name, amount: row.amount, date: row.date,
-            source: row.source, bank_id: row.bank_id,
+          supabase.auth.getUser().then(({ data: { user } }) => {
+            if (!user) return
+            supabase.from('income').insert({
+              id, user_id: user.id, name: row.name, amount: row.amount,
+              date: row.date, source: row.source, bank_id: row.bank_id,
+            })
           })
         },
         onCommit: () => { pendingDeleteIds.current.delete(id) },
