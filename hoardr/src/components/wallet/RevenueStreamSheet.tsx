@@ -27,10 +27,21 @@ const FREQUENCIES: { id: Frequency; label: string; sub: string }[] = [
   { id: 'Monthly',     label: 'Monthly',      sub: 'Once a month'  },
 ]
 
-function addDay(dateStr: string): string {
-  const [y, m, d] = dateStr.split('-').map(Number)
-  const dt = new Date(y, m - 1, d + 1)
-  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+// Returns the next pay date on the startDate-anchored schedule that is strictly after lastGenerated
+function nextScheduledAfter(startDate: string, lastGenerated: string, freq: Frequency): string {
+  const [y, m, d]   = startDate.split('-').map(Number)
+  const [ly, lm, ld] = lastGenerated.split('-').map(Number)
+  const lgTime = new Date(ly, lm - 1, ld).getTime()
+  let cur = new Date(y, m - 1, d)
+  while (cur.getTime() <= lgTime) {
+    switch (freq) {
+      case 'Weekly':       cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + 7);  break
+      case 'Biweekly':    cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + 14); break
+      case 'Semimonthly': cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + 15); break
+      case 'Monthly':     cur = new Date(cur.getFullYear(), cur.getMonth() + 1, cur.getDate());  break
+    }
+  }
+  return `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`
 }
 
 function getPayDates(startDate: string, freq: Frequency): string[] {
@@ -86,8 +97,8 @@ export function RevenueStreamSheet({ open, onClose, banks, onDone, initial }: Pr
     setFreq(ini?.freq ?? 'Biweekly')
     setBankId(ini?.bankId ?? bk[0]?.id ?? null)
     setStartDate(
-      ini?.lastGenerated
-        ? addDay(ini.lastGenerated)
+      ini?.lastGenerated && ini?.startDate
+        ? nextScheduledAfter(ini.startDate, ini.lastGenerated, ini.freq ?? 'Biweekly')
         : (ini?.startDate ?? localToday())
     )
   }, [open])

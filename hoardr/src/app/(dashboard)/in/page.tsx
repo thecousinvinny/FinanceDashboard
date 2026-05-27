@@ -81,6 +81,9 @@ function nextPayDate(lastGenerated: string, freq: Frequency): string {
   return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`
 }
 
+// Module-level: survives tab switches (component remounts), resets only on hard reload
+let sessionAutoGenDone = false
+
 export default function InPage() {
   const router = useRouter()
   const [tab,           setTab]          = useState<Tab>('History')
@@ -127,7 +130,6 @@ export default function InPage() {
   const containerRef      = useRef<HTMLDivElement | null>(null)
   const cardsRef          = useRef<Card[]>(cards)
   const banksRef          = useRef<Bank[]>(banks)
-  const autoGenRan        = useRef(false)
   const draggingIdRef     = useRef<string | null>(null)
   const isDraggingRef     = useRef(false)
   const justEndedDragRef  = useRef(false)
@@ -168,8 +170,8 @@ export default function InPage() {
       setCardStats(stats)
       pageCache.set('in', { cards: newCards, banks: newBanks })
       setLoading(false)
-      if (!autoGenRan.current) {
-        autoGenRan.current = true
+      if (!sessionAutoGenDone) {
+        sessionAutoGenDone = true
         supabase.auth.getUser().then(({ data: { user } }) => {
           if (!user) return
           autoGenerateStreams(user.id)
@@ -256,10 +258,18 @@ export default function InPage() {
     for (let i = 0; i < updated.length; i++) {
       const s = updated[i]
       if (!s.lastGenerated) continue
-      const newDates = getPayDates(addDay(s.lastGenerated), s.freq)
+      // Anchor to original startDate so the pay schedule never drifts
+      const allOnSchedule = getPayDates(s.startDate, s.freq)
+      const newDates = allOnSchedule.filter(d => d > s.lastGenerated!)
       if (!newDates.length) continue
+      // Dedup: skip dates already in DB for this stream
+      const { data: existing } = await supabase
+        .from('income').select('date').eq('user_id', userId).eq('name', s.name).in('date', newDates)
+      const existingSet = new Set((existing ?? []).map((r: { date: string }) => r.date))
+      const toInsert = newDates.filter(d => !existingSet.has(d))
+      if (!toInsert.length) { updated[i] = { ...s, lastGenerated: newDates[newDates.length - 1] }; changed = true; continue }
       const { error } = await supabase.from('income').insert(
-        newDates.map(date => ({ user_id: userId, name: s.name, amount: s.amount, date, source: 'Projects', bank_id: s.bankId ?? null }))
+        toInsert.map(date => ({ user_id: userId, name: s.name, amount: s.amount, date, source: 'Projects', bank_id: s.bankId ?? null }))
       )
       if (!error) { updated[i] = { ...s, lastGenerated: newDates[newDates.length - 1] }; changed = true }
     }
