@@ -47,6 +47,13 @@ function advanceByFreq(date: string, freq: 'Monthly' | 'Quarterly'): string {
   const next      = new Date(y, m - 1 + months, d)
   return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`
 }
+function projectStreamPayments(stream: RevenueStreamConfig, windowEnd: string): number {
+  if (!stream.nextPayDate || stream.nextPayDate > windowEnd) return 0
+  let cur   = stream.nextPayDate
+  let total = 0
+  while (cur <= windowEnd) { total += stream.amount; cur = advanceStream(cur, stream.freq) }
+  return total
+}
 function advanceStream(date: string, freq: Frequency): string {
   const [y, m, d] = date.split('-').map(Number)
   const dt = freq === 'Weekly'       ? new Date(y, m - 1, d + 7)  :
@@ -604,14 +611,22 @@ export default function InPage() {
   [incomeList])
 
   const statThisMonth = useMemo(() => {
-    const d = new Date()
-    const start = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
-    return incomeList.filter(r => r.date >= start).reduce((s, r) => s + r.amount, 0)
-  }, [incomeList])
+    const d         = new Date()
+    const monthStart = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
+    const lastDay   = new Date(d.getFullYear(), d.getMonth() + 1, 0)
+    const monthEnd  = `${lastDay.getFullYear()}-${String(lastDay.getMonth() + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`
+    const actual    = incomeList.filter(r => r.date >= monthStart).reduce((s, r) => s + r.amount, 0)
+    const projected = revStreams.reduce((s, stream) => s + projectStreamPayments(stream, monthEnd), 0)
+    return actual + projected
+  }, [incomeList, revStreams])
 
   const statThisYear = useMemo(() => {
-    return incomeList.filter(r => r.date >= `${new Date().getFullYear()}-01-01`).reduce((s, r) => s + r.amount, 0)
-  }, [incomeList])
+    const yearStart = `${new Date().getFullYear()}-01-01`
+    const yearEnd   = `${new Date().getFullYear()}-12-31`
+    const actual    = incomeList.filter(r => r.date >= yearStart).reduce((s, r) => s + r.amount, 0)
+    const projected = revStreams.reduce((s, stream) => s + projectStreamPayments(stream, yearEnd), 0)
+    return actual + projected
+  }, [incomeList, revStreams])
 
   const statNextIn = useMemo(() => {
     const today = localToday()
