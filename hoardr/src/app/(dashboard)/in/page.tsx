@@ -394,12 +394,16 @@ export default function InPage() {
     if (!interestBank) return
     const bal = parseFloat(intBalance)
     const apy = parseFloat(intApy)
-    if (isNaN(bal) || bal <= 0 || isNaN(apy) || apy <= 0 || !intDate) return
-    saveBankCfg({
-      ...bankCfg,
-      [interestBank.id]: { ...bankCfg[interestBank.id], apy, balance: bal, interestFreq: intFreq, nextInterestDate: intDate },
-    })
-    showToast('Interest scheduled', { type: 'add' })
+    if (isNaN(bal) || bal <= 0) return
+    const hasInterest = !isNaN(apy) && apy > 0 && !!intDate
+    const entry: BankCfgEntry = {
+      ...bankCfg[interestBank.id],
+      balance: bal,
+      apy:     hasInterest ? apy : 0,
+      ...(hasInterest ? { interestFreq: intFreq, nextInterestDate: intDate } : { nextInterestDate: undefined, interestFreq: undefined }),
+    }
+    saveBankCfg({ ...bankCfg, [interestBank.id]: entry })
+    showToast(hasInterest ? 'Interest scheduled' : 'Balance saved', { type: 'add' })
     setInterestBank(null)
   }
 
@@ -849,7 +853,7 @@ export default function InPage() {
         </div>
         <div className="flex items-center justify-between px-5 mb-5">
           <div>
-            <h2 className="text-[18px] font-bold text-ink">Interest Settings</h2>
+            <h2 className="text-[18px] font-bold text-ink">Balance & Interest</h2>
             {interestBank && <p className="text-[12px] text-ink-muted mt-0.5">{interestBank.name}</p>}
           </div>
           <button onClick={() => setInterestBank(null)} className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center">
@@ -867,9 +871,9 @@ export default function InPage() {
                 className="flex-1 bg-transparent text-[22px] font-mono text-ink outline-none placeholder:text-ink-faint" />
             </div>
           </div>
-          {/* APY */}
+          {/* APY — optional */}
           <div>
-            <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">APY (%)</p>
+            <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">APY (%) <span className="normal-case tracking-normal text-ink-faint/60">— optional</span></p>
             <div className="flex items-center gap-1.5 bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 focus-within:border-gold/40">
               <input type="number" inputMode="decimal" placeholder="4.30" value={intApy}
                 onChange={e => setIntApy(e.target.value)}
@@ -877,49 +881,50 @@ export default function InPage() {
               <span className="text-[22px] font-light text-ink-muted font-mono">%</span>
             </div>
           </div>
-          {/* Frequency */}
-          <div>
-            <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Frequency</p>
-            <div className="flex gap-2">
-              {(['Monthly', 'Quarterly'] as const).map(f => (
-                <button key={f} onClick={() => setIntFreq(f)}
-                  className={cn('flex-1 py-2.5 rounded-full text-[12px] font-semibold transition-all select-none',
-                    intFreq === f ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
-                  {f}
-                </button>
-              ))}
-            </div>
-          </div>
-          {/* Next payment date */}
-          <div>
-            <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Next payment date</p>
-            <div className="overflow-hidden rounded-[14px]">
-              <input type="date" value={intDate} onChange={e => setIntDate(e.target.value)}
-                className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink outline-none focus:border-gold/40"
-                style={{ colorScheme: 'dark' }} />
-            </div>
-          </div>
-
-          {/* Preview */}
-          {parseFloat(intBalance) > 0 && parseFloat(intApy) > 0 && intDate && (() => {
-            const divisor = intFreq === 'Quarterly' ? 4 : 12
-            const amount  = parseFloat(intBalance) * (parseFloat(intApy) / 100) / divisor
-            return (
-              <div className="bg-bg-overlay border border-emerald/20 rounded-[14px] px-4 py-3.5 flex items-center gap-3">
-                <Banknote size={18} className="text-emerald flex-shrink-0" strokeWidth={1.75} />
-                <div>
-                  <p className="text-[14px] font-semibold text-ink">+{$fd(amount)} on {intDate}</p>
-                  <p className="text-[11px] text-ink-muted">{parseFloat(intApy)}% APY · {intFreq.toLowerCase()}</p>
+          {/* Frequency + date — only when APY is set */}
+          {parseFloat(intApy) > 0 && (
+            <>
+              <div>
+                <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Frequency</p>
+                <div className="flex gap-2">
+                  {(['Monthly', 'Quarterly'] as const).map(f => (
+                    <button key={f} onClick={() => setIntFreq(f)}
+                      className={cn('flex-1 py-2.5 rounded-full text-[12px] font-semibold transition-all select-none',
+                        intFreq === f ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
+                      {f}
+                    </button>
+                  ))}
                 </div>
               </div>
-            )
-          })()}
+              <div>
+                <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Next payment date</p>
+                <div className="overflow-hidden rounded-[14px]">
+                  <input type="date" value={intDate} onChange={e => setIntDate(e.target.value)}
+                    className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink outline-none focus:border-gold/40"
+                    style={{ colorScheme: 'dark' }} />
+                </div>
+              </div>
+              {parseFloat(intBalance) > 0 && intDate && (() => {
+                const divisor = intFreq === 'Quarterly' ? 4 : 12
+                const amount  = parseFloat(intBalance) * (parseFloat(intApy) / 100) / divisor
+                return (
+                  <div className="bg-bg-overlay border border-emerald/20 rounded-[14px] px-4 py-3.5 flex items-center gap-3">
+                    <Banknote size={18} className="text-emerald flex-shrink-0" strokeWidth={1.75} />
+                    <div>
+                      <p className="text-[14px] font-semibold text-ink">+{$fd(amount)} on {intDate}</p>
+                      <p className="text-[11px] text-ink-muted">{parseFloat(intApy)}% APY · {intFreq.toLowerCase()}</p>
+                    </div>
+                  </div>
+                )
+              })()}
+            </>
+          )}
           <button
             onClick={handleSaveInterestConfig}
-            disabled={!(parseFloat(intBalance) > 0 && parseFloat(intApy) > 0 && intDate)}
+            disabled={!(parseFloat(intBalance) > 0)}
             className="w-full gradient-gold rounded-[14px] py-4 text-[15px] font-bold text-white disabled:opacity-40 transition-opacity"
           >
-            Schedule Interest
+            {parseFloat(intApy) > 0 ? 'Schedule Interest' : 'Save Balance'}
           </button>
         </div>
       </div>
