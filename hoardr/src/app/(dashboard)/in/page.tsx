@@ -62,6 +62,7 @@ export default function InPage() {
   const [bankCfg,       setBankCfg]      = useState<Record<string, { apy: number; balance: number }>>({})
   const [intBalance,    setIntBalance]   = useState('')
   const [intApy,        setIntApy]       = useState('')
+  const [intDate,       setIntDate]      = useState('')
   const [intSaving,     setIntSaving]    = useState(false)
   const [selectedCard,  setSelectedCard] = useState<Card | null>(null)
   const [editCard,      setEditCard]     = useState<Card | null>(null)
@@ -185,6 +186,7 @@ export default function InPage() {
     const cfg = bankCfg[interestBank.id]
     setIntBalance(cfg?.balance ? String(cfg.balance) : '')
     setIntApy(cfg?.apy ? String(cfg.apy) : '')
+    setIntDate(localToday())
   }, [interestBank])
 
   function saveStreams(streams: RevenueStreamConfig[]) {
@@ -303,7 +305,7 @@ export default function InPage() {
       user_id: user.id,
       name:    `${interestBank.name} Interest`,
       amount:  monthly,
-      date:    localToday(),
+      date:    intDate || localToday(),
       source:  'Other',
       bank_id: interestBank.id,
     })
@@ -763,6 +765,16 @@ export default function InPage() {
               <span className="text-[22px] font-light text-ink-muted font-mono">%</span>
             </div>
           </div>
+          {/* Date */}
+          <div>
+            <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Date interest posted</p>
+            <div className="overflow-hidden rounded-[14px]">
+              <input type="date" value={intDate} onChange={e => setIntDate(e.target.value)}
+                className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink outline-none focus:border-gold/40"
+                style={{ colorScheme: 'dark' }} />
+            </div>
+          </div>
+
           {/* Preview */}
           {parseFloat(intBalance) > 0 && parseFloat(intApy) > 0 && (() => {
             const monthly = parseFloat(intBalance) * (parseFloat(intApy) / 100) / 12
