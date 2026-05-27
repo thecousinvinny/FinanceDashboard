@@ -621,6 +621,32 @@ export default function InPage() {
       .sort((a, b) => a.nextPayDate.localeCompare(b.nextPayDate))[0] ?? null
   }, [revStreams])
 
+  const statMonthly = useMemo(() => {
+    const streams = revStreams.reduce((s, r) => {
+      const factor = r.freq === 'Weekly' ? 52/12 : r.freq === 'Biweekly' ? 26/12 : r.freq === 'Semimonthly' ? 24/12 : 1
+      return s + r.amount * factor
+    }, 0)
+    const interest = Object.values(bankCfg).filter(c => c.apy && c.balance).reduce((s, c) => s + c.balance * c.apy / 100 / 12, 0)
+    return streams + interest
+  }, [revStreams, bankCfg])
+
+  const statAnnual = useMemo(() => {
+    const streams = revStreams.reduce((s, r) => {
+      const factor = r.freq === 'Weekly' ? 52 : r.freq === 'Biweekly' ? 26 : r.freq === 'Semimonthly' ? 24 : 12
+      return s + r.amount * factor
+    }, 0)
+    const interest = Object.values(bankCfg).filter(c => c.apy && c.balance).reduce((s, c) => s + c.balance * c.apy / 100, 0)
+    return streams + interest
+  }, [revStreams, bankCfg])
+
+  const statTotalBalance = useMemo(() =>
+    Object.values(bankCfg).reduce((s, c) => s + (c.balance ?? 0), 0),
+  [bankCfg])
+
+  const statIntYear = useMemo(() =>
+    Object.values(bankCfg).filter(c => c.apy && c.balance).reduce((s, c) => s + c.balance * c.apy / 100, 0),
+  [bankCfg])
+
   return (
     <>
       <div className="min-h-screen bg-bg-base tab-enter">
@@ -631,15 +657,29 @@ export default function InPage() {
           <PillGroup options={['History', 'Streams', 'Accounts'] as Tab[]} value={tab} onChange={setTab} />
         </div>
 
-        <div className="mx-4 mt-4 flex gap-2">
-          <StatCard label="This Month" value={statThisMonth} loading={incomeLoading} />
-          <StatCard label="This Year"  value={statThisYear}  loading={incomeLoading} />
-          {statNextIn && (
-            <StatCard label="Next In" value={statNextIn.amount}
-              sub={daysUntilLabel(statNextIn.nextPayDate)}
-              loading={incomeLoading} />
-          )}
-        </div>
+        {tab === 'History' && (
+          <div className="mx-4 mt-4 flex gap-2">
+            <StatCard label="This Month" value={statThisMonth} loading={incomeLoading} />
+            <StatCard label="This Year"  value={statThisYear}  loading={incomeLoading} />
+            {statNextIn && (
+              <StatCard label="Next In" value={statNextIn.amount}
+                sub={daysUntilLabel(statNextIn.nextPayDate)}
+                loading={incomeLoading} />
+            )}
+          </div>
+        )}
+        {tab === 'Streams' && (
+          <div className="mx-4 mt-4 flex gap-2">
+            <StatCard label="Per Month" value={statMonthly} loading={false} />
+            <StatCard label="Per Year"  value={statAnnual}  loading={false} />
+          </div>
+        )}
+        {tab === 'Accounts' && (
+          <div className="mx-4 mt-4 flex gap-2">
+            <StatCard label="Total Saved" value={statTotalBalance} loading={false} />
+            <StatCard label="Int / Year"  value={statIntYear}      loading={false} />
+          </div>
+        )}
 
         {loading && (
           <div className="px-4 mt-5 space-y-4">
