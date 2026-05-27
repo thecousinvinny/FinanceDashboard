@@ -889,8 +889,13 @@ export default function OutPage() {
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      {item.original_cost != null && (
-                        <p className="text-[15px] font-semibold font-mono text-ink">{$fd(item.original_cost)}</p>
+                      {item.original_cost != null ? (
+                        <>
+                          <p className="text-[15px] font-semibold font-mono text-ink">{$fd(item.original_cost)}</p>
+                          <p className="text-[10px] text-ink-faint">list</p>
+                        </>
+                      ) : (
+                        <p className="text-[11px] text-ink-faint">no price</p>
                       )}
                     </div>
                   </div>
