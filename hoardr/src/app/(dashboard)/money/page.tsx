@@ -98,6 +98,8 @@ export default function OutPage() {
   const [editWish,      setEditWish]     = useState<WishItem | null>(null)
   const [buyItem,       setBuyItem]      = useState<WishItem | null>(null)
   const [buyAmount,     setBuyAmount]    = useState('')
+  const [buyDate,       setBuyDate]      = useState('')
+  const [buyCardId,     setBuyCardId]    = useState<string | null>(null)
   const [wishSheet,     setWishSheet]    = useState(false)
 
   // Shared
@@ -445,11 +447,10 @@ export default function OutPage() {
 
   // ── Wishlist handlers ──────────────────────────────────────────────────────
 
-  async function handleBuyItem(id: string, paidCost: number) {
+  async function handleBuyItem(id: string, paidCost: number, date: string, cardId: string | null) {
     const item     = wishlist.find(w => w.id === id)
     if (!item) return
-    const orderedAt = localToday()
-    setWishlist(prev => prev.map(w => w.id === id ? { ...w, status: 'Ordered', bought_cost: paidCost, ordered_at: orderedAt } : w))
+    setWishlist(prev => prev.map(w => w.id === id ? { ...w, status: 'Ordered', bought_cost: paidCost, ordered_at: date } : w))
     showToast(`${item.name} ordered`, { type: 'payment' })
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { await loadData(); return }
@@ -460,9 +461,8 @@ export default function OutPage() {
       const { data: created } = await supabase.from('categories').insert({ user_id: user.id, name: categoryName }).select('id').single()
       categoryId = created?.id ?? null
     }
-    const today = localToday()
-    await supabase.from('expenses').insert({ user_id: user.id, name: item.name, cost: paidCost, date: today, category_id: categoryId, status: 'Procured', description: item.url ?? null, original_cost: item.original_cost ?? null })
-    await supabase.from('wishlist').update({ status: 'Ordered', bought_cost: paidCost, ordered_at: today }).eq('id', id)
+    await supabase.from('expenses').insert({ user_id: user.id, name: item.name, cost: paidCost, date, category_id: categoryId, status: 'Procured', card_id: cardId, description: item.url ?? null, original_cost: item.original_cost ?? null })
+    await supabase.from('wishlist').update({ status: 'Ordered', bought_cost: paidCost, ordered_at: date }).eq('id', id)
     loadData()
   }
 
@@ -866,7 +866,7 @@ export default function OutPage() {
                   key={item.id}
                   onDelete={() => handleDeleteWish(item.id)}
                   onTap={() => setEditWish(item)}
-                  onRight={item.status === 'Interested' ? () => { setBuyItem(item); setBuyAmount('') } : undefined}
+                  onRight={item.status === 'Interested' ? () => { setBuyItem(item); setBuyAmount(''); setBuyDate(localToday()); setBuyCardId(defaultCardId) } : undefined}
                   rightLabel={<CreditCard size={18} strokeWidth={1.5} className="text-white" />}
                 >
                   <div className="flex items-center gap-3 px-4 py-3.5">
@@ -1023,11 +1023,38 @@ export default function OutPage() {
             <p className="text-[11px] text-emerald font-mono mt-2">You saved {$fd(buyItem.original_cost - parseFloat(buyAmount))}</p>
           )}
         </div>
+        <div>
+          <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Date</p>
+          <div className="overflow-hidden rounded-[14px]">
+            <input type="date" value={buyDate} onChange={e => setBuyDate(e.target.value)}
+              className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink outline-none focus:border-gold/40"
+              style={{ colorScheme: 'dark' }} />
+          </div>
+        </div>
+        {cards.length > 0 && (
+          <div>
+            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Card</p>
+            <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+              <button onClick={() => setBuyCardId(null)}
+                className={cn('flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all select-none',
+                  buyCardId === null ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
+                None
+              </button>
+              {cards.map(c => (
+                <button key={c.id} onClick={() => setBuyCardId(c.id)}
+                  className={cn('flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all select-none',
+                    buyCardId === c.id ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
+                  {c.name}{c.last4 ? ` ••••${c.last4}` : ''}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <button
           onClick={() => {
             const paid = parseFloat(buyAmount)
             if (!paid || !buyItem) return
-            handleBuyItem(buyItem.id, paid)
+            handleBuyItem(buyItem.id, paid, buyDate || localToday(), buyCardId)
             setBuyItem(null)
             setBuyAmount('')
           }}
