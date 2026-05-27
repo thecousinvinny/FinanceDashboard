@@ -101,9 +101,9 @@ export default function HomePage() {
         supabase.from('subscriptions')
           .select('id, name, cost, next_renewal, billing, category, card_id')
           .eq('status', 'Active')
-          .gte('next_renewal', todayStr)
+          .not('next_renewal', 'is', null)
           .order('next_renewal', { ascending: true })
-          .limit(3)
+          .limit(5)
           .abortSignal(sig),
         supabase.from('wishlist')
           .select('id, name, bought_cost, ordered_at')

@@ -101,7 +101,8 @@ export function UpcomingBills({ initial, onPaid }: { initial: UpcomingSub[]; onP
       </div>
       <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
         {items.map(sub => {
-          const Icon = sub.category ? getCategoryIcon(sub.category, 'Expense') : RefreshCw
+          const Icon     = sub.category ? getCategoryIcon(sub.category, 'Expense') : RefreshCw
+          const overdue  = (sub.next_renewal ?? '') < localToday()
           return (
             <SwipeToDelete
               key={sub.id}
@@ -113,12 +114,12 @@ export function UpcomingBills({ initial, onPaid }: { initial: UpcomingSub[]; onP
               rightBg="bg-emerald-600"
             >
               <div className="flex items-center gap-3 px-4 py-3.5">
-                <div className="w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
-                  <Icon size={15} strokeWidth={1.75} className="text-gold" />
+                <div className={`w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 flex items-center justify-center flex-shrink-0 ${overdue ? 'ring-ruby/40' : 'ring-white/[0.06]'}`}>
+                  <Icon size={15} strokeWidth={1.75} className={overdue ? 'text-ruby' : 'text-gold'} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[14px] font-medium text-ink">{sub.name}</p>
-                  <p className="text-[11px] text-ink-muted">{daysUntilLabel(sub.next_renewal)}</p>
+                  <p className={`text-[11px] ${overdue ? 'text-ruby' : 'text-ink-muted'}`}>{daysUntilLabel(sub.next_renewal)}</p>
                 </div>
                 <div className="text-right flex-shrink-0">
                   <p className="text-[15px] font-semibold font-mono text-ink">{$fd(sub.cost)}</p>
