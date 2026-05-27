@@ -1,23 +1,23 @@
 'use client'
 
-import { useEffect, useRef, useState, useMemo } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { X, Banknote } from 'lucide-react'
-import { cn, localToday } from '@/lib/utils'
-import { showToast } from '@/lib/toast'
-import { createClient } from '@/lib/supabase/client'
+import { cn, localToday, $fd } from '@/lib/utils'
 
 export interface BankOption { id: string; name: string }
 
 export type Frequency = 'Weekly' | 'Biweekly' | 'Semimonthly' | 'Monthly'
 
 export interface RevenueStreamConfig {
-  id:            string
-  name:          string
-  amount:        number
-  freq:          Frequency
-  bankId:        string | null
-  startDate:     string
-  lastGenerated: string | undefined
+  id:             string
+  name:           string
+  amount:         number
+  freq:           Frequency
+  bankId:         string | null
+  nextPayDate:    string
+  // Legacy fields kept for migration — not used in new streams
+  startDate?:     string
+  lastGenerated?: string
 }
 
 const FREQUENCIES: { id: Frequency; label: string; sub: string }[] = [
@@ -26,40 +26,6 @@ const FREQUENCIES: { id: Frequency; label: string; sub: string }[] = [
   { id: 'Semimonthly', label: 'Semi-monthly', sub: 'Twice a month' },
   { id: 'Monthly',     label: 'Monthly',      sub: 'Once a month'  },
 ]
-
-// Returns the next pay date on the startDate-anchored schedule that is strictly after lastGenerated
-function nextScheduledAfter(startDate: string, lastGenerated: string, freq: Frequency): string {
-  const [y, m, d]   = startDate.split('-').map(Number)
-  const [ly, lm, ld] = lastGenerated.split('-').map(Number)
-  const lgTime = new Date(ly, lm - 1, ld).getTime()
-  let cur = new Date(y, m - 1, d)
-  while (cur.getTime() <= lgTime) {
-    switch (freq) {
-      case 'Weekly':       cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + 7);  break
-      case 'Biweekly':    cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + 14); break
-      case 'Semimonthly': cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + 15); break
-      case 'Monthly':     cur = new Date(cur.getFullYear(), cur.getMonth() + 1, cur.getDate());  break
-    }
-  }
-  return `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`
-}
-
-function getPayDates(startDate: string, freq: Frequency): string[] {
-  const [y, m, d] = startDate.split('-').map(Number)
-  let cur = new Date(y, m - 1, d)
-  const today = new Date(); today.setHours(23, 59, 59, 999)
-  const dates: string[] = []
-  while (cur <= today) {
-    dates.push(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`)
-    switch (freq) {
-      case 'Weekly':       cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + 7);  break
-      case 'Biweekly':    cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + 14); break
-      case 'Semimonthly': cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + 15); break
-      case 'Monthly':     cur = new Date(cur.getFullYear(), cur.getMonth() + 1, cur.getDate());  break
-    }
-  }
-  return dates
-}
 
 interface Props {
   open:     boolean
@@ -70,24 +36,21 @@ interface Props {
 }
 
 export function RevenueStreamSheet({ open, onClose, banks, onDone, initial }: Props) {
-  const supabase      = useMemo(() => createClient(), [])
   const sheetRef      = useRef<HTMLDivElement>(null)
   const dragStartY    = useRef<number | null>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
 
-  const [name,      setName]      = useState('Main Job')
-  const [amount,    setAmount]    = useState('')
-  const [freq,      setFreq]      = useState<Frequency>('Biweekly')
-  const [bankId,    setBankId]    = useState<string | null>(null)
-  const [startDate, setStartDate] = useState('')
-  const [saving,    setSaving]    = useState(false)
+  const [name,        setName]        = useState('Main Job')
+  const [amount,      setAmount]      = useState('')
+  const [freq,        setFreq]        = useState<Frequency>('Biweekly')
+  const [bankId,      setBankId]      = useState<string | null>(null)
+  const [nextPayDate, setNextPayDate] = useState('')
 
   const banksRef   = useRef(banks)
   const initialRef = useRef(initial)
   useEffect(() => { banksRef.current = banks },     [banks])
   useEffect(() => { initialRef.current = initial }, [initial])
 
-  // Only reset when the sheet opens — not when `banks`/`initial` reference changes mid-entry
   useEffect(() => {
     if (!open) return
     const ini = initialRef.current
@@ -96,11 +59,7 @@ export function RevenueStreamSheet({ open, onClose, banks, onDone, initial }: Pr
     setAmount(ini?.amount ? String(ini.amount) : '')
     setFreq(ini?.freq ?? 'Biweekly')
     setBankId(ini?.bankId ?? bk[0]?.id ?? null)
-    setStartDate(
-      ini?.lastGenerated && ini?.startDate
-        ? nextScheduledAfter(ini.startDate, ini.lastGenerated, ini.freq ?? 'Biweekly')
-        : (ini?.startDate ?? localToday())
-    )
+    setNextPayDate(ini?.nextPayDate ?? localToday())
   }, [open])
 
   // Body lock
@@ -150,39 +109,19 @@ export function RevenueStreamSheet({ open, onClose, banks, onDone, initial }: Pr
   }
 
   const amt   = parseFloat(amount)
-  const valid = startDate && !isNaN(amt) && amt > 0
-  const dates = valid ? getPayDates(startDate, freq) : []
-  const total = !isNaN(amt) && amt > 0 ? amt * dates.length : 0
+  const valid = nextPayDate && !isNaN(amt) && amt > 0
 
-  async function handleGenerate() {
-    if (!dates.length || !valid) return
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    setSaving(true)
-    const trimmedName = name.trim() || 'Main Job'
-    const rows = dates.map(date => ({
-      user_id: user.id,
-      name:    trimmedName,
-      amount:  amt,
-      date,
-      source:  'Projects',
-      bank_id: bankId ?? null,
-    }))
-    const { error } = await supabase.from('income').insert(rows)
-    setSaving(false)
-    if (error) { console.error('revenue stream insert error:', error); showToast('Failed to save — try again', { type: 'delete' }); return }
-    showToast(`${dates.length} payments added`, { type: 'add' })
-    const config: RevenueStreamConfig = {
-      id:            initial?.id ?? crypto.randomUUID(),
-      name:          trimmedName,
-      amount:        amt,
+  function handleSave() {
+    if (!valid) return
+    onDone({
+      id:          initial?.id ?? crypto.randomUUID(),
+      name:        name.trim() || 'Main Job',
+      amount:      amt,
       freq,
-      bankId:        bankId ?? null,
-      startDate:     initial?.startDate ?? startDate,
-      lastGenerated: dates[dates.length - 1],
-    }
+      bankId:      bankId ?? null,
+      nextPayDate,
+    })
     onClose()
-    onDone(config)
   }
 
   return (
@@ -202,7 +141,7 @@ export function RevenueStreamSheet({ open, onClose, banks, onDone, initial }: Pr
         </div>
 
         <div className="flex items-center justify-between px-5 mb-5">
-          <h2 className="text-[18px] font-bold text-ink">Revenue Stream</h2>
+          <h2 className="text-[18px] font-bold text-ink">{initial ? 'Edit Stream' : 'Revenue Stream'}</h2>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center">
             <X size={14} className="text-ink-muted" />
           </button>
@@ -264,37 +203,30 @@ export function RevenueStreamSheet({ open, onClose, banks, onDone, initial }: Pr
             </div>
           )}
 
-          {/* Start date */}
+          {/* Next payment date */}
           <div>
-            <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">
-              {initial?.lastGenerated ? 'Generate from' : 'First payment date'}
-            </p>
-            {initial?.lastGenerated && (
-              <p className="text-[11px] text-ink-muted mb-2">
-                Previously generated through {initial.lastGenerated}
-              </p>
-            )}
+            <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Next payment date</p>
             <div className="overflow-hidden rounded-[14px]">
-              <input type="date" value={startDate} max={localToday()} onChange={e => setStartDate(e.target.value)}
+              <input type="date" value={nextPayDate} onChange={e => setNextPayDate(e.target.value)}
                 className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink outline-none focus:border-gold/40"
                 style={{ colorScheme: 'dark' }}/>
             </div>
           </div>
 
           {/* Preview */}
-          {dates.length > 0 && (
+          {valid && (
             <div className="bg-bg-overlay border border-emerald/20 rounded-[14px] px-4 py-3.5 flex items-center gap-3">
               <Banknote size={18} className="text-emerald flex-shrink-0" strokeWidth={1.75} />
               <div>
-                <p className="text-[14px] font-semibold text-ink">{dates.length} payments · ${total.toLocaleString()} total</p>
-                <p className="text-[11px] text-ink-muted">{dates[0]} → {dates[dates.length - 1]}</p>
+                <p className="text-[14px] font-semibold text-ink">+{$fd(amt)} on {nextPayDate}</p>
+                <p className="text-[11px] text-ink-muted">then every {freq.toLowerCase()}</p>
               </div>
             </div>
           )}
 
-          <button onClick={handleGenerate} disabled={!dates.length || saving}
+          <button onClick={handleSave} disabled={!valid}
             className="w-full gradient-gold rounded-[14px] py-4 text-[15px] font-bold text-white disabled:opacity-40 transition-opacity">
-            {saving ? 'Adding…' : dates.length > 0 ? `Generate ${dates.length} Payments` : 'Generate Payments'}
+            {initial ? 'Save Changes' : 'Save Stream'}
           </button>
         </div>
       </div>

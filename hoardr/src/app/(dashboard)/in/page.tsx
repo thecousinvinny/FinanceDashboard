@@ -40,45 +40,20 @@ type BankCfgEntry = { apy: number; balance: number; nextInterestDate?: string; i
 
 const PILL_OPTIONS: Tab[] = ['History', 'Streams', 'Accounts']
 
-// ── local date helpers (mirrors RevenueStreamSheet logic) ──────────────────
-function addDay(s: string): string {
-  const [y, m, d] = s.split('-').map(Number)
-  const dt = new Date(y, m - 1, d + 1)
-  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
-}
-function getPayDates(startDate: string, freq: Frequency): string[] {
-  const [y, m, d] = startDate.split('-').map(Number)
-  let cur = new Date(y, m - 1, d)
-  const today = new Date(); today.setHours(23, 59, 59, 999)
-  const dates: string[] = []
-  while (cur <= today) {
-    dates.push(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`)
-    switch (freq) {
-      case 'Weekly':       cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + 7);  break
-      case 'Biweekly':    cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + 14); break
-      case 'Semimonthly': cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + 15); break
-      case 'Monthly':     cur = new Date(cur.getFullYear(), cur.getMonth() + 1, cur.getDate());  break
-    }
-  }
-  return dates
-}
+// ── local date helpers ─────────────────────────────────────────────────────
 function advanceByFreq(date: string, freq: 'Monthly' | 'Quarterly'): string {
   const [y, m, d] = date.split('-').map(Number)
   const months    = freq === 'Quarterly' ? 3 : 1
   const next      = new Date(y, m - 1 + months, d)
   return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`
 }
-
-function nextPayDate(lastGenerated: string, freq: Frequency): string {
-  const [y, m, d] = lastGenerated.split('-').map(Number)
-  let next: Date
-  switch (freq) {
-    case 'Weekly':       next = new Date(y, m - 1, d + 7);  break
-    case 'Biweekly':    next = new Date(y, m - 1, d + 14); break
-    case 'Semimonthly': next = new Date(y, m - 1, d + 15); break
-    case 'Monthly':     next = new Date(y, m, d);           break
-  }
-  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`
+function advanceStream(date: string, freq: Frequency): string {
+  const [y, m, d] = date.split('-').map(Number)
+  const dt = freq === 'Weekly'       ? new Date(y, m - 1, d + 7)  :
+             freq === 'Biweekly'    ? new Date(y, m - 1, d + 14) :
+             freq === 'Semimonthly' ? new Date(y, m - 1, d + 15) :
+                                      new Date(y, m, d)
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
 }
 
 // Module-level: survives tab switches (component remounts), resets only on hard reload
@@ -253,27 +228,33 @@ export default function InPage() {
     const streams: RevenueStreamConfig[] = (() => {
       try { return JSON.parse(localStorage.getItem('revenue-streams') ?? '[]') } catch { return [] }
     })()
-    let updated = [...streams]
+    const today = localToday()
+    // Migrate legacy streams that have lastGenerated but no nextPayDate
+    let updated = streams.map(s =>
+      !s.nextPayDate && s.lastGenerated ? { ...s, nextPayDate: advanceStream(s.lastGenerated, s.freq) } : s
+    )
     let changed = false
     for (let i = 0; i < updated.length; i++) {
       const s = updated[i]
-      if (!s.lastGenerated) continue
-      // Anchor to original startDate so the pay schedule never drifts
-      const allOnSchedule = getPayDates(s.startDate, s.freq)
-      const newDates = allOnSchedule.filter(d => d > s.lastGenerated!)
-      if (!newDates.length) continue
-      // Dedup: skip dates already in DB for this stream
-      const { data: existing } = await supabase
-        .from('income').select('date').eq('user_id', userId).eq('name', s.name).in('date', newDates)
-      const existingSet = new Set((existing ?? []).map((r: { date: string }) => r.date))
-      const toInsert = newDates.filter(d => !existingSet.has(d))
-      if (!toInsert.length) { updated[i] = { ...s, lastGenerated: newDates[newDates.length - 1] }; changed = true; continue }
-      const { error } = await supabase.from('income').insert(
-        toInsert.map(date => ({ user_id: userId, name: s.name, amount: s.amount, date, source: 'Projects', bank_id: s.bankId ?? null }))
-      )
-      if (!error) { updated[i] = { ...s, lastGenerated: newDates[newDates.length - 1] }; changed = true }
+      if (!s.nextPayDate || s.nextPayDate > today) continue
+      // Catch up all overdue payment dates (stops as soon as next date is in the future)
+      let cur = s.nextPayDate
+      while (cur <= today) {
+        const { error } = await supabase.from('income').insert({
+          user_id: userId, name: s.name, amount: s.amount,
+          date: cur, source: 'Projects', bank_id: s.bankId ?? null,
+        })
+        if (error) break
+        cur = advanceStream(cur, s.freq)
+        changed = true
+      }
+      if (cur !== s.nextPayDate) updated[i] = { ...s, nextPayDate: cur }
     }
-    if (changed) { setRevStreams(updated); try { localStorage.setItem('revenue-streams', JSON.stringify(updated)) } catch {} ; loadIncome() }
+    if (changed) {
+      setRevStreams(updated)
+      try { localStorage.setItem('revenue-streams', JSON.stringify(updated)) } catch {}
+      loadIncome()
+    }
   }
 
   async function autoGenerateInterest(userId: string) {
@@ -660,7 +641,7 @@ export default function InPage() {
                 <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Revenue Streams</p>
                 <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
                   {revStreams.map(stream => {
-                    const next = stream.lastGenerated ? nextPayDate(stream.lastGenerated, stream.freq) : stream.startDate
+                    const next = stream.nextPayDate
                     return (
                       <SwipeToDelete key={stream.id} onDelete={() => handleDeleteStream(stream.id)} onTap={() => { setEditStream(stream); setStreamOpen(true) }}>
                         <div className="flex items-center gap-3 px-4 py-3.5">
