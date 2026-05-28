@@ -32,12 +32,16 @@ export interface Category {
 }
 
 export interface Bank {
-  id:         string
-  user_id:    string
-  name:       string
-  type:       BankType | null
-  last4:      string | null
-  created_at: string
+  id:                 string
+  user_id:            string
+  name:               string
+  type:               BankType | null
+  last4:              string | null
+  balance:            number | null
+  apy:                number | null
+  next_interest_date: string | null
+  interest_freq:      string | null
+  created_at:         string
 }
 
 export interface Card {

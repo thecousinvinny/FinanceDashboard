@@ -13,7 +13,7 @@ import { CardVisual } from '@/components/wallet/CardVisual'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import type { Card, Bank } from '@/types'
-import { Banknote, ChevronRight, X } from 'lucide-react'
+import { Banknote, X } from 'lucide-react'
 import { cn, $f, $fd, $fk, fmtDate, haptic, groupByMonth, localToday, daysUntilLabel } from '@/lib/utils'
 import type { Frequency } from '@/components/wallet/RevenueStreamSheet'
 import { showToast } from '@/lib/toast'
@@ -37,11 +37,10 @@ interface IncomeRow {
 }
 
 type Tab = 'History' | 'Streams' | 'Accounts'
-type BankCfgEntry = { apy: number; balance: number; nextInterestDate?: string; interestFreq?: 'Monthly' | 'Quarterly' }
 
 const PILL_OPTIONS: Tab[] = ['History', 'Streams', 'Accounts']
 
-// ── local date helpers ─────────────────────────────────────────────────────
+// ── date helpers ───────────────────────────────────────────────────────────
 function advanceByFreq(date: string, freq: 'Monthly' | 'Quarterly'): string {
   const [y, m, d] = date.split('-').map(Number)
   const months    = freq === 'Quarterly' ? 3 : 1
@@ -63,6 +62,17 @@ function advanceStream(date: string, freq: Frequency): string {
                                       new Date(y, m, d)
   return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
 }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapStreamRow(s: any): RevenueStreamConfig {
+  return {
+    id:          String(s.id),
+    name:        String(s.name),
+    amount:      Number(s.amount),
+    freq:        s.freq as Frequency,
+    bankId:      s.bank_id ? String(s.bank_id) : null,
+    nextPayDate: String(s.next_pay_date),
+  }
+}
 
 function StatCard({ label, value, sub, loading }: { label: string; value: number; sub?: string; loading: boolean }) {
   return (
@@ -81,17 +91,18 @@ function StatCard({ label, value, sub, loading }: { label: string; value: number
   )
 }
 
-// Module-level: survives tab switches (component remounts), resets only on hard reload
+// Module-level: survives tab switches, resets only on hard reload
 let sessionAutoGenDone = false
 
 export default function InPage() {
   const router = useRouter()
   const [tab,           setTab]          = useState<Tab>('History')
   usePillSwipe(tab, setTab, PILL_OPTIONS, '/money', '/calendar', router)
-  type InCache = { cards: Card[]; banks: Bank[] }
+  type InCache = { cards: Card[]; banks: Bank[]; streams: RevenueStreamConfig[] }
   const cached = pageCache.get<InCache>('in')
   const [cards,         setCards]        = useState<Card[]>(cached?.cards ?? [])
   const [banks,         setBanks]        = useState<Bank[]>(cached?.banks ?? [])
+  const [revStreams,    setRevStreams]   = useState<RevenueStreamConfig[]>(cached?.streams ?? [])
   const [loading,       setLoading]      = useState(!cached)
   const [cardSheetOpen, setCardSheetOpen] = useState(false)
   const [bankSheetOpen, setBankSheetOpen] = useState(false)
@@ -100,11 +111,9 @@ export default function InPage() {
   const [incomeOpen,    setIncomeOpen]   = useState(false)
   const [editIncome,    setEditIncome]   = useState<IncomeInitial | null>(null)
   const [editStream,    setEditStream]   = useState<RevenueStreamConfig | null>(null)
-  const [revStreams,    setRevStreams]   = useState<RevenueStreamConfig[]>([])
   const [incomeList,    setIncomeList]   = useState<IncomeRow[]>([])
   const [incomeLoading, setIncomeLoading] = useState(true)
   const [interestBank,  setInterestBank] = useState<Bank | null>(null)
-  const [bankCfg,       setBankCfg]      = useState<Record<string, BankCfgEntry>>({})
   const [intBalance,    setIntBalance]   = useState('')
   const [intApy,        setIntApy]       = useState('')
   const [intDate,       setIntDate]      = useState('')
@@ -147,14 +156,16 @@ export default function InPage() {
     abortRef.current = controller
     const gen = ++loadGen.current
     try {
-      const [{ data: cardsData }, { data: banksData }, { data: expCardIds }, { data: subCardIds }] = await Promise.all([
+      const [{ data: cardsData }, { data: banksData }, { data: streamsData }, { data: expCardIds }, { data: subCardIds }] = await Promise.all([
         supabase.from('cards').select('*, bank:banks(id, name, type, last4)').order('sort_order', { ascending: true, nullsFirst: false }).order('is_default', { ascending: false }).order('created_at', { ascending: false }).abortSignal(controller.signal),
         supabase.from('banks').select('*').order('created_at', { ascending: false }).abortSignal(controller.signal),
+        supabase.from('revenue_streams').select('*').order('created_at', { ascending: true }).abortSignal(controller.signal),
         supabase.from('expenses').select('card_id').not('card_id', 'is', null).abortSignal(controller.signal),
         supabase.from('subscriptions').select('card_id').not('card_id', 'is', null).abortSignal(controller.signal),
       ])
-      const newCards = (cardsData ?? []) as Card[]
-      const newBanks = (banksData  ?? []) as Bank[]
+      const newCards   = (cardsData  ?? []) as Card[]
+      const newBanks   = (banksData  ?? []) as Bank[]
+      const newStreams  = (streamsData ?? []).map(mapStreamRow)
       const stats: Record<string, { expenses: number; subs: number }> = {}
       for (const row of (expCardIds ?? []) as { card_id: string }[]) {
         if (!stats[row.card_id]) stats[row.card_id] = { expenses: 0, subs: 0 }
@@ -167,15 +178,30 @@ export default function InPage() {
       if (gen !== loadGen.current) return
       setCards(newCards)
       setBanks(newBanks)
+      setRevStreams(newStreams)
       setCardStats(stats)
-      pageCache.set('in', { cards: newCards, banks: newBanks })
+      pageCache.set('in', { cards: newCards, banks: newBanks, streams: newStreams })
       setLoading(false)
       if (!sessionAutoGenDone) {
         sessionAutoGenDone = true
-        supabase.auth.getUser().then(({ data: { user } }) => {
+        supabase.auth.getUser().then(async ({ data: { user } }) => {
           if (!user) return
-          autoGenerateStreams(user.id)
-          autoGenerateInterest(user.id)
+          let streams = newStreams
+          let bks     = newBanks
+          const didMigrate = await migrateFromLocalStorage(user.id, newBanks)
+          if (didMigrate) {
+            const [{ data: sd }, { data: bd }] = await Promise.all([
+              supabase.from('revenue_streams').select('*').order('created_at', { ascending: true }),
+              supabase.from('banks').select('*').order('created_at', { ascending: false }),
+            ])
+            streams = (sd ?? []).map(mapStreamRow)
+            bks     = (bd ?? []) as Bank[]
+            setRevStreams(streams)
+            setBanks(bks)
+            pageCache.set('in', { cards: newCards, banks: bks, streams })
+          }
+          autoGenerateStreams(user.id, streams)
+          autoGenerateInterest(user.id, bks)
         })
       }
     } catch (err) {
@@ -229,39 +255,60 @@ export default function InPage() {
   useEffect(() => { setFabOpen(false) }, [tab])
 
   useEffect(() => {
-    try {
-      const v = localStorage.getItem('revenue-streams')
-      if (v) setRevStreams(JSON.parse(v))
-    } catch {}
-    try {
-      const v = localStorage.getItem('bank-cfg')
-      if (v) setBankCfg(JSON.parse(v))
-    } catch {}
-  }, [])
-
-  useEffect(() => {
     if (!interestBank) return
-    const cfg = bankCfg[interestBank.id]
-    setIntBalance(cfg?.balance ? String(cfg.balance) : '')
-    setIntApy(cfg?.apy ? String(cfg.apy) : '')
-    setIntFreq(cfg?.interestFreq ?? 'Monthly')
-    setIntDate(cfg?.nextInterestDate ?? localToday())
+    const bank = banks.find(b => b.id === interestBank.id) ?? interestBank
+    setIntBalance(bank.balance ? String(bank.balance) : '')
+    setIntApy(bank.apy ? String(bank.apy) : '')
+    setIntFreq((bank.interest_freq as 'Monthly' | 'Quarterly') ?? 'Monthly')
+    setIntDate(bank.next_interest_date ?? localToday())
   }, [interestBank])
 
-  async function autoGenerateStreams(userId: string) {
-    const streams: RevenueStreamConfig[] = (() => {
+  // ── localStorage → Supabase one-time migration ─────────────────────────
+  async function migrateFromLocalStorage(userId: string, loadedBanks: Bank[]): Promise<boolean> {
+    if (localStorage.getItem('hoardr-ls-migrated')) return false
+    let migrated = false
+
+    const lsStreams: RevenueStreamConfig[] = (() => {
       try { return JSON.parse(localStorage.getItem('revenue-streams') ?? '[]') } catch { return [] }
     })()
+    if (lsStreams.length > 0) {
+      const normalized = lsStreams
+        .map(s => !s.nextPayDate && s.lastGenerated ? { ...s, nextPayDate: advanceStream(s.lastGenerated, s.freq) } : s)
+        .filter(s => s.nextPayDate)
+      for (const s of normalized) {
+        await supabase.from('revenue_streams').upsert({
+          id: s.id, user_id: userId, name: s.name, amount: s.amount,
+          freq: s.freq, bank_id: s.bankId ?? null, next_pay_date: s.nextPayDate,
+        }, { onConflict: 'id', ignoreDuplicates: true })
+      }
+      migrated = true
+    }
+
+    const lsCfg: Record<string, { apy?: number; balance?: number; nextInterestDate?: string; interestFreq?: 'Monthly' | 'Quarterly' }> = (() => {
+      try { return JSON.parse(localStorage.getItem('bank-cfg') ?? '{}') } catch { return {} }
+    })()
+    for (const [bankId, conf] of Object.entries(lsCfg)) {
+      if (!loadedBanks.find(b => b.id === bankId)) continue
+      if (!conf.balance) continue
+      const hasInterest = !!(conf.apy && conf.apy > 0)
+      await supabase.from('banks').update({
+        balance:            conf.balance,
+        apy:                hasInterest ? conf.apy : null,
+        interest_freq:      hasInterest ? (conf.interestFreq ?? 'Monthly') : null,
+        next_interest_date: hasInterest ? (conf.nextInterestDate ?? null) : null,
+      }).eq('id', bankId)
+      migrated = true
+    }
+
+    localStorage.setItem('hoardr-ls-migrated', '1')
+    return migrated
+  }
+
+  async function autoGenerateStreams(userId: string, streams: RevenueStreamConfig[]) {
     const today = localToday()
-    // Migrate legacy streams that have lastGenerated but no nextPayDate
-    let updated = streams.map(s =>
-      !s.nextPayDate && s.lastGenerated ? { ...s, nextPayDate: advanceStream(s.lastGenerated, s.freq) } : s
-    )
     let changed = false
-    for (let i = 0; i < updated.length; i++) {
-      const s = updated[i]
+    for (const s of streams) {
       if (!s.nextPayDate || s.nextPayDate > today) continue
-      // Catch up all overdue payment dates (stops as soon as next date is in the future)
       let cur = s.nextPayDate
       while (cur <= today) {
         const { error } = await supabase.from('income').insert({
@@ -272,61 +319,68 @@ export default function InPage() {
         cur = advanceStream(cur, s.freq)
         changed = true
       }
-      if (cur !== s.nextPayDate) updated[i] = { ...s, nextPayDate: cur }
+      if (cur !== s.nextPayDate) {
+        await supabase.from('revenue_streams').update({ next_pay_date: cur }).eq('id', s.id)
+        setRevStreams(prev => prev.map(r => r.id === s.id ? { ...r, nextPayDate: cur } : r))
+      }
     }
-    if (changed) {
-      setRevStreams(updated)
-      try { localStorage.setItem('revenue-streams', JSON.stringify(updated)) } catch {}
-      loadIncome()
-    }
+    if (changed) loadIncome()
   }
 
-  async function autoGenerateInterest(userId: string) {
-    const cfg: Record<string, BankCfgEntry> = (() => {
-      try { return JSON.parse(localStorage.getItem('bank-cfg') ?? '{}') } catch { return {} }
-    })()
+  async function autoGenerateInterest(userId: string, bks: Bank[]) {
     const today = localToday()
-    const next  = { ...cfg }
     let changed = false
-    for (const [bankId, conf] of Object.entries(cfg)) {
-      if (!conf.apy || !conf.balance || !conf.nextInterestDate) continue
-      if (conf.nextInterestDate > today) continue
-      const freq    = conf.interestFreq ?? 'Monthly'
+    for (const bank of bks) {
+      if (!bank.apy || !bank.balance || !bank.next_interest_date) continue
+      if (bank.next_interest_date > today) continue
+      const freq    = (bank.interest_freq as 'Monthly' | 'Quarterly') ?? 'Monthly'
       const divisor = freq === 'Quarterly' ? 4 : 12
-      const amount  = parseFloat((conf.balance * conf.apy / 100 / divisor).toFixed(2))
-      const bank    = banksRef.current.find(b => b.id === bankId)
+      const amount  = parseFloat((bank.balance * bank.apy / 100 / divisor).toFixed(2))
       const { error } = await supabase.from('income').insert({
-        user_id: userId, name: `${bank?.name ?? 'Bank'} Interest`,
-        amount, date: conf.nextInterestDate, source: 'Other', bank_id: bankId,
+        user_id: userId, name: `${bank.name} Interest`,
+        amount, date: bank.next_interest_date, source: 'Other', bank_id: bank.id,
       })
-      if (!error) { next[bankId] = { ...conf, nextInterestDate: advanceByFreq(conf.nextInterestDate, freq) }; changed = true }
+      if (!error) {
+        const nextDate = advanceByFreq(bank.next_interest_date, freq)
+        await supabase.from('banks').update({ next_interest_date: nextDate }).eq('id', bank.id)
+        setBanks(prev => prev.map(b => b.id === bank.id ? { ...b, next_interest_date: nextDate } : b))
+        changed = true
+      }
     }
-    if (changed) { saveBankCfg(next); loadIncome() }
+    if (changed) loadIncome()
   }
 
-  function saveStreams(streams: RevenueStreamConfig[]) {
-    try { localStorage.setItem('revenue-streams', JSON.stringify(streams)) } catch {}
-  }
-
-  function handleStreamDone(config: RevenueStreamConfig) {
-    setRevStreams(prev => {
-      const updated = prev.some(s => s.id === config.id)
-        ? prev.map(s => s.id === config.id ? config : s)
-        : [...prev, config]
-      saveStreams(updated)
-      return updated
-    })
+  async function handleStreamDone(config: RevenueStreamConfig) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const isEdit = revStreams.some(s => s.id === config.id)
+    if (isEdit) {
+      const { error } = await supabase.from('revenue_streams').update({
+        name: config.name, amount: config.amount, freq: config.freq,
+        bank_id: config.bankId ?? null, next_pay_date: config.nextPayDate,
+      }).eq('id', config.id)
+      if (error) { console.error('stream update error:', error); return }
+      setRevStreams(prev => prev.map(s => s.id === config.id ? config : s))
+    } else {
+      const { error } = await supabase.from('revenue_streams').insert({
+        id: config.id, user_id: user.id, name: config.name, amount: config.amount,
+        freq: config.freq, bank_id: config.bankId ?? null, next_pay_date: config.nextPayDate,
+      })
+      if (error) { console.error('stream insert error:', error); return }
+      setRevStreams(prev => [...prev, config])
+    }
     loadIncome()
   }
 
   function handleDeleteStream(id: string) {
     const snapshot = revStreams.slice()
-    const updated  = revStreams.filter(s => s.id !== id)
-    setRevStreams(updated)
-    saveStreams(updated)
+    setRevStreams(prev => prev.filter(s => s.id !== id))
     showToast('Stream removed', {
       type: 'delete',
-      undo: { onUndo: () => { setRevStreams(snapshot); saveStreams(snapshot) }, onCommit: () => {} },
+      undo: {
+        onUndo:   () => setRevStreams(snapshot),
+        onCommit: () => { supabase.from('revenue_streams').delete().eq('id', id) },
+      },
     })
   }
 
@@ -336,7 +390,6 @@ export default function InPage() {
     const snapshot = incomeList.slice()
     pendingDeleteIds.current.add(id)
     setIncomeList(prev => prev.filter(i => i.id !== id))
-    // Delete immediately so navigating away doesn't lose the commit
     supabase.from('income').delete().eq('id', id)
     showToast(`${row.name} deleted`, {
       type: 'delete',
@@ -414,24 +467,26 @@ export default function InPage() {
     })
   }
 
-  function saveBankCfg(next: Record<string, BankCfgEntry>) {
-    setBankCfg(next)
-    try { localStorage.setItem('bank-cfg', JSON.stringify(next)) } catch {}
-  }
-
-  function handleSaveInterestConfig() {
+  async function handleSaveInterestConfig() {
     if (!interestBank) return
     const bal = parseFloat(intBalance)
     const apy = parseFloat(intApy)
     if (isNaN(bal) || bal <= 0) return
     const hasInterest = !isNaN(apy) && apy > 0 && !!intDate
-    const entry: BankCfgEntry = {
-      ...bankCfg[interestBank.id],
-      balance: bal,
-      apy:     hasInterest ? apy : 0,
-      ...(hasInterest ? { interestFreq: intFreq, nextInterestDate: intDate } : { nextInterestDate: undefined, interestFreq: undefined }),
-    }
-    saveBankCfg({ ...bankCfg, [interestBank.id]: entry })
+    const { error } = await supabase.from('banks').update({
+      balance:            bal,
+      apy:                hasInterest ? apy   : null,
+      interest_freq:      hasInterest ? intFreq : null,
+      next_interest_date: hasInterest ? intDate  : null,
+    }).eq('id', interestBank.id)
+    if (error) { console.error('bank update error:', error); return }
+    setBanks(prev => prev.map(b => b.id === interestBank.id ? {
+      ...b,
+      balance:            bal,
+      apy:                hasInterest ? apy    : null,
+      interest_freq:      hasInterest ? intFreq : null,
+      next_interest_date: hasInterest ? intDate  : null,
+    } : b))
     showToast(hasInterest ? 'Interest scheduled' : 'Balance saved', { type: 'add' })
     setInterestBank(null)
   }
@@ -478,6 +533,7 @@ export default function InPage() {
     const optimistic: Bank = {
       id: `tmp-${Date.now()}`, user_id: user.id, name: newBank.name,
       type: newBank.type, last4: newBank.last4, created_at: new Date().toISOString(),
+      balance: null, apy: null, next_interest_date: null, interest_freq: null,
     }
     setBanks(prev => [optimistic, ...prev])
     showToast(`${newBank.name} added`, { type: 'add' })
@@ -572,7 +628,7 @@ export default function InPage() {
       })
       setDraggingId(null)
       setCards(finalOrder)
-      const c = pageCache.get<{ cards: Card[]; banks: Bank[] }>('in')
+      const c = pageCache.get<InCache>('in')
       if (c) pageCache.set('in', { ...c, cards: finalOrder })
       Promise.all(finalOrder.map((card, i) => supabase.from('cards').update({ sort_order: i }).eq('id', card.id)))
     }
@@ -597,12 +653,12 @@ export default function InPage() {
   [incomeList])
 
   const statThisMonth = useMemo(() => {
-    const d         = new Date()
+    const d          = new Date()
     const monthStart = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
-    const lastDay   = new Date(d.getFullYear(), d.getMonth() + 1, 0)
-    const monthEnd  = `${lastDay.getFullYear()}-${String(lastDay.getMonth() + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`
-    const actual    = incomeList.filter(r => r.date >= monthStart).reduce((s, r) => s + r.amount, 0)
-    const projected = revStreams.reduce((s, stream) => s + projectStreamPayments(stream, monthEnd), 0)
+    const lastDay    = new Date(d.getFullYear(), d.getMonth() + 1, 0)
+    const monthEnd   = `${lastDay.getFullYear()}-${String(lastDay.getMonth() + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`
+    const actual     = incomeList.filter(r => r.date >= monthStart).reduce((s, r) => s + r.amount, 0)
+    const projected  = revStreams.reduce((s, stream) => s + projectStreamPayments(stream, monthEnd), 0)
     return actual + projected
   }, [incomeList, revStreams])
 
@@ -622,30 +678,30 @@ export default function InPage() {
   }, [revStreams])
 
   const statMonthly = useMemo(() => {
-    const streams = revStreams.reduce((s, r) => {
+    const streams  = revStreams.reduce((s, r) => {
       const factor = r.freq === 'Weekly' ? 52/12 : r.freq === 'Biweekly' ? 26/12 : r.freq === 'Semimonthly' ? 24/12 : 1
       return s + r.amount * factor
     }, 0)
-    const interest = Object.values(bankCfg).filter(c => c.apy && c.balance).reduce((s, c) => s + c.balance * c.apy / 100 / 12, 0)
+    const interest = banks.filter(b => b.apy && b.balance).reduce((s, b) => s + (b.balance ?? 0) * (b.apy ?? 0) / 100 / 12, 0)
     return streams + interest
-  }, [revStreams, bankCfg])
+  }, [revStreams, banks])
 
   const statAnnual = useMemo(() => {
-    const streams = revStreams.reduce((s, r) => {
+    const streams  = revStreams.reduce((s, r) => {
       const factor = r.freq === 'Weekly' ? 52 : r.freq === 'Biweekly' ? 26 : r.freq === 'Semimonthly' ? 24 : 12
       return s + r.amount * factor
     }, 0)
-    const interest = Object.values(bankCfg).filter(c => c.apy && c.balance).reduce((s, c) => s + c.balance * c.apy / 100, 0)
+    const interest = banks.filter(b => b.apy && b.balance).reduce((s, b) => s + (b.balance ?? 0) * (b.apy ?? 0) / 100, 0)
     return streams + interest
-  }, [revStreams, bankCfg])
+  }, [revStreams, banks])
 
   const statTotalBalance = useMemo(() =>
-    Object.values(bankCfg).reduce((s, c) => s + (c.balance ?? 0), 0),
-  [bankCfg])
+    banks.reduce((s, b) => s + (b.balance ?? 0), 0),
+  [banks])
 
   const statIntYear = useMemo(() =>
-    Object.values(bankCfg).filter(c => c.apy && c.balance).reduce((s, c) => s + c.balance * c.apy / 100, 0),
-  [bankCfg])
+    banks.filter(b => b.apy && b.balance).reduce((s, b) => s + (b.balance ?? 0) * (b.apy ?? 0) / 100, 0),
+  [banks])
 
   return (
     <>
@@ -689,7 +745,7 @@ export default function InPage() {
           </div>
         )}
 
-        {/* ── History ────────────────────────────────────────────────────── */}
+        {/* ── History ─────────────────────────────────────────────────────── */}
         {!loading && tab === 'History' && (
           <div className="mx-4 mt-4 space-y-5">
             {incomeLoading ? (
@@ -731,31 +787,65 @@ export default function InPage() {
           </div>
         )}
 
-        {/* ── Streams ────────────────────────────────────────────────────── */}
+        {/* ── Streams ─────────────────────────────────────────────────────── */}
         {!loading && tab === 'Streams' && (
           <div className="mx-4 mt-4 space-y-5">
-            {/* Revenue Streams */}
             {revStreams.length > 0 && (
               <div>
                 <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Revenue Streams</p>
                 <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
-                  {revStreams.map(stream => {
-                    const next = stream.nextPayDate
+                  {revStreams.map(stream => (
+                    <SwipeToDelete key={stream.id} onDelete={() => handleDeleteStream(stream.id)} onTap={() => { setEditStream(stream); setStreamOpen(true) }}>
+                      <div className="flex items-center gap-3 px-4 py-3.5">
+                        <div className="w-10 h-10 rounded-[12px] bg-emerald/10 flex items-center justify-center flex-shrink-0">
+                          <Banknote size={15} className="text-emerald" strokeWidth={1.75} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[14px] font-medium text-ink truncate">{stream.name}</p>
+                          <p className="text-[11px] text-ink-muted">
+                            {$fd(stream.amount)} · {stream.freq}
+                            {banks.find(b => b.id === stream.bankId) ? ` · ${banks.find(b => b.id === stream.bankId)!.name}` : ''}
+                          </p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-[11px] text-ink-muted">{daysUntilLabel(stream.nextPayDate)}</p>
+                        </div>
+                      </div>
+                    </SwipeToDelete>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {banks.filter(b => b.apy && b.balance).length > 0 && (
+              <div>
+                <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Interest</p>
+                <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
+                  {banks.filter(b => b.apy && b.balance).map(bank => {
+                    const freq    = (bank.interest_freq as 'Monthly' | 'Quarterly') ?? 'Monthly'
+                    const divisor = freq === 'Quarterly' ? 4 : 12
+                    const amount  = parseFloat(((bank.balance ?? 0) * (bank.apy ?? 0) / 100 / divisor).toFixed(2))
                     return (
-                      <SwipeToDelete key={stream.id} onDelete={() => handleDeleteStream(stream.id)} onTap={() => { setEditStream(stream); setStreamOpen(true) }}>
+                      <SwipeToDelete key={bank.id} onDelete={() => {
+                        const snapshot = banks.slice()
+                        setBanks(prev => prev.map(b => b.id === bank.id ? { ...b, apy: null, next_interest_date: null, interest_freq: null } : b))
+                        showToast('Interest removed', {
+                          type: 'delete',
+                          undo: {
+                            onUndo:   () => setBanks(snapshot),
+                            onCommit: () => { supabase.from('banks').update({ apy: null, next_interest_date: null, interest_freq: null }).eq('id', bank.id) },
+                          },
+                        })
+                      }} onTap={() => setInterestBank(bank)}>
                         <div className="flex items-center gap-3 px-4 py-3.5">
-                          <div className="w-10 h-10 rounded-[12px] bg-emerald/10 flex items-center justify-center flex-shrink-0">
-                            <Banknote size={15} className="text-emerald" strokeWidth={1.75} />
-                          </div>
+                          <div className="w-10 h-10 rounded-[12px] bg-emerald/10 flex items-center justify-center text-lg flex-shrink-0">🏦</div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-[14px] font-medium text-ink truncate">{stream.name}</p>
-                            <p className="text-[11px] text-ink-muted">
-                              {$fd(stream.amount)} · {stream.freq}
-                              {banks.find(b => b.id === stream.bankId) ? ` · ${banks.find(b => b.id === stream.bankId)!.name}` : ''}
-                            </p>
+                            <p className="text-[14px] font-medium text-ink truncate">{bank.name} Interest</p>
+                            <p className="text-[11px] text-ink-muted">{bank.apy}% APY · {freq}</p>
                           </div>
                           <div className="text-right flex-shrink-0">
-                            <p className="text-[11px] text-ink-muted">{daysUntilLabel(next)}</p>
+                            <p className="text-[13px] font-semibold font-mono text-emerald">+{$fd(amount)}</p>
+                            <p className="text-[10px] text-ink-faint">{bank.next_interest_date ? daysUntilLabel(bank.next_interest_date) : 'not scheduled'}</p>
                           </div>
                         </div>
                       </SwipeToDelete>
@@ -765,42 +855,7 @@ export default function InPage() {
               </div>
             )}
 
-            {/* Interest Streams */}
-            {Object.entries(bankCfg).filter(([, c]) => c.apy && c.balance).length > 0 && (
-              <div>
-                <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Interest</p>
-                <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
-                  {Object.entries(bankCfg)
-                    .filter(([, c]) => c.apy && c.balance)
-                    .map(([bankId, cfg]) => {
-                      const bank    = banks.find(b => b.id === bankId)
-                      if (!bank) return null
-                      const freq    = cfg.interestFreq ?? 'Monthly'
-                      const divisor = freq === 'Quarterly' ? 4 : 12
-                      const amount  = parseFloat((cfg.balance * cfg.apy / 100 / divisor).toFixed(2))
-                      return (
-                        <SwipeToDelete key={bankId} onDelete={() => {
-                          const next = { ...bankCfg }; delete next[bankId]; saveBankCfg(next)
-                        }} onTap={() => setInterestBank(bank)}>
-                          <div className="flex items-center gap-3 px-4 py-3.5">
-                            <div className="w-10 h-10 rounded-[12px] bg-emerald/10 flex items-center justify-center text-lg flex-shrink-0">🏦</div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[14px] font-medium text-ink truncate">{bank.name} Interest</p>
-                              <p className="text-[11px] text-ink-muted">{cfg.apy}% APY · {freq}</p>
-                            </div>
-                            <div className="text-right flex-shrink-0">
-                              <p className="text-[13px] font-semibold font-mono text-emerald">+{$fd(amount)}</p>
-                              <p className="text-[10px] text-ink-faint">{cfg.nextInterestDate ? daysUntilLabel(cfg.nextInterestDate) : 'not scheduled'}</p>
-                            </div>
-                          </div>
-                        </SwipeToDelete>
-                      )
-                    })}
-                </div>
-              </div>
-            )}
-
-            {revStreams.length === 0 && !Object.values(bankCfg).some(c => c.apy) && (
+            {revStreams.length === 0 && !banks.some(b => b.apy) && (
               <div className="py-12 text-center">
                 <p className="text-[13px] text-ink-faint">No streams yet — tap + to add one.</p>
               </div>
@@ -808,17 +863,15 @@ export default function InPage() {
           </div>
         )}
 
-        {/* ── Accounts ───────────────────────────────────────────────────── */}
+        {/* ── Accounts ────────────────────────────────────────────────────── */}
         {!loading && tab === 'Accounts' && (
           <div className="mx-4 mt-4 space-y-5">
-            {/* Banks */}
             {banks.length > 0 && (
               <div>
                 <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Banks</p>
                 <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
                   {banks.map(bank => {
                     const linked = cards.filter(c => c.bank_id === bank.id)
-                    const cfg    = bankCfg[bank.id]
                     return (
                       <SwipeToDelete key={bank.id} onDelete={() => handleDeleteBank(bank.id)} onTap={() => setInterestBank(bank)}>
                         <div className="flex items-center gap-3 px-4 py-4 bg-bg-surface">
@@ -827,12 +880,12 @@ export default function InPage() {
                             <p className="text-[14px] font-medium text-ink">{bank.name}</p>
                             <p className="text-[11px] text-ink-muted">
                               {bank.type ?? 'Bank'}{bank.last4 ? ` · ••••${bank.last4}` : ''}
-                              {cfg?.apy ? ` · ${cfg.apy}% APY` : ''}
+                              {bank.apy ? ` · ${bank.apy}% APY` : ''}
                             </p>
                           </div>
                           <div className="text-right flex-shrink-0">
                             <p className="text-[12px] text-ink-faint">{linked.length} {linked.length === 1 ? 'card' : 'cards'}</p>
-                            {cfg?.balance ? <p className="text-[12px] font-mono text-emerald">{$fd(cfg.balance)}</p> : null}
+                            {bank.balance ? <p className="text-[12px] font-mono text-emerald">{$fd(bank.balance)}</p> : null}
                           </div>
                         </div>
                       </SwipeToDelete>
@@ -842,7 +895,6 @@ export default function InPage() {
               </div>
             )}
 
-            {/* Cards */}
             {cards.length > 0 && (
               <div>
                 <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Cards</p>
@@ -870,7 +922,7 @@ export default function InPage() {
         <div className="h-10" />
       </div>
 
-      {/* ── FAB ─────────────────────────────────────────────────────────── */}
+      {/* ── FAB ──────────────────────────────────────────────────────────── */}
       {tab === 'Accounts' && fabOpen && (
         <div className="fixed inset-0" style={{ zIndex: 39 }} onClick={() => setFabOpen(false)} />
       )}
@@ -910,7 +962,6 @@ export default function InPage() {
         onClose={() => setBankSheetOpen(false)}
         onAdd={handleAddBank}
       />
-
       <RevenueStreamSheet
         open={streamOpen}
         onClose={() => setStreamOpen(false)}
@@ -932,7 +983,6 @@ export default function InPage() {
         onDone={loadIncome}
         initial={editIncome}
       />
-
       <EditCardSheet
         card={editCard}
         open={editSheetOpen}
@@ -942,7 +992,7 @@ export default function InPage() {
         banks={banks.map(b => ({ id: b.id, name: b.name }))}
       />
 
-      {/* ── Bank interest sheet ─────────────────────────────────────────── */}
+      {/* ── Bank interest sheet ──────────────────────────────────────────── */}
       <div
         onClick={() => setInterestBank(null)}
         className={cn('fixed inset-0 z-[59] transition-opacity duration-300', interestBank ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none')}
@@ -965,7 +1015,6 @@ export default function InPage() {
           </button>
         </div>
         <div className="px-5 space-y-5" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 32px)' }}>
-          {/* Balance */}
           <div>
             <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Current Balance</p>
             <div className="flex items-center gap-1.5 bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 focus-within:border-gold/40">
@@ -975,7 +1024,6 @@ export default function InPage() {
                 className="flex-1 bg-transparent text-[22px] font-mono text-ink outline-none placeholder:text-ink-faint" />
             </div>
           </div>
-          {/* APY — optional */}
           <div>
             <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">APY (%) <span className="normal-case tracking-normal text-ink-faint/60">— optional</span></p>
             <div className="flex items-center gap-1.5 bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 focus-within:border-gold/40">
@@ -985,7 +1033,6 @@ export default function InPage() {
               <span className="text-[22px] font-light text-ink-muted font-mono">%</span>
             </div>
           </div>
-          {/* Frequency + date — only when APY is set */}
           {parseFloat(intApy) > 0 && (
             <>
               <div>
@@ -1033,7 +1080,7 @@ export default function InPage() {
         </div>
       </div>
 
-      {/* ── Card detail sheet ────────────────────────────────────────────── */}
+      {/* ── Card detail sheet ─────────────────────────────────────────────── */}
       <div
         onClick={() => setSelectedCard(null)}
         className={cn('fixed inset-0 z-[59] transition-opacity duration-300', selectedCard ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none')}
@@ -1055,9 +1102,7 @@ export default function InPage() {
             <button
               onClick={() => { setEditCard(selectedCard); setSelectedCard(null); setEditSheetOpen(true) }}
               className="px-3 h-8 rounded-full bg-bg-overlay text-[11px] font-medium text-ink-muted select-none"
-            >
-              Edit
-            </button>
+            >Edit</button>
             <button onClick={() => setSelectedCard(null)} className="w-8 h-8 flex items-center justify-center text-[22px] text-ink-muted">×</button>
           </div>
         </div>
