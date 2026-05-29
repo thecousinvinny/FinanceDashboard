@@ -55,7 +55,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [recurrencePickerOpen, setRecurrencePickerOpen] = useState(false)
   const [dragY,              setDragY]              = useState(0)
-  const locationRef  = useRef<HTMLInputElement>(null)
+  const locationRef  = useRef<HTMLTextAreaElement>(null)
   const acRef        = useRef<unknown>(null)
   const backdropRef  = useRef<HTMLDivElement>(null)
   const dragStartY   = useRef<number | null>(null)
@@ -91,7 +91,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
       if (!locationRef.current) return
       const g = (window as unknown as Record<string, unknown>).google as { maps?: { places?: { Autocomplete: new (el: HTMLInputElement, opts: unknown) => { addListener: (ev: string, fn: () => void) => void; getPlace: () => { formatted_address?: string; name?: string } } } } } | undefined
       if (!g?.maps?.places) return
-      acRef.current = new g.maps.places.Autocomplete(locationRef.current, { types: ['geocode', 'establishment'] })
+      acRef.current = new g.maps.places.Autocomplete(locationRef.current as unknown as HTMLInputElement, { types: ['geocode', 'establishment'] })
       ;(acRef.current as { addListener: (ev: string, fn: () => void) => void }).addListener('place_changed', () => {
         const place = (acRef.current as { getPlace: () => { formatted_address?: string; name?: string } }).getPlace()
         const addr  = place.formatted_address || place.name || ''
@@ -306,10 +306,11 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
 
               {/* Location */}
               <div className="relative">
-                <MapPin size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
-                <input ref={locationRef} type="text" placeholder="Add location" defaultValue={form.location}
+                <MapPin size={15} className="absolute left-4 top-3.5 text-ink-muted pointer-events-none" />
+                <textarea ref={locationRef} placeholder="Add location" defaultValue={form.location}
                   onChange={e => set('location', e.target.value)}
-                  className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] pl-10 pr-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40" />
+                  rows={2}
+                  className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] pl-10 pr-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40 resize-none" />
               </div>
 
               {/* Notes */}

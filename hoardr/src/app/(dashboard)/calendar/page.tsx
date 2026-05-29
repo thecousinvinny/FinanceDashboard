@@ -236,6 +236,7 @@ export default function CalendarPage() {
   const monthGridBotSentRef = useRef<HTMLDivElement>(null)
   const swatchRef           = useRef<HTMLDivElement>(null)
   const ctxMenuRef          = useRef<HTMLDivElement>(null)
+  const colorInputRefs      = useRef(new Map<string, HTMLInputElement>())
   const longPressTimer      = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [swatchOpen,      setSwatchOpen]      = useState<{ id: string; kind: 'type' | 'google'; top: number; left: number } | null>(null)
   const [hoveredPillKey,  setHoveredPillKey]  = useState<string | null>(null)
@@ -271,6 +272,20 @@ export default function CalendarPage() {
     const f = months[0], l = months[months.length - 1]
     return `${f.year}/${f.month}..${l.year}/${l.month}`
   }, [months])
+
+  // Covers both mobile list months and Notion grid weeks so Google events load
+  // regardless of which view is active or how far the user has scrolled.
+  const gEvRangeKey = useMemo(() => {
+    const mFirst = months[0], mLast = months[months.length - 1]
+    const mMin = new Date(mFirst.year, mFirst.month, 1)
+    const mMax = new Date(mLast.year, mLast.month + 1, 0)
+    const wks = notionWeeksRef.current.length > 0 ? notionWeeksRef.current : notionWeeks
+    const wMin = new Date(wks[0] + 'T00:00:00')
+    const wMax = new Date(wks[wks.length - 1] + 'T00:00:00'); wMax.setDate(wMax.getDate() + 6)
+    const rangeMin = new Date(Math.min(mMin.getTime(), wMin.getTime()))
+    const rangeMax = new Date(Math.max(mMax.getTime(), wMax.getTime()))
+    return `${rangeMin.toISOString().slice(0, 7)}..${rangeMax.toISOString().slice(0, 7)}`
+  }, [months, notionWeeks])
 
   const supabase      = useMemo(() => createClient(), [])
   const loadGen       = useRef(0)
@@ -432,9 +447,12 @@ export default function CalendarPage() {
     const calIds = prefs.googleCalendarIds
     if (calIds.length === 0) { setGoogleEvMap({}); return }
     const gen = ++gEvGen.current
-    const f = months[0], l = months[months.length - 1]
-    const tMin = new Date(f.year, f.month, 1).toISOString()
-    const tMax = new Date(l.year, l.month + 1, 0, 23, 59, 59).toISOString()
+    // Parse range from gEvRangeKey (YYYY-MM..YYYY-MM)
+    const [minPart, maxPart] = gEvRangeKey.split('..')
+    const [minY, minM] = minPart.split('-').map(Number)
+    const [maxY, maxM] = maxPart.split('-').map(Number)
+    const tMin = new Date(minY, minM - 1, 1).toISOString()
+    const tMax = new Date(maxY, maxM, 0, 23, 59, 59).toISOString()
     const clr: Record<string, string> = {}
     for (const c of googleCals) clr[c.id] = c.backgroundColor
     Promise.all(calIds.map(calId =>
@@ -468,7 +486,7 @@ export default function CalendarPage() {
     })
     return () => { gEvGen.current++ }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prefs.googleCalendarIds, rangeKey, googleCals, gRefreshKey])
+  }, [prefs.googleCalendarIds, gEvRangeKey, googleCals, gRefreshKey])
 
   const visibleMap = useMemo(() => {
     const m: Record<string, CalEvent[]> = {}
@@ -660,7 +678,7 @@ export default function CalendarPage() {
 
   // ── Scroll to today after first data load ────────────────────────────────
   useEffect(() => {
-    if (!dataLoaded || scrolledToToday.current || isLargeScreen) return
+    if (!dataLoaded || scrolledToToday.current || (isLargeScreen && calView !== 'list')) return
     let t1: ReturnType<typeof setTimeout>
     let t2: ReturnType<typeof setTimeout>
     const doScroll = () => {
@@ -683,7 +701,7 @@ export default function CalendarPage() {
   // After Google Calendar events load they can make days taller, shifting the viewport backward.
   // Re-scroll to today once after the first Google events load, before the user has interacted.
   useEffect(() => {
-    if (!scrolledToToday.current || googleRescrollDone.current || isLargeScreen) return
+    if (!scrolledToToday.current || googleRescrollDone.current || (isLargeScreen && calView !== 'list')) return
     googleRescrollDone.current = true
     requestAnimationFrame(() => {
       const sc = scrollRef.current
@@ -710,7 +728,7 @@ export default function CalendarPage() {
 
   // ── Infinite scroll: append ────────────────────────────────────────────────
   useEffect(() => {
-    if (isLargeScreen) return
+    if (isLargeScreen && calView !== 'list') return
     const sc = scrollRef.current, bot = botSentRef.current
     if (!sc || !bot) return
     const obs = new IntersectionObserver(([entry]) => {
@@ -724,11 +742,11 @@ export default function CalendarPage() {
     }, { root: sc, rootMargin: '0px 0px 400px 0px', threshold: 0 })
     obs.observe(bot)
     return () => obs.disconnect()
-  }, [isLargeScreen])
+  }, [isLargeScreen, calView])
 
   // ── Infinite scroll: prepend ───────────────────────────────────────────────
   useEffect(() => {
-    if (isLargeScreen) return
+    if (isLargeScreen && calView !== 'list') return
     const sc = scrollRef.current, top = topSentRef.current
     if (!sc || !top) return
     const obs = new IntersectionObserver(([entry]) => {
@@ -746,7 +764,7 @@ export default function CalendarPage() {
     }, { root: sc, rootMargin: '400px 0px 0px 0px', threshold: 0 })
     obs.observe(top)
     return () => obs.disconnect()
-  }, [isLargeScreen])
+  }, [isLargeScreen, calView])
 
   // ── Month grid infinite scroll: append ────────────────────────────────────
   useEffect(() => {
@@ -1119,13 +1137,17 @@ export default function CalendarPage() {
                           onTouchEnd={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null } }}
                           onTouchMove={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null } }}
                         >
-                          <button
-                            onClick={e => { const r = e.currentTarget.getBoundingClientRect(); setSwatchOpen({ id: item.type, kind: 'type', top: r.bottom + 4, left: r.left }) }}
-                            style={{ flexShrink: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16, background: 'none', border: 'none', padding: 0 }}
-                            title="Change color"
-                          >
-                            <span style={{ width: 10, height: 10, borderRadius: '50%', background: hidden ? 'transparent' : activeColor, border: `1.5px solid ${activeColor}`, display: 'block', transition: 'all 0.15s', opacity: hidden ? 0.4 : 1, flexShrink: 0 }} />
-                          </button>
+                          <div style={{ position: 'relative', width: 16, height: 16, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                            <span style={{ width: 10, height: 10, borderRadius: 3, background: hidden ? 'transparent' : activeColor, border: `1.5px solid ${activeColor}`, display: 'block', transition: 'all 0.15s', opacity: hidden ? 0.4 : 1, flexShrink: 0, pointerEvents: 'none' }} />
+                            <input
+                              type="color"
+                              ref={el => { if (el) colorInputRefs.current.set(item.type, el) }}
+                              value={activeColor.match(/^#[0-9a-fA-F]{6}$/) ? activeColor.toLowerCase() : '#4ade80'}
+                              onChange={e => setTypeColors(p => ({ ...p, [item.type]: e.target.value }))}
+                              title="Change color"
+                              style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%', padding: 0, border: 'none' }}
+                            />
+                          </div>
                           <button onClick={() => setHiddenTypes(prev => { const next = new Set(prev); if (next.has(item.type)) next.delete(item.type); else next.add(item.type); return next })}
                             style={{ background: 'none', border: 'none', cursor: 'pointer', flex: 1, textAlign: 'left', padding: 0 }}>
                             <span style={{ fontSize: 11, color: hidden ? 'rgb(var(--rgb-ink) / 0.25)' : 'rgb(var(--rgb-ink) / 0.7)', fontFamily: 'var(--font-montserrat)', fontWeight: 500, transition: 'color 0.15s' }}>{item.label}</span>
@@ -1169,13 +1191,17 @@ export default function CalendarPage() {
                           onTouchEnd={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null } }}
                           onTouchMove={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null } }}
                         >
-                          <button
-                            onClick={e => { const r = e.currentTarget.getBoundingClientRect(); setSwatchOpen({ id: cal.id, kind: 'google', top: r.bottom + 4, left: r.left }) }}
-                            style={{ flexShrink: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16, background: 'none', border: 'none', padding: 0 }}
-                            title="Change color"
-                          >
-                            <span style={{ width: 10, height: 10, borderRadius: '50%', background: hidden ? 'transparent' : activeColor, border: `1.5px solid ${activeColor}`, display: 'block', transition: 'all 0.15s', opacity: hidden ? 0.4 : 1, flexShrink: 0 }} />
-                          </button>
+                          <div style={{ position: 'relative', width: 16, height: 16, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                            <span style={{ width: 10, height: 10, borderRadius: 3, background: hidden ? 'transparent' : activeColor, border: `1.5px solid ${activeColor}`, display: 'block', transition: 'all 0.15s', opacity: hidden ? 0.4 : 1, flexShrink: 0, pointerEvents: 'none' }} />
+                            <input
+                              type="color"
+                              ref={el => { if (el) colorInputRefs.current.set(cal.id, el); else colorInputRefs.current.delete(cal.id) }}
+                              value={activeColor.match(/^#[0-9a-fA-F]{6}$/) ? activeColor.toLowerCase() : '#4285f4'}
+                              onChange={e => { const newColors = { ...(prefs.googleCalendarColors ?? {}), [cal.id]: e.target.value }; savePrefs({ ...prefs, googleCalendarColors: newColors }) }}
+                              title="Change color"
+                              style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%', padding: 0, border: 'none' }}
+                            />
+                          </div>
                           <button onClick={() => setHiddenGoogleCals(prev => { const next = new Set(prev); if (next.has(cal.id)) next.delete(cal.id); else next.add(cal.id); return next })}
                             style={{ background: 'none', border: 'none', cursor: 'pointer', flex: 1, textAlign: 'left', padding: 0 }}>
                             <span style={{ fontSize: 11, color: hidden ? 'rgb(var(--rgb-ink) / 0.25)' : 'rgb(var(--rgb-ink) / 0.7)', fontFamily: 'var(--font-montserrat)', fontWeight: 500, transition: 'color 0.15s' }}>{cal.summary}</span>
@@ -1348,50 +1374,76 @@ export default function CalendarPage() {
               </div>
             )}
 
-            {/* List mode (calView === 'list') */}
+            {/* List mode (calView === 'list') — infinite day list matching mobile split view */}
             {calView === 'list' && (
-            <div className="bg-bg-base overflow-y-auto flex-1">
-              {/* Day-of-week row */}
-              <div className="grid grid-cols-7 px-3 mb-1">
-                {(wsMon ? ['M','T','W','T','F','S','S'] : ['S','M','T','W','T','F','S']).map((d, i) => (
-                  <div key={i} className="text-center text-[10px] font-medium tracking-[0.08em] uppercase text-ink-faint py-1">{d}</div>
-                ))}
-              </div>
-              {/* Month grid */}
-              <div className="grid grid-cols-7 px-3 gap-y-0.5">
-                {gridCells.map((day, i) => {
-                  if (day === null) return <div key={i} className="h-12" />
-                  const ds = gds(day), evs = visibleMap[ds] ?? [], isSel = gridSel === ds, isTod = ds === todayStr
-                  return (
-                    <button key={i} onClick={() => setGridSel(isSel ? null : ds)} className="flex flex-col items-center py-1 gap-1 h-12 select-none">
-                      <span className={cn('w-8 h-8 flex items-center justify-center rounded-xl text-[13px] font-medium transition-all',
-                        isTod ? 'gradient-gold text-white font-bold' : isSel ? 'bg-bg-surface border border-white/10 text-ink' : 'text-ink-muted')}>
-                        {day}
-                      </span>
-                      <div className="flex gap-[3px]">
-                        {evs.slice(0, 3).map((ev, j) => <span key={j} className="w-[5px] h-[5px] rounded-full flex-shrink-0" style={{ background: ev.color ?? DOT_COLOR[ev.type] }} />)}
+            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative', background: 'var(--color-bg-base)' }}>
+              <div ref={scrollRef} onScroll={handleDetailScroll}
+                style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', position: 'relative' }}>
+                <div ref={topSentRef} style={{ height: 1 }} />
+                {months.map(({ year: y, month: m }) => {
+                  const dim = getDaysInMonth(y, m)
+                  return Array.from({ length: dim }, (_, i) => {
+                    const day    = i + 1
+                    const ds     = toDateStr(y, m, day)
+                    const isTod  = ds === todayStr
+                    const events = visibleMap[ds] ?? []
+                    const abbr   = new Date(y, m, day).toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()
+                    const stripe = Math.floor(new Date(y, m, day).getTime() / 86400000) % 2 === 0
+                    return (
+                      <div
+                        key={ds}
+                        ref={el => { if (el) dayRefs.current.set(ds, el); else dayRefs.current.delete(ds) }}
+                        onMouseDown={e => rowMouseDown(e, ds)}
+                        onMouseUp={rowMouseUp}
+                        onMouseLeave={() => { rowSwipe.current = null }}
+                        style={{ display: 'flex', alignItems: 'stretch', paddingLeft: 20, background: 'var(--color-bg-surface)', cursor: 'grab' }}
+                      >
+                        <div style={{ width: 60, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-surface)' }}>
+                          <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 9, letterSpacing: '0.09em', textTransform: 'uppercase', lineHeight: 1.2, userSelect: 'none', whiteSpace: 'nowrap' }}>
+                            <span style={{ color: isTod ? '#D4AF37' : 'rgb(var(--rgb-ink) / 0.75)', fontWeight: 700 }}>{abbr}</span>
+                            <span style={{ color: isTod ? '#c9a84c' : 'rgb(var(--rgb-ink) / 0.25)', fontWeight: 500 }}>{' '}{day}</span>
+                          </span>
+                        </div>
+                        <div style={{ width: 1, flexShrink: 0, background: isTod ? 'rgba(201,168,76,0.35)' : 'rgb(var(--rgb-ink) / 0.04)', marginTop: 8, marginBottom: 8 }} />
+                        <div
+                          onClick={() => { navigator.vibrate?.(6); openCreatePopover(null, ds) }}
+                          style={{ flex: 1, paddingLeft: 12, paddingRight: 14, paddingTop: 6, paddingBottom: 6, display: 'flex', flexDirection: 'column', gap: 2, minHeight: 112, background: stripe ? 'var(--color-bg-surface)' : 'var(--color-bg-elevated)', cursor: 'text' }}>
+                          {events.map((ev, idx) => {
+                            const bar  = ev.color ?? DETAIL_DOT[ev.type]
+                            const M    = 'var(--font-montserrat)'
+                            const row2: string | null = ev.type === 'google'
+                              ? (ev.amount ? getTimeRange(ev) : 'ALL DAY')
+                              : (ev.amount || null)
+                            return (
+                              <button key={idx} onClick={e => { e.stopPropagation(); navigator.vibrate?.(6); if (ev.id) { handleOpenEdit(ev) } else { setSelectedDay(ds); setViewIndex(1) } }}
+                                style={{ display: 'flex', alignItems: 'stretch', width: '100%', background: 'none', border: 'none', padding: '10px 0', cursor: 'pointer', textAlign: 'left', gap: 9 }}>
+                                <div style={{ width: 3, borderRadius: 2, background: bar, flexShrink: 0 }} />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <p style={{ fontSize: 14, fontWeight: 500, color: isTod ? 'rgb(var(--rgb-ink) / 0.95)' : 'rgb(var(--rgb-ink) / 0.82)', fontFamily: M, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.35 }}>
+                                    {ev.title}
+                                  </p>
+                                  {row2 && (
+                                    <p style={{ fontSize: 11, color: 'rgb(var(--rgb-ink) / 0.32)', fontFamily: M, margin: '3px 0 0', lineHeight: 1.3 }}>
+                                      {row2}
+                                    </p>
+                                  )}
+                                  {ev.location && (
+                                    <p style={{ fontSize: 11, color: 'rgb(var(--rgb-ink) / 0.26)', fontFamily: M, margin: '2px 0 0', lineHeight: 1.3 }}>
+                                      {ev.location}
+                                    </p>
+                                  )}
+                                </div>
+                              </button>
+                            )
+                          })}
+                        </div>
                       </div>
-                    </button>
-                  )
+                    )
+                  })
                 })}
+                <div ref={botSentRef} style={{ height: 1 }} />
+                <div style={{ height: 96 }} />
               </div>
-              {/* Selected day panel */}
-              {gridSelLabel && (
-                <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden mb-4">
-                  <div className="px-4 pt-4 pb-3 border-b border-white/[0.04] flex items-center justify-between">
-                    <p className="text-[18px] font-semibold text-ink">{gridSelLabel}</p>
-                  </div>
-                  {gridSelEvents.length === 0
-                    ? <div className="py-8 text-center text-ink-faint text-[13px]">Nothing on this day.</div>
-                    : <div className="divide-y divide-white/[0.04]">{gridSelEvents.map((ev, i) => <EventRow key={i} ev={ev} onEdit={handleOpenEdit} />)}</div>}
-                </div>
-              )}
-              {!gridSelLabel && (
-                <div className="mx-4 mt-4 mb-4 bg-bg-surface border border-white/[0.06] rounded-card py-6 text-center text-ink-faint text-[13px]">
-                  Tap a day to see events
-                </div>
-              )}
-              <div style={{ height: 88 }} />
             </div>
             )}
           </div>
@@ -1416,6 +1468,10 @@ export default function CalendarPage() {
                   >
                     {gridMonthLbl}
                   </span>
+                  <button
+                    onClick={() => { goToToday(); scrollListToToday() }}
+                    style={{ fontSize: 11, fontWeight: 600, color: '#D4AF37', background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.02em' }}
+                  >Today</button>
                 </div>
                 {/* DOW labels */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', paddingLeft: 8, paddingRight: 8, paddingBottom: 4, flexShrink: 0 }}>
@@ -1563,7 +1619,7 @@ export default function CalendarPage() {
                                     </p>
                                   )}
                                   {ev.location && (
-                                    <p style={{ fontSize: 11, color: 'rgb(var(--rgb-ink) / 0.26)', fontFamily: M, margin: '2px 0 0', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <p style={{ fontSize: 11, color: 'rgb(var(--rgb-ink) / 0.26)', fontFamily: M, margin: '2px 0 0', lineHeight: 1.3 }}>
                                       {ev.location}
                                     </p>
                                   )}
@@ -1728,7 +1784,7 @@ export default function CalendarPage() {
         },
         {
           label: 'Change Color',
-          action: () => { setSwatchOpen({ id, kind, top: y, left: x }); setSidebarCtxMenu(null) },
+          action: () => { colorInputRefs.current.get(id)?.click(); setSidebarCtxMenu(null) },
         },
         ...(kind === 'type' && typeColors[id as EventType] ? [{
           label: 'Reset Color',
