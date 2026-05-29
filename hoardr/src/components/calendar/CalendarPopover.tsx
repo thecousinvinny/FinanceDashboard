@@ -82,6 +82,14 @@ function repeatLabel(rule: string): string {
   return REPEAT_OPTIONS.find(o => o.value === rule)?.label ?? rule
 }
 
+interface LocSuggestion {
+  placeId:           string
+  mainText:          string
+  secText:           string
+  description:       string
+  matchedSubstrings: Array<{ offset: number; length: number }>
+}
+
 function fmt12(hhmm: string): string {
   const [h, m] = hhmm.split(':').map(Number)
   const period = h >= 12 ? 'PM' : 'AM'
@@ -128,6 +136,11 @@ export function CalendarPopover({
   const [calDropOpen, setCalDropOpen] = useState(false)
   const [calDropRect, setCalDropRect] = useState<DropRect | null>(null)
   const [visible, setVisible]         = useState(false)
+  const [locValue,       setLocValue]       = useState(initial.location)
+  const [locSuggestions, setLocSuggestions] = useState<LocSuggestion[]>([])
+  const [locOpen,        setLocOpen]        = useState(false)
+  const [recentLoc,      setRecentLoc]      = useState('')
+  const [locDropRect,    setLocDropRect]    = useState<DropRect | null>(null)
 
   const titleRef     = useRef<HTMLInputElement>(null)
   const popRef       = useRef<HTMLDivElement>(null)
@@ -137,8 +150,10 @@ export function CalendarPopover({
   const endDropRef   = useRef<HTMLDivElement>(null)
   const calBtnRef    = useRef<HTMLButtonElement>(null)
   const calDropRef   = useRef<HTMLDivElement>(null)
-  const locationRef  = useRef<HTMLInputElement>(null)
-  const acRef        = useRef<unknown>(null)
+  const locDropRef   = useRef<HTMLDivElement>(null)
+  const locRowRef    = useRef<HTMLDivElement>(null)
+  const locSvcRef    = useRef<unknown>(null)
+  const locTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const isModal   = anchorRect === null
   const placement = anchorRect ? calcPlacement(anchorRect) : null
@@ -153,29 +168,19 @@ export function CalendarPopover({
     setTimeout(() => titleRef.current?.focus(), 80)
   }, [])
 
-  // Google Places Autocomplete — same pattern as AddEventSheet/EditEventSheet
+  // Google Places AutocompleteService — raw predictions, no pac-container appended to body
   useEffect(() => {
     const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
     if (!key) return
+    const saved = localStorage.getItem('cal-recent-location')
+    if (saved) setRecentLoc(saved)
 
     function init() {
-      if (!locationRef.current) return
       const g = (window as unknown as Record<string, unknown>).google as {
-        maps?: { places?: { Autocomplete: new (el: HTMLInputElement, opts: unknown) => {
-          addListener: (ev: string, fn: () => void) => void
-          getPlace:    () => { formatted_address?: string; name?: string }
-        } } }
+        maps?: { places?: { AutocompleteService: new () => unknown } }
       } | undefined
       if (!g?.maps?.places) return
-      acRef.current = new g.maps.places.Autocomplete(locationRef.current, {
-        types: ['geocode', 'establishment'],
-      })
-      ;(acRef.current as { addListener: (ev: string, fn: () => void) => void }).addListener('place_changed', () => {
-        const place = (acRef.current as { getPlace: () => { formatted_address?: string; name?: string } }).getPlace()
-        const addr  = place.formatted_address || place.name || ''
-        setField('location', addr)
-        if (locationRef.current) locationRef.current.value = addr
-      })
+      locSvcRef.current = new g.maps.places.AutocompleteService()
     }
 
     const g = (window as unknown as Record<string, unknown>).google as { maps?: { places?: unknown } } | undefined
@@ -194,7 +199,7 @@ export function CalendarPopover({
         existing.addEventListener('load', init, { once: true })
       }
     }
-    return () => { acRef.current = null }
+    return () => { locSvcRef.current = null }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -205,7 +210,8 @@ export function CalendarPopover({
         popRef.current && !popRef.current.contains(e.target as Node) &&
         !calDropRef.current?.contains(e.target as Node) &&
         !startDropRef.current?.contains(e.target as Node) &&
-        !endDropRef.current?.contains(e.target as Node)
+        !endDropRef.current?.contains(e.target as Node) &&
+        !locDropRef.current?.contains(e.target as Node)
       ) onClose()
     }
     const t = setTimeout(() => document.addEventListener('mousedown', onDown), 60)
@@ -246,6 +252,7 @@ export function CalendarPopover({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        if (locOpen)    { setLocOpen(false);    return }
         if (startOpen)  { setStartOpen(false);  return }
         if (endOpen)    { setEndOpen(false);    return }
         if (calDropOpen){ setCalDropOpen(false); return }
@@ -254,7 +261,7 @@ export function CalendarPopover({
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose, startOpen, endOpen, calDropOpen])
+  }, [onClose, startOpen, endOpen, calDropOpen, locOpen])
 
   function setField<K extends keyof PopoverFormData>(key: K, val: PopoverFormData[K]) {
     setForm(f => {
@@ -307,6 +314,103 @@ export function CalendarPopover({
     const r = calBtnRef.current?.getBoundingClientRect()
     if (r) setCalDropRect({ top: r.top, left: r.left, width: r.width })
     setCalDropOpen(o => !o)
+  }
+
+  useEffect(() => {
+    if (!locOpen) return
+    const onDown = (e: MouseEvent) => {
+      if (!locDropRef.current?.contains(e.target as Node) && !locRowRef.current?.contains(e.target as Node))
+        setLocOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [locOpen])
+
+  function handleLocChange(val: string) {
+    setLocValue(val)
+    setField('location', val)
+    if (locTimerRef.current) clearTimeout(locTimerRef.current)
+    if (!val.trim()) {
+      setLocSuggestions([])
+      if (recentLoc) {
+        if (locRowRef.current) {
+          const r = locRowRef.current.getBoundingClientRect()
+          setLocDropRect({ top: r.bottom, left: r.left, width: r.width })
+        }
+        setLocOpen(true)
+      } else {
+        setLocOpen(false)
+      }
+      return
+    }
+    locTimerRef.current = setTimeout(() => {
+      const svc = locSvcRef.current as { getPlacePredictions: (req: unknown, cb: (results: unknown[] | null, status: string) => void) => void } | null
+      if (!svc) return
+      svc.getPlacePredictions(
+        { input: val, types: ['geocode', 'establishment'] },
+        (results: unknown[] | null, status: string) => {
+          if (status === 'OK' && results && results.length > 0) {
+            const mapped = (results as Array<{
+              place_id: string
+              structured_formatting: {
+                main_text:                    string
+                secondary_text?:              string
+                main_text_matched_substrings: Array<{ offset: number; length: number }>
+              }
+              description: string
+            }>).slice(0, 5).map(r => ({
+              placeId:           r.place_id,
+              mainText:          r.structured_formatting.main_text,
+              secText:           r.structured_formatting.secondary_text ?? '',
+              description:       r.description,
+              matchedSubstrings: r.structured_formatting.main_text_matched_substrings ?? [],
+            }))
+            setLocSuggestions(mapped)
+            if (locRowRef.current) {
+              const rect = locRowRef.current.getBoundingClientRect()
+              setLocDropRect({ top: rect.bottom, left: rect.left, width: rect.width })
+            }
+            setLocOpen(true)
+          } else {
+            setLocSuggestions([])
+            setLocOpen(false)
+          }
+        }
+      )
+    }, 200)
+  }
+
+  function handleLocFocus() {
+    if (locRowRef.current) {
+      const r = locRowRef.current.getBoundingClientRect()
+      setLocDropRect({ top: r.bottom, left: r.left, width: r.width })
+    }
+    if (locSuggestions.length > 0) setLocOpen(true)
+    else if (!locValue && recentLoc) setLocOpen(true)
+  }
+
+  function selectLoc(text: string) {
+    setLocValue(text)
+    setField('location', text)
+    setLocOpen(false)
+    setLocSuggestions([])
+    localStorage.setItem('cal-recent-location', text)
+    setRecentLoc(text)
+  }
+
+  function highlightMatch(text: string, query: string) {
+    if (!query.trim()) return text
+    const lower  = text.toLowerCase()
+    const qLower = query.toLowerCase()
+    const idx    = lower.indexOf(qLower)
+    if (idx < 0) return text
+    return (
+      <>
+        {text.slice(0, idx)}
+        <span style={{ color: GOLD }}>{text.slice(idx, idx + query.length)}</span>
+        {text.slice(idx + query.length)}
+      </>
+    )
   }
 
   const calList   = googleCals
@@ -458,6 +562,57 @@ export function CalendarPopover({
         </div>
       )}
 
+      {/* Location suggestions dropdown — rendered as sibling to avoid layout disruption */}
+      {locOpen && locDropRect && (
+        <div
+          ref={locDropRef}
+          onMouseDown={e => { e.preventDefault(); e.stopPropagation() }}
+          style={{
+            position: 'fixed',
+            top: locDropRect.top + 2,
+            left: locDropRect.left,
+            width: locDropRect.width,
+            background: '#1D2026',
+            border: `0.5px solid ${DIV}`,
+            borderRadius: 8,
+            zIndex: 203,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.55)',
+            maxHeight: 320,
+            overflowY: 'auto',
+            fontFamily: 'var(--font-montserrat)',
+          }}
+        >
+          {!locValue && recentLoc && (
+            <button
+              onClick={() => selectLoc(recentLoc)}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', width: '100%', background: 'none', border: 'none', cursor: 'pointer', borderBottom: locSuggestions.length > 0 ? `0.5px solid ${DIV}` : 'none', textAlign: 'left' }}
+            >
+              <Clock size={14} color={MUTED} style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: 13, color: 'var(--color-ink)' }}>{recentLoc}</span>
+            </button>
+          )}
+          {locSuggestions.map((sug, i) => (
+            <button
+              key={sug.placeId}
+              onClick={() => selectLoc(sug.description)}
+              style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', width: '100%', background: 'none', border: 'none', cursor: 'pointer', borderBottom: i < locSuggestions.length - 1 ? `0.5px solid ${DIV}` : 'none', textAlign: 'left' }}
+            >
+              <MapPin size={14} color={MUTED} style={{ flexShrink: 0, marginTop: 2 }} />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 14, color: 'var(--color-ink)', fontWeight: 400, lineHeight: 1.4 }}>
+                  {highlightMatch(sug.mainText, locValue)}
+                </div>
+                {sug.secText && (
+                  <div style={{ fontSize: 12, color: MUTED, fontWeight: 300, lineHeight: 1.4, marginTop: 2 }}>
+                    {sug.secText}
+                  </div>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Popover card */}
       <div ref={popRef} style={popoverStyle}>
 
@@ -545,14 +700,14 @@ export function CalendarPopover({
           </div>
 
           {/* Location */}
-          <div style={rowStyle}>
+          <div ref={locRowRef} style={rowStyle}>
             <MapPin size={16} color={MUTED} style={{ flexShrink: 0 }} />
             <input
-              ref={locationRef}
               type="text"
               placeholder="Location"
-              defaultValue={form.location}
-              onChange={e => setField('location', e.target.value)}
+              value={locValue}
+              onChange={e => handleLocChange(e.target.value)}
+              onFocus={handleLocFocus}
               style={{ ...inputStyle, flex: 1 }}
             />
           </div>
