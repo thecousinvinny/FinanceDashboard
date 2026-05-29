@@ -804,7 +804,7 @@ export default function CalendarPage() {
       else                hDeg = ((r - g) / d + 4) * 60
       if (hDeg < 0) hDeg += 360
     }
-    return `hsl(${Math.round(hDeg)}, ${Math.round(Math.min(s, 0.45) * 100)}%, 87%)`
+    return `hsl(${Math.round(hDeg)}, ${Math.round(Math.min(s, 0.70) * 100)}%, 92%)`
   }
 
   // ── Grid helpers ───────────────────────────────────────────────────────────
