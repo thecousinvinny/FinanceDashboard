@@ -120,6 +120,14 @@ function allocateSpanLanes(
 const SAFE_TOP = 'calc(max(env(safe-area-inset-top, 0px), 44px) + 12px)'
 const GRID_EXPANDED = 280  // px — compact month grid height in split view
 
+// ── Notion month grid sizing constants (single source of truth) ──────────────
+const MAX_VIS_EVENTS = 4   // max event rows per cell — governs both height and overflow cutoff
+const EV_ROW_H  = 20       // event pill height (18) + marginBottom (2)
+const DATE_ROW_H = 20      // date number row height including its marginBottom
+const CELL_PAD_V = 9       // paddingTop (5) + paddingBottom (4) on each cell
+const OVERFLOW_H = 14      // "+N more" text row height
+const CELL_MIN_H = CELL_PAD_V + DATE_ROW_H + MAX_VIS_EVENTS * EV_ROW_H + OVERFLOW_H  // 123
+
 // ── Grid event row ─────────────────────────────────────────────────────────────
 function EventRow({ ev, onEdit }: { ev: CalEvent; onEdit: (ev: CalEvent) => void }) {
   const displayAmt = ev.amount && ev.type === 'google'
@@ -1171,8 +1179,9 @@ export default function CalendarPage() {
                       const days      = weekDays(weekStart)
                       const weekSpans = multiDayEvents.filter(s => s.startDate <= days[6] && s.endDate >= days[0])
                       const spanLanes = allocateSpanLanes(weekSpans, days)
-                      const SPAN_H = 18, SPAN_GAP = 2
+                      const SPAN_H = 18, SPAN_GAP = EV_ROW_H - SPAN_H
                       const maxLanes  = spanLanes.length
+                      const singleSlots = Math.max(0, MAX_VIS_EVENTS - maxLanes)
                       return (
                         <div key={weekStart} style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', borderBottom: '1px solid var(--color-grid-border)' }}>
                           {days.map((ds, ci) => {
@@ -1185,8 +1194,8 @@ export default function CalendarPage() {
                             const singleEvs    = allEvs.filter(ev => !ev.endDate)
                             const allDayEvs    = singleEvs.filter(ev => ev.type !== 'google' || !ev.amount)
                             const timedEvs     = singleEvs.filter(ev => ev.type === 'google' && !!ev.amount)
-                            const shownAllDay  = Math.min(allDayEvs.length, 2)
-                            const shownTimed   = Math.min(timedEvs.length, Math.max(0, 4 - shownAllDay))
+                            const shownAllDay  = Math.min(allDayEvs.length, singleSlots)
+                            const shownTimed   = Math.min(timedEvs.length, singleSlots - shownAllDay)
                             const overflow     = singleEvs.length - shownAllDay - shownTimed
                             return (
                               <div
@@ -1195,10 +1204,9 @@ export default function CalendarPage() {
                                 ref={el => { if (el) monthCellRefs.current.set(ds, el); else monthCellRefs.current.delete(ds) }}
                                 onDoubleClick={e => { navigator.vibrate?.(6); if (calView === 'month') openCreatePopover(e.currentTarget.getBoundingClientRect(), ds) }}
                                 className="group"
-                                style={{ minHeight: 140, borderRight: ci < 6 ? '1px solid var(--color-grid-border)' : 'none', padding: '5px 0 4px', cursor: 'pointer', display: 'flex', flexDirection: 'column', background: isToday ? 'rgba(201,168,76,0.05)' : 'var(--color-bg-base)', position: 'relative' }}
+                                style={{ minHeight: CELL_MIN_H, borderRight: ci < 6 ? '1px solid var(--color-grid-border)' : 'none', padding: '5px 0 4px', cursor: 'pointer', display: 'flex', flexDirection: 'column', background: isToday ? 'rgba(201,168,76,0.05)' : 'var(--color-bg-base)', position: 'relative' }}
                               >
                                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none" style={{ background: 'rgb(var(--rgb-ink) / 0.03)' }} />
-                                <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-100 pointer-events-none flex items-center justify-center" style={{ width: 16, height: 16, color: 'rgb(var(--rgb-ink) / 0.28)', fontSize: 15, lineHeight: 1 }}>+</div>
                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', opacity: isPast ? 0.45 : 1, transition: 'opacity 0.15s' }}>
                                   {/* Date number row */}
                                   <div style={{ display: 'flex', alignItems: 'center', marginBottom: 3, flexShrink: 0, paddingLeft: 4, paddingRight: 4 }}>
