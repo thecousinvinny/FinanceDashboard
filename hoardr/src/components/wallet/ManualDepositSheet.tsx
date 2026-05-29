@@ -166,21 +166,21 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
           <div className="w-9 h-1 rounded-full bg-white/20" />
         </div>
 
-        <div className="flex items-center justify-between px-5 mb-5">
+        <div className="flex items-center justify-between px-5 mb-4">
           <h2 className="text-[18px] font-bold text-ink">{isEdit ? 'Edit Income' : 'Add Income'}</h2>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center">
             <X size={14} className="text-ink-muted" />
           </button>
         </div>
 
-        <div ref={scrollAreaRef} className="px-5 space-y-5 overflow-y-auto"
-          style={{ maxHeight: '70vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
+        <div ref={scrollAreaRef} className="px-5 space-y-4 overflow-y-auto"
+          style={{ maxHeight: '70vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
 
           {/* Label */}
           <div>
             <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Label</p>
             <input type="text" value={label} onChange={e => setLabel(e.target.value)} placeholder="Venmo, Zelle, freelance…"
-              className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40"/>
+              className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40"/>
           </div>
 
           {/* Amount */}
@@ -221,7 +221,7 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
               {(['Other', 'Projects', 'Repayment', 'Refund'] as const).map(s => (
                 <button key={s} onClick={() => setSource(s)}
                   className={cn(
-                    'flex flex-col items-center gap-1.5 py-3 rounded-[14px] transition-all select-none',
+                    'flex flex-col items-center gap-1 py-2.5 rounded-[14px] transition-all select-none',
                     source === s ? 'bg-gold/15 ring-1 ring-gold/40' : 'bg-bg-overlay',
                   )}>
                   <CategoryIcon category={s} type="Income" size={18} className={source === s ? 'text-gold' : 'text-ink-muted'} />
@@ -252,7 +252,7 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
           )}
 
           <button onClick={handleSave} disabled={!valid || saving}
-            className="w-full gradient-gold rounded-[14px] py-4 text-[15px] font-bold text-white disabled:opacity-40 transition-opacity">
+            className="w-full gradient-gold rounded-[14px] py-3.5 text-[15px] font-bold text-white disabled:opacity-40 transition-opacity">
             {saving ? 'Saving…' : isEdit ? 'Save Changes' : (valid ? `Add ${$fd(amt)}` : 'Add Income')}
           </button>
         </div>

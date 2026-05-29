@@ -173,7 +173,7 @@ export function AddEventSheet({ open, defaultDate, defaultCalendarId, googleCals
         {/* Scrollable content */}
         <div
           className="px-5 space-y-3 overflow-y-auto"
-          style={{ maxHeight: '65vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}
+          style={{ maxHeight: '70vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}
         >
           {/* Title */}
           <input
@@ -181,7 +181,7 @@ export function AddEventSheet({ open, defaultDate, defaultCalendarId, googleCals
             placeholder="Event title"
             value={form.title}
             onChange={e => set('title', e.target.value)}
-            className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40"
+            className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40"
           />
 
           {/* Date — wrapper clips iOS native control to border-radius */}
@@ -190,7 +190,7 @@ export function AddEventSheet({ open, defaultDate, defaultCalendarId, googleCals
               type="date"
               value={form.date}
               onChange={e => set('date', e.target.value)}
-              className="w-full px-4 py-3.5 text-[15px] text-ink bg-transparent outline-none"
+              className="w-full px-4 py-3 text-[15px] text-ink bg-transparent outline-none"
               style={{ colorScheme: 'dark' }}
             />
           </div>
@@ -203,7 +203,7 @@ export function AddEventSheet({ open, defaultDate, defaultCalendarId, googleCals
                 <select
                   value={form.calendarId}
                   onChange={e => set('calendarId', e.target.value)}
-                  className="w-full px-4 py-3.5 pr-10 text-[15px] text-ink bg-transparent outline-none appearance-none"
+                  className="w-full px-4 py-3 pr-10 text-[15px] text-ink bg-transparent outline-none appearance-none"
                   style={{ colorScheme: 'dark' }}
                 >
                   {googleCals.map(cal => (
@@ -221,7 +221,7 @@ export function AddEventSheet({ open, defaultDate, defaultCalendarId, googleCals
           <button
             type="button"
             onClick={() => set('allDay', !form.allDay)}
-            className="w-full flex items-center justify-between bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-left"
+            className="w-full flex items-center justify-between bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 text-left"
           >
             <div className="flex items-center gap-2.5 pointer-events-none">
               <Clock size={15} className="text-ink-muted" />
@@ -274,7 +274,7 @@ export function AddEventSheet({ open, defaultDate, defaultCalendarId, googleCals
           <button
             type="button"
             onClick={() => setRecurrencePickerOpen(true)}
-            className="w-full flex items-center justify-between bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-left"
+            className="w-full flex items-center justify-between bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 text-left"
           >
             <div className="flex items-center gap-2.5 pointer-events-none">
               <RefreshCw size={15} className="text-ink-muted" />
@@ -294,7 +294,7 @@ export function AddEventSheet({ open, defaultDate, defaultCalendarId, googleCals
               placeholder="Add location"
               value={form.location}
               onChange={e => set('location', e.target.value)}
-              className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] pl-10 pr-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40"
+              className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] pl-10 pr-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40"
             />
           </div>
 
@@ -306,7 +306,7 @@ export function AddEventSheet({ open, defaultDate, defaultCalendarId, googleCals
               value={form.notes}
               onChange={e => set('notes', e.target.value)}
               rows={3}
-              className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] pl-10 pr-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40 resize-none"
+              className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] pl-10 pr-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40 resize-none"
             />
           </div>
 
@@ -315,7 +315,7 @@ export function AddEventSheet({ open, defaultDate, defaultCalendarId, googleCals
             type="button"
             onClick={handleSubmit}
             disabled={!canSave || saving}
-            className="w-full gradient-gold rounded-[14px] py-4 text-[15px] font-bold text-white disabled:opacity-40 transition-opacity"
+            className="w-full gradient-gold rounded-[14px] py-3.5 text-[15px] font-bold text-white disabled:opacity-40 transition-opacity"
           >
             {saving ? 'Saving…' : 'Add to Calendar'}
           </button>

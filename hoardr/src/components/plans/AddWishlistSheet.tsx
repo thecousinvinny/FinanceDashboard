@@ -143,19 +143,19 @@ export function AddWishlistSheet({ open, onClose, onAdd }: Props) {
           <div className="w-9 h-1 rounded-full bg-white/20" />
         </div>
 
-        <div className="flex items-center justify-between px-5 mb-5">
+        <div className="flex items-center justify-between px-5 mb-4">
           <h2 className="text-[18px] font-bold tracking-tight text-ink">New Wishlist Item</h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-[22px] text-ink-muted">×</button>
         </div>
 
-        <div ref={scrollAreaRef} className="px-5 space-y-5 overflow-y-auto" style={{ maxHeight: '65vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
+        <div ref={scrollAreaRef} className="px-5 space-y-4 overflow-y-auto" style={{ maxHeight: '70vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
 
           <div>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Item Name</p>
             <input
               type="text" placeholder="e.g. iPhone" value={name}
               onChange={e => setName(e.target.value)}
-              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none"
+              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none"
             />
           </div>
 
@@ -166,7 +166,7 @@ export function AddWishlistSheet({ open, onClose, onAdd }: Props) {
             <input
               type="text" placeholder="e.g. iPhone 17 Pro Max 256GB" value={description}
               onChange={e => setDescription(e.target.value)}
-              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none"
+              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none"
             />
           </div>
 
@@ -174,18 +174,18 @@ export function AddWishlistSheet({ open, onClose, onAdd }: Props) {
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
               List Price <span className="normal-case text-ink-faint/60">(optional)</span>
             </p>
-            <div className="flex items-center gap-1.5 bg-bg-overlay rounded-[14px] px-4 py-3">
-              <span className="text-[22px] font-light text-ink-muted font-mono">$</span>
+            <div className="flex items-center gap-1.5 bg-bg-overlay rounded-[14px] px-4 py-2.5">
+              <span className="text-[20px] font-light text-ink-muted font-mono">$</span>
               <input
                 type="text" inputMode="decimal" placeholder="0.00" value={amount}
                 onChange={e => handleAmountChange(e.target.value)}
-                className="flex-1 bg-transparent text-[28px] font-bold font-mono text-ink outline-none placeholder:text-ink-faint"
+                className="flex-1 bg-transparent text-[22px] font-bold font-mono text-ink outline-none placeholder:text-ink-faint"
               />
             </div>
           </div>
 
           <div>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-3">
+            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
               Category <span className="normal-case text-ink-faint/60">(optional)</span>
             </p>
             <div className="grid grid-cols-4 gap-2">
@@ -197,7 +197,7 @@ export function AddWishlistSheet({ open, onClose, onAdd }: Props) {
                     key={cat.name}
                     onClick={() => setCategory(active ? '' : cat.name)}
                     className={cn(
-                      'flex flex-col items-center gap-1.5 py-2.5 rounded-[14px] text-[10px] font-semibold transition-all select-none',
+                      'flex flex-col items-center gap-1 py-2.5 rounded-[14px] text-[10px] font-semibold transition-all select-none',
                       active ? 'bg-gold/15 text-gold ring-1 ring-gold/40' : 'bg-bg-overlay text-ink-muted',
                     )}
                   >
@@ -216,14 +216,14 @@ export function AddWishlistSheet({ open, onClose, onAdd }: Props) {
             <input
               type="url" placeholder="https://..." value={url}
               onChange={e => setUrl(e.target.value)}
-              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none"
+              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none"
             />
           </div>
 
           <button
             onClick={handleAdd} disabled={!canAdd}
             className={cn(
-              'w-full py-4 rounded-[14px] text-[15px] font-semibold transition-all select-none',
+              'w-full py-3.5 rounded-[14px] text-[15px] font-semibold transition-all select-none',
               canAdd ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-faint',
             )}
           >

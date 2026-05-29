@@ -173,12 +173,12 @@ export function EditCardSheet({ card, open, onClose, onSave, onMakeDefault, bank
         >
           <div className="w-9 h-1 rounded-full bg-white/20" />
         </div>
-        <div className="flex items-center justify-between px-5 mb-5">
+        <div className="flex items-center justify-between px-5 mb-4">
           <h2 className="text-[18px] font-bold tracking-tight text-ink">Edit Card</h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-[22px] text-ink-muted">×</button>
         </div>
 
-        <div ref={scrollAreaRef} className="px-5 space-y-5 overflow-y-auto" style={{ maxHeight: '65vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
+        <div ref={scrollAreaRef} className="px-5 space-y-4 overflow-y-auto" style={{ maxHeight: '70vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
 
           {/* Default badge / make default button */}
           {card?.is_default ? (
@@ -241,7 +241,7 @@ export function EditCardSheet({ card, open, onClose, onSave, onMakeDefault, bank
           <div>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Card Name</p>
             <input type="text" placeholder="e.g. CHASE SAPPHIRE" value={name} onChange={e => setName(e.target.value)}
-              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none" />
+              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none" />
           </div>
 
           {/* Alias */}
@@ -250,7 +250,7 @@ export function EditCardSheet({ card, open, onClose, onSave, onMakeDefault, bank
               Nickname <span className="normal-case text-ink-faint/60">(optional)</span>
             </p>
             <input type="text" placeholder="e.g. Daily Driver" value={alias} onChange={e => setAlias(e.target.value)}
-              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none" />
+              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none" />
           </div>
 
           {/* Type */}
@@ -284,12 +284,12 @@ export function EditCardSheet({ card, open, onClose, onSave, onMakeDefault, bank
             <div>
               <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Last 4</p>
               <input type="text" inputMode="numeric" placeholder="1234" value={last4} onChange={e => handleLast4(e.target.value)}
-                className="w-full bg-bg-overlay rounded-[14px] px-4 py-3.5 text-[15px] font-mono text-ink placeholder:text-ink-faint outline-none" />
+                className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] font-mono text-ink placeholder:text-ink-faint outline-none" />
             </div>
             <div>
               <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Expires</p>
               <input type="text" inputMode="numeric" placeholder="MM/YY" value={expires} onChange={e => handleExpires(e.target.value)}
-                className="w-full bg-bg-overlay rounded-[14px] px-4 py-3.5 text-[15px] font-mono text-ink placeholder:text-ink-faint outline-none" />
+                className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] font-mono text-ink placeholder:text-ink-faint outline-none" />
             </div>
           </div>
 
@@ -297,7 +297,7 @@ export function EditCardSheet({ card, open, onClose, onSave, onMakeDefault, bank
           <div>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Cardholder Name</p>
             <input type="text" placeholder="e.g. JOHN DOE" value={cardholder} onChange={e => setCardholder(e.target.value)}
-              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3.5 text-[15px] font-mono text-ink placeholder:text-ink-faint outline-none" />
+              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] font-mono text-ink placeholder:text-ink-faint outline-none" />
           </div>
 
           {/* Linked bank */}
@@ -322,7 +322,7 @@ export function EditCardSheet({ card, open, onClose, onSave, onMakeDefault, bank
           )}
 
           <button onClick={handleSave} disabled={!canSave}
-            className={cn('w-full py-4 rounded-[14px] text-[15px] font-semibold transition-all select-none', canSave ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-faint')}>
+            className={cn('w-full py-3.5 rounded-[14px] text-[15px] font-semibold transition-all select-none', canSave ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-faint')}>
             Save Changes
           </button>
         </div>

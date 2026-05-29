@@ -228,16 +228,16 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
             </div>
 
             <div className="px-5 space-y-3 overflow-y-auto"
-              style={{ maxHeight: '65vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
+              style={{ maxHeight: '70vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
 
               {/* Title */}
               <input type="text" placeholder="Event title" value={form.title} onChange={e => set('title', e.target.value)}
-                className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40" />
+                className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40" />
 
               {/* Date */}
               <div className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] overflow-hidden">
                 <input type="date" value={form.date} onChange={e => set('date', e.target.value)}
-                  className="w-full px-4 py-3.5 text-[15px] text-ink bg-transparent outline-none"
+                  className="w-full px-4 py-3 text-[15px] text-ink bg-transparent outline-none"
                   style={{ colorScheme: 'dark' }} />
               </div>
 
@@ -247,7 +247,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
                   <p className="text-[10px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-2 pl-1">Calendar</p>
                   <div className="relative w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] overflow-hidden">
                     <select value={form.calendarId} onChange={e => set('calendarId', e.target.value)}
-                      className="w-full px-4 py-3.5 pr-10 text-[15px] text-ink bg-transparent outline-none appearance-none"
+                      className="w-full px-4 py-3 pr-10 text-[15px] text-ink bg-transparent outline-none appearance-none"
                       style={{ colorScheme: 'dark' }}>
                       {googleCals.map(cal => (
                         <option key={cal.id} value={cal.primary ? 'primary' : cal.id}>
@@ -262,7 +262,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
 
               {/* All-day toggle */}
               <button type="button" onClick={() => set('allDay', !form.allDay)}
-                className="w-full flex items-center justify-between bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-left">
+                className="w-full flex items-center justify-between bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 text-left">
                 <div className="flex items-center gap-2.5 pointer-events-none">
                   <Clock size={15} className="text-ink-muted" />
                   <span className="text-[14px] text-ink">All day</span>
@@ -294,7 +294,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
 
               {/* Repeat */}
               <button type="button" onClick={() => setRecurrencePickerOpen(true)}
-                className="w-full flex items-center justify-between bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-left">
+                className="w-full flex items-center justify-between bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 text-left">
                 <div className="flex items-center gap-2.5 pointer-events-none">
                   <RefreshCw size={15} className="text-ink-muted" />
                   <span className="text-[14px] text-ink">Repeat</span>
@@ -309,19 +309,19 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
                 <MapPin size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
                 <input ref={locationRef} type="text" placeholder="Add location" defaultValue={form.location}
                   onChange={e => set('location', e.target.value)}
-                  className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] pl-10 pr-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40" />
+                  className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] pl-10 pr-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40" />
               </div>
 
               {/* Notes */}
               <div className="relative">
                 <AlignLeft size={15} className="absolute left-4 top-4 text-ink-muted pointer-events-none" />
                 <textarea placeholder="Notes" value={form.notes} onChange={e => set('notes', e.target.value)} rows={3}
-                  className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] pl-10 pr-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40 resize-none" />
+                  className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] pl-10 pr-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40 resize-none" />
               </div>
 
               {/* Save */}
               <button type="button" onClick={handleSave} disabled={!canSave || saving}
-                className="w-full gradient-gold rounded-[14px] py-4 text-[15px] font-bold text-white disabled:opacity-40 transition-opacity">
+                className="w-full gradient-gold rounded-[14px] py-3.5 text-[15px] font-bold text-white disabled:opacity-40 transition-opacity">
                 {saving ? 'Saving…' : 'Save'}
               </button>
 

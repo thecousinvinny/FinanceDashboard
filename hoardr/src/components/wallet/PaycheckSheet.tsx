@@ -155,15 +155,15 @@ export function PaycheckSheet({ open, onClose, banks, onDone }: Props) {
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 mb-5">
+        <div className="flex items-center justify-between px-5 mb-4">
           <h2 className="text-[18px] font-bold text-ink">Paycheck Generator</h2>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center">
             <X size={14} className="text-ink-muted" />
           </button>
         </div>
 
-        <div ref={scrollAreaRef} className="px-5 space-y-5 overflow-y-auto"
-          style={{ maxHeight: '70vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
+        <div ref={scrollAreaRef} className="px-5 space-y-4 overflow-y-auto"
+          style={{ maxHeight: '70vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
 
           {/* Label */}
           <div>
@@ -173,7 +173,7 @@ export function PaycheckSheet({ open, onClose, banks, onDone }: Props) {
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="Paycheck"
-              className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40"
+              className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40"
             />
           </div>
 
@@ -238,7 +238,7 @@ export function PaycheckSheet({ open, onClose, banks, onDone }: Props) {
                 value={startDate}
                 max={localToday()}
                 onChange={e => setStartDate(e.target.value)}
-                className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink outline-none focus:border-gold/40"
+                className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 text-[15px] text-ink outline-none focus:border-gold/40"
                 style={{ colorScheme: 'dark' }}
               />
             </div>
@@ -258,7 +258,7 @@ export function PaycheckSheet({ open, onClose, banks, onDone }: Props) {
           <button
             onClick={handleGenerate}
             disabled={!dates.length || saving}
-            className="w-full gradient-gold rounded-[14px] py-4 text-[15px] font-bold text-white disabled:opacity-40 transition-opacity"
+            className="w-full gradient-gold rounded-[14px] py-3.5 text-[15px] font-bold text-white disabled:opacity-40 transition-opacity"
           >
             {saving ? 'Adding…' : dates.length > 0 ? `Generate ${dates.length} Paychecks` : 'Generate Paychecks'}
           </button>

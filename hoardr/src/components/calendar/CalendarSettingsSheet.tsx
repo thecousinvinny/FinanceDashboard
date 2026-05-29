@@ -124,7 +124,7 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
         {/* Scrollable content */}
         <div
           className="px-5 overflow-y-auto"
-          style={{ maxHeight: '65vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}
+          style={{ maxHeight: '70vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}
         >
           {/* ── Show on Calendar ───────────────────────────────────── */}
           <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">
