@@ -740,8 +740,14 @@ export default function CalendarPage() {
     return () => obs.disconnect()
   }, [isLargeScreen, calView])
 
-  // Applies per-type color override from typeColors (Notion grid only)
-  const notionColor = (ev: CalEvent) => ev.color ?? typeColors[ev.type] ?? DOT_COLOR[ev.type]
+  // Applies per-type and per-calendar color overrides (Notion grid only).
+  // Google events: check live prefs.googleCalendarColors first so sidebar color changes
+  // take effect instantly without re-fetching the event map.
+  const notionColor = (ev: CalEvent) => {
+    if (ev.type === 'google' && ev.calendarId)
+      return prefs.googleCalendarColors?.[ev.calendarId] ?? ev.color ?? DOT_COLOR.google
+    return ev.color ?? typeColors[ev.type] ?? DOT_COLOR[ev.type]
+  }
 
   // Derives a light, hue-tinted text color from a hex background color (same hue, sat ≤45%, L=87%)
   function lightTextColor(hex: string): string {
