@@ -757,6 +757,8 @@ export default function CalendarPage() {
         if (ds) {
           const parts = ds.split('-').map(Number)
           setNotionGridLbl(new Date(parts[0], parts[1] - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }))
+          setSidebarYear(parts[0])
+          setSidebarMonth(parts[1] - 1)
           return
         }
         node = node.parentElement
@@ -942,11 +944,6 @@ export default function CalendarPage() {
                       </button>
                     ))}
                   </div>
-                  {calView === 'month' && (
-                    <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', letterSpacing: '-0.01em' }}>
-                      {notionGridLbl}
-                    </span>
-                  )}
                   <div style={{ flex: 1 }} />
                   {calView === 'month' && (
                     <button onClick={() => {
@@ -1103,9 +1100,9 @@ export default function CalendarPage() {
                     }))}
                     {/* Per-Google-calendar rows */}
                     {googleCals.filter(c => prefs.googleCalendarIds.includes(c.id)).length > 0 && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, marginBottom: 4 }}>
-                        <div style={{ flex: 1, height: '0.5px', background: 'rgb(var(--rgb-ink) / 0.08)' }} />
-                        <p style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgb(var(--rgb-ink) / 0.18)', margin: 0, fontFamily: 'var(--font-montserrat)', flexShrink: 0, paddingRight: 4 }}>Google</p>
+                      <div style={{ marginTop: 8, marginBottom: 4 }}>
+                        <div style={{ height: '0.5px', background: 'rgb(var(--rgb-ink) / 0.08)', marginBottom: 6 }} />
+                        <p style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgb(var(--rgb-ink) / 0.18)', margin: 0, fontFamily: 'var(--font-montserrat)', paddingLeft: 4 }}>Google</p>
                       </div>
                     )}
                     {googleCals.filter(c => prefs.googleCalendarIds.includes(c.id)).map(cal => {
