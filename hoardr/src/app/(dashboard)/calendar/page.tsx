@@ -743,6 +743,27 @@ export default function CalendarPage() {
   // Applies per-type color override from typeColors (Notion grid only)
   const notionColor = (ev: CalEvent) => ev.color ?? typeColors[ev.type] ?? DOT_COLOR[ev.type]
 
+  // Derives a light, hue-tinted text color from a hex background color (same hue, sat ≤45%, L=87%)
+  function lightTextColor(hex: string): string {
+    const h = hex.replace('#', '')
+    if (h.length !== 6 && h.length !== 3) return '#DDD'
+    const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h
+    const r = parseInt(full.slice(0, 2), 16) / 255
+    const g = parseInt(full.slice(2, 4), 16) / 255
+    const b = parseInt(full.slice(4, 6), 16) / 255
+    const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min
+    const l   = (max + min) / 2
+    const s   = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1))
+    let hDeg  = 0
+    if (d !== 0) {
+      if (max === r)      hDeg = ((g - b) / d % 6) * 60
+      else if (max === g) hDeg = ((b - r) / d + 2) * 60
+      else                hDeg = ((r - g) / d + 4) * 60
+      if (hDeg < 0) hDeg += 360
+    }
+    return `hsl(${Math.round(hDeg)}, ${Math.round(Math.min(s, 0.45) * 100)}%, 87%)`
+  }
+
   // ── Grid helpers ───────────────────────────────────────────────────────────
   const gridDays  = getDaysInMonth(gridYear, gridMonth)
   const firstDay  = wsMon ? (new Date(gridYear, gridMonth, 1).getDay() + 6) % 7 : new Date(gridYear, gridMonth, 1).getDay()
@@ -1131,7 +1152,7 @@ export default function CalendarPage() {
                                         {new Date(cy, cm - 1, 1).toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
                                       </span>
                                     )}
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, minWidth: 22 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, minWidth: 22, marginLeft: 'auto' }}>
                                       <span style={{ fontSize: isToday ? 20 : 12, fontWeight: isToday ? 700 : 400, color: isToday ? '#C9A84C' : 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', lineHeight: 1 }}>
                                         {cd}
                                       </span>
@@ -1149,7 +1170,7 @@ export default function CalendarPage() {
                                         return (
                                           <div key={li} onClick={bar.ev.type === 'google' && bar.ev.id ? (e) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), bar.ev, days[bar.startCol] ?? ds) } : undefined}
                                             style={{ height: SPAN_H, marginBottom: SPAN_GAP, marginLeft: isStart ? 2 : 0, marginRight: isEnd ? 2 : 0, borderRadius: isStart ? '4px 0 0 4px' : isEnd ? '0 4px 4px 0' : 0, background: bg + 'CC', display: 'flex', alignItems: 'center', paddingLeft: isStart ? 4 : 2, overflow: 'hidden', cursor: (bar.ev.type === 'google') && bar.ev.id ? 'pointer' : 'default' }}>
-                                            {isStart && <span style={{ fontSize: 9, color: '#fff', fontFamily: 'var(--font-montserrat)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bar.ev.title}</span>}
+                                            {isStart && <span style={{ fontSize: 9, color: lightTextColor(bg), fontFamily: 'var(--font-montserrat)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bar.ev.title}</span>}
                                           </div>
                                         )
                                       })}
@@ -1157,15 +1178,18 @@ export default function CalendarPage() {
                                   )}
                                   {/* Single-day events */}
                                   <div style={{ paddingLeft: 4, paddingRight: 4, display: 'flex', flexDirection: 'column' }}>
-                                    {allDayEvs.slice(0, shownAllDay).map((ev, ei) => (
-                                      <div
-                                        key={ei}
-                                        onClick={ev.type === 'google' && ev.id ? (e) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), ev, ds) } : undefined}
-                                        style={{ background: notionColor(ev) + 'DD', borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, opacity: 0.85, cursor: (ev.type === 'google') && ev.id ? 'pointer' : 'default' }}
-                                      >
-                                        <span style={{ fontSize: 10, color: '#fff', fontFamily: 'var(--font-montserrat)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
-                                      </div>
-                                    ))}
+                                    {allDayEvs.slice(0, shownAllDay).map((ev, ei) => {
+                                      const evColor = notionColor(ev)
+                                      return (
+                                        <div
+                                          key={ei}
+                                          onClick={ev.type === 'google' && ev.id ? (e) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), ev, ds) } : undefined}
+                                          style={{ background: evColor + 'DD', borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, opacity: 0.85, cursor: (ev.type === 'google') && ev.id ? 'pointer' : 'default' }}
+                                        >
+                                          <span style={{ fontSize: 10, color: lightTextColor(evColor), fontFamily: 'var(--font-montserrat)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
+                                        </div>
+                                      )
+                                    })}
                                     {/* Timed / financial events */}
                                     {timedEvs.slice(0, shownTimed).map((ev, ei) => {
                                       const bar     = notionColor(ev)
@@ -1179,8 +1203,8 @@ export default function CalendarPage() {
                                           style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 2, height: 18, overflow: 'hidden', flexShrink: 0, background: 'transparent', borderRadius: 3, opacity: 0.9, cursor: (ev.type === 'google') && ev.id ? 'pointer' : 'default' }}
                                         >
                                           <div style={{ width: 3, height: '100%', borderRadius: '3px 0 0 3px', background: bar, flexShrink: 0 }} />
-                                          <span style={{ fontSize: 10, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, paddingLeft: 4, paddingRight: 3 }}>
-                                            {timeStr && <span style={{ color: 'rgb(var(--rgb-ink) / 0.45)', marginRight: 3 }}>{timeStr}</span>}{ev.title}
+                                          <span style={{ fontSize: 10, color: lightTextColor(bar), fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, paddingLeft: 4, paddingRight: 3 }}>
+                                            {timeStr && <span style={{ color: lightTextColor(bar), opacity: 0.6, marginRight: 3 }}>{timeStr}</span>}{ev.title}
                                           </span>
                                         </div>
                                       )
