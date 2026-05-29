@@ -237,7 +237,10 @@ export default function CalendarPage() {
   const swatchRef           = useRef<HTMLDivElement>(null)
   const ctxMenuRef          = useRef<HTMLDivElement>(null)
   const longPressTimer      = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [swatchOpen, setSwatchOpen] = useState<{ id: string; kind: 'type' | 'google'; top: number; left: number } | null>(null)
+  const [swatchOpen,      setSwatchOpen]      = useState<{ id: string; kind: 'type' | 'google'; top: number; left: number } | null>(null)
+  const [hoveredPillKey,  setHoveredPillKey]  = useState<string | null>(null)
+  const [selectedEvId,    setSelectedEvId]    = useState<string | null>(null)
+  const [deleteConfirm,   setDeleteConfirm]   = useState<CalEvent | null>(null)
   const [hiddenTypes,       setHiddenTypes]       = useState<Set<EventType>>(new Set())
   const [hiddenGoogleCals,  setHiddenGoogleCals]  = useState<Set<string>>(() => {
     try { const s = localStorage.getItem('cal-hidden-google-cals'); return s ? new Set(JSON.parse(s)) : new Set() } catch { return new Set() }
@@ -536,6 +539,26 @@ export default function CalendarPage() {
     return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey) }
   }, [swatchOpen])
 
+  // Keyboard delete for selected event in Notion month grid
+  useEffect(() => {
+    if (!selectedEvId || !isLargeScreen) return
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        for (const evs of Object.values(googleEvMap)) {
+          const found = evs.find(ev => ev.id === selectedEvId)
+          if (found) { setDeleteConfirm(found); break }
+        }
+      } else if (e.key === 'Escape') {
+        setSelectedEvId(null)
+        setPopover(null)
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [selectedEvId, isLargeScreen, googleEvMap])
+
   function handleDeleteCalEvent(ev: CalEvent) {
     if (!ev.id) return
     setGoogleEvMap(prev => {
@@ -585,6 +608,7 @@ export default function CalendarPage() {
     if (!ev.id) return
     const parts = ev.amount?.split(' – ').map(t => t.trim()) ?? []
     const allDay = !ev.amount?.trim()
+    setSelectedEvId(ev.id)
     setPopover({ anchorRect, mode: 'edit', data: { eventId: ev.id, title: ev.title, date, endDate: date, allDay, startTime: !allDay && parts[0] ? parts[0] : '09:00', endTime: !allDay && parts[1] ? parts[1] : '10:00', location: ev.location ?? '', notes: ev.notes ?? '', recurrenceRule: '', calendarId: ev.calendarId ?? 'primary' } })
   }
 
@@ -603,6 +627,7 @@ export default function CalendarPage() {
         showToast('Event updated', { type: 'payment' })
       }
       setPopover(null)
+      setSelectedEvId(null)
       setGRefreshKey(k => k + 1)
     } catch { showToast('Failed to save', { type: 'delete' }) }
     finally { setPopoverSaving(false) }
@@ -612,6 +637,7 @@ export default function CalendarPage() {
     if (!popover?.data.eventId) return
     const eid = popover.data.eventId, calId = popover.data.calendarId
     setPopover(null)
+    setSelectedEvId(null)
     setGoogleEvMap(prev => {
       const m = { ...prev }
       for (const key of Object.keys(m)) { m[key] = m[key].filter(e => e.id !== eid); if (!m[key].length) delete m[key] }
@@ -1213,6 +1239,7 @@ export default function CalendarPage() {
                                 key={ds}
                                 data-caldate={ds}
                                 ref={el => { if (el) monthCellRefs.current.set(ds, el); else monthCellRefs.current.delete(ds) }}
+                                onClick={() => setSelectedEvId(null)}
                                 onDoubleClick={e => { navigator.vibrate?.(6); if (calView === 'month') openCreatePopover(e.currentTarget.getBoundingClientRect(), ds) }}
                                 className="group"
                                 style={{ minHeight: CELL_MIN_H, borderRight: ci < 6 ? '1px solid var(--color-grid-border)' : 'none', padding: '5px 0 4px', cursor: 'pointer', display: 'flex', flexDirection: 'column', background: isToday ? 'rgba(201,168,76,0.05)' : 'var(--color-bg-base)', position: 'relative' }}
@@ -1241,9 +1268,15 @@ export default function CalendarPage() {
                                         const isStart = bar.startCol === ci
                                         const isEnd   = bar.endCol   === ci
                                         const bg = notionColor(bar.ev)
+                                        const barSel     = selectedEvId   === bar.ev.id
+                                        const barHovered = hoveredPillKey === bar.ev.id
                                         return (
-                                          <div key={li} onClick={bar.ev.type === 'google' && bar.ev.id ? (e) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), bar.ev, days[bar.startCol] ?? ds) } : undefined}
-                                            style={{ height: SPAN_H, marginBottom: SPAN_GAP, marginLeft: isStart ? 2 : 0, marginRight: isEnd ? 2 : 0, borderRadius: isStart ? '4px 0 0 4px' : isEnd ? '0 4px 4px 0' : 0, background: bg + 'CC', display: 'flex', alignItems: 'center', paddingLeft: isStart ? 4 : 2, overflow: 'hidden', cursor: (bar.ev.type === 'google') && bar.ev.id ? 'pointer' : 'default' }}>
+                                          <div key={li}
+                                            onMouseEnter={() => bar.ev.id && setHoveredPillKey(bar.ev.id)}
+                                            onMouseLeave={() => setHoveredPillKey(null)}
+                                            onClick={bar.ev.type === 'google' && bar.ev.id ? (e) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), bar.ev, days[bar.startCol] ?? ds) } : undefined}
+                                            style={{ height: SPAN_H, marginBottom: SPAN_GAP, marginLeft: isStart ? 2 : 0, marginRight: isEnd ? 2 : 0, borderRadius: isStart ? '4px 0 0 4px' : isEnd ? '0 4px 4px 0' : 0, background: bg + 'CC', display: 'flex', alignItems: 'center', paddingLeft: isStart ? 4 : 2, overflow: 'hidden', cursor: (bar.ev.type === 'google') && bar.ev.id ? 'pointer' : 'default', position: 'relative', boxShadow: barSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none' }}>
+                                            {(barHovered || barSel) && bar.ev.id && <div style={{ position: 'absolute', inset: 0, background: barSel ? 'rgba(255,255,255,0.145)' : 'rgba(255,255,255,0.071)', pointerEvents: 'none' }} />}
                                             {isStart && <span style={{ fontSize: 9, color: lightTextColor(bg), fontFamily: 'var(--font-montserrat)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bar.ev.title}</span>}
                                           </div>
                                         )
@@ -1253,29 +1286,39 @@ export default function CalendarPage() {
                                   {/* Single-day events */}
                                   <div style={{ paddingLeft: 4, paddingRight: 4, display: 'flex', flexDirection: 'column' }}>
                                     {allDayEvs.slice(0, shownAllDay).map((ev, ei) => {
-                                      const evColor = notionColor(ev)
+                                      const evColor  = notionColor(ev)
+                                      const pillSel  = selectedEvId   === ev.id
+                                      const pillHov  = hoveredPillKey === ev.id
                                       return (
                                         <div
                                           key={ei}
+                                          onMouseEnter={() => ev.id && setHoveredPillKey(ev.id)}
+                                          onMouseLeave={() => setHoveredPillKey(null)}
                                           onClick={ev.type === 'google' && ev.id ? (e) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), ev, ds) } : undefined}
-                                          style={{ background: evColor + 'DD', borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, opacity: 0.85, cursor: (ev.type === 'google') && ev.id ? 'pointer' : 'default' }}
+                                          style={{ background: evColor + 'DD', borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, opacity: 0.85, cursor: (ev.type === 'google') && ev.id ? 'pointer' : 'default', position: 'relative', boxShadow: pillSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none' }}
                                         >
+                                          {(pillHov || pillSel) && ev.id && <div style={{ position: 'absolute', inset: 0, background: pillSel ? 'rgba(255,255,255,0.145)' : 'rgba(255,255,255,0.071)', pointerEvents: 'none', borderRadius: 4 }} />}
                                           <span style={{ fontSize: 10, color: lightTextColor(evColor), fontFamily: 'var(--font-montserrat)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
                                         </div>
                                       )
                                     })}
                                     {/* Timed / financial events */}
                                     {timedEvs.slice(0, shownTimed).map((ev, ei) => {
-                                      const bar     = notionColor(ev)
-                                      const timeStr = (ev.type === 'google') && ev.amount
+                                      const bar      = notionColor(ev)
+                                      const timeStr  = (ev.type === 'google') && ev.amount
                                         ? ev.amount.split(' – ')[0].trim().replace(/^(\d{2}):(\d{2})$/, (_, hh, mm) => { const n = Number(hh); return `${n % 12 || 12}:${mm}${n >= 12 ? 'p' : 'a'}` })
                                         : null
+                                      const timedSel = selectedEvId   === ev.id
+                                      const timedHov = hoveredPillKey === ev.id
                                       return (
                                         <div
                                           key={ei}
+                                          onMouseEnter={() => ev.id && setHoveredPillKey(ev.id)}
+                                          onMouseLeave={() => setHoveredPillKey(null)}
                                           onClick={ev.type === 'google' && ev.id ? (e) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), ev, ds) } : undefined}
-                                          style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 2, height: 18, overflow: 'hidden', flexShrink: 0, background: 'transparent', borderRadius: 3, opacity: 0.9, cursor: (ev.type === 'google') && ev.id ? 'pointer' : 'default' }}
+                                          style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 2, height: 18, overflow: 'hidden', flexShrink: 0, background: 'transparent', borderRadius: 3, opacity: 0.9, cursor: (ev.type === 'google') && ev.id ? 'pointer' : 'default', position: 'relative', boxShadow: timedSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none' }}
                                         >
+                                          {(timedHov || timedSel) && ev.id && <div style={{ position: 'absolute', inset: 0, background: timedSel ? 'rgba(255,255,255,0.145)' : 'rgba(255,255,255,0.071)', pointerEvents: 'none', borderRadius: 3 }} />}
                                           <div style={{ width: 3, height: '100%', borderRadius: '3px 0 0 3px', background: bar, flexShrink: 0 }} />
                                           <span style={{ fontSize: 10, color: lightTextColor(bar), fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, paddingLeft: 4, paddingRight: 3 }}>
                                             {timeStr && <span style={{ color: lightTextColor(bar), opacity: 0.6, marginRight: 3 }}>{timeStr}</span>}{ev.title}
@@ -1735,11 +1778,40 @@ export default function CalendarPage() {
         initial={popover.data}
         googleCals={googleCals.filter(c => prefs.googleCalendarIds.includes(c.id))}
         googleCalendarColors={prefs.googleCalendarColors}
-        onClose={() => setPopover(null)}
+        onClose={() => { setPopover(null); setSelectedEvId(null) }}
         onSave={handlePopoverSave}
         onDelete={popover.mode === 'edit' ? handlePopoverDelete : undefined}
         saving={popoverSaving}
       />
+    )}
+
+    {/* Delete confirm dialog */}
+    {deleteConfirm && (
+      <div
+        style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        onClick={() => setDeleteConfirm(null)}
+      >
+        <div onClick={e => e.stopPropagation()} style={{ background: '#21242A', borderRadius: 16, padding: '24px 24px 20px', maxWidth: 340, width: 'calc(100vw - 40px)', boxShadow: '0 8px 40px rgba(0,0,0,0.7)', border: '0.5px solid rgba(255,255,255,0.1)', fontFamily: 'var(--font-montserrat)' }}>
+          <p style={{ fontSize: 17, fontWeight: 600, color: 'var(--color-ink)', margin: '0 0 8px' }}>Delete Event</p>
+          <p style={{ fontSize: 14, color: 'rgb(var(--rgb-ink) / 0.5)', margin: '0 0 20px', lineHeight: 1.45 }}>
+            &ldquo;{deleteConfirm.title}&rdquo; will be permanently deleted.
+          </p>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => setDeleteConfirm(null)}
+              style={{ padding: '8px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'var(--color-ink)', fontSize: 14, cursor: 'pointer', fontFamily: 'var(--font-montserrat)' }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => { handleDeleteCalEvent(deleteConfirm); setDeleteConfirm(null); setSelectedEvId(null) }}
+              style={{ padding: '8px 18px', borderRadius: 8, background: '#ef4444', border: 'none', color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-montserrat)' }}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
     )}
     </>
   )
