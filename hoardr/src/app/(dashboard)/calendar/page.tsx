@@ -1008,6 +1008,7 @@ export default function CalendarPage() {
                   {/* Calendar legend toggles */}
                   <div style={{ padding: '12px 10px 8px', flexShrink: 0 }}>
                     <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgb(var(--rgb-ink) / 0.25)', marginBottom: 8, fontFamily: 'var(--font-montserrat)' }}>Calendars</p>
+                    <p style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgb(var(--rgb-ink) / 0.18)', marginBottom: 4, fontFamily: 'var(--font-montserrat)', paddingLeft: 4 }}>Finance</p>
                     {/* Income & Subscriptions */}
                     {([
                       { type: 'income' as EventType, label: 'Income',        color: DOT_COLOR.income },
@@ -1057,6 +1058,12 @@ export default function CalendarPage() {
                       )
                     }))}
                     {/* Per-Google-calendar rows */}
+                    {googleCals.filter(c => prefs.googleCalendarIds.includes(c.id)).length > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, marginBottom: 4 }}>
+                        <div style={{ flex: 1, height: '0.5px', background: 'rgb(var(--rgb-ink) / 0.08)' }} />
+                        <p style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgb(var(--rgb-ink) / 0.18)', margin: 0, fontFamily: 'var(--font-montserrat)', flexShrink: 0, paddingRight: 4 }}>Google</p>
+                      </div>
+                    )}
                     {googleCals.filter(c => prefs.googleCalendarIds.includes(c.id)).map(cal => {
                       const hidden      = hiddenGoogleCals.has(cal.id)
                       const activeColor = prefs.googleCalendarColors?.[cal.id] ?? cal.backgroundColor
