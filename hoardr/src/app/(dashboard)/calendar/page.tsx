@@ -823,10 +823,12 @@ export default function CalendarPage() {
     return ev.color ?? typeColors[ev.type] ?? DOT_COLOR[ev.type]
   }
 
-  // Derives a light, hue-tinted text color from a hex background color (same hue, sat ≤45%, L=87%)
-  function lightTextColor(hex: string): string {
+  // Derives a light, hue-tinted text color from a hex background color.
+  // Future/present: L=95%, S≤85% — near-white with strong color tint (matches Notion).
+  // Past:           L=75%, S≤50% — noticeably dimmer to signal elapsed events.
+  function lightTextColor(hex: string, isPast = false): string {
     const h = hex.replace('#', '')
-    if (h.length !== 6 && h.length !== 3) return '#DDD'
+    if (h.length !== 6 && h.length !== 3) return isPast ? '#AAA' : '#EEE'
     const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h
     const r = parseInt(full.slice(0, 2), 16) / 255
     const g = parseInt(full.slice(2, 4), 16) / 255
@@ -841,7 +843,9 @@ export default function CalendarPage() {
       else                hDeg = ((r - g) / d + 4) * 60
       if (hDeg < 0) hDeg += 360
     }
-    return `hsl(${Math.round(hDeg)}, ${Math.round(Math.min(s, 0.70) * 100)}%, 92%)`
+    const targetL = isPast ? 75 : 95
+    const maxS    = isPast ? 0.50 : 0.85
+    return `hsl(${Math.round(hDeg)}, ${Math.round(Math.min(s, maxS) * 100)}%, ${targetL}%)`
   }
 
   // ── Grid helpers ───────────────────────────────────────────────────────────
@@ -1245,16 +1249,16 @@ export default function CalendarPage() {
                                 style={{ minHeight: CELL_MIN_H, borderRight: ci < 6 ? '1px solid var(--color-grid-border)' : 'none', padding: '5px 0 4px', cursor: 'pointer', display: 'flex', flexDirection: 'column', background: isToday ? 'rgba(201,168,76,0.05)' : 'var(--color-bg-base)', position: 'relative' }}
                               >
                                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none" style={{ background: 'rgb(var(--rgb-ink) / 0.03)' }} />
-                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', opacity: isPast ? 0.45 : 1, transition: 'opacity 0.15s' }}>
+                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                                   {/* Date number row */}
                                   <div style={{ display: 'flex', alignItems: 'center', marginBottom: 3, flexShrink: 0, paddingLeft: 4, paddingRight: 4 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginLeft: 'auto', flexShrink: 0 }}>
                                       {isMonthStart && (
-                                        <span style={{ fontSize: 10, fontWeight: 700, color: '#C9A84C', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.03em', textTransform: 'uppercase', lineHeight: 1 }}>
+                                        <span style={{ fontSize: 10, fontWeight: 700, color: '#C9A84C', opacity: isPast ? 0.35 : 1, fontFamily: 'var(--font-montserrat)', letterSpacing: '0.03em', textTransform: 'uppercase', lineHeight: 1 }}>
                                           {new Date(cy, cm - 1, 1).toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
                                         </span>
                                       )}
-                                      <span style={{ fontSize: isToday ? 20 : 12, fontWeight: isToday ? 700 : 400, color: isToday ? '#C9A84C' : 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', lineHeight: 1 }}>
+                                      <span style={{ fontSize: isToday ? 20 : 12, fontWeight: isToday ? 700 : 400, color: isToday ? '#C9A84C' : isPast ? 'rgb(var(--rgb-ink) / 0.3)' : 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', lineHeight: 1 }}>
                                         {cd}
                                       </span>
                                     </div>
@@ -1275,9 +1279,9 @@ export default function CalendarPage() {
                                             onMouseEnter={() => bar.ev.id && setHoveredPillKey(bar.ev.id)}
                                             onMouseLeave={() => setHoveredPillKey(null)}
                                             onClick={bar.ev.type === 'google' && bar.ev.id ? (e) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), bar.ev, days[bar.startCol] ?? ds) } : undefined}
-                                            style={{ height: SPAN_H, marginBottom: SPAN_GAP, marginLeft: isStart ? 2 : 0, marginRight: isEnd ? 2 : 0, borderRadius: isStart ? '4px 0 0 4px' : isEnd ? '0 4px 4px 0' : 0, background: bg + 'CC', display: 'flex', alignItems: 'center', paddingLeft: isStart ? 4 : 2, overflow: 'hidden', cursor: (bar.ev.type === 'google') && bar.ev.id ? 'pointer' : 'default', position: 'relative', boxShadow: barSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none' }}>
+                                            style={{ height: SPAN_H, marginBottom: SPAN_GAP, marginLeft: isStart ? 2 : 0, marginRight: isEnd ? 2 : 0, borderRadius: isStart ? '4px 0 0 4px' : isEnd ? '0 4px 4px 0' : 0, background: isPast ? bg + '8C' : bg, display: 'flex', alignItems: 'center', paddingLeft: isStart ? 4 : 2, overflow: 'hidden', cursor: (bar.ev.type === 'google') && bar.ev.id ? 'pointer' : 'default', position: 'relative', boxShadow: barSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none' }}>
                                             {(barHovered || barSel) && bar.ev.id && <div style={{ position: 'absolute', inset: 0, background: barSel ? 'rgba(255,255,255,0.145)' : 'rgba(255,255,255,0.071)', pointerEvents: 'none' }} />}
-                                            {isStart && <span style={{ fontSize: 9, color: lightTextColor(bg), fontFamily: 'var(--font-montserrat)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bar.ev.title}</span>}
+                                            {isStart && <span style={{ fontSize: 9, color: lightTextColor(bg, isPast), fontFamily: 'var(--font-montserrat)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bar.ev.title}</span>}
                                           </div>
                                         )
                                       })}
@@ -1295,10 +1299,10 @@ export default function CalendarPage() {
                                           onMouseEnter={() => ev.id && setHoveredPillKey(ev.id)}
                                           onMouseLeave={() => setHoveredPillKey(null)}
                                           onClick={ev.type === 'google' && ev.id ? (e) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), ev, ds) } : undefined}
-                                          style={{ background: evColor + 'DD', borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, opacity: 0.85, cursor: (ev.type === 'google') && ev.id ? 'pointer' : 'default', position: 'relative', boxShadow: pillSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none' }}
+                                          style={{ background: isPast ? evColor + '8C' : evColor, borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, cursor: (ev.type === 'google') && ev.id ? 'pointer' : 'default', position: 'relative', boxShadow: pillSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none' }}
                                         >
                                           {(pillHov || pillSel) && ev.id && <div style={{ position: 'absolute', inset: 0, background: pillSel ? 'rgba(255,255,255,0.145)' : 'rgba(255,255,255,0.071)', pointerEvents: 'none', borderRadius: 4 }} />}
-                                          <span style={{ fontSize: 10, color: lightTextColor(evColor), fontFamily: 'var(--font-montserrat)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
+                                          <span style={{ fontSize: 10, color: lightTextColor(evColor, isPast), fontFamily: 'var(--font-montserrat)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
                                         </div>
                                       )
                                     })}
@@ -1316,12 +1320,12 @@ export default function CalendarPage() {
                                           onMouseEnter={() => ev.id && setHoveredPillKey(ev.id)}
                                           onMouseLeave={() => setHoveredPillKey(null)}
                                           onClick={ev.type === 'google' && ev.id ? (e) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), ev, ds) } : undefined}
-                                          style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 2, height: 18, overflow: 'hidden', flexShrink: 0, background: 'transparent', borderRadius: 3, opacity: 0.9, cursor: (ev.type === 'google') && ev.id ? 'pointer' : 'default', position: 'relative', boxShadow: timedSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none' }}
+                                          style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 2, height: 18, overflow: 'hidden', flexShrink: 0, background: 'transparent', borderRadius: 3, cursor: (ev.type === 'google') && ev.id ? 'pointer' : 'default', position: 'relative', boxShadow: timedSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none' }}
                                         >
                                           {(timedHov || timedSel) && ev.id && <div style={{ position: 'absolute', inset: 0, background: timedSel ? 'rgba(255,255,255,0.145)' : 'rgba(255,255,255,0.071)', pointerEvents: 'none', borderRadius: 3 }} />}
                                           <div style={{ width: 3, height: '100%', borderRadius: '3px 0 0 3px', background: bar, flexShrink: 0 }} />
-                                          <span style={{ fontSize: 10, color: lightTextColor(bar), fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, paddingLeft: 4, paddingRight: 3 }}>
-                                            {timeStr && <span style={{ color: lightTextColor(bar), opacity: 0.6, marginRight: 3 }}>{timeStr}</span>}{ev.title}
+                                          <span style={{ fontSize: 10, color: lightTextColor(bar, isPast), fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, paddingLeft: 4, paddingRight: 3 }}>
+                                            {timeStr && <span style={{ color: lightTextColor(bar, isPast), opacity: 0.6, marginRight: 3 }}>{timeStr}</span>}{ev.title}
                                           </span>
                                         </div>
                                       )
