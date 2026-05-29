@@ -1204,13 +1204,13 @@ export default function CalendarPage() {
                                 <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-100 pointer-events-none flex items-center justify-center" style={{ width: 16, height: 16, color: 'rgb(var(--rgb-ink) / 0.28)', fontSize: 15, lineHeight: 1 }}>+</div>
                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', opacity: isPast ? 0.45 : 1, transition: 'opacity 0.15s' }}>
                                   {/* Date number row */}
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3, flexShrink: 0, paddingLeft: 4, paddingRight: 4 }}>
-                                    {isMonthStart && (
-                                      <span style={{ fontSize: 10, fontWeight: 700, color: '#C9A84C', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.03em', textTransform: 'uppercase', lineHeight: 1 }}>
-                                        {new Date(cy, cm - 1, 1).toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
-                                      </span>
-                                    )}
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, minWidth: 22, marginLeft: 'auto' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: 3, flexShrink: 0, paddingLeft: 4, paddingRight: 4 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginLeft: 'auto', flexShrink: 0 }}>
+                                      {isMonthStart && (
+                                        <span style={{ fontSize: 10, fontWeight: 700, color: '#C9A84C', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.03em', textTransform: 'uppercase', lineHeight: 1 }}>
+                                          {new Date(cy, cm - 1, 1).toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
+                                        </span>
+                                      )}
                                       <span style={{ fontSize: isToday ? 20 : 12, fontWeight: isToday ? 700 : 400, color: isToday ? '#C9A84C' : 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', lineHeight: 1 }}>
                                         {cd}
                                       </span>
