@@ -235,6 +235,9 @@ export default function CalendarPage() {
   const [typeColors,   setTypeColors]   = useState<Partial<Record<EventType, string>>>(() => {
     try { const s = localStorage.getItem('cal-type-colors'); return s ? JSON.parse(s) : {} } catch { return {} }
   })
+  const [notionGridLbl, setNotionGridLbl] = useState(() =>
+    new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  )
   const [hoveredSidebarRow, setHoveredSidebarRow] = useState<string | null>(null)
   const [sidebarCtxMenu, setSidebarCtxMenu] = useState<{ id: string; kind: 'type' | 'google'; x: number; y: number } | null>(null)
   const [sidebarYear, setSidebarYear] = useState(today.getFullYear())
@@ -740,6 +743,30 @@ export default function CalendarPage() {
     return () => obs.disconnect()
   }, [isLargeScreen, calView])
 
+  // ── Month grid scroll → update notionGridLbl ──────────────────────────────
+  useEffect(() => {
+    if (!isLargeScreen || calView !== 'month') return
+    const sc = monthGridRef.current
+    if (!sc) return
+    const handleScroll = () => {
+      const scRect = sc.getBoundingClientRect()
+      const el = document.elementFromPoint(scRect.left + scRect.width / 4, scRect.top + 5)
+      let node: Element | null = el
+      while (node && node !== sc) {
+        const ds = node.getAttribute('data-caldate')
+        if (ds) {
+          const parts = ds.split('-').map(Number)
+          setNotionGridLbl(new Date(parts[0], parts[1] - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }))
+          return
+        }
+        node = node.parentElement
+      }
+    }
+    sc.addEventListener('scroll', handleScroll, { passive: true })
+    handleScroll()
+    return () => sc.removeEventListener('scroll', handleScroll)
+  }, [isLargeScreen, calView])
+
   // Applies per-type and per-calendar color overrides (Notion grid only).
   // Google events: check live prefs.googleCalendarColors first so sidebar color changes
   // take effect instantly without re-fetching the event map.
@@ -915,7 +942,24 @@ export default function CalendarPage() {
                       </button>
                     ))}
                   </div>
+                  {calView === 'month' && (
+                    <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', letterSpacing: '-0.01em' }}>
+                      {notionGridLbl}
+                    </span>
+                  )}
                   <div style={{ flex: 1 }} />
+                  {calView === 'month' && (
+                    <button onClick={() => {
+                      setSidebarYear(today.getFullYear()); setSidebarMonth(today.getMonth())
+                      const el = monthCellRefs.current.get(todayStr)
+                      const sc = monthGridRef.current
+                      if (el && sc) {
+                        const cRect = sc.getBoundingClientRect()
+                        const eRect = el.getBoundingClientRect()
+                        sc.scrollTop = sc.scrollTop + eRect.top - cRect.top - 120
+                      }
+                    }} className="text-[11px] font-medium text-gold select-none">Today</button>
+                  )}
                   <button onClick={() => setSettingsOpen(true)} className="w-9 h-9 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center select-none">
                     <SlidersHorizontal size={15} className="text-ink-muted" />
                   </button>
@@ -1150,6 +1194,7 @@ export default function CalendarPage() {
                             return (
                               <div
                                 key={ds}
+                                data-caldate={ds}
                                 ref={el => { if (el) monthCellRefs.current.set(ds, el); else monthCellRefs.current.delete(ds) }}
                                 onDoubleClick={e => { navigator.vibrate?.(6); if (calView === 'month') openCreatePopover(e.currentTarget.getBoundingClientRect(), ds) }}
                                 className="group"
