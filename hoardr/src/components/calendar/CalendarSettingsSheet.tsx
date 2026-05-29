@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
+import { COLOR_PALETTE } from '@/lib/category-meta'
 
 export type EventTypeFilter = 'income' | 'sub'
 
@@ -38,7 +39,9 @@ const TYPE_META: { type: EventTypeFilter; label: string; color: string }[] = [
 export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLoading, calsError, onSave }: Props) {
   const [local,  setLocal]  = useState<CalPrefs>(prefs)
   const [dragY,  setDragY]  = useState(0)
+  const [swatchFor, setSwatchFor] = useState<{ calId: string; top: number; left: number } | null>(null)
   const backdropRef = useRef<HTMLDivElement>(null)
+  const swatchRef   = useRef<HTMLDivElement>(null)
   const dragStartY  = useRef<number | null>(null)
 
   useEffect(() => {
@@ -53,7 +56,14 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
     return () => el.removeEventListener('touchmove', prevent)
   }, [open])
 
-  useEffect(() => { if (!open) setDragY(0) }, [open])
+  useEffect(() => { if (!open) { setDragY(0); setSwatchFor(null) } }, [open])
+
+  useEffect(() => {
+    if (!swatchFor) return
+    const onDown = (e: MouseEvent) => { if (!swatchRef.current?.contains(e.target as Node)) setSwatchFor(null) }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [swatchFor])
 
   function onDragStart(e: React.TouchEvent) { dragStartY.current = e.touches[0].clientY }
   function onDragMove(e: React.TouchEvent) {
@@ -164,13 +174,15 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
               const isCustom    = !!local.googleCalendarColors?.[cal.id]
               return (
                 <div key={cal.id} className="flex items-center gap-2 px-4 py-3.5 select-none">
-                  {/* Color dot — tap opens native color picker */}
-                  <label className="relative flex-shrink-0 cursor-pointer flex items-center justify-center" style={{ width: 20, height: 20 }} title="Change color">
+                  {/* Color dot — tap opens swatch picker */}
+                  <button
+                    onClick={e => { const r = e.currentTarget.getBoundingClientRect(); setSwatchFor({ calId: cal.id, top: r.bottom + 4, left: r.left }) }}
+                    className="relative flex-shrink-0 cursor-pointer flex items-center justify-center bg-transparent border-0 p-0"
+                    style={{ width: 20, height: 20 }}
+                    title="Change color"
+                  >
                     <span className="w-2.5 h-2.5 rounded-full block" style={{ background: activeColor }} />
-                    <input type="color" value={activeColor}
-                      onChange={e => setLocal(p => ({ ...p, googleCalendarColors: { ...(p.googleCalendarColors ?? {}), [cal.id]: e.target.value } }))}
-                      className="absolute inset-0 opacity-0 w-full h-full cursor-pointer p-0 border-0" />
-                  </label>
+                  </button>
                   {isCustom && (
                     <button onClick={() => setLocal(p => { const c = { ...(p.googleCalendarColors ?? {}) }; delete c[cal.id]; return { ...p, googleCalendarColors: c } })}
                       className="flex-shrink-0 text-[9px] text-ink-faint leading-none">✕</button>
@@ -230,6 +242,50 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
           </button>
         </div>
       </div>
+
+      {/* Color swatch picker */}
+      {swatchFor && (() => {
+        const currentColor = local.googleCalendarColors?.[swatchFor.calId]
+          ?? googleCals.find(c => c.id === swatchFor.calId)?.backgroundColor ?? '#4285F4'
+        const popW = 4 * 22 + 3 * 6 + 20
+        return (
+          <div ref={swatchRef} onMouseDown={e => e.stopPropagation()} style={{
+            position: 'fixed',
+            top: Math.min(swatchFor.top, window.innerHeight - 180),
+            left: Math.max(8, Math.min(swatchFor.left, window.innerWidth - popW - 8)),
+            zIndex: 80,
+            background: '#21242A',
+            border: '0.5px solid rgba(255,255,255,0.12)',
+            borderRadius: 10,
+            padding: 10,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 22px)',
+            gap: 6,
+            boxShadow: '0 4px 24px rgba(0,0,0,0.6)',
+          }}>
+            {COLOR_PALETTE.map(color => {
+              const isSel = color.toLowerCase() === currentColor?.toLowerCase()
+              return (
+                <button
+                  key={color}
+                  onClick={() => {
+                    setLocal(p => ({ ...p, googleCalendarColors: { ...(p.googleCalendarColors ?? {}), [swatchFor.calId]: color } }))
+                    setSwatchFor(null)
+                  }}
+                  style={{
+                    width: 22, height: 22, borderRadius: 4, background: color, padding: 0,
+                    border: isSel ? '2px solid rgba(255,255,255,0.9)' : '2px solid transparent',
+                    cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  {isSel && <span style={{ color: 'white', fontSize: 12, fontWeight: 700, lineHeight: 1, textShadow: '0 1px 2px rgba(0,0,0,0.4)' }}>✓</span>}
+                </button>
+              )
+            })}
+          </div>
+        )
+      })()}
     </>
   )
 }

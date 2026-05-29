@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getWeekStartsMonday } from '@/lib/week-start'
 import { cn } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
+import { COLOR_PALETTE } from '@/lib/category-meta'
 import { Plus, SlidersHorizontal, Eye, EyeOff, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning, type LucideIcon } from 'lucide-react'
 import { EditEventSheet, type EditableEvent, type EventEdits, type RecurrenceScope } from '@/components/calendar/EditEventSheet'
 import { CalendarSettingsSheet, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
@@ -233,9 +234,10 @@ export default function CalendarPage() {
   const monthCellRefs       = useRef(new Map<string, HTMLElement>())
   const monthGridTopSentRef = useRef<HTMLDivElement>(null)
   const monthGridBotSentRef = useRef<HTMLDivElement>(null)
-  const colorInputRefs      = useRef(new Map<string, HTMLInputElement>())
+  const swatchRef           = useRef<HTMLDivElement>(null)
   const ctxMenuRef          = useRef<HTMLDivElement>(null)
   const longPressTimer      = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [swatchOpen, setSwatchOpen] = useState<{ id: string; kind: 'type' | 'google'; top: number; left: number } | null>(null)
   const [hiddenTypes,       setHiddenTypes]       = useState<Set<EventType>>(new Set())
   const [hiddenGoogleCals,  setHiddenGoogleCals]  = useState<Set<string>>(() => {
     try { const s = localStorage.getItem('cal-hidden-google-cals'); return s ? new Set(JSON.parse(s)) : new Set() } catch { return new Set() }
@@ -524,6 +526,15 @@ export default function CalendarPage() {
     document.addEventListener('keydown', onKey)
     return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey) }
   }, [sidebarCtxMenu])
+
+  useEffect(() => {
+    if (!swatchOpen) return
+    const onDown = (e: MouseEvent) => { if (!swatchRef.current?.contains(e.target as Node)) setSwatchOpen(null) }
+    const onKey  = (e: KeyboardEvent) => { if (e.key === 'Escape') setSwatchOpen(null) }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey) }
+  }, [swatchOpen])
 
   function handleDeleteCalEvent(ev: CalEvent) {
     if (!ev.id) return
@@ -986,10 +997,10 @@ export default function CalendarPage() {
             {calView === 'month' && (
               <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
 
-                {/* Sidebar (180px) */}
-                <div style={{ width: 180, background: 'var(--color-bg-surface)', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--color-grid-border)', flexShrink: 0 }}>
+                {/* Sidebar (200px) */}
+                <div style={{ width: 200, background: 'var(--color-bg-surface)', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--color-grid-border)', flexShrink: 0 }}>
                   {/* Mini month navigator */}
-                  <div style={{ padding: '14px 10px 10px', flexShrink: 0 }}>
+                  <div style={{ padding: '14px 12px 10px', flexShrink: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8, gap: 2 }}>
                       <button onClick={() => { if (sidebarMonth === 0) { setSidebarMonth(11); setSidebarYear(y => y - 1) } else setSidebarMonth(m => m - 1) }}
                         style={{ width: 22, height: 22, borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer', color: '#C9A84C', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>‹</button>
@@ -1078,13 +1089,13 @@ export default function CalendarPage() {
                           onTouchEnd={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null } }}
                           onTouchMove={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null } }}
                         >
-                          <label style={{ position: 'relative', flexShrink: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', width: 16, height: 16, justifyContent: 'center' }} title="Change color">
+                          <button
+                            onClick={e => { const r = e.currentTarget.getBoundingClientRect(); setSwatchOpen({ id: item.type, kind: 'type', top: r.bottom + 4, left: r.left }) }}
+                            style={{ flexShrink: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16, background: 'none', border: 'none', padding: 0 }}
+                            title="Change color"
+                          >
                             <span style={{ width: 10, height: 10, borderRadius: '50%', background: hidden ? 'transparent' : activeColor, border: `1.5px solid ${activeColor}`, display: 'block', transition: 'all 0.15s', opacity: hidden ? 0.4 : 1, flexShrink: 0 }} />
-                            <input type="color" value={activeColor}
-                              ref={el => { if (el) colorInputRefs.current.set(item.type, el); else colorInputRefs.current.delete(item.type) }}
-                              onChange={e => setTypeColors(p => ({ ...p, [item.type]: e.target.value }))}
-                              style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', padding: 0, border: 'none' }} />
-                          </label>
+                          </button>
                           <button onClick={() => setHiddenTypes(prev => { const next = new Set(prev); if (next.has(item.type)) next.delete(item.type); else next.add(item.type); return next })}
                             style={{ background: 'none', border: 'none', cursor: 'pointer', flex: 1, textAlign: 'left', padding: 0 }}>
                             <span style={{ fontSize: 11, color: hidden ? 'rgb(var(--rgb-ink) / 0.25)' : 'rgb(var(--rgb-ink) / 0.7)', fontFamily: 'var(--font-montserrat)', fontWeight: 500, transition: 'color 0.15s' }}>{item.label}</span>
@@ -1128,13 +1139,13 @@ export default function CalendarPage() {
                           onTouchEnd={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null } }}
                           onTouchMove={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null } }}
                         >
-                          <label style={{ position: 'relative', flexShrink: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', width: 16, height: 16, justifyContent: 'center' }} title="Change color">
+                          <button
+                            onClick={e => { const r = e.currentTarget.getBoundingClientRect(); setSwatchOpen({ id: cal.id, kind: 'google', top: r.bottom + 4, left: r.left }) }}
+                            style={{ flexShrink: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16, background: 'none', border: 'none', padding: 0 }}
+                            title="Change color"
+                          >
                             <span style={{ width: 10, height: 10, borderRadius: '50%', background: hidden ? 'transparent' : activeColor, border: `1.5px solid ${activeColor}`, display: 'block', transition: 'all 0.15s', opacity: hidden ? 0.4 : 1, flexShrink: 0 }} />
-                            <input type="color" value={activeColor}
-                              ref={el => { if (el) colorInputRefs.current.set(cal.id, el); else colorInputRefs.current.delete(cal.id) }}
-                              onChange={e => { const c = e.target.value; savePrefs({ ...prefs, googleCalendarColors: { ...(prefs.googleCalendarColors ?? {}), [cal.id]: c } }) }}
-                              style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', padding: 0, border: 'none' }} />
-                          </label>
+                          </button>
                           <button onClick={() => setHiddenGoogleCals(prev => { const next = new Set(prev); if (next.has(cal.id)) next.delete(cal.id); else next.add(cal.id); return next })}
                             style={{ background: 'none', border: 'none', cursor: 'pointer', flex: 1, textAlign: 'left', padding: 0 }}>
                             <span style={{ fontSize: 11, color: hidden ? 'rgb(var(--rgb-ink) / 0.25)' : 'rgb(var(--rgb-ink) / 0.7)', fontFamily: 'var(--font-montserrat)', fontWeight: 500, transition: 'color 0.15s' }}>{cal.summary}</span>
@@ -1607,6 +1618,53 @@ export default function CalendarPage() {
     <EditEventSheet open={!!editEvent} event={editEvent} googleCals={googleCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => setEditEvent(null)} onSave={handleEditEvent} onDelete={_scope => { if (editEvent) { const ev: CalEvent = { id: editEvent.id, title: editEvent.title, type: 'google', amount: '', calendarId: editEvent.calendarId }; handleDeleteCalEvent(ev) } setEditEvent(null) }} />
     <CalendarSettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} prefs={prefs} googleCals={googleCals} calsLoading={calsLoading} onSave={savePrefs} />
 
+    {/* Color swatch picker */}
+    {swatchOpen && (() => {
+      const { id, kind, top, left } = swatchOpen
+      const currentColor = kind === 'type'
+        ? typeColors[id as EventType] ?? DOT_COLOR[id as EventType]
+        : prefs.googleCalendarColors?.[id] ?? googleCals.find(c => c.id === id)?.backgroundColor ?? DOT_COLOR.google
+      const popW = 4 * 22 + 3 * 6 + 20  // 4 cols + 3 gaps + padding = 126px
+      return (
+        <div ref={swatchRef} onMouseDown={e => e.stopPropagation()} style={{
+          position: 'fixed',
+          top: Math.min(top, window.innerHeight - 180),
+          left: Math.max(8, Math.min(left, window.innerWidth - popW - 8)),
+          zIndex: 400,
+          background: '#21242A',
+          border: '0.5px solid rgba(255,255,255,0.12)',
+          borderRadius: 10,
+          padding: 10,
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 22px)',
+          gap: 6,
+          boxShadow: '0 4px 24px rgba(0,0,0,0.6)',
+        }}>
+          {COLOR_PALETTE.map(color => {
+            const isSel = color.toLowerCase() === currentColor?.toLowerCase()
+            return (
+              <button
+                key={color}
+                onClick={() => {
+                  if (kind === 'type') setTypeColors(p => ({ ...p, [id as EventType]: color }))
+                  else savePrefs({ ...prefs, googleCalendarColors: { ...(prefs.googleCalendarColors ?? {}), [id]: color } })
+                  setSwatchOpen(null)
+                }}
+                style={{
+                  width: 22, height: 22, borderRadius: 4, background: color, padding: 0,
+                  border: isSel ? '2px solid rgba(255,255,255,0.9)' : '2px solid transparent',
+                  cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxSizing: 'border-box',
+                }}
+              >
+                {isSel && <span style={{ color: 'white', fontSize: 12, fontWeight: 700, lineHeight: 1, textShadow: '0 1px 2px rgba(0,0,0,0.4)' }}>✓</span>}
+              </button>
+            )
+          })}
+        </div>
+      )
+    })()}
+
     {/* Sidebar context menu */}
     {sidebarCtxMenu && (() => {
       const { id, kind, x, y } = sidebarCtxMenu
@@ -1623,7 +1681,7 @@ export default function CalendarPage() {
         },
         {
           label: 'Change Color',
-          action: () => { colorInputRefs.current.get(id)?.click(); setSidebarCtxMenu(null) },
+          action: () => { setSwatchOpen({ id, kind, top: y, left: x }); setSidebarCtxMenu(null) },
         },
         ...(kind === 'type' && typeColors[id as EventType] ? [{
           label: 'Reset Color',
