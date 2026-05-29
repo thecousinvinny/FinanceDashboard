@@ -150,10 +150,11 @@ export function CalendarPopover({
   const endDropRef   = useRef<HTMLDivElement>(null)
   const calBtnRef    = useRef<HTMLButtonElement>(null)
   const calDropRef   = useRef<HTMLDivElement>(null)
-  const locDropRef   = useRef<HTMLDivElement>(null)
-  const locRowRef    = useRef<HTMLDivElement>(null)
-  const locSvcRef    = useRef<unknown>(null)
-  const locTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const locDropRef      = useRef<HTMLDivElement>(null)
+  const locRowRef       = useRef<HTMLDivElement>(null)
+  const locTextareaRef  = useRef<HTMLTextAreaElement>(null)
+  const locSvcRef       = useRef<unknown>(null)
+  const locTimerRef     = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const isModal   = anchorRect === null
   const placement = anchorRect ? calcPlacement(anchorRect) : null
@@ -325,6 +326,13 @@ export function CalendarPopover({
     document.addEventListener('mousedown', onDown)
     return () => document.removeEventListener('mousedown', onDown)
   }, [locOpen])
+
+  useEffect(() => {
+    const el = locTextareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [locValue])
 
   function handleLocChange(val: string) {
     setLocValue(val)
@@ -699,16 +707,17 @@ export function CalendarPopover({
             )}
           </div>
 
-          {/* Location */}
-          <div ref={locRowRef} style={rowStyle}>
-            <MapPin size={16} color={MUTED} style={{ flexShrink: 0 }} />
-            <input
-              type="text"
+          {/* Location — textarea auto-sizes to content, icon top-pinned to first line */}
+          <div ref={locRowRef} style={{ ...rowStyle, alignItems: 'flex-start', padding: '12px 14px' }}>
+            <MapPin size={16} color={MUTED} style={{ flexShrink: 0, marginTop: 1 }} />
+            <textarea
+              ref={locTextareaRef}
               placeholder="Location"
               value={locValue}
               onChange={e => handleLocChange(e.target.value)}
               onFocus={handleLocFocus}
-              style={{ ...inputStyle, flex: 1 }}
+              rows={1}
+              style={{ ...inputStyle, flex: 1, resize: 'none', lineHeight: 1.5, overflow: 'hidden', minHeight: 22, display: 'block' }}
             />
           </div>
 
