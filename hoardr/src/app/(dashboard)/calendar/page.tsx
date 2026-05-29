@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getWeekStartsMonday } from '@/lib/week-start'
 import { cn } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
-import { Plus, SlidersHorizontal, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning, type LucideIcon } from 'lucide-react'
+import { Plus, SlidersHorizontal, Eye, EyeOff, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning, type LucideIcon } from 'lucide-react'
 import { EditEventSheet, type EditableEvent, type EventEdits, type RecurrenceScope } from '@/components/calendar/EditEventSheet'
 import { CalendarSettingsSheet, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
 import { CalendarPopover, defaultTimes, type PopoverFormData } from '@/components/calendar/CalendarPopover'
@@ -225,11 +225,18 @@ export default function CalendarPage() {
   const monthCellRefs       = useRef(new Map<string, HTMLElement>())
   const monthGridTopSentRef = useRef<HTMLDivElement>(null)
   const monthGridBotSentRef = useRef<HTMLDivElement>(null)
+  const colorInputRefs      = useRef(new Map<string, HTMLInputElement>())
+  const ctxMenuRef          = useRef<HTMLDivElement>(null)
+  const longPressTimer      = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [hiddenTypes,       setHiddenTypes]       = useState<Set<EventType>>(new Set())
-  const [hiddenGoogleCals,  setHiddenGoogleCals]  = useState<Set<string>>(new Set())
+  const [hiddenGoogleCals,  setHiddenGoogleCals]  = useState<Set<string>>(() => {
+    try { const s = localStorage.getItem('cal-hidden-google-cals'); return s ? new Set(JSON.parse(s)) : new Set() } catch { return new Set() }
+  })
   const [typeColors,   setTypeColors]   = useState<Partial<Record<EventType, string>>>(() => {
     try { const s = localStorage.getItem('cal-type-colors'); return s ? JSON.parse(s) : {} } catch { return {} }
   })
+  const [hoveredSidebarRow, setHoveredSidebarRow] = useState<string | null>(null)
+  const [sidebarCtxMenu, setSidebarCtxMenu] = useState<{ id: string; kind: 'type' | 'google'; x: number; y: number } | null>(null)
   const [sidebarYear, setSidebarYear] = useState(today.getFullYear())
   const [sidebarMonth, setSidebarMonth] = useState(today.getMonth())
   const [wsMon] = useState(() => getWeekStartsMonday())
@@ -275,6 +282,7 @@ export default function CalendarPage() {
   useEffect(() => { monthsRef.current = months }, [months])
   useEffect(() => { notionWeeksRef.current = notionWeeks }, [notionWeeks])
   useEffect(() => { localStorage.setItem('cal-type-colors', JSON.stringify(typeColors)) }, [typeColors])
+  useEffect(() => { localStorage.setItem('cal-hidden-google-cals', JSON.stringify([...hiddenGoogleCals])) }, [hiddenGoogleCals])
 
   // ── Large-screen detection (iPad ≥768px, Mac ≥1024px) ────────────────────
   useEffect(() => {
@@ -496,6 +504,15 @@ export default function CalendarPage() {
     setPrefs(p)
     await supabase.from('profiles').update({ calendar_prefs: p }).eq('id', (await supabase.auth.getUser()).data.user?.id ?? '')
   }
+
+  useEffect(() => {
+    if (!sidebarCtxMenu) return
+    const onDown = (e: MouseEvent) => { if (!ctxMenuRef.current?.contains(e.target as Node)) setSidebarCtxMenu(null) }
+    const onKey  = (e: KeyboardEvent) => { if (e.key === 'Escape') setSidebarCtxMenu(null) }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey) }
+  }, [sidebarCtxMenu])
 
   function handleDeleteCalEvent(ev: CalEvent) {
     if (!ev.id) return
@@ -963,7 +980,7 @@ export default function CalendarPage() {
 
                   {/* Calendar legend toggles */}
                   <div style={{ padding: '12px 10px 8px', flexShrink: 0 }}>
-                    <p style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgb(var(--rgb-ink) / 0.25)', marginBottom: 8, fontFamily: 'var(--font-montserrat)' }}>CALENDARS</p>
+                    <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgb(var(--rgb-ink) / 0.25)', marginBottom: 8, fontFamily: 'var(--font-montserrat)' }}>Calendars</p>
                     {/* Income & Subscriptions */}
                     {([
                       { type: 'income' as EventType, label: 'Income',        color: DOT_COLOR.income },
@@ -972,11 +989,22 @@ export default function CalendarPage() {
                       const hidden      = hiddenTypes.has(item.type)
                       const activeColor = typeColors[item.type] ?? item.color
                       const isCustom    = !!typeColors[item.type]
+                      const hovered     = hoveredSidebarRow === item.type
                       return (
-                        <div key={item.type} style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: '3px 0' }}>
+                        <div
+                          key={item.type}
+                          style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: '3px 4px', borderRadius: 6, background: hovered ? 'rgba(255,255,255,0.03)' : 'transparent', transition: 'background 0.12s' }}
+                          onMouseEnter={() => setHoveredSidebarRow(item.type)}
+                          onMouseLeave={() => setHoveredSidebarRow(null)}
+                          onContextMenu={e => { e.preventDefault(); setSidebarCtxMenu({ id: item.type, kind: 'type', x: e.clientX, y: e.clientY }) }}
+                          onTouchStart={e => { const t = e.touches[0]; longPressTimer.current = setTimeout(() => setSidebarCtxMenu({ id: item.type, kind: 'type', x: t.clientX, y: t.clientY }), 500) }}
+                          onTouchEnd={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null } }}
+                          onTouchMove={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null } }}
+                        >
                           <label style={{ position: 'relative', flexShrink: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', width: 16, height: 16, justifyContent: 'center' }} title="Change color">
                             <span style={{ width: 10, height: 10, borderRadius: '50%', background: hidden ? 'transparent' : activeColor, border: `1.5px solid ${activeColor}`, display: 'block', transition: 'all 0.15s', opacity: hidden ? 0.4 : 1, flexShrink: 0 }} />
                             <input type="color" value={activeColor}
+                              ref={el => { if (el) colorInputRefs.current.set(item.type, el); else colorInputRefs.current.delete(item.type) }}
                               onChange={e => setTypeColors(p => ({ ...p, [item.type]: e.target.value }))}
                               style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', padding: 0, border: 'none' }} />
                           </label>
@@ -984,12 +1012,20 @@ export default function CalendarPage() {
                             style={{ background: 'none', border: 'none', cursor: 'pointer', flex: 1, textAlign: 'left', padding: 0 }}>
                             <span style={{ fontSize: 11, color: hidden ? 'rgb(var(--rgb-ink) / 0.25)' : 'rgb(var(--rgb-ink) / 0.7)', fontFamily: 'var(--font-montserrat)', fontWeight: 500, transition: 'color 0.15s' }}>{item.label}</span>
                           </button>
-                          {isCustom && (
+                          {hovered ? (
+                            <button
+                              onClick={e => { e.stopPropagation(); setHiddenTypes(prev => { const next = new Set(prev); if (next.has(item.type)) next.delete(item.type); else next.add(item.type); return next }) }}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', flexShrink: 0, display: 'flex', alignItems: 'center', color: 'rgb(var(--rgb-ink) / 0.4)' }}
+                              title={hidden ? 'Show' : 'Hide'}
+                            >
+                              {hidden ? <EyeOff size={11} /> : <Eye size={11} />}
+                            </button>
+                          ) : isCustom ? (
                             <button onClick={() => setTypeColors(p => { const n = { ...p }; delete n[item.type]; return n })}
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', opacity: 0.35, flexShrink: 0, lineHeight: 1, fontSize: 9, color: 'var(--color-ink)' }} title="Reset to default">
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', opacity: 0.35, flexShrink: 0, lineHeight: 1, fontSize: 9, color: 'var(--color-ink)' }} title="Reset color">
                               ✕
                             </button>
-                          )}
+                          ) : null}
                         </div>
                       )
                     }))}
@@ -997,13 +1033,38 @@ export default function CalendarPage() {
                     {googleCals.filter(c => prefs.googleCalendarIds.includes(c.id)).map(cal => {
                       const hidden      = hiddenGoogleCals.has(cal.id)
                       const activeColor = prefs.googleCalendarColors?.[cal.id] ?? cal.backgroundColor
+                      const hovered     = hoveredSidebarRow === cal.id
                       return (
-                        <div key={cal.id} style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: '3px 0' }}>
-                          <span style={{ width: 10, height: 10, borderRadius: '50%', background: hidden ? 'transparent' : activeColor, border: `1.5px solid ${activeColor}`, display: 'block', transition: 'all 0.15s', opacity: hidden ? 0.4 : 1, flexShrink: 0 }} />
+                        <div
+                          key={cal.id}
+                          style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: '3px 4px', borderRadius: 6, background: hovered ? 'rgba(255,255,255,0.03)' : 'transparent', transition: 'background 0.12s' }}
+                          onMouseEnter={() => setHoveredSidebarRow(cal.id)}
+                          onMouseLeave={() => setHoveredSidebarRow(null)}
+                          onContextMenu={e => { e.preventDefault(); setSidebarCtxMenu({ id: cal.id, kind: 'google', x: e.clientX, y: e.clientY }) }}
+                          onTouchStart={e => { const t = e.touches[0]; longPressTimer.current = setTimeout(() => setSidebarCtxMenu({ id: cal.id, kind: 'google', x: t.clientX, y: t.clientY }), 500) }}
+                          onTouchEnd={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null } }}
+                          onTouchMove={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null } }}
+                        >
+                          <label style={{ position: 'relative', flexShrink: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', width: 16, height: 16, justifyContent: 'center' }} title="Change color">
+                            <span style={{ width: 10, height: 10, borderRadius: '50%', background: hidden ? 'transparent' : activeColor, border: `1.5px solid ${activeColor}`, display: 'block', transition: 'all 0.15s', opacity: hidden ? 0.4 : 1, flexShrink: 0 }} />
+                            <input type="color" value={activeColor}
+                              ref={el => { if (el) colorInputRefs.current.set(cal.id, el); else colorInputRefs.current.delete(cal.id) }}
+                              onChange={e => { const c = e.target.value; savePrefs({ ...prefs, googleCalendarColors: { ...(prefs.googleCalendarColors ?? {}), [cal.id]: c } }) }}
+                              style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', padding: 0, border: 'none' }} />
+                          </label>
                           <button onClick={() => setHiddenGoogleCals(prev => { const next = new Set(prev); if (next.has(cal.id)) next.delete(cal.id); else next.add(cal.id); return next })}
                             style={{ background: 'none', border: 'none', cursor: 'pointer', flex: 1, textAlign: 'left', padding: 0 }}>
                             <span style={{ fontSize: 11, color: hidden ? 'rgb(var(--rgb-ink) / 0.25)' : 'rgb(var(--rgb-ink) / 0.7)', fontFamily: 'var(--font-montserrat)', fontWeight: 500, transition: 'color 0.15s' }}>{cal.summary}</span>
                           </button>
+                          {hovered && (
+                            <button
+                              onClick={e => { e.stopPropagation(); setHiddenGoogleCals(prev => { const next = new Set(prev); if (next.has(cal.id)) next.delete(cal.id); else next.add(cal.id); return next }) }}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', flexShrink: 0, display: 'flex', alignItems: 'center', color: 'rgb(var(--rgb-ink) / 0.4)' }}
+                              title={hidden ? 'Show' : 'Hide'}
+                            >
+                              {hidden ? <EyeOff size={11} /> : <Eye size={11} />}
+                            </button>
+                          )}
                         </div>
                       )
                     })}
@@ -1458,6 +1519,70 @@ export default function CalendarPage() {
 
     <EditEventSheet open={!!editEvent} event={editEvent} googleCals={googleCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => setEditEvent(null)} onSave={handleEditEvent} onDelete={_scope => { if (editEvent) { const ev: CalEvent = { id: editEvent.id, title: editEvent.title, type: 'google', amount: '', calendarId: editEvent.calendarId }; handleDeleteCalEvent(ev) } setEditEvent(null) }} />
     <CalendarSettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} prefs={prefs} googleCals={googleCals} calsLoading={calsLoading} onSave={savePrefs} />
+
+    {/* Sidebar context menu */}
+    {sidebarCtxMenu && (() => {
+      const { id, kind, x, y } = sidebarCtxMenu
+      const isHidden = kind === 'type' ? hiddenTypes.has(id as EventType) : hiddenGoogleCals.has(id)
+      type MenuItem = { label: string; action: () => void; danger?: boolean }
+      const items: MenuItem[] = [
+        {
+          label: isHidden ? 'Show' : 'Hide',
+          action: () => {
+            if (kind === 'type') setHiddenTypes(prev => { const next = new Set(prev); if (next.has(id as EventType)) next.delete(id as EventType); else next.add(id as EventType); return next })
+            else setHiddenGoogleCals(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next })
+            setSidebarCtxMenu(null)
+          },
+        },
+        {
+          label: 'Change Color',
+          action: () => { colorInputRefs.current.get(id)?.click(); setSidebarCtxMenu(null) },
+        },
+        ...(kind === 'type' && typeColors[id as EventType] ? [{
+          label: 'Reset Color',
+          action: () => { setTypeColors(p => { const n = { ...p }; delete n[id as EventType]; return n }); setSidebarCtxMenu(null) },
+        }] : []),
+        ...(kind === 'google' ? [{
+          label: 'Remove Calendar',
+          danger: true,
+          action: () => {
+            savePrefs({ ...prefs, googleCalendarIds: prefs.googleCalendarIds.filter(c => c !== id) })
+            setSidebarCtxMenu(null)
+          },
+        }] : []),
+      ]
+      const menuW = 168
+      const menuH = items.length * 32 + 8
+      return (
+        <div ref={ctxMenuRef} style={{
+          position: 'fixed',
+          top:  Math.min(y, window.innerHeight - menuH - 8),
+          left: Math.min(x, window.innerWidth  - menuW - 8),
+          width: menuW,
+          background: '#21242A',
+          border: '0.5px solid rgba(255,255,255,0.1)',
+          borderRadius: 10,
+          zIndex: 300,
+          boxShadow: '0 4px 24px rgba(0,0,0,0.55)',
+          overflow: 'hidden',
+          fontFamily: 'var(--font-montserrat)',
+          padding: '4px 0',
+        }}>
+          {items.map(item => (
+            <button key={item.label} onClick={item.action} style={{
+              display: 'block', width: '100%', padding: '7px 14px',
+              background: 'none', border: 'none', cursor: 'pointer',
+              textAlign: 'left', fontSize: 13,
+              color: item.danger ? '#ef4444' : 'var(--color-ink)',
+              fontFamily: 'var(--font-montserrat)',
+            }}>
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )
+    })()}
+
     {popover && (
       <CalendarPopover
         anchorRect={popover.anchorRect}
