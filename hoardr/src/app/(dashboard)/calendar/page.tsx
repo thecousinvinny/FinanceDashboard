@@ -1454,7 +1454,7 @@ export default function CalendarPage() {
                                       const pillSel  = selectedEvId   === ev.id
                                       const pillHov  = hoveredPillKey === ev.id
                                       const isDraggable = ev.type === 'google' && !!ev.id
-                                      const isBeingDragged = dragState?.ev.id === ev.id
+                                      const isBeingDragged = !!dragState && !!ev.id && dragState.ev.id === ev.id
                                       return (
                                         <div
                                           key={ei}
@@ -1480,7 +1480,7 @@ export default function CalendarPage() {
                                       const timedSel = selectedEvId   === ev.id
                                       const timedHov = hoveredPillKey === ev.id
                                       const isDraggable = ev.type === 'google' && !!ev.id
-                                      const isBeingDragged = dragState?.ev.id === ev.id
+                                      const isBeingDragged = !!dragState && !!ev.id && dragState.ev.id === ev.id
                                       return (
                                         <div
                                           key={ei}
