@@ -1374,75 +1374,154 @@ export default function CalendarPage() {
               </div>
             )}
 
-            {/* List mode (calView === 'list') — infinite day list matching mobile split view */}
+            {/* List mode (calView === 'list') — Fantastical split view matching mobile */}
             {calView === 'list' && (
-            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative', background: 'var(--color-bg-base)' }}>
-              <div ref={scrollRef} onScroll={handleDetailScroll}
-                style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', position: 'relative' }}>
-                <div ref={topSentRef} style={{ height: 1 }} />
-                {months.map(({ year: y, month: m }) => {
-                  const dim = getDaysInMonth(y, m)
-                  return Array.from({ length: dim }, (_, i) => {
-                    const day    = i + 1
-                    const ds     = toDateStr(y, m, day)
-                    const isTod  = ds === todayStr
-                    const events = visibleMap[ds] ?? []
-                    const abbr   = new Date(y, m, day).toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()
-                    const stripe = Math.floor(new Date(y, m, day).getTime() / 86400000) % 2 === 0
-                    return (
-                      <div
-                        key={ds}
-                        ref={el => { if (el) dayRefs.current.set(ds, el); else dayRefs.current.delete(ds) }}
-                        onMouseDown={e => rowMouseDown(e, ds)}
-                        onMouseUp={rowMouseUp}
-                        onMouseLeave={() => { rowSwipe.current = null }}
-                        style={{ display: 'flex', alignItems: 'stretch', paddingLeft: 20, background: 'var(--color-bg-surface)', cursor: 'grab' }}
-                      >
-                        <div style={{ width: 60, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-surface)' }}>
-                          <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 9, letterSpacing: '0.09em', textTransform: 'uppercase', lineHeight: 1.2, userSelect: 'none', whiteSpace: 'nowrap' }}>
-                            <span style={{ color: isTod ? '#D4AF37' : 'rgb(var(--rgb-ink) / 0.75)', fontWeight: 700 }}>{abbr}</span>
-                            <span style={{ color: isTod ? '#c9a84c' : 'rgb(var(--rgb-ink) / 0.25)', fontWeight: 500 }}>{' '}{day}</span>
-                          </span>
-                        </div>
-                        <div style={{ width: 1, flexShrink: 0, background: isTod ? 'rgba(201,168,76,0.35)' : 'rgb(var(--rgb-ink) / 0.04)', marginTop: 8, marginBottom: 8 }} />
+            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--color-bg-base)' }}>
+
+              {/* Compact month grid — collapsible */}
+              <div style={{ height: gridH, overflow: 'hidden', flexShrink: 0, transition: isDraggingHandle ? 'none' : 'height 0.3s cubic-bezier(0.4,0,0.2,1)', background: 'var(--color-bg-surface)' }}>
+                <div style={{ height: GRID_EXPANDED, display: 'flex', flexDirection: 'column' }}>
+                  {/* Month header */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 16, paddingRight: 12, paddingTop: 12, paddingBottom: 6, flexShrink: 0 }}>
+                    <span
+                      style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', userSelect: 'none', cursor: 'pointer', letterSpacing: '-0.01em' }}
+                      onDoubleClick={scrollListToToday}
+                    >{gridMonthLbl}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <button onClick={goToPrev} style={{ width: 24, height: 24, borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer', color: '#C9A84C', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
+                      <button onClick={goToNext} style={{ width: 24, height: 24, borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer', color: '#C9A84C', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
+                      <button onClick={() => { goToToday(); scrollListToToday() }} style={{ fontSize: 11, fontWeight: 600, color: '#D4AF37', background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.02em' }}>Today</button>
+                    </div>
+                  </div>
+                  {/* DOW labels */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', paddingLeft: 8, paddingRight: 8, paddingBottom: 4, flexShrink: 0 }}>
+                    {(wsMon ? ['M','T','W','T','F','S','S'] : ['S','M','T','W','T','F','S']).map((d, i) => (
+                      <div key={i} style={{ textAlign: 'center', fontSize: 9, fontWeight: 700, color: 'rgba(212,175,55,0.55)', letterSpacing: '0.05em', fontFamily: 'var(--font-montserrat)' }}>{d}</div>
+                    ))}
+                  </div>
+                  {/* Grid cells */}
+                  <div
+                    style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gridAutoRows: '1fr', paddingLeft: 6, paddingRight: 6, paddingBottom: 4 }}
+                    onMouseDown={(e) => { gridSwipe.current = { x: e.clientX, y: e.clientY } }}
+                    onMouseUp={(e) => {
+                      const s = gridSwipe.current; gridSwipe.current = null; if (!s) return
+                      const dx = e.clientX - s.x, dy = e.clientY - s.y
+                      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) { if (dx < 0) goToNext(); else goToPrev() }
+                    }}
+                    onMouseLeave={() => { gridSwipe.current = null }}
+                  >
+                    {gridCells.map((day, i) => {
+                      if (day === null) return <div key={i} />
+                      const ds = gds(day)
+                      const isToday = ds === todayStr
+                      const isSel   = ds === gridSel
+                      const dots    = (visibleMap[ds] ?? []).slice(0, 3).map(ev => ev.color ?? DOT_COLOR[ev.type])
+                      return (
+                        <button key={i}
+                          onClick={() => {
+                            setGridSel(ds)
+                            const sc = scrollRef.current, el = dayRefs.current.get(ds)
+                            if (sc && el) { const cR = sc.getBoundingClientRect(), eR = el.getBoundingClientRect(); sc.scrollTop = sc.scrollTop + eR.top - cR.top - 16 }
+                          }}
+                          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'none', cursor: 'pointer', outline: 'none', gap: 2, minWidth: 0 }}
+                        >
+                          <div style={{ width: 26, height: 26, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isToday ? '#D4AF37' : isSel ? 'rgba(212,175,55,0.15)' : 'transparent', flexShrink: 0 }}>
+                            <span style={{ fontSize: 12, fontWeight: isToday ? 700 : isSel ? 600 : 400, color: isToday ? '#000' : isSel ? '#D4AF37' : 'rgb(var(--rgb-ink) / 0.72)', fontFamily: 'var(--font-montserrat)', lineHeight: 1 }}>{day}</span>
+                          </div>
+                          {dots.length > 0 && (
+                            <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                              {dots.map((c, di) => <span key={di} style={{ width: 3, height: 3, borderRadius: '50%', background: c, flexShrink: 0 }} />)}
+                            </div>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Drag handle */}
+              <div
+                style={{ height: 22, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'row-resize', background: 'var(--color-bg-base)', borderTop: '1px solid rgb(var(--rgb-ink) / 0.05)' }}
+                onClick={() => { if (!handleDragRef.current) setGridH(g => g > 0 ? 0 : GRID_EXPANDED) }}
+                onTouchStart={(e) => { e.stopPropagation(); handleDragRef.current = { startY: e.touches[0].clientY, startH: gridH }; setIsDraggingHandle(true) }}
+                onTouchMove={(e) => { if (!handleDragRef.current) return; e.stopPropagation(); const dy = e.touches[0].clientY - handleDragRef.current.startY; setGridH(Math.max(0, Math.min(GRID_EXPANDED, handleDragRef.current.startH + dy))) }}
+                onTouchEnd={(e) => { e.stopPropagation(); setIsDraggingHandle(false); handleDragRef.current = null; setGridH(g => g > GRID_EXPANDED / 2 ? GRID_EXPANDED : 0) }}
+              >
+                <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgb(var(--rgb-ink) / 0.18)' }} />
+              </div>
+
+              {/* Infinite scroll list */}
+              <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                <div ref={scrollRef} onScroll={handleDetailScroll}
+                  style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', position: 'relative' }}>
+                  <div ref={topSentRef} style={{ height: 1 }} />
+                  {months.map(({ year: y, month: m }) => {
+                    const dim = getDaysInMonth(y, m)
+                    return Array.from({ length: dim }, (_, i) => {
+                      const day    = i + 1
+                      const ds     = toDateStr(y, m, day)
+                      const isTod  = ds === todayStr
+                      const events = visibleMap[ds] ?? []
+                      const abbr   = new Date(y, m, day).toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()
+                      const stripe = Math.floor(new Date(y, m, day).getTime() / 86400000) % 2 === 0
+                      return (
                         <div
-                          onClick={() => { navigator.vibrate?.(6); openCreatePopover(null, ds) }}
-                          style={{ flex: 1, paddingLeft: 12, paddingRight: 14, paddingTop: 6, paddingBottom: 6, display: 'flex', flexDirection: 'column', gap: 2, minHeight: 112, background: stripe ? 'var(--color-bg-surface)' : 'var(--color-bg-elevated)', cursor: 'text' }}>
-                          {events.map((ev, idx) => {
-                            const bar  = ev.color ?? DETAIL_DOT[ev.type]
-                            const M    = 'var(--font-montserrat)'
-                            const row2: string | null = ev.type === 'google'
-                              ? (ev.amount ? getTimeRange(ev) : 'ALL DAY')
-                              : (ev.amount || null)
-                            return (
-                              <button key={idx} onClick={e => { e.stopPropagation(); navigator.vibrate?.(6); if (ev.id) { handleOpenEdit(ev) } else { setSelectedDay(ds); setViewIndex(1) } }}
-                                style={{ display: 'flex', alignItems: 'stretch', width: '100%', background: 'none', border: 'none', padding: '10px 0', cursor: 'pointer', textAlign: 'left', gap: 9 }}>
-                                <div style={{ width: 3, borderRadius: 2, background: bar, flexShrink: 0 }} />
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <p style={{ fontSize: 14, fontWeight: 500, color: isTod ? 'rgb(var(--rgb-ink) / 0.95)' : 'rgb(var(--rgb-ink) / 0.82)', fontFamily: M, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.35 }}>
-                                    {ev.title}
-                                  </p>
-                                  {row2 && (
-                                    <p style={{ fontSize: 11, color: 'rgb(var(--rgb-ink) / 0.32)', fontFamily: M, margin: '3px 0 0', lineHeight: 1.3 }}>
-                                      {row2}
+                          key={ds}
+                          ref={el => { if (el) dayRefs.current.set(ds, el); else dayRefs.current.delete(ds) }}
+                          onMouseDown={e => rowMouseDown(e, ds)}
+                          onMouseUp={rowMouseUp}
+                          onMouseLeave={() => { rowSwipe.current = null }}
+                          style={{ display: 'flex', alignItems: 'stretch', paddingLeft: gridH === 0 ? 20 : 6, background: 'var(--color-bg-surface)', cursor: 'grab',
+                                   transition: isDraggingHandle ? 'none' : 'padding-left 0.3s cubic-bezier(0.4,0,0.2,1)' }}
+                        >
+                          <div style={{ width: gridH === 0 ? 60 : 'calc((100% - 6px) / 7)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-surface)',
+                                        transition: isDraggingHandle ? 'none' : 'width 0.3s cubic-bezier(0.4,0,0.2,1)' }}>
+                            <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 9, letterSpacing: '0.09em', textTransform: 'uppercase', lineHeight: 1.2, userSelect: 'none', whiteSpace: 'nowrap' }}>
+                              <span style={{ color: isTod ? '#D4AF37' : 'rgb(var(--rgb-ink) / 0.75)', fontWeight: 700 }}>{abbr}</span>
+                              <span style={{ color: isTod ? '#c9a84c' : 'rgb(var(--rgb-ink) / 0.25)', fontWeight: 500 }}>{' '}{day}</span>
+                            </span>
+                          </div>
+                          <div style={{ width: 1, flexShrink: 0, background: isTod ? 'rgba(201,168,76,0.35)' : 'rgb(var(--rgb-ink) / 0.04)', marginTop: 8, marginBottom: 8 }} />
+                          <div
+                            onClick={() => openCreatePopover(null, ds)}
+                            style={{ flex: 1, paddingLeft: 12, paddingRight: 14, paddingTop: 6, paddingBottom: 6, display: 'flex', flexDirection: 'column', gap: 2, minHeight: 112, background: stripe ? 'var(--color-bg-surface)' : 'var(--color-bg-elevated)', cursor: 'text' }}>
+                            {events.map((ev, idx) => {
+                              const bar  = ev.color ?? DETAIL_DOT[ev.type]
+                              const M    = 'var(--font-montserrat)'
+                              const row2: string | null = ev.type === 'google'
+                                ? (ev.amount ? getTimeRange(ev) : 'ALL DAY')
+                                : (ev.amount || null)
+                              return (
+                                <button key={idx} onClick={e => { e.stopPropagation(); if (ev.id) { handleOpenEdit(ev) } else { setSelectedDay(ds); setViewIndex(1) } }}
+                                  style={{ display: 'flex', alignItems: 'stretch', width: '100%', background: 'none', border: 'none', padding: '10px 0', cursor: 'pointer', textAlign: 'left', gap: 9 }}>
+                                  <div style={{ width: 3, borderRadius: 2, background: bar, flexShrink: 0 }} />
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <p style={{ fontSize: 14, fontWeight: 500, color: isTod ? 'rgb(var(--rgb-ink) / 0.95)' : 'rgb(var(--rgb-ink) / 0.82)', fontFamily: M, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.35 }}>
+                                      {ev.title}
                                     </p>
-                                  )}
-                                  {ev.location && (
-                                    <p style={{ fontSize: 11, color: 'rgb(var(--rgb-ink) / 0.26)', fontFamily: M, margin: '2px 0 0', lineHeight: 1.3 }}>
-                                      {ev.location}
-                                    </p>
-                                  )}
-                                </div>
-                              </button>
-                            )
-                          })}
+                                    {row2 && (
+                                      <p style={{ fontSize: 11, color: 'rgb(var(--rgb-ink) / 0.32)', fontFamily: M, margin: '3px 0 0', lineHeight: 1.3 }}>
+                                        {row2}
+                                      </p>
+                                    )}
+                                    {ev.location && (
+                                      <p style={{ fontSize: 11, color: 'rgb(var(--rgb-ink) / 0.26)', fontFamily: M, margin: '2px 0 0', lineHeight: 1.3 }}>
+                                        {ev.location}
+                                      </p>
+                                    )}
+                                  </div>
+                                </button>
+                              )
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    )
-                  })
-                })}
-                <div ref={botSentRef} style={{ height: 1 }} />
-                <div style={{ height: 96 }} />
+                      )
+                    })
+                  })}
+                  <div ref={botSentRef} style={{ height: 1 }} />
+                  <div style={{ height: 96 }} />
+                </div>
               </div>
             </div>
             )}
