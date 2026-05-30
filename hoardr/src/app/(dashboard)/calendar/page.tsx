@@ -1450,7 +1450,7 @@ export default function CalendarPage() {
                                   {/* Single-day events */}
                                   <div style={{ paddingLeft: 4, paddingRight: 4, display: 'flex', flexDirection: 'column' }}>
                                     {allDayEvs.slice(0, shownAllDay).map((ev, ei) => {
-                                      const evColor  = notionColor(ev)
+                                      const evColor  = ev.type === 'income' ? '#4ADE80' : ev.type === 'sub' ? '#F36369' : notionColor(ev)
                                       const pillSel  = selectedEvId   === ev.id
                                       const pillHov  = hoveredPillKey === ev.id
                                       const isDraggable = ev.type === 'google' && !!ev.id
