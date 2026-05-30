@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getWeekStartsMonday } from '@/lib/week-start'
-import { cn } from '@/lib/utils'
+import { cn, nextRenewalDate, localToday } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
 import { COLOR_PALETTE } from '@/lib/category-meta'
 import { Plus, SlidersHorizontal, Eye, EyeOff, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning, type LucideIcon } from 'lucide-react'
@@ -379,7 +379,7 @@ export default function CalendarPage() {
       const [{ data: inc }, { data: subs }, { data: profile }] =
         await Promise.all([
           supabase.from('income').select('name, amount, date').abortSignal(controller.signal),
-          supabase.from('subscriptions').select('name, cost, next_renewal').eq('status', 'Active').abortSignal(controller.signal),
+          supabase.from('subscriptions').select('name, cost, next_renewal, billing').eq('status', 'Active').abortSignal(controller.signal),
           supabase.from('profiles').select('calendar_prefs').abortSignal(controller.signal).single(),
         ])
       if (gen !== loadGen.current) return
@@ -388,7 +388,13 @@ export default function CalendarPage() {
       const map: Record<string, CalEvent[]> = {}
       const push = (date: string, ev: CalEvent) => { if (!map[date]) map[date] = []; map[date].push(ev) }
       for (const i of inc  ?? []) push(String(i.date), { title: String(i.name), type: 'income', amount: `+$${Number(i.amount).toFixed(2)}` })
-      for (const s of subs ?? []) if (s.next_renewal) push(String(s.next_renewal), { title: String(s.name), type: 'sub', amount: `$${Number(s.cost).toFixed(2)}` })
+      const calToday = localToday()
+      for (const s of subs ?? []) {
+        if (!s.next_renewal) continue
+        let renewDate = String(s.next_renewal)
+        while (renewDate < calToday && s.billing) renewDate = nextRenewalDate(renewDate, s.billing as Parameters<typeof nextRenewalDate>[1])
+        push(renewDate, { title: String(s.name), type: 'sub', amount: `$${Number(s.cost).toFixed(2)}` })
+      }
       setEventMap(map)
       setDataLoaded(true)
     } catch (err) {
@@ -1435,7 +1441,7 @@ export default function CalendarPage() {
                                           onMouseEnter={() => ev.id && setHoveredPillKey(ev.id)}
                                           onMouseLeave={() => setHoveredPillKey(null)}
                                           onClick={ev.type === 'google' && ev.id ? (e) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), ev, ds) } : undefined}
-                                          style={{ background: (isPast && ev.type === 'google') ? evColor + '8C' : evColor, borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, cursor: isDraggable ? 'grab' : 'default', position: 'relative', boxShadow: pillSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none', opacity: isBeingDragged ? 0.4 : 1, transition: 'opacity 0.1s' }}
+                                          style={{ background: isPast ? evColor + '8C' : evColor, borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, cursor: isDraggable ? 'grab' : 'default', position: 'relative', boxShadow: pillSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none', opacity: isBeingDragged ? 0.4 : 1, transition: 'opacity 0.1s' }}
                                         >
                                           {(pillHov || pillSel) && ev.id && <div style={{ position: 'absolute', inset: 0, background: pillSel ? 'rgba(255,255,255,0.145)' : 'rgba(255,255,255,0.071)', pointerEvents: 'none', borderRadius: 4 }} />}
                                           <span style={{ fontSize: 10, color: (ev.type === 'income' || ev.type === 'sub') ? 'white' : isPast ? lightTextColor(evColor, true) : 'rgba(255,255,255,0.92)', fontFamily: 'var(--font-montserrat)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
