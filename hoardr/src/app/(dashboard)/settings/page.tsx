@@ -201,7 +201,12 @@ export default function SettingsPage() {
                 )}
               >
                 <div className="flex gap-1 mb-2">
-                  {t.swatches.map((color, i) => (
+                  {t.gradient ? (
+                    <div
+                      className="h-6 rounded-[5px] w-full"
+                      style={{ background: t.gradient, border: '1px solid rgba(0,0,0,0.08)' }}
+                    />
+                  ) : t.swatches.map((color, i) => (
                     <div
                       key={i}
                       className="h-6 rounded-[5px] flex-1"

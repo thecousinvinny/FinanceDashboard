@@ -226,6 +226,11 @@ html, body {
   .glow-green  { text-shadow: 0 0 25px rgba(74,222,128,0.3),   0 0 50px rgba(74,222,128,0.1);   }
   .glow-gold   { text-shadow: 0 0 25px rgba(232,196,107,0.3), 0 0 50px rgba(232,196,107,0.1); }
   .glow-ruby   { text-shadow: 0 0 25px rgba(243,99,105,0.3),  0 0 50px rgba(243,99,105,0.1);  }
+
+  /* Midnight Teal primary gradient — standalone class for new components */
+  .gradient-teal {
+    background: linear-gradient(135deg, #2DD4BF 0%, #22D3EE 100%);
+  }
 }
 
 /* ── Google Places Autocomplete dark theme ───────────────────────────────── */
@@ -311,3 +316,79 @@ html.light .divide-white\/\[0\.04\] > * + * { border-color: var(--card-divider) 
 html.light nav[class*="fixed bottom-0"] {
   border-top: 1px solid rgba(0,0,0,0.06);
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Midnight Teal theme
+   ══════════════════════════════════════════════════════════════════════════ */
+
+html.midnight-teal {
+  /* ── Background tokens ────────────────────────────────────────────────── */
+  --rgb-bg-base:     14 21 29;      /* #0E151D */
+  --rgb-bg-surface:  22 30 39;      /* #161E27 */
+  --rgb-bg-elevated: 28 42 54;      /* #1C2A36 */
+  --rgb-bg-overlay:  36 48 64;      /* #243040 */
+
+  /* ── Text tokens ──────────────────────────────────────────────────────── */
+  --rgb-ink:         226 234 240;   /* #E2EAF0 */
+  --rgb-ink-muted:   85  96  112;   /* #556070 */
+  --rgb-ink-faint:   74  90  104;   /* #4A5A68 */
+
+  /* ── Structural ───────────────────────────────────────────────────────── */
+  --nav-bg:          rgba(14,21,29,0.92);
+  --card-border:     rgba(28,42,54,0.9);
+  --card-divider:    rgba(36,48,64,0.5);
+
+  /* ── Solid helpers (inline style props) ──────────────────────────────── */
+  --color-bg-base:     rgb(14, 21, 29);
+  --color-bg-surface:  rgb(22, 30, 39);
+  --color-bg-elevated: rgb(28, 42, 54);
+  --color-ink:         rgb(226, 234, 240);
+  --color-grid-border: rgb(28, 42, 54);
+
+  /* ── Teal accent (for use in inline styles / new components) ─────────── */
+  --color-teal:        #2DD4BF;
+  --color-teal-accent: #22D3EE;
+}
+
+/* ── Midnight Teal — accent gradient replaces gold everywhere ────────────── */
+html.midnight-teal .gradient-gold    { background: linear-gradient(135deg, #2DD4BF 0%, #22D3EE 100%) !important; }
+html.midnight-teal .gradient-emerald { background: linear-gradient(135deg, #2DD4BF 0%, #22D3EE 100%) !important; }
+
+/* ── Midnight Teal — semantic text colors ────────────────────────────────── */
+html.midnight-teal .text-gold    { color: #2DD4BF !important; }
+html.midnight-teal .text-emerald { color: #2DD4BF !important; }
+
+/* ── Midnight Teal — glow effects ────────────────────────────────────────── */
+html.midnight-teal .glow-green { text-shadow: 0 0 25px rgba(45,212,191,0.35), 0 0 50px rgba(45,212,191,0.15) !important; }
+html.midnight-teal .glow-gold  { text-shadow: 0 0 25px rgba(45,212,191,0.35), 0 0 50px rgba(45,212,191,0.15) !important; }
+
+/* ── Midnight Teal — gold border / ring / background variants ────────────── */
+html.midnight-teal .border-gold                   { border-color: #2DD4BF !important; }
+html.midnight-teal .border-gold\/50               { border-color: rgba(45,212,191,0.5) !important; }
+html.midnight-teal .border-gold\/40               { border-color: rgba(45,212,191,0.4) !important; }
+html.midnight-teal .focus\:border-gold\/40:focus  { border-color: rgba(45,212,191,0.4) !important; }
+html.midnight-teal .focus-within\:border-gold\/40:focus-within { border-color: rgba(45,212,191,0.4) !important; }
+html.midnight-teal .ring-gold\/60                 { --tw-ring-color: rgba(45,212,191,0.6) !important; }
+html.midnight-teal .ring-gold\/40                 { --tw-ring-color: rgba(45,212,191,0.4) !important; }
+html.midnight-teal .bg-gold\/20                   { background-color: rgba(45,212,191,0.2)  !important; }
+html.midnight-teal .bg-gold\/15                   { background-color: rgba(45,212,191,0.15) !important; }
+
+/* ── Midnight Teal — white-opacity border / ring / divide overrides ──────── */
+html.midnight-teal .border-white\/\[0\.06\]  { border-color: rgba(28,42,54,0.9) !important; }
+html.midnight-teal .border-white\/\[0\.04\]  { border-color: rgba(36,48,64,0.5) !important; }
+html.midnight-teal .border-white\/\[0\.08\]  { border-color: rgba(36,48,64,0.6) !important; }
+html.midnight-teal .ring-white\/\[0\.06\]    { --tw-ring-color: rgba(28,42,54,0.9) !important; }
+html.midnight-teal .divide-white\/\[0\.04\] > * + * { border-color: rgba(36,48,64,0.5) !important; }
+
+/* ── Midnight Teal — nav bar ─────────────────────────────────────────────── */
+html.midnight-teal nav[class*="fixed bottom-0"] {
+  border-top: 0.5px solid rgb(28,42,54);
+}
+
+/* ── Midnight Teal — Google Places Autocomplete ──────────────────────────── */
+html.midnight-teal .pac-container { background-color: #161E27 !important; border-color: rgba(28,42,54,0.9) !important; }
+html.midnight-teal .pac-item      { background-color: #161E27 !important; border-color: rgba(36,48,64,0.5) !important; color: #E2EAF0 !important; }
+html.midnight-teal .pac-item:hover,
+html.midnight-teal .pac-item-selected { background-color: #1C2A36 !important; }
+html.midnight-teal .pac-item-query    { color: #E2EAF0 !important; }
+html.midnight-teal .pac-matched       { color: #2DD4BF !important; font-weight: 600 !important; }

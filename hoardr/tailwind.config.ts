@@ -24,6 +24,10 @@ const config: Config = {
           DEFAULT: '#4ADE80',
           dark:    '#22B14C',
         },
+        teal: {
+          DEFAULT: '#2DD4BF',
+          accent:  '#22D3EE',
+        },
         ruby: {
           DEFAULT: '#F36369',
         },
