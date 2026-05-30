@@ -11,6 +11,7 @@ export interface CalPrefs {
   googleCalendarIds:      string[]
   defaultCalendarId?:     string
   googleCalendarColors?:  Record<string, string>   // calId → hex override
+  typeColors?:            Record<string, string>   // 'income' | 'sub' → hex override
 }
 
 export interface GCalendar {
@@ -39,7 +40,7 @@ const TYPE_META: { type: EventTypeFilter; label: string; color: string }[] = [
 export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLoading, calsError, onSave }: Props) {
   const [local,  setLocal]  = useState<CalPrefs>(prefs)
   const [dragY,  setDragY]  = useState(0)
-  const [swatchFor, setSwatchFor] = useState<{ calId: string; top: number; left: number } | null>(null)
+  const [swatchFor, setSwatchFor] = useState<{ key: string; kind: 'google' | 'finance'; top: number; left: number } | null>(null)
   const backdropRef = useRef<HTMLDivElement>(null)
   const swatchRef   = useRef<HTMLDivElement>(null)
   const dragStartY  = useRef<number | null>(null)
@@ -142,20 +143,31 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
           </p>
           <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] overflow-hidden divide-y divide-white/[0.04] mb-5">
             {/* Income & Subscriptions */}
-            {TYPE_META.map(({ type, label, color }) => {
-              const on = local.visibleTypes.includes(type)
+            {TYPE_META.map(({ type, label, color: defaultColor }) => {
+              const on          = local.visibleTypes.includes(type)
+              const activeColor = local.typeColors?.[type] ?? defaultColor
+              const isCustom    = !!local.typeColors?.[type]
               return (
-                <button
-                  key={type}
-                  onClick={() => toggleType(type)}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left select-none"
-                >
-                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: color }} />
-                  <span className="text-[14px] font-medium text-ink flex-1">{label}</span>
-                  <span className={`w-11 h-6 rounded-full relative transition-colors flex-shrink-0 ${on ? 'gradient-gold' : 'bg-bg-base border border-white/10'}`}>
-                    <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+                <div key={type} className="flex items-center gap-2 px-4 py-3.5 select-none">
+                  <button
+                    onClick={e => { const r = e.currentTarget.getBoundingClientRect(); setSwatchFor({ key: type, kind: 'finance', top: r.bottom + 4, left: r.left }) }}
+                    className="relative flex-shrink-0 cursor-pointer flex items-center justify-center bg-transparent border-0 p-0"
+                    style={{ width: 20, height: 20 }}
+                    title="Change color"
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full block" style={{ background: activeColor }} />
+                  </button>
+                  {isCustom && (
+                    <button onClick={() => setLocal(p => { const c = { ...(p.typeColors ?? {}) }; delete c[type]; return { ...p, typeColors: c } })}
+                      className="flex-shrink-0 text-[9px] text-ink-faint leading-none">✕</button>
+                  )}
+                  <button onClick={() => toggleType(type)} className="flex-1 text-left min-w-0">
+                    <span className="text-[14px] font-medium text-ink truncate block">{label}</span>
+                  </button>
+                  <span onClick={() => toggleType(type)} className={`w-11 h-6 rounded-full relative transition-colors flex-shrink-0 cursor-pointer ${on ? 'gradient-gold' : 'bg-bg-base border border-white/10'}`}>
+                    <span className={`absolute top-0.5 left-0 w-5 h-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
                   </span>
-                </button>
+                </div>
               )
             })}
             {/* Individual Google calendars */}
@@ -176,7 +188,7 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
                 <div key={cal.id} className="flex items-center gap-2 px-4 py-3.5 select-none">
                   {/* Color dot — tap opens swatch picker */}
                   <button
-                    onClick={e => { const r = e.currentTarget.getBoundingClientRect(); setSwatchFor({ calId: cal.id, top: r.bottom + 4, left: r.left }) }}
+                    onClick={e => { const r = e.currentTarget.getBoundingClientRect(); setSwatchFor({ key: cal.id, kind: 'google', top: r.bottom + 4, left: r.left }) }}
                     className="relative flex-shrink-0 cursor-pointer flex items-center justify-center bg-transparent border-0 p-0"
                     style={{ width: 20, height: 20 }}
                     title="Change color"
@@ -245,8 +257,10 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
 
       {/* Color swatch picker */}
       {swatchFor && (() => {
-        const currentColor = local.googleCalendarColors?.[swatchFor.calId]
-          ?? googleCals.find(c => c.id === swatchFor.calId)?.backgroundColor ?? '#4285F4'
+        const isFinance = swatchFor.kind === 'finance'
+        const currentColor = isFinance
+          ? (local.typeColors?.[swatchFor.key] ?? TYPE_META.find(t => t.type === swatchFor.key)?.color ?? '#4ADE80')
+          : (local.googleCalendarColors?.[swatchFor.key] ?? googleCals.find(c => c.id === swatchFor.key)?.backgroundColor ?? '#4285F4')
         const popW = 4 * 22 + 3 * 6 + 20
         return (
           <div ref={swatchRef} onMouseDown={e => e.stopPropagation()} style={{
@@ -269,7 +283,11 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
                 <button
                   key={color}
                   onClick={() => {
-                    setLocal(p => ({ ...p, googleCalendarColors: { ...(p.googleCalendarColors ?? {}), [swatchFor.calId]: color } }))
+                    if (isFinance) {
+                      setLocal(p => ({ ...p, typeColors: { ...(p.typeColors ?? {}), [swatchFor.key]: color } }))
+                    } else {
+                      setLocal(p => ({ ...p, googleCalendarColors: { ...(p.googleCalendarColors ?? {}), [swatchFor.key]: color } }))
+                    }
                     setSwatchFor(null)
                   }}
                   style={{

@@ -250,9 +250,6 @@ export default function CalendarPage() {
   const [hiddenGoogleCals,  setHiddenGoogleCals]  = useState<Set<string>>(() => {
     try { const s = localStorage.getItem('cal-hidden-google-cals'); return s ? new Set(JSON.parse(s)) : new Set() } catch { return new Set() }
   })
-  const [typeColors,   setTypeColors]   = useState<Partial<Record<EventType, string>>>(() => {
-    try { const s = localStorage.getItem('cal-type-colors'); return s ? JSON.parse(s) : {} } catch { return {} }
-  })
   const [notionGridLbl, setNotionGridLbl] = useState(() =>
     new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
   )
@@ -318,7 +315,6 @@ export default function CalendarPage() {
 
   useEffect(() => { monthsRef.current = months }, [months])
   useEffect(() => { notionWeeksRef.current = notionWeeks }, [notionWeeks])
-  useEffect(() => { localStorage.setItem('cal-type-colors', JSON.stringify(typeColors)) }, [typeColors])
   useEffect(() => { localStorage.setItem('cal-hidden-google-cals', JSON.stringify([...hiddenGoogleCals])) }, [hiddenGoogleCals])
 
   // ── Large-screen detection (iPad ≥768px, Mac ≥1024px) ────────────────────
@@ -949,7 +945,7 @@ export default function CalendarPage() {
   const notionColor = (ev: CalEvent) => {
     if (ev.type === 'google' && ev.calendarId)
       return prefs.googleCalendarColors?.[ev.calendarId] ?? ev.color ?? DOT_COLOR.google
-    return ev.color ?? typeColors[ev.type] ?? DOT_COLOR[ev.type]
+    return ev.color ?? prefs.typeColors?.[ev.type] ?? DOT_COLOR[ev.type]
   }
 
   // Derives a light, hue-tinted text color from a hex background color.
@@ -1237,8 +1233,8 @@ export default function CalendarPage() {
                       { type: 'sub'    as EventType, label: 'Subscriptions', defaultColor: DOT_COLOR.sub    },
                     ]).map(item => {
                       const hidden      = hiddenTypes.has(item.type)
-                      const activeColor = typeColors[item.type] ?? item.defaultColor
-                      const isCustom    = !!typeColors[item.type]
+                      const activeColor = prefs.typeColors?.[item.type] ?? item.defaultColor
+                      const isCustom    = !!prefs.typeColors?.[item.type]
                       const hovered     = hoveredSidebarRow === item.type
                       return (
                         <div
@@ -1257,7 +1253,7 @@ export default function CalendarPage() {
                               type="color"
                               ref={el => { if (el) colorInputRefs.current.set(item.type, el) }}
                               value={activeColor.match(/^#[0-9a-fA-F]{6}$/) ? activeColor.toLowerCase() : item.defaultColor}
-                              onChange={e => setTypeColors(p => ({ ...p, [item.type]: e.target.value }))}
+                              onChange={e => savePrefs({ ...prefs, typeColors: { ...(prefs.typeColors ?? {}), [item.type]: e.target.value } })}
                               style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%', padding: 0, border: 'none' }}
                             />
                           </div>
@@ -1274,7 +1270,7 @@ export default function CalendarPage() {
                               {hidden ? <EyeOff size={11} /> : <Eye size={11} />}
                             </button>
                           ) : isCustom ? (
-                            <button onClick={() => setTypeColors(p => { const n = { ...p }; delete n[item.type]; return n })}
+                            <button onClick={() => { const tc = { ...(prefs.typeColors ?? {}) }; delete tc[item.type]; savePrefs({ ...prefs, typeColors: tc }) }}
                               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', opacity: 0.35, flexShrink: 0, lineHeight: 1, fontSize: 9, color: 'var(--color-ink)' }} title="Reset color">
                               ✕
                             </button>
@@ -1450,7 +1446,7 @@ export default function CalendarPage() {
                                   {/* Single-day events */}
                                   <div style={{ paddingLeft: 4, paddingRight: 4, display: 'flex', flexDirection: 'column' }}>
                                     {allDayEvs.slice(0, shownAllDay).map((ev, ei) => {
-                                      const evColor  = ev.type === 'income' ? '#4ADE80' : ev.type === 'sub' ? '#F36369' : notionColor(ev)
+                                      const evColor  = notionColor(ev)
                                       const pillSel  = selectedEvId   === ev.id
                                       const pillHov  = hoveredPillKey === ev.id
                                       const isDraggable = ev.type === 'google' && !!ev.id
@@ -1464,10 +1460,10 @@ export default function CalendarPage() {
                                           onMouseEnter={() => ev.id && setHoveredPillKey(ev.id)}
                                           onMouseLeave={() => setHoveredPillKey(null)}
                                           onClick={ev.type === 'google' && ev.id ? (e) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), ev, ds) } : undefined}
-                                          style={{ background: (ev.type === 'income' || ev.type === 'sub') ? evColor : isPast ? evColor + '8C' : evColor, borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, cursor: isDraggable ? 'grab' : 'default', position: 'relative', boxShadow: pillSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none', opacity: isBeingDragged ? 0.4 : 1, transition: 'opacity 0.1s' }}
+                                          style={{ background: isPast ? evColor + '8C' : evColor, borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, cursor: isDraggable ? 'grab' : 'default', position: 'relative', boxShadow: pillSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none', opacity: isBeingDragged ? 0.4 : 1, transition: 'opacity 0.1s' }}
                                         >
                                           {(pillHov || pillSel) && ev.id && <div style={{ position: 'absolute', inset: 0, background: pillSel ? 'rgba(255,255,255,0.145)' : 'rgba(255,255,255,0.071)', pointerEvents: 'none', borderRadius: 4 }} />}
-                                          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.92)', fontFamily: 'var(--font-montserrat)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
+                                          <span style={{ fontSize: 10, color: isPast ? lightTextColor(evColor, true) : 'rgba(255,255,255,0.92)', fontFamily: 'var(--font-montserrat)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
                                         </div>
                                       )
                                     })}
@@ -1970,7 +1966,7 @@ export default function CalendarPage() {
     {swatchOpen && (() => {
       const { id, kind, top, left } = swatchOpen
       const currentColor = kind === 'type'
-        ? typeColors[id as EventType] ?? DOT_COLOR[id as EventType]
+        ? prefs.typeColors?.[id] ?? DOT_COLOR[id as EventType]
         : prefs.googleCalendarColors?.[id] ?? googleCals.find(c => c.id === id)?.backgroundColor ?? DOT_COLOR.google
       const popW = 4 * 22 + 3 * 6 + 20  // 4 cols + 3 gaps + padding = 126px
       return (
@@ -1994,7 +1990,7 @@ export default function CalendarPage() {
               <button
                 key={color}
                 onClick={() => {
-                  if (kind === 'type') setTypeColors(p => ({ ...p, [id as EventType]: color }))
+                  if (kind === 'type') savePrefs({ ...prefs, typeColors: { ...(prefs.typeColors ?? {}), [id]: color } })
                   else savePrefs({ ...prefs, googleCalendarColors: { ...(prefs.googleCalendarColors ?? {}), [id]: color } })
                   setSwatchOpen(null)
                 }}
@@ -2031,9 +2027,9 @@ export default function CalendarPage() {
           label: 'Change Color',
           action: () => { colorInputRefs.current.get(id)?.click(); setSidebarCtxMenu(null) },
         },
-        ...(kind === 'type' && typeColors[id as EventType] ? [{
+        ...(kind === 'type' && prefs.typeColors?.[id] ? [{
           label: 'Reset Color',
-          action: () => { setTypeColors(p => { const n = { ...p }; delete n[id as EventType]; return n }); setSidebarCtxMenu(null) },
+          action: () => { const tc = { ...(prefs.typeColors ?? {}) }; delete tc[id as EventType]; savePrefs({ ...prefs, typeColors: tc }); setSidebarCtxMenu(null) },
         }] : []),
         ...(kind === 'google' ? [{
           label: 'Remove Calendar',
