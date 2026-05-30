@@ -1104,11 +1104,6 @@ export default function CalendarPage() {
                         const nm = sidebarMonth === 0 ? 11 : sidebarMonth - 1
                         const ny = sidebarMonth === 0 ? sidebarYear - 1 : sidebarYear
                         setSidebarMonth(nm); setSidebarYear(ny)
-                        const firstDay = `${ny}-${String(nm + 1).padStart(2, '0')}-01`
-                        requestAnimationFrame(() => {
-                          const el = monthCellRefs.current.get(firstDay), sc = monthGridRef.current
-                          if (el && sc) { const cR = sc.getBoundingClientRect(), eR = el.getBoundingClientRect(); sc.scrollTop = sc.scrollTop + eR.top - cR.top - 120 }
-                        })
                       }} style={{ width: 22, height: 22, borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer', color: '#C9A84C', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>‹</button>
                       <span style={{ flex: 1, textAlign: 'center', fontSize: 10, fontWeight: 700, color: '#C9A84C', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                         {new Date(sidebarYear, sidebarMonth, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase()}
@@ -1117,11 +1112,6 @@ export default function CalendarPage() {
                         const nm = sidebarMonth === 11 ? 0 : sidebarMonth + 1
                         const ny = sidebarMonth === 11 ? sidebarYear + 1 : sidebarYear
                         setSidebarMonth(nm); setSidebarYear(ny)
-                        const firstDay = `${ny}-${String(nm + 1).padStart(2, '0')}-01`
-                        requestAnimationFrame(() => {
-                          const el = monthCellRefs.current.get(firstDay), sc = monthGridRef.current
-                          if (el && sc) { const cR = sc.getBoundingClientRect(), eR = el.getBoundingClientRect(); sc.scrollTop = sc.scrollTop + eR.top - cR.top - 120 }
-                        })
                       }} style={{ width: 22, height: 22, borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer', color: '#C9A84C', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>›</button>
                     </div>
                     {/* DOW mini header */}
