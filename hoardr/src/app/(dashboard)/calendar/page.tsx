@@ -242,6 +242,8 @@ export default function CalendarPage() {
   const [hoveredPillKey,  setHoveredPillKey]  = useState<string | null>(null)
   const [selectedEvId,    setSelectedEvId]    = useState<string | null>(null)
   const [deleteConfirm,   setDeleteConfirm]   = useState<CalEvent | null>(null)
+  const [dragState,    setDragState]    = useState<{ ev: CalEvent; originDate: string } | null>(null)
+  const [dragOverDate, setDragOverDate] = useState<string | null>(null)
   const [hiddenTypes,       setHiddenTypes]       = useState<Set<EventType>>(new Set())
   const [hiddenGoogleCals,  setHiddenGoogleCals]  = useState<Set<string>>(() => {
     try { const s = localStorage.getItem('cal-hidden-google-cals'); return s ? new Set(JSON.parse(s)) : new Set() } catch { return new Set() }
@@ -309,6 +311,7 @@ export default function CalendarPage() {
   const monthLblTapRef  = useRef<number>(0)
   const gridSwipe       = useRef<{ x: number; y: number } | null>(null)
   const handleDragRef   = useRef<{ startY: number; startH: number } | null>(null)
+  const dragOverRef     = useRef<string | null>(null)
 
   useEffect(() => { monthsRef.current = months }, [months])
   useEffect(() => { notionWeeksRef.current = notionWeeks }, [notionWeeks])
@@ -594,6 +597,39 @@ export default function CalendarPage() {
         onCommit: () => deleteCalEvent(ev.id!, ev.calendarId ?? 'primary'),
       },
     })
+  }
+
+  async function handleEventDrop(ev: CalEvent, newDate: string, originDate: string) {
+    if (!ev.id || newDate === originDate) return
+    const allDay = !ev.amount?.trim()
+    // Optimistic: move event to the new date in local state
+    setGoogleEvMap(prev => {
+      const m = { ...prev }
+      if (m[originDate]) {
+        m[originDate] = m[originDate].filter(e => e.id !== ev.id)
+        if (!m[originDate].length) delete m[originDate]
+      }
+      const updated: CalEvent = { ...ev, instanceDate: newDate }
+      m[newDate] = [...(m[newDate] ?? []), updated]
+      return m
+    })
+    try {
+      const body: GCalEvent = allDay
+        ? { summary: ev.title, start: { date: newDate }, end: { date: newDate } }
+        : (() => {
+            const parts = (ev.amount ?? '').split(' – ').map(t => t.trim())
+            return {
+              summary: ev.title,
+              start: { dateTime: `${newDate}T${parts[0] || '09:00'}:00`, timeZone: 'America/Los_Angeles' },
+              end:   { dateTime: `${newDate}T${parts[1] || '10:00'}:00`, timeZone: 'America/Los_Angeles' },
+            }
+          })()
+      await updateCalEvent(ev.id, body, ev.calendarId ?? 'primary')
+      showToast('Event moved', { type: 'payment' })
+    } catch {
+      showToast('Failed to move event', { type: 'delete' })
+      setGRefreshKey(k => k + 1)
+    }
   }
 
   function handleOpenEdit(ev: CalEvent) {
@@ -1261,10 +1297,25 @@ export default function CalendarPage() {
                                 ref={el => { if (el) monthCellRefs.current.set(ds, el); else monthCellRefs.current.delete(ds) }}
                                 onClick={() => setSelectedEvId(null)}
                                 onDoubleClick={e => { navigator.vibrate?.(6); if (calView === 'month') openCreatePopover(e.currentTarget.getBoundingClientRect(), ds) }}
+                                onDragOver={e => {
+                                  if (!dragState) return
+                                  e.preventDefault()
+                                  if (dragOverRef.current !== ds) { dragOverRef.current = ds; setDragOverDate(ds) }
+                                }}
+                                onDrop={e => {
+                                  e.preventDefault()
+                                  if (!dragState) return
+                                  const { ev, originDate } = dragState
+                                  setDragState(null); setDragOverDate(null); dragOverRef.current = null
+                                  handleEventDrop(ev, ds, originDate)
+                                }}
                                 className="group"
                                 style={{ minHeight: CELL_MIN_H, borderRight: ci < 6 ? '1px solid var(--color-grid-border)' : 'none', padding: '5px 0 4px', cursor: 'pointer', display: 'flex', flexDirection: 'column', background: isToday ? 'rgba(201,168,76,0.05)' : 'var(--color-bg-base)', position: 'relative' }}
                               >
                                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none" style={{ background: 'rgb(var(--rgb-ink) / 0.03)' }} />
+                                {dragOverDate === ds && dragState && (
+                                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(212,175,55,0.07)', border: '1.5px solid rgba(212,175,55,0.3)', pointerEvents: 'none', zIndex: 5 }} />
+                                )}
                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                                   {/* Date number row */}
                                   <div style={{ display: 'flex', alignItems: 'center', marginBottom: 3, flexShrink: 0, paddingLeft: 4, paddingRight: 4 }}>
@@ -1309,13 +1360,18 @@ export default function CalendarPage() {
                                       const evColor  = notionColor(ev)
                                       const pillSel  = selectedEvId   === ev.id
                                       const pillHov  = hoveredPillKey === ev.id
+                                      const isDraggable = ev.type === 'google' && !!ev.id
+                                      const isBeingDragged = dragState?.ev.id === ev.id
                                       return (
                                         <div
                                           key={ei}
+                                          draggable={isDraggable}
+                                          onDragStart={isDraggable ? (e) => { e.stopPropagation(); setDragState({ ev, originDate: ds }) } : undefined}
+                                          onDragEnd={isDraggable ? () => { setDragState(null); setDragOverDate(null); dragOverRef.current = null } : undefined}
                                           onMouseEnter={() => ev.id && setHoveredPillKey(ev.id)}
                                           onMouseLeave={() => setHoveredPillKey(null)}
                                           onClick={ev.type === 'google' && ev.id ? (e) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), ev, ds) } : undefined}
-                                          style={{ background: isPast ? evColor + '8C' : evColor, borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, cursor: (ev.type === 'google') && ev.id ? 'pointer' : 'default', position: 'relative', boxShadow: pillSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none' }}
+                                          style={{ background: isPast ? evColor + '8C' : evColor, borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, cursor: isDraggable ? 'grab' : 'default', position: 'relative', boxShadow: pillSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none', opacity: isBeingDragged ? 0.4 : 1, transition: 'opacity 0.1s' }}
                                         >
                                           {(pillHov || pillSel) && ev.id && <div style={{ position: 'absolute', inset: 0, background: pillSel ? 'rgba(255,255,255,0.145)' : 'rgba(255,255,255,0.071)', pointerEvents: 'none', borderRadius: 4 }} />}
                                           <span style={{ fontSize: 10, color: lightTextColor(evColor, isPast), fontFamily: 'var(--font-montserrat)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
@@ -1330,13 +1386,18 @@ export default function CalendarPage() {
                                         : null
                                       const timedSel = selectedEvId   === ev.id
                                       const timedHov = hoveredPillKey === ev.id
+                                      const isDraggable = ev.type === 'google' && !!ev.id
+                                      const isBeingDragged = dragState?.ev.id === ev.id
                                       return (
                                         <div
                                           key={ei}
+                                          draggable={isDraggable}
+                                          onDragStart={isDraggable ? (e) => { e.stopPropagation(); setDragState({ ev, originDate: ds }) } : undefined}
+                                          onDragEnd={isDraggable ? () => { setDragState(null); setDragOverDate(null); dragOverRef.current = null } : undefined}
                                           onMouseEnter={() => ev.id && setHoveredPillKey(ev.id)}
                                           onMouseLeave={() => setHoveredPillKey(null)}
                                           onClick={ev.type === 'google' && ev.id ? (e) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), ev, ds) } : undefined}
-                                          style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 2, height: 18, overflow: 'hidden', flexShrink: 0, background: 'transparent', borderRadius: 3, cursor: (ev.type === 'google') && ev.id ? 'pointer' : 'default', position: 'relative', boxShadow: timedSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none' }}
+                                          style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 2, height: 18, overflow: 'hidden', flexShrink: 0, background: 'transparent', borderRadius: 3, cursor: isDraggable ? 'grab' : 'default', position: 'relative', boxShadow: timedSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none', opacity: isBeingDragged ? 0.4 : 1, transition: 'opacity 0.1s' }}
                                         >
                                           {(timedHov || timedSel) && ev.id && <div style={{ position: 'absolute', inset: 0, background: timedSel ? 'rgba(255,255,255,0.145)' : 'rgba(255,255,255,0.071)', pointerEvents: 'none', borderRadius: 3 }} />}
                                           <div style={{ width: 3, height: '100%', borderRadius: '3px 0 0 3px', background: bar, flexShrink: 0 }} />
