@@ -1073,52 +1073,32 @@ export default function CalendarPage() {
           <div
             style={{ width: '100vw', height: '100%', flex: 'none', display: 'flex', flexDirection: 'column', background: 'var(--color-bg-base)', userSelect: 'none', cursor: 'default' }}>
 
-            {/* Top bar — month mode only; list mode header lives inside the compact grid */}
-            {calView === 'month' && (
-            <div style={{ paddingTop: 8, flexShrink: 0 }}>
-              <div className="px-5 pb-3 pt-0">
-                <div className="flex items-center gap-2">
-                  {/* List / Month toggle */}
-                  <div style={{ display: 'flex', background: 'rgb(var(--rgb-ink) / 0.06)', borderRadius: 20, padding: 2, gap: 2 }}>
-                    {(['list', 'month'] as const).map(v => (
-                      <button key={v} onClick={() => switchCalView(v)} style={{
-                        padding: '5px 14px', borderRadius: 18, border: 'none', cursor: 'pointer',
-                        fontSize: 11, fontWeight: 600, fontFamily: 'var(--font-montserrat)', letterSpacing: '0.04em',
-                        background: calView === v ? 'linear-gradient(135deg,#F7DF9E,#D4AF37,#A47F23)' : 'transparent',
-                        color: calView === v ? '#000' : 'rgb(var(--rgb-ink) / 0.4)',
-                        transition: 'background 0.15s, color 0.15s',
-                      }}>
-                        {v === 'list' ? 'List' : 'Month'}
-                      </button>
-                    ))}
-                  </div>
-                  <div style={{ flex: 1 }} />
-                  <button onClick={() => {
-                    setSidebarYear(today.getFullYear()); setSidebarMonth(today.getMonth())
-                    const el = monthCellRefs.current.get(todayStr)
-                    const sc = monthGridRef.current
-                    if (el && sc) {
-                      const cRect = sc.getBoundingClientRect()
-                      const eRect = el.getBoundingClientRect()
-                      sc.scrollTop = sc.scrollTop + eRect.top - cRect.top - 120
-                    }
-                  }} className="text-[11px] font-medium text-gold select-none">Today</button>
-                  <button onClick={() => setSettingsOpen(true)} className="w-9 h-9 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center select-none">
-                    <SlidersHorizontal size={15} className="text-ink-muted" />
-                  </button>
-                </div>
-              </div>
-            </div>
-            )}
 
             {/* Notion-Style Month Grid */}
             {calView === 'month' && (
               <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
 
-                {/* Sidebar (200px) */}
-                <div style={{ width: 200, background: 'var(--color-bg-surface)', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--color-grid-border)', flexShrink: 0 }}>
+                {/* Sidebar (200px) — extends full height to top of screen */}
+                <div style={{ width: 200, background: '#1D2026', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--color-grid-border)', flexShrink: 0 }}>
+                  {/* Top section: safe-area pad + List/Month toggle + settings gear */}
+                  <div style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)', paddingLeft: 10, paddingRight: 10, paddingBottom: 8, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ display: 'flex', background: 'rgb(var(--rgb-ink) / 0.08)', borderRadius: 20, padding: 2, gap: 2, flex: 1 }}>
+                      {(['list', 'month'] as const).map(v => (
+                        <button key={v} onClick={() => switchCalView(v)} style={{
+                          flex: 1, padding: '4px 0', borderRadius: 18, border: 'none', cursor: 'pointer',
+                          fontSize: 10, fontWeight: 600, fontFamily: 'var(--font-montserrat)', letterSpacing: '0.04em',
+                          background: calView === v ? 'linear-gradient(135deg,#F7DF9E,#D4AF37,#A47F23)' : 'transparent',
+                          color: calView === v ? '#000' : 'rgb(var(--rgb-ink) / 0.4)',
+                          transition: 'background 0.15s, color 0.15s',
+                        }}>{v === 'list' ? 'List' : 'Month'}</button>
+                      ))}
+                    </div>
+                    <button onClick={() => setSettingsOpen(true)} style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgb(var(--rgb-ink) / 0.06)', border: '1px solid rgb(var(--rgb-ink) / 0.07)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <SlidersHorizontal size={12} color="rgb(var(--rgb-ink) / 0.4)" />
+                    </button>
+                  </div>
                   {/* Mini month navigator */}
-                  <div style={{ padding: '14px 12px 10px', flexShrink: 0 }}>
+                  <div style={{ padding: '0 12px 10px', flexShrink: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8, gap: 2 }}>
                       <button onClick={() => { if (sidebarMonth === 0) { setSidebarMonth(11); setSidebarYear(y => y - 1) } else setSidebarMonth(m => m - 1) }}
                         style={{ width: 22, height: 22, borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer', color: '#C9A84C', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>‹</button>
@@ -1156,7 +1136,7 @@ export default function CalendarPage() {
                       while (cells.length % 7 !== 0)
                         cells.push({ day: nd++, year: nextYear, month: nextMonth, overflow: true })
                       return (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: '1px 0' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gridAutoRows: 28, gap: '1px 0' }}>
                           {cells.map((cell, i) => {
                             const ds      = toDateStr(cell.year, cell.month, cell.day)
                             const isToday = ds === todayStr
@@ -1178,12 +1158,14 @@ export default function CalendarPage() {
                                     sc.scrollTop = sc.scrollTop + eRect.top - cRect.top - 120
                                   }
                                 }}
-                                style={{ height: 28, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, position: 'relative' }}
+                                style={{ height: 28, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
                               >
-                                {/* Squircle highlight — today uses gold, hover uses white tint */}
-                                <div style={{ position: 'absolute', width: 28, height: 28, borderRadius: 5, background: hlBg, transition: 'background 0.1s', pointerEvents: 'none' }} />
-                                <span style={{ position: 'relative', zIndex: 1, fontSize: 9, fontWeight: isToday ? 700 : 400, color: isToday ? '#000' : 'rgb(var(--rgb-ink) / 0.55)', fontFamily: 'var(--font-montserrat)', opacity: cell.overflow ? 0.35 : 1 }}>{cell.day}</span>
-                                {hasEvs && !isToday && <span style={{ position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)', width: 3, height: 3, borderRadius: '50%', background: '#C9A84C', opacity: 0.5, zIndex: 1 }} />}
+                                {/* Fixed 28×28 inner frame — highlight lives here, never affects grid row height */}
+                                <div style={{ position: 'relative', width: 28, height: 28, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                  <div style={{ position: 'absolute', inset: 0, borderRadius: 5, background: hlBg, transition: 'background 0.1s' }} />
+                                  <span style={{ position: 'relative', zIndex: 1, fontSize: 9, fontWeight: isToday ? 700 : 400, color: isToday ? '#000' : 'rgb(var(--rgb-ink) / 0.55)', fontFamily: 'var(--font-montserrat)', opacity: cell.overflow ? 0.35 : 1 }}>{cell.day}</span>
+                                  {hasEvs && !isToday && <span style={{ position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)', width: 3, height: 3, borderRadius: '50%', background: '#C9A84C', opacity: 0.5, zIndex: 1 }} />}
+                                </div>
                               </button>
                             )
                           })}
@@ -1328,6 +1310,10 @@ export default function CalendarPage() {
 
                 {/* Main Notion grid */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, background: 'var(--color-bg-base)' }}>
+                  {/* Safe-area top + month label */}
+                  <div style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 10px)', paddingLeft: 10, paddingBottom: 5, flexShrink: 0 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#C9A84C', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.75 }}>{notionGridLbl}</span>
+                  </div>
                   {/* Sticky DOW header */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', background: 'var(--color-bg-base)', borderBottom: '1px solid var(--color-grid-border)', flexShrink: 0 }}>
                     {(wsMon ? ['MON','TUE','WED','THU','FRI','SAT','SUN'] : ['SUN','MON','TUE','WED','THU','FRI','SAT']).map(d => (
