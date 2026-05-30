@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getWeekStartsMonday } from '@/lib/week-start'
-import { cn, nextRenewalDate, localToday } from '@/lib/utils'
+import { cn, nextRenewalDate } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
 import { COLOR_PALETTE } from '@/lib/category-meta'
 import { Plus, SlidersHorizontal, Eye, EyeOff, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning, type LucideIcon } from 'lucide-react'
@@ -386,14 +386,17 @@ export default function CalendarPage() {
       if (gen !== loadGen.current) return
       if (profile?.calendar_prefs) setPrefs(profile.calendar_prefs as CalPrefs)
 
-      const calToday = localToday()
+      // Use browser local date — must match todayStr (which also uses new Date()) so that
+      // events advanced to "today" are not immediately classified as isPast
+      const _now = new Date()
+      const calToday = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`
       const map: Record<string, CalEvent[]> = {}
       const push = (date: string, ev: CalEvent) => { if (!map[date]) map[date] = []; map[date].push(ev) }
 
       // Historical income entries
       for (const i of inc ?? []) push(String(i.date), { title: String(i.name), type: 'income', amount: `+$${Number(i.amount).toFixed(2)}` })
 
-      // Upcoming income from revenue streams — advance stale next_pay_date to future
+      // Upcoming income from revenue streams — advance stale next_pay_date to today or future
       function advancePayDate(date: string, freq: string): string {
         const [y, m, d] = date.split('-').map(Number)
         const dt = freq === 'Weekly'       ? new Date(y, m - 1, d + 7)  :
@@ -409,11 +412,12 @@ export default function CalendarPage() {
         push(payDate, { title: String(r.name), type: 'income', amount: `+$${Number(r.amount).toFixed(2)}` })
       }
 
-      // Subscriptions — advance stale next_renewal to next upcoming date
+      // Subscriptions — advance stale next_renewal to today or future
+      // Guard: skip entirely if billing is missing (can't advance without it)
       for (const s of subs ?? []) {
-        if (!s.next_renewal) continue
+        if (!s.next_renewal || !s.billing) continue
         let renewDate = String(s.next_renewal)
-        while (renewDate < calToday && s.billing) renewDate = nextRenewalDate(renewDate, s.billing as Parameters<typeof nextRenewalDate>[1])
+        while (renewDate < calToday) renewDate = nextRenewalDate(renewDate, s.billing as Parameters<typeof nextRenewalDate>[1])
         push(renewDate, { title: String(s.name), type: 'sub', amount: `$${Number(s.cost).toFixed(2)}` })
       }
       setEventMap(map)
