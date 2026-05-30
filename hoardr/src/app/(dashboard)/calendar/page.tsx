@@ -191,7 +191,6 @@ export default function CalendarPage() {
   const router   = useRouter()
   const today    = useMemo(() => new Date(), [])
   const todayStr = useMemo(() => toDateStr(today.getFullYear(), today.getMonth(), today.getDate()), [today])
-  console.log('[CAL DEBUG] todayStr:', todayStr)
 
   // ── View state: 0=Split/Grid 1=Day ───────────────────────────────────────
   const [viewIndex,         setViewIndex]         = useState<0 | 1>(0)
@@ -377,9 +376,8 @@ export default function CalendarPage() {
     abortRef.current = controller
     const gen = ++loadGen.current
     try {
-      const [{ data: inc }, { data: subs }, { data: streams }, { data: profile }] =
+      const [{ data: subs }, { data: streams }, { data: profile }] =
         await Promise.all([
-          supabase.from('income').select('name, amount, date').abortSignal(controller.signal),
           supabase.from('subscriptions').select('name, cost, next_renewal, billing').eq('status', 'Active').abortSignal(controller.signal),
           supabase.from('revenue_streams').select('name, amount, freq, next_pay_date').abortSignal(controller.signal),
           supabase.from('profiles').select('calendar_prefs').abortSignal(controller.signal).single(),
@@ -390,9 +388,6 @@ export default function CalendarPage() {
       const calToday = localToday()
       const map: Record<string, CalEvent[]> = {}
       const push = (date: string, ev: CalEvent) => { if (!map[date]) map[date] = []; map[date].push(ev) }
-
-      // Historical income (past dates, faded)
-      for (const i of inc ?? []) push(String(i.date), { title: String(i.name), type: 'income', amount: `+$${Number(i.amount).toFixed(2)}` })
 
       // Upcoming income from revenue streams — advance stale next_pay_date to future
       function advancePayDate(date: string, freq: string): string {
@@ -417,11 +412,6 @@ export default function CalendarPage() {
         while (renewDate < calToday && s.billing) renewDate = nextRenewalDate(renewDate, s.billing as Parameters<typeof nextRenewalDate>[1])
         push(renewDate, { title: String(s.name), type: 'sub', amount: `$${Number(s.cost).toFixed(2)}` })
       }
-      console.log('[CAL DEBUG] calToday:', calToday)
-      console.log('[CAL DEBUG] raw income rows:', JSON.stringify(inc?.slice(0, 3)))
-      console.log('[CAL DEBUG] raw subs:', JSON.stringify(subs?.map(s => ({ name: s.name, next_renewal: s.next_renewal, billing: s.billing }))))
-      console.log('[CAL DEBUG] raw streams:', JSON.stringify(streams?.map(r => ({ name: r.name, next_pay_date: r.next_pay_date, freq: r.freq }))))
-      console.log('[CAL DEBUG] eventMap keys (sample):', JSON.stringify(Object.keys(map).sort().slice(-10)))
       setEventMap(map)
       setDataLoaded(true)
     } catch (err) {
