@@ -418,10 +418,10 @@ export default function CalendarPage() {
         push(renewDate, { title: String(s.name), type: 'sub', amount: `$${Number(s.cost).toFixed(2)}` })
       }
       console.log('[CAL DEBUG] calToday:', calToday)
-      console.log('[CAL DEBUG] raw income rows:', inc?.slice(0, 3))
-      console.log('[CAL DEBUG] raw subs:', subs?.map(s => ({ name: s.name, next_renewal: s.next_renewal, billing: s.billing })))
-      console.log('[CAL DEBUG] raw streams:', streams?.map(r => ({ name: r.name, next_pay_date: r.next_pay_date, freq: r.freq })))
-      console.log('[CAL DEBUG] eventMap keys (sample):', Object.keys(map).sort().slice(-10))
+      console.log('[CAL DEBUG] raw income rows:', JSON.stringify(inc?.slice(0, 3)))
+      console.log('[CAL DEBUG] raw subs:', JSON.stringify(subs?.map(s => ({ name: s.name, next_renewal: s.next_renewal, billing: s.billing }))))
+      console.log('[CAL DEBUG] raw streams:', JSON.stringify(streams?.map(r => ({ name: r.name, next_pay_date: r.next_pay_date, freq: r.freq }))))
+      console.log('[CAL DEBUG] eventMap keys (sample):', JSON.stringify(Object.keys(map).sort().slice(-10)))
       setEventMap(map)
       setDataLoaded(true)
     } catch (err) {
