@@ -1078,8 +1078,8 @@ export default function CalendarPage() {
             {calView === 'month' && (
               <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
 
-                {/* Sidebar (200px) — extends full height to top of screen */}
-                <div style={{ width: 200, background: '#1D2026', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--color-grid-border)', flexShrink: 0 }}>
+                {/* Sidebar — extends full height to top of screen */}
+                <div style={{ width: 215, background: '#1D2026', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--color-grid-border)', flexShrink: 0, overflowY: 'auto' }}>
                   {/* Top section: safe-area pad + List/Month toggle + settings gear */}
                   <div style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)', paddingLeft: 10, paddingRight: 10, paddingBottom: 8, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
                     <div style={{ display: 'flex', background: 'rgb(var(--rgb-ink) / 0.08)', borderRadius: 20, padding: 2, gap: 2, flex: 1 }}>
@@ -1100,16 +1100,32 @@ export default function CalendarPage() {
                   {/* Mini month navigator */}
                   <div style={{ padding: '0 12px 10px', flexShrink: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8, gap: 2 }}>
-                      <button onClick={() => { if (sidebarMonth === 0) { setSidebarMonth(11); setSidebarYear(y => y - 1) } else setSidebarMonth(m => m - 1) }}
-                        style={{ width: 22, height: 22, borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer', color: '#C9A84C', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>‹</button>
+                      <button onClick={() => {
+                        const nm = sidebarMonth === 0 ? 11 : sidebarMonth - 1
+                        const ny = sidebarMonth === 0 ? sidebarYear - 1 : sidebarYear
+                        setSidebarMonth(nm); setSidebarYear(ny)
+                        const firstDay = `${ny}-${String(nm + 1).padStart(2, '0')}-01`
+                        requestAnimationFrame(() => {
+                          const el = monthCellRefs.current.get(firstDay), sc = monthGridRef.current
+                          if (el && sc) { const cR = sc.getBoundingClientRect(), eR = el.getBoundingClientRect(); sc.scrollTop = sc.scrollTop + eR.top - cR.top - 120 }
+                        })
+                      }} style={{ width: 22, height: 22, borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer', color: '#C9A84C', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>‹</button>
                       <span style={{ flex: 1, textAlign: 'center', fontSize: 10, fontWeight: 700, color: '#C9A84C', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                         {new Date(sidebarYear, sidebarMonth, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase()}
                       </span>
-                      <button onClick={() => { if (sidebarMonth === 11) { setSidebarMonth(0); setSidebarYear(y => y + 1) } else setSidebarMonth(m => m + 1) }}
-                        style={{ width: 22, height: 22, borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer', color: '#C9A84C', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>›</button>
+                      <button onClick={() => {
+                        const nm = sidebarMonth === 11 ? 0 : sidebarMonth + 1
+                        const ny = sidebarMonth === 11 ? sidebarYear + 1 : sidebarYear
+                        setSidebarMonth(nm); setSidebarYear(ny)
+                        const firstDay = `${ny}-${String(nm + 1).padStart(2, '0')}-01`
+                        requestAnimationFrame(() => {
+                          const el = monthCellRefs.current.get(firstDay), sc = monthGridRef.current
+                          if (el && sc) { const cR = sc.getBoundingClientRect(), eR = el.getBoundingClientRect(); sc.scrollTop = sc.scrollTop + eR.top - cR.top - 120 }
+                        })
+                      }} style={{ width: 22, height: 22, borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer', color: '#C9A84C', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>›</button>
                     </div>
                     {/* DOW mini header */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', marginBottom: 2 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0,1fr))', marginBottom: 2 }}>
                       {(wsMon ? ['M','T','W','T','F','S','S'] : ['S','M','T','W','T','F','S']).map((d, i) => (
                         <div key={i} style={{ textAlign: 'center', fontSize: 8, fontWeight: 600, color: 'rgb(var(--rgb-ink) / 0.25)', fontFamily: 'var(--font-montserrat)', paddingBottom: 2 }}>{d}</div>
                       ))}
@@ -1133,10 +1149,10 @@ export default function CalendarPage() {
                       for (let d = 1; d <= dim; d++)
                         cells.push({ day: d, year: sidebarYear, month: sidebarMonth, overflow: false })
                       let nd = 1
-                      while (cells.length % 7 !== 0)
+                      while (cells.length < 42)
                         cells.push({ day: nd++, year: nextYear, month: nextMonth, overflow: true })
                       return (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gridAutoRows: 28, gap: '1px 0' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0,1fr))', gridAutoRows: '28px', gap: '1px 0' }}>
                           {cells.map((cell, i) => {
                             const ds      = toDateStr(cell.year, cell.month, cell.day)
                             const isToday = ds === todayStr
@@ -1161,7 +1177,7 @@ export default function CalendarPage() {
                                 style={{ height: 28, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
                               >
                                 {/* Fixed 28×28 inner frame — highlight lives here, never affects grid row height */}
-                                <div style={{ position: 'relative', width: 28, height: 28, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                <div style={{ position: 'relative', width: '100%', height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                                   <div style={{ position: 'absolute', inset: 0, borderRadius: 5, background: hlBg, transition: 'background 0.1s' }} />
                                   <span style={{ position: 'relative', zIndex: 1, fontSize: 9, fontWeight: isToday ? 700 : 400, color: isToday ? '#000' : 'rgb(var(--rgb-ink) / 0.55)', fontFamily: 'var(--font-montserrat)', opacity: cell.overflow ? 0.35 : 1 }}>{cell.day}</span>
                                   {hasEvs && !isToday && <span style={{ position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)', width: 3, height: 3, borderRadius: '50%', background: '#C9A84C', opacity: 0.5, zIndex: 1 }} />}
