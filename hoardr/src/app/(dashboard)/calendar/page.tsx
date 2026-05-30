@@ -257,6 +257,7 @@ export default function CalendarPage() {
     new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
   )
   const [hoveredSidebarRow, setHoveredSidebarRow] = useState<string | null>(null)
+  const [hoveredSidebarDay, setHoveredSidebarDay] = useState<string | null>(null)
   const [sidebarCtxMenu, setSidebarCtxMenu] = useState<{ id: string; kind: 'type' | 'google'; x: number; y: number } | null>(null)
   const [sidebarYear, setSidebarYear] = useState(today.getFullYear())
   const [sidebarMonth, setSidebarMonth] = useState(today.getMonth())
@@ -1137,27 +1138,52 @@ export default function CalendarPage() {
                     {(() => {
                       const dim      = getDaysInMonth(sidebarYear, sidebarMonth)
                       const firstDow = wsMon ? (new Date(sidebarYear, sidebarMonth, 1).getDay() + 6) % 7 : new Date(sidebarYear, sidebarMonth, 1).getDay()
-                      const cells: (number | null)[] = [...Array(firstDow).fill(null), ...Array.from({ length: dim }, (_, i) => i + 1)]
-                      while (cells.length % 7 !== 0) cells.push(null)
+                      // Prev-month overflow
+                      const prevYear  = sidebarMonth === 0 ? sidebarYear - 1 : sidebarYear
+                      const prevMonth = sidebarMonth === 0 ? 11 : sidebarMonth - 1
+                      const prevDim   = getDaysInMonth(prevYear, prevMonth)
+                      // Next-month overflow
+                      const nextYear  = sidebarMonth === 11 ? sidebarYear + 1 : sidebarYear
+                      const nextMonth = sidebarMonth === 11 ? 0 : sidebarMonth + 1
+                      // Build full grid: prev overflow + current + next overflow
+                      type Cell = { day: number; year: number; month: number; overflow: boolean }
+                      const cells: Cell[] = []
+                      for (let i = firstDow - 1; i >= 0; i--)
+                        cells.push({ day: prevDim - i, year: prevYear, month: prevMonth, overflow: true })
+                      for (let d = 1; d <= dim; d++)
+                        cells.push({ day: d, year: sidebarYear, month: sidebarMonth, overflow: false })
+                      let nd = 1
+                      while (cells.length % 7 !== 0)
+                        cells.push({ day: nd++, year: nextYear, month: nextMonth, overflow: true })
                       return (
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: '1px 0' }}>
-                          {cells.map((day, i) => {
-                            if (day === null) return <div key={i} style={{ height: 20 }} />
-                            const ds      = toDateStr(sidebarYear, sidebarMonth, day)
+                          {cells.map((cell, i) => {
+                            const ds      = toDateStr(cell.year, cell.month, cell.day)
                             const isToday = ds === todayStr
-                            const hasEvs  = (monthVisibleMap[ds] ?? []).length > 0
+                            const hasEvs  = !cell.overflow && (monthVisibleMap[ds] ?? []).length > 0
+                            const hov     = hoveredSidebarDay === ds
+                            const hlBg    = isToday ? '#C9A84C' : hov ? (cell.overflow ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.07)') : 'transparent'
                             return (
-                              <button key={i} onClick={() => {
-                                const el = monthCellRefs.current.get(ds)
-                                const sc = monthGridRef.current
-                                if (el && sc) {
-                                  const cRect = sc.getBoundingClientRect()
-                                  const eRect = el.getBoundingClientRect()
-                                  sc.scrollTop = sc.scrollTop + eRect.top - cRect.top - 120
-                                }
-                              }} style={{ height: 20, borderRadius: '50%', background: isToday ? '#C9A84C' : 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, position: 'relative' }}>
-                                <span style={{ fontSize: 9, fontWeight: isToday ? 700 : 400, color: isToday ? '#000' : 'rgb(var(--rgb-ink) / 0.55)', fontFamily: 'var(--font-montserrat)' }}>{day}</span>
-                                {hasEvs && !isToday && <span style={{ position: 'absolute', bottom: 1, left: '50%', transform: 'translateX(-50%)', width: 3, height: 3, borderRadius: '50%', background: '#C9A84C', opacity: 0.5 }} />}
+                              <button
+                                key={i}
+                                onMouseEnter={() => setHoveredSidebarDay(ds)}
+                                onMouseLeave={() => setHoveredSidebarDay(p => p === ds ? null : p)}
+                                onClick={() => {
+                                  if (cell.overflow) { setSidebarYear(cell.year); setSidebarMonth(cell.month) }
+                                  const el = monthCellRefs.current.get(ds)
+                                  const sc = monthGridRef.current
+                                  if (el && sc) {
+                                    const cRect = sc.getBoundingClientRect()
+                                    const eRect = el.getBoundingClientRect()
+                                    sc.scrollTop = sc.scrollTop + eRect.top - cRect.top - 120
+                                  }
+                                }}
+                                style={{ height: 28, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, position: 'relative' }}
+                              >
+                                {/* Squircle highlight — today uses gold, hover uses white tint */}
+                                <div style={{ position: 'absolute', width: 28, height: 28, borderRadius: 5, background: hlBg, transition: 'background 0.1s', pointerEvents: 'none' }} />
+                                <span style={{ position: 'relative', zIndex: 1, fontSize: 9, fontWeight: isToday ? 700 : 400, color: isToday ? '#000' : 'rgb(var(--rgb-ink) / 0.55)', fontFamily: 'var(--font-montserrat)', opacity: cell.overflow ? 0.35 : 1 }}>{cell.day}</span>
+                                {hasEvs && !isToday && <span style={{ position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)', width: 3, height: 3, borderRadius: '50%', background: '#C9A84C', opacity: 0.5, zIndex: 1 }} />}
                               </button>
                             )
                           })}
