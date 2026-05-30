@@ -993,8 +993,9 @@ export default function CalendarPage() {
           <div
             style={{ width: '100vw', height: '100%', flex: 'none', display: 'flex', flexDirection: 'column', background: 'var(--color-bg-base)', userSelect: 'none', cursor: 'default' }}>
 
-            {/* Top bar */}
-            <div style={{ paddingTop: calView === 'month' ? 8 : SAFE_TOP, flexShrink: 0 }}>
+            {/* Top bar — month mode only; list mode header lives inside the compact grid */}
+            {calView === 'month' && (
+            <div style={{ paddingTop: 8, flexShrink: 0 }}>
               <div className="px-5 pb-3 pt-0">
                 <div className="flex items-center gap-2">
                   {/* List / Month toggle */}
@@ -1012,34 +1013,23 @@ export default function CalendarPage() {
                     ))}
                   </div>
                   <div style={{ flex: 1 }} />
-                  {calView === 'month' && (
-                    <button onClick={() => {
-                      setSidebarYear(today.getFullYear()); setSidebarMonth(today.getMonth())
-                      const el = monthCellRefs.current.get(todayStr)
-                      const sc = monthGridRef.current
-                      if (el && sc) {
-                        const cRect = sc.getBoundingClientRect()
-                        const eRect = el.getBoundingClientRect()
-                        sc.scrollTop = sc.scrollTop + eRect.top - cRect.top - 120
-                      }
-                    }} className="text-[11px] font-medium text-gold select-none">Today</button>
-                  )}
+                  <button onClick={() => {
+                    setSidebarYear(today.getFullYear()); setSidebarMonth(today.getMonth())
+                    const el = monthCellRefs.current.get(todayStr)
+                    const sc = monthGridRef.current
+                    if (el && sc) {
+                      const cRect = sc.getBoundingClientRect()
+                      const eRect = el.getBoundingClientRect()
+                      sc.scrollTop = sc.scrollTop + eRect.top - cRect.top - 120
+                    }
+                  }} className="text-[11px] font-medium text-gold select-none">Today</button>
                   <button onClick={() => setSettingsOpen(true)} className="w-9 h-9 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center select-none">
                     <SlidersHorizontal size={15} className="text-ink-muted" />
                   </button>
-                  {calView !== 'month' && <>
-                    <button onClick={goToPrev} className="w-8 h-8 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center text-ink-muted text-[14px] select-none">‹</button>
-                    <button onClick={goToNext} className="w-8 h-8 rounded-full bg-bg-surface border border-white/[0.06] flex items-center justify-center text-ink-muted text-[14px] select-none">›</button>
-                  </>}
                 </div>
-                {calView !== 'month' && (
-                  <div className="flex items-center justify-between mt-2">
-                    <p className="text-[18px] font-semibold text-ink">{gridMonthLbl}</p>
-                    <button onClick={goToToday} className="text-[11px] font-medium text-gold select-none">Today</button>
-                  </div>
-                )}
               </div>
             </div>
+            )}
 
             {/* Notion-Style Month Grid */}
             {calView === 'month' && (
@@ -1381,15 +1371,32 @@ export default function CalendarPage() {
               {/* Compact month grid — collapsible */}
               <div style={{ height: gridH, overflow: 'hidden', flexShrink: 0, transition: isDraggingHandle ? 'none' : 'height 0.3s cubic-bezier(0.4,0,0.2,1)', background: 'var(--color-bg-surface)' }}>
                 <div style={{ height: GRID_EXPANDED, display: 'flex', flexDirection: 'column' }}>
-                  {/* Month header */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 16, paddingRight: 12, paddingTop: 12, paddingBottom: 6, flexShrink: 0 }}>
+                  {/* Single header row: [List/Month toggle] — [month label] — [‹ › settings Today] */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 12, paddingRight: 12, paddingTop: 10, paddingBottom: 6, flexShrink: 0 }}>
+                    {/* List / Month toggle */}
+                    <div style={{ display: 'flex', background: 'rgb(var(--rgb-ink) / 0.06)', borderRadius: 20, padding: 2, gap: 2, flexShrink: 0 }}>
+                      {(['list', 'month'] as const).map(v => (
+                        <button key={v} onClick={() => switchCalView(v)} style={{
+                          padding: '4px 12px', borderRadius: 18, border: 'none', cursor: 'pointer',
+                          fontSize: 11, fontWeight: 600, fontFamily: 'var(--font-montserrat)', letterSpacing: '0.04em',
+                          background: calView === v ? 'linear-gradient(135deg,#F7DF9E,#D4AF37,#A47F23)' : 'transparent',
+                          color: calView === v ? '#000' : 'rgb(var(--rgb-ink) / 0.4)',
+                          transition: 'background 0.15s, color 0.15s',
+                        }}>{v === 'list' ? 'List' : 'Month'}</button>
+                      ))}
+                    </div>
+                    {/* Month label — centered */}
                     <span
-                      style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', userSelect: 'none', cursor: 'pointer', letterSpacing: '-0.01em' }}
+                      style={{ flex: 1, textAlign: 'center', fontSize: 15, fontWeight: 700, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', userSelect: 'none', cursor: 'pointer', letterSpacing: '-0.01em' }}
                       onDoubleClick={scrollListToToday}
                     >{gridMonthLbl}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {/* Right controls */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                       <button onClick={goToPrev} style={{ width: 24, height: 24, borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer', color: '#C9A84C', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
                       <button onClick={goToNext} style={{ width: 24, height: 24, borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer', color: '#C9A84C', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
+                      <button onClick={() => setSettingsOpen(true)} style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgb(var(--rgb-ink) / 0.06)', border: '1px solid rgb(var(--rgb-ink) / 0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <SlidersHorizontal size={13} color="rgb(var(--rgb-ink) / 0.45)" />
+                      </button>
                       <button onClick={() => { goToToday(); scrollListToToday() }} style={{ fontSize: 11, fontWeight: 600, color: '#D4AF37', background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.02em' }}>Today</button>
                     </div>
                   </div>
