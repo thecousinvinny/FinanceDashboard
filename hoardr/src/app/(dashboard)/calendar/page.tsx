@@ -191,6 +191,7 @@ export default function CalendarPage() {
   const router   = useRouter()
   const today    = useMemo(() => new Date(), [])
   const todayStr = useMemo(() => toDateStr(today.getFullYear(), today.getMonth(), today.getDate()), [today])
+  console.log('[CAL DEBUG] todayStr:', todayStr)
 
   // ── View state: 0=Split/Grid 1=Day ───────────────────────────────────────
   const [viewIndex,         setViewIndex]         = useState<0 | 1>(0)
@@ -416,6 +417,11 @@ export default function CalendarPage() {
         while (renewDate < calToday && s.billing) renewDate = nextRenewalDate(renewDate, s.billing as Parameters<typeof nextRenewalDate>[1])
         push(renewDate, { title: String(s.name), type: 'sub', amount: `$${Number(s.cost).toFixed(2)}` })
       }
+      console.log('[CAL DEBUG] calToday:', calToday)
+      console.log('[CAL DEBUG] raw income rows:', inc?.slice(0, 3))
+      console.log('[CAL DEBUG] raw subs:', subs?.map(s => ({ name: s.name, next_renewal: s.next_renewal, billing: s.billing })))
+      console.log('[CAL DEBUG] raw streams:', streams?.map(r => ({ name: r.name, next_pay_date: r.next_pay_date, freq: r.freq })))
+      console.log('[CAL DEBUG] eventMap keys (sample):', Object.keys(map).sort().slice(-10))
       setEventMap(map)
       setDataLoaded(true)
     } catch (err) {
