@@ -1464,10 +1464,10 @@ export default function CalendarPage() {
                                           onMouseEnter={() => ev.id && setHoveredPillKey(ev.id)}
                                           onMouseLeave={() => setHoveredPillKey(null)}
                                           onClick={ev.type === 'google' && ev.id ? (e) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), ev, ds) } : undefined}
-                                          style={{ background: isPast ? evColor + '8C' : evColor, borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, cursor: isDraggable ? 'grab' : 'default', position: 'relative', boxShadow: pillSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none', opacity: isBeingDragged ? 0.4 : 1, transition: 'opacity 0.1s' }}
+                                          style={{ background: (ev.type === 'income' || ev.type === 'sub') ? evColor : isPast ? evColor + '8C' : evColor, borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, cursor: isDraggable ? 'grab' : 'default', position: 'relative', boxShadow: pillSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none', opacity: isBeingDragged ? 0.4 : 1, transition: 'opacity 0.1s' }}
                                         >
                                           {(pillHov || pillSel) && ev.id && <div style={{ position: 'absolute', inset: 0, background: pillSel ? 'rgba(255,255,255,0.145)' : 'rgba(255,255,255,0.071)', pointerEvents: 'none', borderRadius: 4 }} />}
-                                          <span style={{ fontSize: 10, color: isPast ? lightTextColor(evColor, true) : 'rgba(255,255,255,0.92)', fontFamily: 'var(--font-montserrat)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
+                                          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.92)', fontFamily: 'var(--font-montserrat)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
                                         </div>
                                       )
                                     })}
