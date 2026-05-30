@@ -943,7 +943,8 @@ export default function CalendarPage() {
     }
     const targetL = isPast ? 75 : 95
     const maxS    = isPast ? 0.50 : 0.85
-    return `hsl(${Math.round(hDeg)}, ${Math.round(Math.min(s, maxS) * 100)}%, ${targetL}%)`
+    const minS    = isPast ? 0    : 0.35   // prevent near-gray text on desaturated backgrounds
+    return `hsl(${Math.round(hDeg)}, ${Math.round(Math.max(Math.min(s, maxS), minS) * 100)}%, ${targetL}%)`
   }
 
   // ── Grid helpers ───────────────────────────────────────────────────────────
@@ -1463,9 +1464,9 @@ export default function CalendarPage() {
                                           style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 2, height: 18, overflow: 'hidden', flexShrink: 0, background: 'transparent', borderRadius: 3, cursor: isDraggable ? 'grab' : 'default', position: 'relative', boxShadow: timedSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none', opacity: isBeingDragged ? 0.4 : 1, transition: 'opacity 0.1s' }}
                                         >
                                           {(timedHov || timedSel) && ev.id && <div style={{ position: 'absolute', inset: 0, background: timedSel ? 'rgba(255,255,255,0.145)' : 'rgba(255,255,255,0.071)', pointerEvents: 'none', borderRadius: 3 }} />}
-                                          <div style={{ width: 3, height: '100%', borderRadius: '3px 0 0 3px', background: bar, flexShrink: 0 }} />
+                                          <div style={{ width: 3, height: '100%', borderRadius: '3px 0 0 3px', background: isPast ? bar + '8C' : bar, flexShrink: 0 }} />
                                           <span style={{ fontSize: 10, color: lightTextColor(bar, isPast), fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, paddingLeft: 4, paddingRight: 3 }}>
-                                            {timeStr && <span style={{ color: lightTextColor(bar, isPast), opacity: 0.6, marginRight: 3 }}>{timeStr}</span>}{ev.title}
+                                            {timeStr && <span style={{ color: lightTextColor(bar, true), marginRight: 3 }}>{timeStr}</span>}{ev.title}
                                           </span>
                                         </div>
                                       )
