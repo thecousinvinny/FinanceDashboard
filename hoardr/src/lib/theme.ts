@@ -1,31 +1,24 @@
 export type Theme = 'obsidian' | 'charcoal-slate' | 'cool-linen' | 'midnight-teal'
 
 export interface ThemeDef {
-  id:        Theme
-  label:     string
-  subtitle:  string
-  swatches:  [string, string, string]
-  gradient?: string  // when set, renders a single gradient swatch instead of 3 flat chips
+  id:       Theme
+  label:    string
+  subtitle: string
+  swatches: [string, string, string]  // CSS color strings — may be flat hex or gradient
 }
 
 export const THEMES: ThemeDef[] = [
   { id: 'obsidian',       label: 'Obsidian',       subtitle: 'Dark',  swatches: ['#0A0A0B', '#16161B', '#1A1A1E'] },
   { id: 'charcoal-slate', label: 'Charcoal Slate', subtitle: 'Dark',  swatches: ['#191B1F', '#21242A', '#2A2D35'] },
   { id: 'cool-linen',     label: 'Cool Linen',     subtitle: 'Light', swatches: ['#F0F2F5', '#E8EAEE', '#DFE2E7'] },
-  {
-    id:       'midnight-teal',
-    label:    'Midnight Teal',
-    subtitle: 'Dark',
-    swatches: ['#161E27', '#2DD4BF', '#22D3EE'],
-    gradient: 'linear-gradient(135deg, #2DD4BF 0%, #22D3EE 100%)',
-  },
+  { id: 'midnight-teal', label: 'Midnight Teal', subtitle: 'Dark',  swatches: ['#141414', '#1C1F22', 'linear-gradient(135deg, #2DD4BF, #22D3EE)'] },
 ]
 
 const THEME_BG: Record<Theme, string> = {
   'obsidian':       '#0A0A0B',
   'charcoal-slate': '#191B1F',
   'cool-linen':     '#F0F2F5',
-  'midnight-teal':  '#0E151D',
+  'midnight-teal':  '#141414',
 }
 
 export function applyTheme(t: Theme) {

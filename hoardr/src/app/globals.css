@@ -323,10 +323,10 @@ html.light nav[class*="fixed bottom-0"] {
 
 html.midnight-teal {
   /* ── Background tokens ────────────────────────────────────────────────── */
-  --rgb-bg-base:     14 21 29;      /* #0E151D */
-  --rgb-bg-surface:  22 30 39;      /* #161E27 */
-  --rgb-bg-elevated: 28 42 54;      /* #1C2A36 */
-  --rgb-bg-overlay:  36 48 64;      /* #243040 */
+  --rgb-bg-base:     20 20 20;      /* #141414 — near-neutral charcoal */
+  --rgb-bg-surface:  28 31 34;      /* #1C1F22 — dark gray, zero blue cast */
+  --rgb-bg-elevated: 36 39 41;      /* #242729 — medium charcoal */
+  --rgb-bg-overlay:  44 48 53;      /* #2C3035 — slightly lighter charcoal */
 
   /* ── Text tokens ──────────────────────────────────────────────────────── */
   --rgb-ink:         226 234 240;   /* #E2EAF0 */
@@ -334,16 +334,16 @@ html.midnight-teal {
   --rgb-ink-faint:   74  90  104;   /* #4A5A68 */
 
   /* ── Structural ───────────────────────────────────────────────────────── */
-  --nav-bg:          rgba(14,21,29,0.92);
-  --card-border:     rgba(28,42,54,0.9);
-  --card-divider:    rgba(36,48,64,0.5);
+  --nav-bg:          rgba(20,20,20,0.92);
+  --card-border:     rgba(42,45,48,0.9);   /* #2A2D30 */
+  --card-divider:    rgba(52,55,57,0.5);   /* #343739 */
 
   /* ── Solid helpers (inline style props) ──────────────────────────────── */
-  --color-bg-base:     rgb(14, 21, 29);
-  --color-bg-surface:  rgb(22, 30, 39);
-  --color-bg-elevated: rgb(28, 42, 54);
+  --color-bg-base:     rgb(20, 20, 20);
+  --color-bg-surface:  rgb(28, 31, 34);
+  --color-bg-elevated: rgb(36, 39, 41);
   --color-ink:         rgb(226, 234, 240);
-  --color-grid-border: rgb(28, 42, 54);
+  --color-grid-border: rgb(42, 45, 48);    /* #2A2D30 */
 
   /* ── Teal accent (for use in inline styles / new components) ─────────── */
   --color-teal:        #2DD4BF;
@@ -374,15 +374,15 @@ html.midnight-teal .bg-gold\/20                   { background-color: rgba(45,21
 html.midnight-teal .bg-gold\/15                   { background-color: rgba(45,212,191,0.15) !important; }
 
 /* ── Midnight Teal — white-opacity border / ring / divide overrides ──────── */
-html.midnight-teal .border-white\/\[0\.06\]  { border-color: rgba(28,42,54,0.9) !important; }
-html.midnight-teal .border-white\/\[0\.04\]  { border-color: rgba(36,48,64,0.5) !important; }
-html.midnight-teal .border-white\/\[0\.08\]  { border-color: rgba(36,48,64,0.6) !important; }
-html.midnight-teal .ring-white\/\[0\.06\]    { --tw-ring-color: rgba(28,42,54,0.9) !important; }
-html.midnight-teal .divide-white\/\[0\.04\] > * + * { border-color: rgba(36,48,64,0.5) !important; }
+html.midnight-teal .border-white\/\[0\.06\]  { border-color: rgba(42,45,48,0.9) !important; }
+html.midnight-teal .border-white\/\[0\.04\]  { border-color: rgba(52,55,57,0.5) !important; }
+html.midnight-teal .border-white\/\[0\.08\]  { border-color: rgba(52,55,57,0.6) !important; }
+html.midnight-teal .ring-white\/\[0\.06\]    { --tw-ring-color: rgba(42,45,48,0.9) !important; }
+html.midnight-teal .divide-white\/\[0\.04\] > * + * { border-color: rgba(52,55,57,0.5) !important; }
 
 /* ── Midnight Teal — nav bar ─────────────────────────────────────────────── */
 html.midnight-teal nav[class*="fixed bottom-0"] {
-  border-top: 0.5px solid rgb(28,42,54);
+  border-top: 0.5px solid rgb(42,45,48);
 }
 
 /* ── Midnight Teal — Google Places Autocomplete ──────────────────────────── */

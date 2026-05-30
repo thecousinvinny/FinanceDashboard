@@ -45,7 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var t=localStorage.getItem('theme');if(t==='charcoal-slate'){document.documentElement.classList.add('charcoal-slate');document.documentElement.style.background='#191B1F'}else if(t==='cool-linen'){document.documentElement.classList.add('cool-linen');document.documentElement.style.background='#F0F2F5';document.documentElement.style.colorScheme='light'}else if(t==='light'){document.documentElement.classList.add('light')}else if(t==='midnight-teal'){document.documentElement.classList.add('midnight-teal');document.documentElement.style.background='#0E151D'}})()`,
+            __html: `(function(){var t=localStorage.getItem('theme');if(t==='charcoal-slate'){document.documentElement.classList.add('charcoal-slate');document.documentElement.style.background='#191B1F'}else if(t==='cool-linen'){document.documentElement.classList.add('cool-linen');document.documentElement.style.background='#F0F2F5';document.documentElement.style.colorScheme='light'}else if(t==='light'){document.documentElement.classList.add('light')}else if(t==='midnight-teal'){document.documentElement.classList.add('midnight-teal');document.documentElement.style.background='#141414'}})()`,
           }}
         />
       </head>
