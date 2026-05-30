@@ -122,7 +122,7 @@ const SAFE_TOP = 'calc(max(env(safe-area-inset-top, 0px), 44px) + 12px)'
 const GRID_EXPANDED = 280  // px — compact month grid height in split view
 
 // ── Notion month grid sizing constants (single source of truth) ──────────────
-const MAX_VIS_EVENTS = 4   // max event rows per cell — governs both height and overflow cutoff
+const MAX_VIS_EVENTS = 6   // max event rows per cell — governs both height and overflow cutoff
 const EV_ROW_H  = 20       // event pill height (18) + marginBottom (2)
 const DATE_ROW_H = 20      // date number row height including its marginBottom
 const CELL_PAD_V = 9       // paddingTop (5) + paddingBottom (4) on each cell
@@ -244,6 +244,8 @@ export default function CalendarPage() {
   const [deleteConfirm,   setDeleteConfirm]   = useState<CalEvent | null>(null)
   const [dragState,    setDragState]    = useState<{ ev: CalEvent; originDate: string } | null>(null)
   const [dragOverDate, setDragOverDate] = useState<string | null>(null)
+  const [copiedEvent,  setCopiedEvent]  = useState<CalEvent | null>(null)
+  const [pasteDate,    setPasteDate]    = useState<string | null>(null)
   const [hiddenTypes,       setHiddenTypes]       = useState<Set<EventType>>(new Set())
   const [hiddenGoogleCals,  setHiddenGoogleCals]  = useState<Set<string>>(() => {
     try { const s = localStorage.getItem('cal-hidden-google-cals'); return s ? new Set(JSON.parse(s)) : new Set() } catch { return new Set() }
@@ -579,6 +581,47 @@ export default function CalendarPage() {
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [selectedEvId, isLargeScreen, googleEvMap])
+
+  // Cmd/Ctrl+C to copy selected event, Cmd/Ctrl+V to paste to hovered cell
+  useEffect(() => {
+    if (!isLargeScreen) return
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return
+      const mod = e.metaKey || e.ctrlKey
+      if (!mod) return
+
+      if (e.key === 'c' && selectedEvId) {
+        e.preventDefault()
+        let found: CalEvent | undefined
+        outer: for (const evs of Object.values(googleEvMap)) {
+          for (const ev of evs) { if (ev.id === selectedEvId) { found = ev; break outer } }
+        }
+        if (found) { setCopiedEvent(found); showToast('Event copied — hover a day then ⌘V', { type: 'add' }) }
+
+      } else if (e.key === 'v' && copiedEvent) {
+        e.preventDefault()
+        const target = pasteDate ?? todayStr
+        const allDay = !copiedEvent.amount?.trim()
+        const body: GCalEvent = allDay
+          ? { summary: copiedEvent.title, location: copiedEvent.location, description: copiedEvent.notes, start: { date: target }, end: { date: target } }
+          : (() => {
+              const parts = (copiedEvent.amount ?? '').split(' – ').map(t => t.trim())
+              return {
+                summary: copiedEvent.title, location: copiedEvent.location, description: copiedEvent.notes,
+                start: { dateTime: `${target}T${parts[0] || '09:00'}:00`, timeZone: 'America/Los_Angeles' },
+                end:   { dateTime: `${target}T${parts[1] || '10:00'}:00`, timeZone: 'America/Los_Angeles' },
+              }
+            })()
+        createCalEvent(body, copiedEvent.calendarId ?? 'primary')
+          .then(() => { showToast('Event pasted', { type: 'add' }); setGRefreshKey(k => k + 1) })
+          .catch(() => showToast('Failed to paste', { type: 'delete' }))
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLargeScreen, selectedEvId, copiedEvent, pasteDate, googleEvMap, todayStr])
 
   function handleDeleteCalEvent(ev: CalEvent) {
     if (!ev.id) return
@@ -1309,6 +1352,8 @@ export default function CalendarPage() {
                                   setDragState(null); setDragOverDate(null); dragOverRef.current = null
                                   handleEventDrop(ev, ds, originDate)
                                 }}
+                                onMouseEnter={() => setPasteDate(ds)}
+                                onMouseLeave={() => setPasteDate(p => p === ds ? null : p)}
                                 className="group"
                                 style={{ minHeight: CELL_MIN_H, borderRight: ci < 6 ? '1px solid var(--color-grid-border)' : 'none', padding: '5px 0 4px', cursor: 'pointer', display: 'flex', flexDirection: 'column', background: isToday ? 'rgba(201,168,76,0.05)' : 'var(--color-bg-base)', position: 'relative' }}
                               >
@@ -1409,6 +1454,11 @@ export default function CalendarPage() {
                                     })}
                                     {overflow > 0 && (
                                       <div style={{ fontSize: 9, color: 'rgb(var(--rgb-ink) / 0.35)', fontFamily: 'var(--font-montserrat)', paddingLeft: 2 }}>+{overflow} more</div>
+                                    )}
+                                    {copiedEvent && pasteDate === ds && (
+                                      <div style={{ padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', borderRadius: 4, border: '1.5px dashed rgba(212,175,55,0.45)', flexShrink: 0 }}>
+                                        <span style={{ fontSize: 10, color: 'rgba(212,175,55,0.65)', fontFamily: 'var(--font-montserrat)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{copiedEvent.title}</span>
+                                      </div>
                                     )}
                                   </div>
                                 </div>
