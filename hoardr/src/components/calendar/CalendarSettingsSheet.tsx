@@ -141,6 +141,23 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
             Show on Calendar
           </p>
           <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] overflow-hidden divide-y divide-white/[0.04] mb-5">
+            {/* Income & Subscriptions */}
+            {TYPE_META.map(({ type, label, color }) => {
+              const on = local.visibleTypes.includes(type)
+              return (
+                <button
+                  key={type}
+                  onClick={() => toggleType(type)}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left select-none"
+                >
+                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: color }} />
+                  <span className="text-[14px] font-medium text-ink flex-1">{label}</span>
+                  <span className={`w-11 h-6 rounded-full relative transition-colors flex-shrink-0 ${on ? 'gradient-gold' : 'bg-bg-base border border-white/10'}`}>
+                    <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+                  </span>
+                </button>
+              )
+            })}
             {/* Individual Google calendars */}
             {calsLoading && (
               <div className="px-4 py-3.5 text-[13px] text-ink-faint">Loading calendars…</div>

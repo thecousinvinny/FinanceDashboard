@@ -1227,6 +1227,57 @@ export default function CalendarPage() {
                   {/* Calendar legend toggles */}
                   <div style={{ padding: '12px 10px 8px', flexShrink: 0 }}>
                     <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgb(var(--rgb-ink) / 0.25)', marginBottom: 8, fontFamily: 'var(--font-montserrat)' }}>Calendars</p>
+                    <p style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgb(var(--rgb-ink) / 0.18)', marginBottom: 4, fontFamily: 'var(--font-montserrat)', paddingLeft: 4 }}>Finance</p>
+                    {([
+                      { type: 'income' as EventType, label: 'Income',        defaultColor: DOT_COLOR.income },
+                      { type: 'sub'    as EventType, label: 'Subscriptions', defaultColor: DOT_COLOR.sub    },
+                    ]).map(item => {
+                      const hidden      = hiddenTypes.has(item.type)
+                      const activeColor = typeColors[item.type] ?? item.defaultColor
+                      const isCustom    = !!typeColors[item.type]
+                      const hovered     = hoveredSidebarRow === item.type
+                      return (
+                        <div
+                          key={item.type}
+                          style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: '3px 4px', borderRadius: 6, background: hovered ? 'rgba(255,255,255,0.03)' : 'transparent', transition: 'background 0.12s' }}
+                          onMouseEnter={() => setHoveredSidebarRow(item.type)}
+                          onMouseLeave={() => setHoveredSidebarRow(null)}
+                          onContextMenu={e => { e.preventDefault(); setSidebarCtxMenu({ id: item.type, kind: 'type', x: e.clientX, y: e.clientY }) }}
+                          onTouchStart={e => { const t = e.touches[0]; longPressTimer.current = setTimeout(() => setSidebarCtxMenu({ id: item.type, kind: 'type', x: t.clientX, y: t.clientY }), 500) }}
+                          onTouchEnd={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null } }}
+                          onTouchMove={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null } }}
+                        >
+                          <div style={{ position: 'relative', width: 16, height: 16, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                            <span style={{ width: 10, height: 10, borderRadius: 3, background: hidden ? 'transparent' : activeColor, border: `1.5px solid ${activeColor}`, display: 'block', transition: 'all 0.15s', opacity: hidden ? 0.4 : 1, flexShrink: 0, pointerEvents: 'none' }} />
+                            <input
+                              type="color"
+                              ref={el => { if (el) colorInputRefs.current.set(item.type, el) }}
+                              value={activeColor.match(/^#[0-9a-fA-F]{6}$/) ? activeColor.toLowerCase() : item.defaultColor}
+                              onChange={e => setTypeColors(p => ({ ...p, [item.type]: e.target.value }))}
+                              style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%', padding: 0, border: 'none' }}
+                            />
+                          </div>
+                          <button onClick={() => setHiddenTypes(prev => { const next = new Set(prev); if (next.has(item.type)) next.delete(item.type); else next.add(item.type); return next })}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', flex: 1, textAlign: 'left', padding: 0 }}>
+                            <span style={{ fontSize: 11, color: hidden ? 'rgb(var(--rgb-ink) / 0.25)' : 'rgb(var(--rgb-ink) / 0.7)', fontFamily: 'var(--font-montserrat)', fontWeight: 500, transition: 'color 0.15s' }}>{item.label}</span>
+                          </button>
+                          {hovered ? (
+                            <button
+                              onClick={e => { e.stopPropagation(); setHiddenTypes(prev => { const next = new Set(prev); if (next.has(item.type)) next.delete(item.type); else next.add(item.type); return next }) }}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', flexShrink: 0, display: 'flex', alignItems: 'center', color: 'rgb(var(--rgb-ink) / 0.4)' }}
+                              title={hidden ? 'Show' : 'Hide'}
+                            >
+                              {hidden ? <EyeOff size={11} /> : <Eye size={11} />}
+                            </button>
+                          ) : isCustom ? (
+                            <button onClick={() => setTypeColors(p => { const n = { ...p }; delete n[item.type]; return n })}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', opacity: 0.35, flexShrink: 0, lineHeight: 1, fontSize: 9, color: 'var(--color-ink)' }} title="Reset color">
+                              ✕
+                            </button>
+                          ) : null}
+                        </div>
+                      )
+                    })}
                     {/* Per-Google-calendar rows */}
                     {googleCals.filter(c => prefs.googleCalendarIds.includes(c.id)).length > 0 && (
                       <div style={{ marginTop: 8, marginBottom: 4 }}>
@@ -1321,7 +1372,7 @@ export default function CalendarPage() {
                             const isPast       = ds < todayStr
                             const allEvs       = monthVisibleMap[ds] ?? []
                             const singleEvs    = allEvs.filter(ev => !ev.endDate)
-                            const allDayEvs    = singleEvs.filter(ev => ev.type === 'google' && !ev.amount)
+                            const allDayEvs    = singleEvs.filter(ev => ev.type !== 'google' || !ev.amount)
                             const timedEvs     = singleEvs.filter(ev => ev.type === 'google' && !!ev.amount)
                             const shownAllDay  = Math.min(allDayEvs.length, singleSlots)
                             const shownTimed   = Math.min(timedEvs.length, singleSlots - shownAllDay)
@@ -1573,7 +1624,7 @@ export default function CalendarPage() {
                       const day    = i + 1
                       const ds     = toDateStr(y, m, day)
                       const isTod  = ds === todayStr
-                      const events = (visibleMap[ds] ?? []).filter(e => e.type === 'google')
+                      const events = visibleMap[ds] ?? []
                       const abbr   = new Date(y, m, day).toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()
                       const stripe = Math.floor(new Date(y, m, day).getTime() / 86400000) % 2 === 0
                       return (
@@ -1758,7 +1809,7 @@ export default function CalendarPage() {
                     const day    = i + 1
                     const ds     = toDateStr(y, m, day)
                     const isTod  = ds === todayStr
-                    const events = (visibleMap[ds] ?? []).filter(e => e.type === 'google')
+                    const events = visibleMap[ds] ?? []
                     const abbr   = new Date(y, m, day).toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()
                     const stripe = Math.floor(new Date(y, m, day).getTime() / 86400000) % 2 === 0
 
@@ -1856,7 +1907,7 @@ export default function CalendarPage() {
             {(() => {
               // Prefer custom events over google duplicates (same event shows twice if dedup misfired)
               const customGids = new Set<string>()
-              const eventsToShow = dayEvents.filter(e => e.type === 'google' && (!e.id || !customGids.has(e.id)))
+              const eventsToShow = dayEvents.filter(e => e.type !== 'google' || !e.id || !customGids.has(e.id))
               return eventsToShow.length === 0 ? (
               <div style={{ paddingTop: 52, textAlign: 'center', color: 'rgb(var(--rgb-ink) / 0.15)', fontSize: 13, fontFamily: 'var(--font-montserrat)', letterSpacing: '0.06em' }}>
                 Nothing scheduled
