@@ -376,19 +376,40 @@ export default function CalendarPage() {
     abortRef.current = controller
     const gen = ++loadGen.current
     try {
-      const [{ data: inc }, { data: subs }, { data: profile }] =
+      const [{ data: inc }, { data: subs }, { data: streams }, { data: profile }] =
         await Promise.all([
           supabase.from('income').select('name, amount, date').abortSignal(controller.signal),
           supabase.from('subscriptions').select('name, cost, next_renewal, billing').eq('status', 'Active').abortSignal(controller.signal),
+          supabase.from('revenue_streams').select('name, amount, freq, next_pay_date').abortSignal(controller.signal),
           supabase.from('profiles').select('calendar_prefs').abortSignal(controller.signal).single(),
         ])
       if (gen !== loadGen.current) return
       if (profile?.calendar_prefs) setPrefs(profile.calendar_prefs as CalPrefs)
 
+      const calToday = localToday()
       const map: Record<string, CalEvent[]> = {}
       const push = (date: string, ev: CalEvent) => { if (!map[date]) map[date] = []; map[date].push(ev) }
-      for (const i of inc  ?? []) push(String(i.date), { title: String(i.name), type: 'income', amount: `+$${Number(i.amount).toFixed(2)}` })
-      const calToday = localToday()
+
+      // Historical income (past dates, faded)
+      for (const i of inc ?? []) push(String(i.date), { title: String(i.name), type: 'income', amount: `+$${Number(i.amount).toFixed(2)}` })
+
+      // Upcoming income from revenue streams — advance stale next_pay_date to future
+      function advancePayDate(date: string, freq: string): string {
+        const [y, m, d] = date.split('-').map(Number)
+        const dt = freq === 'Weekly'       ? new Date(y, m - 1, d + 7)  :
+                   freq === 'Biweekly'    ? new Date(y, m - 1, d + 14) :
+                   freq === 'Semimonthly' ? new Date(y, m - 1, d + 15) :
+                                            new Date(y, m, d)            // Monthly
+        return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+      }
+      for (const r of streams ?? []) {
+        if (!r.next_pay_date || !r.freq) continue
+        let payDate = String(r.next_pay_date)
+        while (payDate < calToday) payDate = advancePayDate(payDate, String(r.freq))
+        push(payDate, { title: String(r.name), type: 'income', amount: `+$${Number(r.amount).toFixed(2)}` })
+      }
+
+      // Subscriptions — advance stale next_renewal to next upcoming date
       for (const s of subs ?? []) {
         if (!s.next_renewal) continue
         let renewDate = String(s.next_renewal)
