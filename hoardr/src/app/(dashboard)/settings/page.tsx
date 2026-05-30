@@ -74,9 +74,9 @@ export default function SettingsPage() {
     setCalsError(false)
     fetch('/api/calendar?action=calendars')
       .then(async r => {
-        const d = await r.json() as { calendars?: unknown[]; error?: string }
+        const d = await r.json() as { items?: unknown[]; error?: string }
         if (!r.ok || d.error) throw new Error(d.error ?? 'no_token')
-        setGoogleCals((d.calendars ?? []) as typeof googleCals)
+        setGoogleCals((d.items ?? []) as typeof googleCals)
       })
       .catch(() => setCalsError(true))
       .finally(() => setCalsLoading(false))

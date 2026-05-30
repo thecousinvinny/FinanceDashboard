@@ -212,6 +212,7 @@ export default function CalendarPage() {
   const [prefs,       setPrefs]       = useState<CalPrefs>(DEFAULT_PREFS)
   const [googleCals,  setGoogleCals]  = useState<GCalendar[]>([])
   const [calsLoading, setCalsLoading] = useState(false)
+  const [calsError,   setCalsError]   = useState(false)
   const [settingsOpen,   setSettingsOpen]   = useState(false)
   const [weatherMap,     setWeatherMap]     = useState<Record<string, DayWeather>>({})
   const [editEvent,      setEditEvent]      = useState<EditableEvent | null>(null)
@@ -471,9 +472,15 @@ export default function CalendarPage() {
     if (googleCals.length > 0) return
     if (!settingsOpen && prefs.googleCalendarIds.length === 0) return
     setCalsLoading(true)
+    setCalsError(false)
     fetch('/api/calendar?action=calendars')
-      .then(r => r.json()).then((d: { items?: GCalendar[] }) => setGoogleCals(d.items ?? []))
-      .catch(() => {}).finally(() => setCalsLoading(false))
+      .then(async r => {
+        const d = await r.json() as { items?: GCalendar[]; error?: string }
+        if (!r.ok || d.error) throw new Error(d.error ?? 'no_token')
+        setGoogleCals(d.items ?? [])
+      })
+      .catch(() => setCalsError(true))
+      .finally(() => setCalsLoading(false))
   }, [settingsOpen, googleCals.length, prefs.googleCalendarIds.length])
 
   useEffect(() => {
@@ -1577,7 +1584,7 @@ export default function CalendarPage() {
                       const ds = gds(day)
                       const isToday = ds === todayStr
                       const isSel   = ds === gridSel
-                      const dots    = (visibleMap[ds] ?? []).slice(0, 3).map(ev => ev.color ?? DOT_COLOR[ev.type])
+                      const dots    = (visibleMap[ds] ?? []).slice(0, 3).map(ev => notionColor(ev))
                       return (
                         <button key={i}
                           onClick={() => {
@@ -1960,7 +1967,7 @@ export default function CalendarPage() {
     )}
 
     <EditEventSheet open={!!editEvent} event={editEvent} googleCals={googleCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => setEditEvent(null)} onSave={handleEditEvent} onDelete={_scope => { if (editEvent) { const ev: CalEvent = { id: editEvent.id, title: editEvent.title, type: 'google', amount: '', calendarId: editEvent.calendarId }; handleDeleteCalEvent(ev) } setEditEvent(null) }} />
-    <CalendarSettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} prefs={prefs} googleCals={googleCals} calsLoading={calsLoading} onSave={savePrefs} />
+    <CalendarSettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} prefs={prefs} googleCals={googleCals} calsLoading={calsLoading} calsError={calsError} onSave={savePrefs} />
 
     {/* Color swatch picker */}
     {swatchOpen && (() => {
