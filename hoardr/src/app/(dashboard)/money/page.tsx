@@ -800,6 +800,7 @@ export default function OutPage() {
                 {activeSubs.map(sub => {
                   const renewal   = sub.next_renewal ? daysUntilLabel(sub.next_renewal) : '—'
                   const isOverdue = typeof renewal === 'string' && renewal.includes('ago')
+                  const card      = sub.card_id ? cards.find(c => c.id === sub.card_id) ?? null : null
                   return (
                     <SwipeToDelete
                       key={sub.id}
@@ -818,7 +819,10 @@ export default function OutPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-[14px] font-medium text-ink">{sub.name}</p>
-                          <p className={cn('text-[11px]', isOverdue ? 'text-ruby' : 'text-ink-muted')}>{renewal}</p>
+                          <div className="flex items-center gap-1">
+                            <span className={cn('text-[11px]', isOverdue ? 'text-ruby' : 'text-ink-muted')}>{renewal}</span>
+                            {card && <span className="text-[10px] text-ink-faint">· {card.name}</span>}
+                          </div>
                         </div>
                         <div className="text-right flex-shrink-0">
                           <p className="text-[15px] font-semibold font-mono text-ink">{$fd(sub.cost)}</p>
