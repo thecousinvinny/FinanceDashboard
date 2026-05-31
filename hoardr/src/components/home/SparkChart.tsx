@@ -104,25 +104,31 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
           onTouchMove={e => { e.preventDefault(); pickIdx(e.touches[0].clientX) }}
           onTouchEnd={() => setHoverIdx(null)}
         >
-          <svg viewBox="0 0 300 64" className="w-full h-full" preserveAspectRatio="none" overflow="visible" style={{ filter: 'blur(1px)' }}>
+          <svg viewBox="0 0 300 64" className="w-full h-full" preserveAspectRatio="none" overflow="visible">
             <defs>
               <linearGradient id="inc-grad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%"   style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.6 }}/>
-                <stop offset="100%" style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0   }}/>
+                <stop offset="0%"   style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.85 }}/>
+                <stop offset="100%" style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.05 }}/>
               </linearGradient>
               <linearGradient id="exp-grad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%"   style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.6 }}/>
-                <stop offset="100%" style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0   }}/>
+                <stop offset="0%"   style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.85 }}/>
+                <stop offset="100%" style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.05 }}/>
               </linearGradient>
               <linearGradient id="sub-grad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%"   stopColor="rgba(226,234,240,1)" stopOpacity="0.3"/>
+                <stop offset="0%"   stopColor="rgba(226,234,240,1)" stopOpacity="0.55"/>
                 <stop offset="100%" stopColor="rgba(226,234,240,1)" stopOpacity="0"/>
               </linearGradient>
             </defs>
 
+            {/* fills */}
             <path d={buildArea(expVals)} fill="url(#exp-grad)" stroke="none" style={{ mixBlendMode: 'screen' }}/>
             <path d={buildArea(incVals)} fill="url(#inc-grad)" stroke="none" style={{ mixBlendMode: 'screen' }}/>
             {totalSub > 0 && <path d={buildArea(subVals)} fill="url(#sub-grad)" stroke="none" style={{ mixBlendMode: 'screen' }}/>}
+
+            {/* 1px top-edge lines */}
+            <path d={buildPath(expVals)} fill="none" strokeWidth="1" vectorEffect="non-scaling-stroke" style={{ stroke: 'var(--sem-expense, #D4AF37)' }}/>
+            <path d={buildPath(incVals)} fill="none" strokeWidth="1" vectorEffect="non-scaling-stroke" style={{ stroke: 'var(--sem-income,  #4ADE80)' }}/>
+            {totalSub > 0 && <path d={buildPath(subVals)} fill="none" stroke="rgba(226,234,240,0.6)" strokeWidth="1" vectorEffect="non-scaling-stroke"/>}
 
             {hoverIdx !== null && (
               <>
