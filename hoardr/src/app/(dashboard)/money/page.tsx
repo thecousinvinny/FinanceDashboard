@@ -40,49 +40,40 @@ function CategoryPillBar({ cat, index, isSub = false }: {
     return () => clearTimeout(t)
   }, [cat.pct, index])
 
-  const isWide = cat.pct > 50
+  const amountColor = cat.pct > 70 ? '#C9A84C' : '#556070'
 
   return (
-    <div style={{ position: 'relative', height: 32, borderRadius: 8, background: '#1C2A36' }}>
-      {/* Animated fill */}
+    <div style={{ position: 'relative', height: 32, borderRadius: 8, background: '#1C1F22' }}>
+      {/* Fill — slides behind content, no overflow or flex */}
       <div style={{
         position:   'absolute',
         left: 0, top: 0, bottom: 0,
         width:      `${animPct}%`,
         borderRadius: 8,
-        background: 'linear-gradient(90deg, rgba(245,158,11,0.35), rgba(245,158,11,0.10))',
+        background: 'linear-gradient(90deg, rgba(201,168,76,0.40), rgba(201,168,76,0.12))',
         transition: 'width 600ms cubic-bezier(0.22, 1, 0.36, 1)',
-        overflow:   'hidden',
+      }} />
+      {/* Content overlay — always full track width, never clipped */}
+      <div style={{
+        position:   'absolute',
+        left: 10, right: 10, top: 0, bottom: 0,
         display:    'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding:    '0 10px',
-        boxSizing:  'border-box',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <CategoryIcon
             category={cat.name} type="Expense" size={12} isSub={isSub}
             className={isSub ? 'text-white/60' : 'text-gold'}
           />
-          <span style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.9)', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 12, fontWeight: 500, color: '#E2EAF0', whiteSpace: 'nowrap' }}>
             {cat.name}
           </span>
         </div>
-        {isWide && (
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', flexShrink: 0, fontFamily: 'var(--font-big-shoulders)' }}>
-            {$fd(cat.total)}
-          </span>
-        )}
+        <span style={{ fontSize: 11, color: amountColor, flexShrink: 0, fontFamily: 'var(--font-big-shoulders)' }}>
+          {$fd(cat.total)}
+        </span>
       </div>
-
-      {/* Amount outside fill for narrow bars */}
-      {!isWide && (
-        <div style={{ position: 'absolute', right: 10, top: 0, bottom: 0, display: 'flex', alignItems: 'center' }}>
-          <span style={{ fontSize: 11, color: '#556070', flexShrink: 0, fontFamily: 'var(--font-big-shoulders)' }}>
-            {$fd(cat.total)}
-          </span>
-        </div>
-      )}
     </div>
   )
 }
