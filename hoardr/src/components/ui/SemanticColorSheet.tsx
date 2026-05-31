@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { HexColorPicker, HexColorInput } from 'react-colorful'
 import { cn } from '@/lib/utils'
 import { COLOR_PALETTE } from '@/lib/category-meta'
 import {
@@ -30,14 +31,15 @@ interface PickerProps {
 
 function ColorPicker({ value, onChange, onApply, onReset }: PickerProps) {
   const [gradTarget, setGradTarget] = useState<'from' | 'to'>('from')
-  const isGrad   = value.type === 'gradient'
-  const fromHex  = isGrad ? value.from  : value.hex
-  const toHex    = isGrad ? value.to    : value.hex
-  const angle    = isGrad ? value.angle : 135
-  const activeHex = gradTarget === 'from' ? fromHex : toHex
-  const previewBg = isGrad ? `linear-gradient(${angle}deg, ${fromHex}, ${toHex})` : fromHex
+  const isGrad  = value.type === 'gradient'
+  const fromHex = isGrad ? value.from  : value.hex
+  const toHex   = isGrad ? value.to    : value.hex
+  const angle   = isGrad ? value.angle : 135
 
-  function selectColor(hex: string) {
+  const activeHex    = gradTarget === 'from' ? fromHex : toHex
+  const previewBg    = isGrad ? `linear-gradient(${angle}deg, ${fromHex}, ${toHex})` : fromHex
+
+  function setActiveHex(hex: string) {
     if (isGrad) {
       const g = value as { type: 'gradient'; from: string; to: string; angle: number }
       onChange(gradTarget === 'from' ? { ...g, from: hex } : { ...g, to: hex })
@@ -56,12 +58,9 @@ function ColorPicker({ value, onChange, onApply, onReset }: PickerProps) {
   }
 
   return (
-    <div className="space-y-5">
-      {/* Preview */}
-      <div
-        className="h-12 rounded-[14px] ring-1 ring-white/[0.08]"
-        style={{ background: previewBg }}
-      />
+    <div className="space-y-4">
+      {/* Preview bar */}
+      <div className="h-12 rounded-[14px] ring-1 ring-white/[0.08]" style={{ background: previewBg }} />
 
       {/* Flat / Gradient toggle */}
       <div className="flex rounded-[10px] overflow-hidden border border-white/[0.08]">
@@ -81,7 +80,7 @@ function ColorPicker({ value, onChange, onApply, onReset }: PickerProps) {
         ))}
       </div>
 
-      {/* From / To selector */}
+      {/* From / To selector (gradient only) */}
       {isGrad && (
         <div className="flex gap-2">
           {(['from', 'to'] as const).map(target => (
@@ -103,27 +102,45 @@ function ColorPicker({ value, onChange, onApply, onReset }: PickerProps) {
         </div>
       )}
 
-      {/* Color palette */}
-      <div className="grid grid-cols-8 gap-2">
-        {COLOR_PALETTE.map(hex => {
-          const selected = hex === activeHex
-          return (
-            <button
-              key={hex}
-              onClick={() => selectColor(hex)}
-              className="aspect-square rounded-[8px] transition-transform active:scale-90"
-              style={{
-                background: hex,
-                boxShadow:  selected
-                  ? `0 0 0 2px #fff, 0 0 0 4px ${hex}`
-                  : '0 0 0 1px rgba(255,255,255,0.08)',
-              }}
-            />
-          )
-        })}
+      {/* Color wheel */}
+      <HexColorPicker color={activeHex} onChange={setActiveHex} />
+
+      {/* Hex input */}
+      <div className="flex items-center gap-2 bg-bg-overlay border border-white/[0.08] rounded-[12px] px-3 py-2.5">
+        <span className="text-ink-muted text-[14px] font-mono select-none">#</span>
+        <HexColorInput
+          color={activeHex}
+          onChange={setActiveHex}
+          className="flex-1 bg-transparent text-[14px] font-mono text-ink outline-none uppercase tracking-wider"
+          style={{ colorScheme: 'dark' }}
+        />
+        <div className="w-6 h-6 rounded-full ring-1 ring-white/[0.12] flex-shrink-0" style={{ background: activeHex }} />
       </div>
 
-      {/* Angle chips */}
+      {/* Quick-select palette */}
+      <div>
+        <p className="text-[10px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Quick Select</p>
+        <div className="grid grid-cols-8 gap-2">
+          {COLOR_PALETTE.map(hex => {
+            const selected = hex.toLowerCase() === activeHex.toLowerCase()
+            return (
+              <button
+                key={hex}
+                onClick={() => setActiveHex(hex)}
+                className="aspect-square rounded-[8px] transition-transform active:scale-90"
+                style={{
+                  background: hex,
+                  boxShadow:  selected
+                    ? `0 0 0 2px #fff, 0 0 0 4px ${hex}`
+                    : '0 0 0 1px rgba(255,255,255,0.08)',
+                }}
+              />
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Angle chips (gradient only) */}
       {isGrad && (
         <div>
           <p className="text-[10px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Direction</p>
@@ -343,7 +360,7 @@ export function SemanticColorSheet({ open, onClose }: Props) {
           ref={scrollAreaRef}
           className="px-5 overflow-y-auto"
           style={{
-            maxHeight:          '70vh',
+            maxHeight:          '75vh',
             paddingBottom:      'calc(env(safe-area-inset-bottom, 0px) + 32px)',
             overflowX:          'hidden',
             overscrollBehavior: 'contain',
