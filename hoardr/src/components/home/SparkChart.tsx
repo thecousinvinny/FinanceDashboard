@@ -219,7 +219,7 @@ export function SparkChart({ points, onHover }: { points: DayPoint[]; onHover?: 
       )}
 
       {/* X-axis day labels pinned to bottom */}
-      <div className="absolute bottom-0.5 left-0 right-0 px-4 pointer-events-none" style={{ zIndex: 10 }}>
+      <div className="absolute bottom-0 left-0 right-0 px-4 pointer-events-none" style={{ zIndex: 10 }}>
         {/* Sparse x-axis day labels */}
         <div className="relative" style={{ height: 10 }}>
           {[...labelSet].sort((a, b) => a - b).map(i => {
@@ -231,7 +231,7 @@ export function SparkChart({ points, onHover }: { points: DayPoint[]; onHover?: 
               <span
                 key={i}
                 className={`absolute text-[8px] font-medium leading-none ${
-                  i === hoverIdx ? 'text-white' : isLast ? 'text-gold' : 'text-white/40'
+                  i === hoverIdx ? 'text-white' : isLast ? 'text-gold' : 'text-ink-faint'
                 }`}
                 style={{
                   fontFamily: 'var(--font-big-shoulders)',
@@ -247,7 +247,7 @@ export function SparkChart({ points, onHover }: { points: DayPoint[]; onHover?: 
             const pct = (hoverIdx / (n - 1)) * 100
             return (
               <span
-                className="absolute text-[8px] font-medium leading-none text-white"
+                className="absolute text-[8px] font-medium leading-none text-ink-faint"
                 style={{ fontFamily: 'var(--font-big-shoulders)', left: `${pct}%`, transform: 'translateX(-50%)' }}
               >
                 {p.day}
