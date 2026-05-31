@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { $fc } from '@/lib/utils'
 
 export interface DayPoint {
@@ -13,10 +13,26 @@ export interface DayPoint {
 
 // Fills the full parent container (parent must be position:relative with a defined size).
 // Legend, x-axis, and tooltip are rendered as internal overlays.
+function readColor(varName: string, fallback: string): string {
+  if (typeof window === 'undefined') return fallback
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim() || fallback
+}
+
 export function SparkChart({ points, onHover }: { points: DayPoint[]; onHover?: (p: DayPoint | null) => void }) {
   const [hoverIdx,     setHoverIdx]     = useState<number | null>(null)
   const [tooltipFixed, setTooltipFixed] = useState<{ x: number; y: number } | null>(null)
+  const [colorRev,     setColorRev]     = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = () => setColorRev(r => r + 1)
+    window.addEventListener('sem-colors-changed', handler)
+    return () => window.removeEventListener('sem-colors-changed', handler)
+  }, [])
+
+  const incColor = readColor('--sem-income',  '#4ADE80')
+  const expColor = readColor('--sem-expense', '#D4AF37')
+  const subColor = readColor('--sem-sub',     'rgb(180,185,200)')
 
   const W = 300, H = 200, n = points.length
   if (n === 0) return null
@@ -67,7 +83,7 @@ export function SparkChart({ points, onHover }: { points: DayPoint[]; onHover?: 
   }
   const ig = gf(incPeakY), eg = gf(expPeakY), sg = gf(subPeakY)
 
-  const animKey = `${n}-${Math.round(totalExp + totalInc)}`
+  const animKey = `${n}-${Math.round(totalExp + totalInc)}-${colorRev}`
   const hovered = hoverIdx !== null ? points[hoverIdx] : null
 
   function handleMouseMove(e: React.MouseEvent) {
@@ -129,28 +145,28 @@ export function SparkChart({ points, onHover }: { points: DayPoint[]; onHover?: 
         >
           <defs>
             <linearGradient id="inc-grad" x1="0" y1="0" x2="0" y2={H} gradientUnits="userSpaceOnUse">
-              <stop offset={0}         style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0    }}/>
-              <stop offset={ig.before} style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0    }}/>
-              <stop offset={ig.peak}   style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.95 }}/>
-              <stop offset={ig.mid1}   style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.55 }}/>
-              <stop offset={ig.mid2}   style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.15 }}/>
-              <stop offset={1}         style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0    }}/>
+              <stop offset={0}         stopColor={incColor} stopOpacity={0}   />
+              <stop offset={ig.before} stopColor={incColor} stopOpacity={0}   />
+              <stop offset={ig.peak}   stopColor={incColor} stopOpacity={0.95}/>
+              <stop offset={ig.mid1}   stopColor={incColor} stopOpacity={0.55}/>
+              <stop offset={ig.mid2}   stopColor={incColor} stopOpacity={0.15}/>
+              <stop offset={1}         stopColor={incColor} stopOpacity={0}   />
             </linearGradient>
             <linearGradient id="exp-grad" x1="0" y1="0" x2="0" y2={H} gradientUnits="userSpaceOnUse">
-              <stop offset={0}         style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0    }}/>
-              <stop offset={eg.before} style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0    }}/>
-              <stop offset={eg.peak}   style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.95 }}/>
-              <stop offset={eg.mid1}   style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.55 }}/>
-              <stop offset={eg.mid2}   style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.15 }}/>
-              <stop offset={1}         style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0    }}/>
+              <stop offset={0}         stopColor={expColor} stopOpacity={0}   />
+              <stop offset={eg.before} stopColor={expColor} stopOpacity={0}   />
+              <stop offset={eg.peak}   stopColor={expColor} stopOpacity={0.95}/>
+              <stop offset={eg.mid1}   stopColor={expColor} stopOpacity={0.55}/>
+              <stop offset={eg.mid2}   stopColor={expColor} stopOpacity={0.15}/>
+              <stop offset={1}         stopColor={expColor} stopOpacity={0}   />
             </linearGradient>
             <linearGradient id="sub-grad" x1="0" y1="0" x2="0" y2={H} gradientUnits="userSpaceOnUse">
-              <stop offset={0}         stopColor="rgb(180,185,200)" stopOpacity="0.00"/>
-              <stop offset={sg.before} stopColor="rgb(180,185,200)" stopOpacity="0.00"/>
-              <stop offset={sg.peak}   stopColor="rgb(180,185,200)" stopOpacity="0.95"/>
-              <stop offset={sg.mid1}   stopColor="rgb(180,185,200)" stopOpacity="0.55"/>
-              <stop offset={sg.mid2}   stopColor="rgb(180,185,200)" stopOpacity="0.15"/>
-              <stop offset={1}         stopColor="rgb(180,185,200)" stopOpacity="0.00"/>
+              <stop offset={0}         stopColor={subColor} stopOpacity={0}   />
+              <stop offset={sg.before} stopColor={subColor} stopOpacity={0}   />
+              <stop offset={sg.peak}   stopColor={subColor} stopOpacity={0.95}/>
+              <stop offset={sg.mid1}   stopColor={subColor} stopOpacity={0.55}/>
+              <stop offset={sg.mid2}   stopColor={subColor} stopOpacity={0.15}/>
+              <stop offset={1}         stopColor={subColor} stopOpacity={0}   />
             </linearGradient>
           </defs>
 
@@ -173,9 +189,9 @@ export function SparkChart({ points, onHover }: { points: DayPoint[]; onHover?: 
           const cH = containerRef.current!.offsetHeight
           const xPx = (toX(hoverIdx) / W) * cW
           const dots = [
-            { yPx: (toY(incVals[hoverIdx]) / H) * cH, color: 'var(--sem-income, #4ADE80)' },
-            { yPx: (toY(expVals[hoverIdx]) / H) * cH, color: 'var(--sem-expense, #D4AF37)' },
-            ...(totalSub > 0 ? [{ yPx: (toY(subVals[hoverIdx]) / H) * cH, color: 'rgba(180,185,200,0.8)' }] : []),
+            { yPx: (toY(incVals[hoverIdx]) / H) * cH, color: incColor },
+            { yPx: (toY(expVals[hoverIdx]) / H) * cH, color: expColor },
+            ...(totalSub > 0 ? [{ yPx: (toY(subVals[hoverIdx]) / H) * cH, color: subColor }] : []),
           ]
           return dots.map(({ yPx, color }, i) => (
             <div key={i} className="pointer-events-none" style={{

@@ -22,6 +22,7 @@ export function getSemanticColors(): SemanticColors {
 export function setSemanticColors(colors: SemanticColors) {
   localStorage.setItem('sem-colors', JSON.stringify(colors))
   applySemanticColors(colors)
+  window.dispatchEvent(new CustomEvent('sem-colors-changed'))
 }
 
 export function applySemanticColors(colors: SemanticColors = getSemanticColors()) {
