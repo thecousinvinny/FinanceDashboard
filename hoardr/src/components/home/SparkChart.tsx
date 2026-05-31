@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { $fc, $fk } from '@/lib/utils'
+import { $fc } from '@/lib/utils'
 
 export interface DayPoint {
   day:   string  // "1", "12", "31"
@@ -13,7 +13,7 @@ export interface DayPoint {
 
 // Fills the full parent container (parent must be position:relative with a defined size).
 // Legend, x-axis, and tooltip are rendered as internal overlays.
-export function SparkChart({ points }: { points: DayPoint[] }) {
+export function SparkChart({ points, onHover }: { points: DayPoint[]; onHover?: (p: DayPoint | null) => void }) {
   const [hoverIdx,     setHoverIdx]     = useState<number | null>(null)
   const [tooltipFixed, setTooltipFixed] = useState<{ x: number; y: number } | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -52,14 +52,10 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
   const totalInc = incVals.reduce((s, v) => s + v, 0)
   const totalSub = subVals.reduce((s, v) => s + v, 0)
 
-  // Per-series peak Y in SVG coordinates.
-  // Each series has its own gradient peak; fadeY is the midpoint between peak and bottom.
-  const incPeakY = toY(Math.max(...incVals, 0))
-  const expPeakY = toY(Math.max(...expVals, 0))
-  const subPeakY = toY(Math.max(...subVals, 0))
-  const incFadeY = incPeakY + (H - incPeakY) * 0.5
-  const expFadeY = expPeakY + (H - expPeakY) * 0.5
-  const subFadeY = subPeakY + (H - subPeakY) * 0.5
+  // Fixed gradient shape — all series use the same vertical profile so each
+  // looks equally vivid regardless of absolute value.
+  const peakOff = 0.15          // 0.0 → 0.85 ramp lands at 15% from top
+  const fadeOff = 0.15 + 0.85 * 0.6  // 0.66 — mid-fade stop
 
   const animKey = `${n}-${Math.round(totalExp + totalInc)}`
   const hovered = hoverIdx !== null ? points[hoverIdx] : null
@@ -68,13 +64,16 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
     const rect = containerRef.current?.getBoundingClientRect()
     if (!rect) return
     const idx = Math.round(((e.clientX - rect.left) / rect.width) * (n - 1))
-    setHoverIdx(Math.max(0, Math.min(n - 1, idx)))
+    const clamped = Math.max(0, Math.min(n - 1, idx))
+    setHoverIdx(clamped)
     setTooltipFixed({ x: e.clientX, y: e.clientY })
+    onHover?.(points[clamped] ?? null)
   }
 
   function handleMouseLeave() {
     setHoverIdx(null)
     setTooltipFixed(null)
+    onHover?.(null)
   }
 
   // Flip tooltip left of cursor when near the right 35% of the container
@@ -99,9 +98,11 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
         const rect = containerRef.current?.getBoundingClientRect()
         if (!rect) return
         const idx = Math.round(((e.touches[0].clientX - rect.left) / rect.width) * (n - 1))
-        setHoverIdx(Math.max(0, Math.min(n - 1, idx)))
+        const clamped = Math.max(0, Math.min(n - 1, idx))
+        setHoverIdx(clamped)
+        onHover?.(points[clamped] ?? null)
       }}
-      onTouchEnd={() => setHoverIdx(null)}
+      onTouchEnd={() => { setHoverIdx(null); onHover?.(null) }}
     >
       {/* key remounts this div on new data, restarting the clip animation */}
       <div
@@ -117,25 +118,25 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
           overflow="visible"
         >
           <defs>
-            {/* 4-stop gradient per series: 0 at top → 0.88 at peak → 0.08 at fadeY → 0 at bottom.
-                userSpaceOnUse so stop offsets map to real SVG Y coordinates. */}
-            <linearGradient id="inc-grad" x1="0" y1="0" x2="0" y2={H} gradientUnits="userSpaceOnUse">
-              <stop offset={0}              style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0    }}/>
-              <stop offset={incPeakY / H}   style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.88 }}/>
-              <stop offset={incFadeY / H}   style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.08 }}/>
-              <stop offset={1}              style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0    }}/>
+            {/* Fixed 4-stop gradient — same profile for all series so each is equally vivid.
+                0.0 at top → 0.85 at 15% → 0.06 at 66% → 0.0 at bottom */}
+            <linearGradient id="inc-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset={0}       style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0    }}/>
+              <stop offset={peakOff} style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.85 }}/>
+              <stop offset={fadeOff} style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.06 }}/>
+              <stop offset={1}       style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0    }}/>
             </linearGradient>
-            <linearGradient id="exp-grad" x1="0" y1="0" x2="0" y2={H} gradientUnits="userSpaceOnUse">
-              <stop offset={0}              style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0    }}/>
-              <stop offset={expPeakY / H}   style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.88 }}/>
-              <stop offset={expFadeY / H}   style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.08 }}/>
-              <stop offset={1}              style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0    }}/>
+            <linearGradient id="exp-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset={0}       style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0    }}/>
+              <stop offset={peakOff} style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.85 }}/>
+              <stop offset={fadeOff} style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.06 }}/>
+              <stop offset={1}       style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0    }}/>
             </linearGradient>
-            <linearGradient id="sub-grad" x1="0" y1="0" x2="0" y2={H} gradientUnits="userSpaceOnUse">
-              <stop offset={0}            stopColor="rgb(180,185,200)" stopOpacity="0"/>
-              <stop offset={subPeakY / H} stopColor="rgb(180,185,200)" stopOpacity="0.55"/>
-              <stop offset={subFadeY / H} stopColor="rgb(180,185,200)" stopOpacity="0.08"/>
-              <stop offset={1}            stopColor="rgb(180,185,200)" stopOpacity="0"/>
+            <linearGradient id="sub-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset={0}       stopColor="rgb(180,185,200)" stopOpacity="0"/>
+              <stop offset={peakOff} stopColor="rgb(180,185,200)" stopOpacity="0.85"/>
+              <stop offset={fadeOff} stopColor="rgb(180,185,200)" stopOpacity="0.06"/>
+              <stop offset={1}       stopColor="rgb(180,185,200)" stopOpacity="0"/>
             </linearGradient>
           </defs>
 
@@ -185,30 +186,8 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
         </div>
       )}
 
-      {/* Legend + x-axis pinned to bottom of chart */}
-      <div className="absolute bottom-0 left-0 right-0 px-4 pb-3 pointer-events-none" style={{ zIndex: 10 }}>
-        <div className="flex items-center justify-between mb-1.5">
-          <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint">
-            {hovered ? hovered.label : '14 days'}
-          </p>
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1 text-[10px] font-medium text-emerald" style={{ fontFamily: 'var(--font-big-shoulders)' }}>
-              <span className="w-1.5 h-1.5 rounded-full inline-block flex-shrink-0" style={{ background: 'var(--sem-income, #4ADE80)' }}/>
-              {hovered ? $fc(hovered.inc) : $fk(totalInc)}
-            </span>
-            <span className="flex items-center gap-1 text-[10px] font-medium text-gold" style={{ fontFamily: 'var(--font-big-shoulders)' }}>
-              <span className="w-1.5 h-1.5 rounded-full inline-block flex-shrink-0" style={{ background: 'var(--sem-expense, #D4AF37)' }}/>
-              {hovered ? $fc(hovered.exp) : $fk(totalExp)}
-            </span>
-            {totalSub > 0 && (
-              <span className="flex items-center gap-1 text-[10px] font-medium" style={{ fontFamily: 'var(--font-big-shoulders)', color: 'rgba(226,234,240,0.7)' }}>
-                <span className="w-1.5 h-1.5 rounded-full inline-block flex-shrink-0" style={{ background: 'rgba(226,234,240,0.6)' }}/>
-                {hovered ? $fc(hovered.sub) : $fk(totalSub)}
-              </span>
-            )}
-          </div>
-        </div>
-
+      {/* X-axis day labels pinned to bottom */}
+      <div className="absolute bottom-0 left-0 right-0 px-4 pb-2.5 pointer-events-none" style={{ zIndex: 10 }}>
         {/* Sparse x-axis day labels */}
         <div className="relative" style={{ height: 10 }}>
           {[...labelSet].sort((a, b) => a - b).map(i => {

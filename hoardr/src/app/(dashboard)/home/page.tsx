@@ -332,9 +332,7 @@ export default function HomePage() {
     await supabase.from('wishlist').delete().eq('id', id)
   }
 
-  const saved       = earned - spent
-  const netPositive = saved >= 0
-  const hasData     = spent > 0 || earned > 0
+  const saved = earned - spent
 
   return (
     <>
@@ -353,13 +351,7 @@ export default function HomePage() {
 
       {!loading && (
         <>
-          <HomeHero
-            spent={spent}
-            saved={saved}
-            netPositive={netPositive}
-            hasData={hasData}
-            points={sparkPoints}
-          />
+          <HomeHero spent={spent} points={sparkPoints} />
 
           {/* ── Hoard pile ──────────────────────────────────────────────── */}
           <HoardChest hoardTotal={hoardTotal} thisMonthNet={saved} />
