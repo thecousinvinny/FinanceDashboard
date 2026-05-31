@@ -2,13 +2,15 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, ChevronRight, CreditCard, LogOut, CalendarDays, Tag, Settings2 } from 'lucide-react'
+import { Check, ChevronRight, CreditCard, LogOut, CalendarDays, Tag, Settings2, Palette } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { type Theme, THEMES, applyTheme, readTheme } from '@/lib/theme'
 import { CalendarSettingsSheet, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
+import { SemanticColorSheet } from '@/components/ui/SemanticColorSheet'
 import { type IconColorMode, getIconColorMode, setIconColorMode } from '@/lib/category-meta'
 import { getWeekStartsMonday, setWeekStartsMonday } from '@/lib/week-start'
+import { applySemanticColors } from '@/lib/semantic-colors'
 
 const DEFAULT_PREFS: CalPrefs = { visibleTypes: ['sub', 'income'], googleCalendarIds: [] }
 
@@ -32,11 +34,13 @@ export default function SettingsPage() {
   const [defaultCardName,      setDefaultCardName]      = useState<string | null>(null)
   const [settingsCards,        setSettingsCards]        = useState<SettingsCard[]>([])
   const [settingsCardsLoading, setSettingsCardsLoading] = useState(false)
+  const [semColorsOpen,        setSemColorsOpen]        = useState(false)
 
   useEffect(() => {
     setTheme(readTheme())
     setIconMode(getIconColorMode())
     setWsMon(getWeekStartsMonday())
+    applySemanticColors()
   }, [])
 
   useEffect(() => {
@@ -225,6 +229,24 @@ export default function SettingsPage() {
           })}
         </div>
 
+        {/* Accent colors */}
+        <div className="mt-4">
+          <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Accent Colors</p>
+          <button
+            onClick={() => setSemColorsOpen(true)}
+            className="w-full flex items-center gap-3 px-4 py-3.5 text-left bg-bg-overlay border border-white/[0.06] rounded-card active:opacity-70 transition-opacity"
+          >
+            <div className="w-8 h-8 rounded-[10px] bg-bg-surface ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+              <Palette size={15} className="text-gold" strokeWidth={1.75} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[14px] font-medium text-ink">Income, Expense &amp; Subs</p>
+              <p className="text-[11px] text-ink-muted">Flat or gradient accent colors</p>
+            </div>
+            <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
+          </button>
+        </div>
+
         {/* Icon color mode */}
         <div className="mt-4">
           <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Icon Colors</p>
@@ -330,6 +352,11 @@ export default function SettingsPage() {
       </div>
 
       </div>
+
+      <SemanticColorSheet
+        open={semColorsOpen}
+        onClose={() => setSemColorsOpen(false)}
+      />
 
       <CalendarSettingsSheet
         open={calOpen}

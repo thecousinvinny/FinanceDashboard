@@ -22,6 +22,22 @@
   --color-bg-elevated: rgb(26, 26, 30);
   --color-ink:         rgb(247, 247, 245);
   --color-grid-border: rgb(42, 42, 42);
+
+  /* ── Semantic color defaults ─────────────────────────────────────────────── */
+  --sem-income:        #4ADE80;
+  --sem-income-rgb:    74,222,128;
+  --sem-income-from:   #4ADE80;
+  --sem-income-to:     #4ADE80;
+  --sem-income-angle:  135deg;
+  --sem-expense:       #D4AF37;
+  --sem-expense-rgb:   212,175,55;
+  --sem-expense-from:  #D4AF37;
+  --sem-expense-to:    #D4AF37;
+  --sem-expense-angle: 135deg;
+  --sem-sub:           rgba(255,255,255,0.6);
+  --sem-sub-from:      rgba(255,255,255,0.6);
+  --sem-sub-to:        rgba(255,255,255,0.6);
+  --sem-sub-angle:     135deg;
 }
 
 html.charcoal-slate {
@@ -222,15 +238,45 @@ html, body {
     -webkit-backdrop-filter: blur(20px) saturate(160%);
   }
 
-  /* Glow effects for hero numbers */
-  .glow-green  { text-shadow: 0 0 25px rgba(74,222,128,0.3),   0 0 50px rgba(74,222,128,0.1);   }
-  .glow-gold   { text-shadow: 0 0 25px rgba(232,196,107,0.3), 0 0 50px rgba(232,196,107,0.1); }
+  /* Glow effects for hero numbers — follow semantic color vars */
+  .glow-green  { text-shadow: 0 0 25px rgba(var(--sem-income-rgb),  0.3),  0 0 50px rgba(var(--sem-income-rgb),  0.1);  }
+  .glow-gold   { text-shadow: 0 0 25px rgba(var(--sem-expense-rgb), 0.3), 0 0 50px rgba(var(--sem-expense-rgb), 0.1); }
   .glow-ruby   { text-shadow: 0 0 25px rgba(243,99,105,0.3),  0 0 50px rgba(243,99,105,0.1);  }
 
   /* Midnight Teal primary gradient — standalone class for new components */
   .gradient-teal {
     background: linear-gradient(135deg, #2DD4BF 0%, #22D3EE 100%);
   }
+}
+
+/* ── Semantic color classes ──────────────────────────────────────────────── */
+/* Override Tailwind's static hex values with CSS vars so user color prefs
+   and theme defaults cascade correctly. !important beats inline styles from
+   category mode — CategoryIcon drops these classes when a custom color exists. */
+.text-emerald { color: var(--sem-income)  !important; }
+.text-gold    { color: var(--sem-expense) !important; }
+.sem-sub      { color: var(--sem-sub)     !important; }
+
+/* Gradient text — active only when data-*-grad attribute is set.
+   SVG icons are unaffected: -webkit-text-fill-color doesn't control SVG stroke;
+   SVG paths continue using the `color` property via currentColor. */
+:root[data-inc-grad] :not(svg).text-emerald {
+  background:              linear-gradient(var(--sem-income-angle), var(--sem-income-from), var(--sem-income-to));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip:         text;
+}
+:root[data-exp-grad] :not(svg).text-gold {
+  background:              linear-gradient(var(--sem-expense-angle), var(--sem-expense-from), var(--sem-expense-to));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip:         text;
+}
+:root[data-sub-grad] :not(svg).sem-sub {
+  background:              linear-gradient(var(--sem-sub-angle), var(--sem-sub-from), var(--sem-sub-to));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip:         text;
 }
 
 /* ── Google Places Autocomplete dark theme ───────────────────────────────── */
@@ -348,19 +394,21 @@ html.midnight-teal {
   /* ── Teal accent (for use in inline styles / new components) ─────────── */
   --color-teal:        #2DD4BF;
   --color-teal-accent: #22D3EE;
+
+  /* ── Semantic color defaults (teal replaces gold/emerald) ────────────── */
+  --sem-income:        #2DD4BF;
+  --sem-income-rgb:    45,212,191;
+  --sem-income-from:   #2DD4BF;
+  --sem-income-to:     #22D3EE;
+  --sem-expense:       #2DD4BF;
+  --sem-expense-rgb:   45,212,191;
+  --sem-expense-from:  #2DD4BF;
+  --sem-expense-to:    #22D3EE;
 }
 
 /* ── Midnight Teal — accent gradient replaces gold everywhere ────────────── */
 html.midnight-teal .gradient-gold    { background: linear-gradient(135deg, #2DD4BF 0%, #22D3EE 100%) !important; }
 html.midnight-teal .gradient-emerald { background: linear-gradient(135deg, #2DD4BF 0%, #22D3EE 100%) !important; }
-
-/* ── Midnight Teal — semantic text colors ────────────────────────────────── */
-html.midnight-teal .text-gold    { color: #2DD4BF !important; }
-html.midnight-teal .text-emerald { color: #2DD4BF !important; }
-
-/* ── Midnight Teal — glow effects ────────────────────────────────────────── */
-html.midnight-teal .glow-green { text-shadow: 0 0 25px rgba(45,212,191,0.35), 0 0 50px rgba(45,212,191,0.15) !important; }
-html.midnight-teal .glow-gold  { text-shadow: 0 0 25px rgba(45,212,191,0.35), 0 0 50px rgba(45,212,191,0.15) !important; }
 
 /* ── Midnight Teal — gold border / ring / background variants ────────────── */
 html.midnight-teal .border-gold                   { border-color: #2DD4BF !important; }

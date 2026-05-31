@@ -53,12 +53,13 @@ export function CategoryIcon({ category, type, isSub = false, size = 16, classNa
   const Icon = getCategoryIcon(category, type)
 
   if (getIconColorMode() === 'semantic') {
-    const color = isSub
-      ? 'rgba(255,255,255,0.6)'
-      : type === 'Income' ? '#22c55e' : '#D4AF37'
-    return <Icon size={size} className={className} strokeWidth={strokeWidth} style={{ color }} />
+    const semClass = isSub ? 'sem-sub' : type === 'Income' ? 'text-emerald' : 'text-gold'
+    return <Icon size={size} className={semClass} strokeWidth={strokeWidth} />
   }
 
+  // Category mode: use DB-stored color via inline style; drop the className when
+  // a custom color exists so CSS !important on text-emerald/text-gold doesn't override it.
   const color = categoryMeta[category]?.color
-  return <Icon size={size} className={className} strokeWidth={strokeWidth} style={color ? { color } : undefined} />
+  if (color) return <Icon size={size} strokeWidth={strokeWidth} style={{ color }} />
+  return <Icon size={size} className={className} strokeWidth={strokeWidth} />
 }
