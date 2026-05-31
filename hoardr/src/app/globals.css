@@ -256,14 +256,16 @@ html, body {
 .react-colorful__pointer    { width: 22px !important; height: 22px !important; border-width: 3px !important; }
 
 /* ── Semantic color classes ──────────────────────────────────────────────── */
-/* Override Tailwind's static hex values with CSS vars so user color prefs
-   and theme defaults cascade correctly. !important beats inline styles from
-   category mode — CategoryIcon drops these classes when a custom color exists. */
-.text-emerald { color: var(--sem-income)  !important; }
-.text-gold    { color: var(--sem-expense) !important; }
-.sem-sub      { color: var(--sem-sub)     !important; }
+/* These rules appear AFTER @tailwind utilities in the CSS output, so they
+   win over Tailwind's generated .text-emerald / .text-gold by cascade order
+   alone — no !important needed. Inline styles (category mode icons) still
+   win naturally. Fallback values prevent invisible text if a var is unset. */
+.text-emerald { color: var(--sem-income,  #4ADE80); }
+.text-gold    { color: var(--sem-expense, #D4AF37); }
+.sem-sub      { color: var(--sem-sub,     rgba(255,255,255,0.6)); }
 
 /* Gradient text — active only when data-*-grad attribute is set.
+   Higher specificity selector wins over the flat rules above.
    SVG icons are unaffected: -webkit-text-fill-color doesn't control SVG stroke;
    SVG paths continue using the `color` property via currentColor. */
 :root[data-inc-grad] :not(svg).text-emerald {
