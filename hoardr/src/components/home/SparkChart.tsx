@@ -219,7 +219,7 @@ export function SparkChart({ points, onHover }: { points: DayPoint[]; onHover?: 
       )}
 
       {/* X-axis day labels pinned to bottom */}
-      <div className="absolute bottom-4 left-0 right-0 px-4 pointer-events-none" style={{ zIndex: 10 }}>
+      <div className="absolute bottom-1.5 left-0 right-0 px-4 pointer-events-none" style={{ zIndex: 10 }}>
         {/* Sparse x-axis day labels */}
         <div className="relative" style={{ height: 10 }}>
           {[...labelSet].sort((a, b) => a - b).map(i => {
