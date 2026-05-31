@@ -52,6 +52,21 @@ export function SparkChart({ points, onHover }: { points: DayPoint[]; onHover?: 
   const totalInc = incVals.reduce((s, v) => s + v, 0)
   const totalSub = subVals.reduce((s, v) => s + v, 0)
 
+  const incPeakY = toY(Math.max(...incVals, 0))
+  const expPeakY = toY(Math.max(...expVals, 0))
+  const subPeakY = toY(Math.max(...subVals, 0))
+
+  function gf(peakY: number) {
+    const p = peakY / H
+    return {
+      before: Math.max(0, p - 0.08),
+      peak:   p,
+      mid1:   Math.min(1, p + 0.30),
+      mid2:   Math.min(1, p + 0.60),
+    }
+  }
+  const ig = gf(incPeakY), eg = gf(expPeakY), sg = gf(subPeakY)
+
   const animKey = `${n}-${Math.round(totalExp + totalInc)}`
   const hovered = hoverIdx !== null ? points[hoverIdx] : null
 
@@ -113,33 +128,29 @@ export function SparkChart({ points, onHover }: { points: DayPoint[]; onHover?: 
           overflow="visible"
         >
           <defs>
-            {/* 6-stop mountain curve — transparent at top, builds through middle,
-                peaks ~72% down where the bulk of each fill sits, softens to baseline.
-                objectBoundingBox (default) means each series' gradient is relative
-                to that series' own fill height, so all three are equally vivid. */}
-            <linearGradient id="inc-grad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset={0.00} style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.00 }}/>
-              <stop offset={0.25} style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.15 }}/>
-              <stop offset={0.50} style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.55 }}/>
-              <stop offset={0.72} style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.82 }}/>
-              <stop offset={0.88} style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.60 }}/>
-              <stop offset={1.00} style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.00 }}/>
+            <linearGradient id="inc-grad" x1="0" y1="0" x2="0" y2={H} gradientUnits="userSpaceOnUse">
+              <stop offset={0}         style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0    }}/>
+              <stop offset={ig.before} style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0    }}/>
+              <stop offset={ig.peak}   style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.95 }}/>
+              <stop offset={ig.mid1}   style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.55 }}/>
+              <stop offset={ig.mid2}   style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.15 }}/>
+              <stop offset={1}         style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0    }}/>
             </linearGradient>
-            <linearGradient id="exp-grad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset={0.00} style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.00 }}/>
-              <stop offset={0.25} style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.15 }}/>
-              <stop offset={0.50} style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.55 }}/>
-              <stop offset={0.72} style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.82 }}/>
-              <stop offset={0.88} style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.60 }}/>
-              <stop offset={1.00} style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.00 }}/>
+            <linearGradient id="exp-grad" x1="0" y1="0" x2="0" y2={H} gradientUnits="userSpaceOnUse">
+              <stop offset={0}         style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0    }}/>
+              <stop offset={eg.before} style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0    }}/>
+              <stop offset={eg.peak}   style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.95 }}/>
+              <stop offset={eg.mid1}   style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.55 }}/>
+              <stop offset={eg.mid2}   style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.15 }}/>
+              <stop offset={1}         style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0    }}/>
             </linearGradient>
-            <linearGradient id="sub-grad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset={0.00} stopColor="rgb(180,185,200)" stopOpacity="0.00"/>
-              <stop offset={0.25} stopColor="rgb(180,185,200)" stopOpacity="0.15"/>
-              <stop offset={0.50} stopColor="rgb(180,185,200)" stopOpacity="0.55"/>
-              <stop offset={0.72} stopColor="rgb(180,185,200)" stopOpacity="0.82"/>
-              <stop offset={0.88} stopColor="rgb(180,185,200)" stopOpacity="0.60"/>
-              <stop offset={1.00} stopColor="rgb(180,185,200)" stopOpacity="0.00"/>
+            <linearGradient id="sub-grad" x1="0" y1="0" x2="0" y2={H} gradientUnits="userSpaceOnUse">
+              <stop offset={0}         stopColor="rgb(180,185,200)" stopOpacity="0.00"/>
+              <stop offset={sg.before} stopColor="rgb(180,185,200)" stopOpacity="0.00"/>
+              <stop offset={sg.peak}   stopColor="rgb(180,185,200)" stopOpacity="0.95"/>
+              <stop offset={sg.mid1}   stopColor="rgb(180,185,200)" stopOpacity="0.55"/>
+              <stop offset={sg.mid2}   stopColor="rgb(180,185,200)" stopOpacity="0.15"/>
+              <stop offset={1}         stopColor="rgb(180,185,200)" stopOpacity="0.00"/>
             </linearGradient>
           </defs>
 
@@ -150,19 +161,37 @@ export function SparkChart({ points, onHover }: { points: DayPoint[]; onHover?: 
           )}
 
           {hoverIdx !== null && (
-            <>
-              <line
-                x1={toX(hoverIdx)} y1={0} x2={toX(hoverIdx)} y2={H}
-                stroke="rgba(255,255,255,0.15)" strokeWidth="1" vectorEffect="non-scaling-stroke"
-              />
-              <circle cx={toX(hoverIdx)} cy={toY(expVals[hoverIdx])} r="3" fill="var(--sem-expense, #D4AF37)"/>
-              <circle cx={toX(hoverIdx)} cy={toY(incVals[hoverIdx])} r="3" fill="var(--sem-income,  #4ADE80)"/>
-              {totalSub > 0 && (
-                <circle cx={toX(hoverIdx)} cy={toY(subVals[hoverIdx])} r="3" fill="rgba(226,234,240,0.8)"/>
-              )}
-            </>
+            <line
+              x1={toX(hoverIdx)} y1={0} x2={toX(hoverIdx)} y2={H}
+              stroke="rgba(255,255,255,0.15)" strokeWidth="1" vectorEffect="non-scaling-stroke"
+            />
           )}
         </svg>
+
+        {hoverIdx !== null && containerRef.current && (() => {
+          const cW = containerRef.current!.offsetWidth
+          const cH = containerRef.current!.offsetHeight
+          const xPx = (toX(hoverIdx) / W) * cW
+          const dots = [
+            { yPx: (toY(incVals[hoverIdx]) / H) * cH, color: 'var(--sem-income, #4ADE80)' },
+            { yPx: (toY(expVals[hoverIdx]) / H) * cH, color: 'var(--sem-expense, #D4AF37)' },
+            ...(totalSub > 0 ? [{ yPx: (toY(subVals[hoverIdx]) / H) * cH, color: 'rgba(180,185,200,0.8)' }] : []),
+          ]
+          return dots.map(({ yPx, color }, i) => (
+            <div key={i} className="pointer-events-none" style={{
+              position:     'absolute',
+              zIndex:       5,
+              left:         xPx,
+              top:          yPx,
+              width:        6,
+              height:       6,
+              borderRadius: '50%',
+              background:   '#161E27',
+              border:       `1.5px solid ${color}`,
+              transform:    'translate(-50%, -50%)',
+            }} />
+          ))
+        })()}
       </div>
 
       {/* Tooltip — fixed position so it escapes overflow:hidden on the card */}
