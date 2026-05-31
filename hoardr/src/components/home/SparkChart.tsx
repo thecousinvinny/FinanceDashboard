@@ -247,7 +247,7 @@ export function SparkChart({ points, onHover }: { points: DayPoint[]; onHover?: 
               <span
                 key={i}
                 className={`absolute text-[8px] font-medium leading-none ${
-                  i === hoverIdx ? 'text-white' : isLast ? 'text-gold' : 'text-ink-faint'
+                  i === hoverIdx ? 'text-white' : isLast ? 'text-ink-muted font-bold' : 'text-ink-faint'
                 }`}
                 style={{
                   fontFamily: 'var(--font-big-shoulders)',
