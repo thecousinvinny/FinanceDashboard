@@ -27,6 +27,66 @@ import { getAppPrefs } from '@/lib/app-prefs'
 
 type Tab = 'Expenses' | 'Subs' | 'Wishlist'
 
+function CategoryPillBar({ cat, index, isSub = false }: {
+  cat:   { name: string; total: number; pct: number }
+  index: number
+  isSub?: boolean
+}) {
+  const [animPct, setAnimPct] = useState(0)
+
+  useEffect(() => {
+    setAnimPct(0)
+    const t = setTimeout(() => setAnimPct(cat.pct), 50 + index * 80)
+    return () => clearTimeout(t)
+  }, [cat.pct, index])
+
+  const isWide = cat.pct > 50
+
+  return (
+    <div style={{ position: 'relative', height: 32, borderRadius: 8, background: '#1C2A36' }}>
+      {/* Animated fill */}
+      <div style={{
+        position:   'absolute',
+        left: 0, top: 0, bottom: 0,
+        width:      `${animPct}%`,
+        borderRadius: 8,
+        background: 'linear-gradient(90deg, rgba(245,158,11,0.35), rgba(245,158,11,0.10))',
+        transition: 'width 600ms cubic-bezier(0.22, 1, 0.36, 1)',
+        overflow:   'hidden',
+        display:    'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding:    '0 10px',
+        boxSizing:  'border-box',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+          <CategoryIcon
+            category={cat.name} type="Expense" size={12} isSub={isSub}
+            className={isSub ? 'text-white/60' : 'text-gold'}
+          />
+          <span style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.9)', whiteSpace: 'nowrap' }}>
+            {cat.name}
+          </span>
+        </div>
+        {isWide && (
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', flexShrink: 0, fontFamily: 'var(--font-big-shoulders)' }}>
+            {$fd(cat.total)}
+          </span>
+        )}
+      </div>
+
+      {/* Amount outside fill for narrow bars */}
+      {!isWide && (
+        <div style={{ position: 'absolute', right: 10, top: 0, bottom: 0, display: 'flex', alignItems: 'center' }}>
+          <span style={{ fontSize: 11, color: '#556070', flexShrink: 0, fontFamily: 'var(--font-big-shoulders)' }}>
+            {$fd(cat.total)}
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const LIMIT = 100
 
 interface Sub {
@@ -661,22 +721,9 @@ export default function OutPage() {
       {!loading && tab === 'Expenses' && catBreakdown.length > 0 && (
         <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card px-4 py-3">
           <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">This Month</p>
-          <div className="space-y-2.5">
-            {catBreakdown.map(cat => (
-              <div key={cat.name}>
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <CategoryIcon category={cat.name} type="Expense" size={12}
-                      isSub={subNames.has(cat.name.toLowerCase())}
-                      className={subNames.has(cat.name.toLowerCase()) ? 'text-white/60' : 'text-gold'} />
-                    <span className="text-[12px] font-medium text-ink truncate">{cat.name}</span>
-                  </div>
-                  <span className="text-[12px] font-semibold text-ink ml-3 flex-shrink-0" style={{ fontFamily: 'var(--font-big-shoulders)' }}>{$fd(cat.total)}</span>
-                </div>
-                <div className="h-[3px] rounded-full bg-bg-overlay overflow-hidden">
-                  <div className="h-full rounded-full bg-gold/50 transition-all duration-500" style={{ width: `${cat.pct}%` }} />
-                </div>
-              </div>
+          <div className="space-y-2">
+            {catBreakdown.map((cat, i) => (
+              <CategoryPillBar key={cat.name} cat={cat} index={i} isSub={subNames.has(cat.name.toLowerCase())} />
             ))}
           </div>
         </div>
@@ -684,20 +731,9 @@ export default function OutPage() {
       {!loading && tab === 'Subs' && subCatBreakdown.length > 0 && (
         <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card px-4 py-3">
           <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Per Month by Category</p>
-          <div className="space-y-2.5">
-            {subCatBreakdown.map(cat => (
-              <div key={cat.name}>
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <CategoryIcon category={cat.name} type="Expense" size={12} className="text-gold" />
-                    <span className="text-[12px] font-medium text-ink truncate">{cat.name}</span>
-                  </div>
-                  <span className="text-[12px] font-semibold text-ink ml-3 flex-shrink-0" style={{ fontFamily: 'var(--font-big-shoulders)' }}>{$fd(cat.total)}</span>
-                </div>
-                <div className="h-[3px] rounded-full bg-bg-overlay overflow-hidden">
-                  <div className="h-full rounded-full bg-gold/50 transition-all duration-500" style={{ width: `${cat.pct}%` }} />
-                </div>
-              </div>
+          <div className="space-y-2">
+            {subCatBreakdown.map((cat, i) => (
+              <CategoryPillBar key={cat.name} cat={cat} index={i} />
             ))}
           </div>
         </div>
@@ -705,20 +741,9 @@ export default function OutPage() {
       {!loading && tab === 'Wishlist' && wishCatBreakdown.length > 0 && (
         <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card px-4 py-3">
           <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Wish List by Category</p>
-          <div className="space-y-2.5">
-            {wishCatBreakdown.map(cat => (
-              <div key={cat.name}>
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <CategoryIcon category={cat.name} type="Expense" size={12} className="text-gold" />
-                    <span className="text-[12px] font-medium text-ink truncate">{cat.name}</span>
-                  </div>
-                  <span className="text-[12px] font-semibold text-ink ml-3 flex-shrink-0" style={{ fontFamily: 'var(--font-big-shoulders)' }}>{$fd(cat.total)}</span>
-                </div>
-                <div className="h-[3px] rounded-full bg-bg-overlay overflow-hidden">
-                  <div className="h-full rounded-full bg-gold/50 transition-all duration-500" style={{ width: `${cat.pct}%` }} />
-                </div>
-              </div>
+          <div className="space-y-2">
+            {wishCatBreakdown.map((cat, i) => (
+              <CategoryPillBar key={cat.name} cat={cat} index={i} />
             ))}
           </div>
         </div>
