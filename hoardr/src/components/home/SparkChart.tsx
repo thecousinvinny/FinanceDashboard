@@ -29,7 +29,7 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
     let d = `M${pts[0].x},${pts[0].y}`
     for (let i = 0; i < pts.length - 1; i++) {
       const p1 = pts[i], p2 = pts[i + 1]
-      const dx = (p2.x - p1.x) / 3
+      const dx = (p2.x - p1.x) * 0.4
       d += ` C${(p1.x + dx).toFixed(1)},${p1.y.toFixed(1)} ${(p2.x - dx).toFixed(1)},${p2.y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`
     }
     return d
@@ -107,15 +107,15 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
           <svg viewBox="0 0 300 64" className="w-full h-full" preserveAspectRatio="none" overflow="visible">
             <defs>
               <linearGradient id="inc-grad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#4ADE80" stopOpacity="0.22"/>
+                <stop offset="0%" stopColor="#4ADE80" stopOpacity="0.45"/>
                 <stop offset="100%" stopColor="#4ADE80" stopOpacity="0"/>
               </linearGradient>
               <linearGradient id="exp-grad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#E8C46B" stopOpacity="0.22"/>
+                <stop offset="0%" stopColor="#E8C46B" stopOpacity="0.45"/>
                 <stop offset="100%" stopColor="#E8C46B" stopOpacity="0"/>
               </linearGradient>
               <linearGradient id="sub-grad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="rgba(255,255,255,0.18)"/>
+                <stop offset="0%" stopColor="rgba(255,255,255,0.45)"/>
                 <stop offset="100%" stopColor="rgba(255,255,255,0)"/>
               </linearGradient>
             </defs>
@@ -123,10 +123,10 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
             <path d={buildArea(expVals)} fill="url(#exp-grad)"/>
             <path d={buildArea(incVals)} fill="url(#inc-grad)"/>
             {totalSub > 0 && <path d={buildArea(subVals)} fill="url(#sub-grad)"/>}
-            <path d={buildPath(expVals)} fill="none" stroke="#E8C46B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
-            <path d={buildPath(incVals)} fill="none" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
+            <path d={buildPath(expVals)} fill="none" stroke="#E8C46B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" style={{ filter: 'drop-shadow(0 0 4px #E8C46B)' }}/>
+            <path d={buildPath(incVals)} fill="none" stroke="#4ADE80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" style={{ filter: 'drop-shadow(0 0 4px #4ADE80)' }}/>
             {totalSub > 0 && (
-              <path d={buildPath(subVals)} fill="none" stroke="rgba(255,255,255,0.65)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
+              <path d={buildPath(subVals)} fill="none" stroke="rgba(255,255,255,0.65)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" style={{ filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.5))' }}/>
             )}
 
             {hoverIdx !== null && (
