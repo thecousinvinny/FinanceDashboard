@@ -111,10 +111,10 @@ function IncomeBarChart({ incomeList }: { incomeList: IncomeRow[] }) {
 
   return (
     <div
-      className="mx-4 mt-4"
-      style={{ borderRadius: 14, background: '#161E27', border: '0.5px solid #1C2A36', padding: 16 }}
+      className="mx-4 mt-4 bg-bg-surface border border-white/[0.06]"
+      style={{ borderRadius: 14, padding: 16 }}
     >
-      <p style={{ fontSize: 9, fontWeight: 500, letterSpacing: '0.12em', color: '#556070', textTransform: 'uppercase', marginBottom: 12 }}>
+      <p style={{ fontSize: 9, fontWeight: 500, letterSpacing: '0.12em', color: 'rgb(var(--rgb-ink-faint))', textTransform: 'uppercase', marginBottom: 12 }}>
         Last 6 Months
       </p>
 
@@ -149,7 +149,7 @@ function IncomeBarChart({ incomeList }: { incomeList: IncomeRow[] }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
         {months.map((m, i) => (
           <div key={m.key} style={{ width: BAR_W, textAlign: 'center' }}>
-            <span style={{ fontSize: 10, color: hoverIdx === i ? '#E2EAF0' : '#556070', transition: 'color 150ms' }}>
+            <span style={{ fontSize: 10, color: hoverIdx === i ? 'rgb(var(--rgb-ink))' : 'rgb(var(--rgb-ink-faint))', transition: 'color 150ms' }}>
               {m.label}
             </span>
           </div>
@@ -165,8 +165,8 @@ function IncomeBarChart({ incomeList }: { incomeList: IncomeRow[] }) {
             zIndex:       50,
             top:          tipPos.y - 58,
             left:         tipPos.x + 12,
-            background:   '#0E151D',
-            border:       '0.5px solid #243040',
+            background:   'var(--color-bg-elevated)',
+            border:       '0.5px solid var(--color-grid-border)',
             borderRadius: 8,
             padding:      '6px 10px',
           }}
@@ -174,7 +174,7 @@ function IncomeBarChart({ incomeList }: { incomeList: IncomeRow[] }) {
           <p style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.10em', color: '#22c55e', textTransform: 'uppercase', marginBottom: 2 }}>
             {hoveredMonth.label}
           </p>
-          <p style={{ fontSize: 13, fontWeight: 600, color: '#E2EAF0', fontFamily: 'var(--font-big-shoulders)' }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: 'rgb(var(--rgb-ink))', fontFamily: 'var(--font-big-shoulders)' }}>
             ${Math.round(hoveredMonth.total).toLocaleString('en-US')}
           </p>
         </div>
