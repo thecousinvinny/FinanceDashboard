@@ -52,11 +52,6 @@ export function SparkChart({ points, onHover }: { points: DayPoint[]; onHover?: 
   const totalInc = incVals.reduce((s, v) => s + v, 0)
   const totalSub = subVals.reduce((s, v) => s + v, 0)
 
-  // Fixed gradient shape — all series use the same vertical profile so each
-  // looks equally vivid regardless of absolute value.
-  const peakOff = 0.15          // 0.0 → 0.85 ramp lands at 15% from top
-  const fadeOff = 0.15 + 0.85 * 0.6  // 0.66 — mid-fade stop
-
   const animKey = `${n}-${Math.round(totalExp + totalInc)}`
   const hovered = hoverIdx !== null ? points[hoverIdx] : null
 
@@ -118,25 +113,33 @@ export function SparkChart({ points, onHover }: { points: DayPoint[]; onHover?: 
           overflow="visible"
         >
           <defs>
-            {/* Fixed 4-stop gradient — same profile for all series so each is equally vivid.
-                0.0 at top → 0.85 at 15% → 0.06 at 66% → 0.0 at bottom */}
+            {/* 6-stop mountain curve — transparent at top, builds through middle,
+                peaks ~72% down where the bulk of each fill sits, softens to baseline.
+                objectBoundingBox (default) means each series' gradient is relative
+                to that series' own fill height, so all three are equally vivid. */}
             <linearGradient id="inc-grad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset={0}       style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0    }}/>
-              <stop offset={peakOff} style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.85 }}/>
-              <stop offset={fadeOff} style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.06 }}/>
-              <stop offset={1}       style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0    }}/>
+              <stop offset={0.00} style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.00 }}/>
+              <stop offset={0.25} style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.15 }}/>
+              <stop offset={0.50} style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.55 }}/>
+              <stop offset={0.72} style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.82 }}/>
+              <stop offset={0.88} style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.60 }}/>
+              <stop offset={1.00} style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.00 }}/>
             </linearGradient>
             <linearGradient id="exp-grad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset={0}       style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0    }}/>
-              <stop offset={peakOff} style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.85 }}/>
-              <stop offset={fadeOff} style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.06 }}/>
-              <stop offset={1}       style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0    }}/>
+              <stop offset={0.00} style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.00 }}/>
+              <stop offset={0.25} style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.15 }}/>
+              <stop offset={0.50} style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.55 }}/>
+              <stop offset={0.72} style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.82 }}/>
+              <stop offset={0.88} style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.60 }}/>
+              <stop offset={1.00} style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.00 }}/>
             </linearGradient>
             <linearGradient id="sub-grad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset={0}       stopColor="rgb(180,185,200)" stopOpacity="0"/>
-              <stop offset={peakOff} stopColor="rgb(180,185,200)" stopOpacity="0.85"/>
-              <stop offset={fadeOff} stopColor="rgb(180,185,200)" stopOpacity="0.06"/>
-              <stop offset={1}       stopColor="rgb(180,185,200)" stopOpacity="0"/>
+              <stop offset={0.00} stopColor="rgb(180,185,200)" stopOpacity="0.00"/>
+              <stop offset={0.25} stopColor="rgb(180,185,200)" stopOpacity="0.15"/>
+              <stop offset={0.50} stopColor="rgb(180,185,200)" stopOpacity="0.55"/>
+              <stop offset={0.72} stopColor="rgb(180,185,200)" stopOpacity="0.82"/>
+              <stop offset={0.88} stopColor="rgb(180,185,200)" stopOpacity="0.60"/>
+              <stop offset={1.00} stopColor="rgb(180,185,200)" stopOpacity="0.00"/>
             </linearGradient>
           </defs>
 
