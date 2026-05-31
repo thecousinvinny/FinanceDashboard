@@ -74,6 +74,115 @@ function mapStreamRow(s: any): RevenueStreamConfig {
   }
 }
 
+const MONTH_ABBRS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+
+function IncomeBarChart({ incomeList }: { incomeList: IncomeRow[] }) {
+  const [animated,   setAnimated]   = useState(false)
+  const [hoverIdx,   setHoverIdx]   = useState<number | null>(null)
+  const [tipPos,     setTipPos]     = useState({ x: 0, y: 0 })
+
+  const CHART_H = 100
+  const BAR_W   = 28
+
+  const months = useMemo(() => {
+    const today  = new Date()
+    const result: { key: string; label: string; total: number }[] = []
+    for (let i = 5; i >= 0; i--) {
+      const d   = new Date(today.getFullYear(), today.getMonth() - i, 1)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      result.push({ key, label: MONTH_ABBRS[d.getMonth()], total: 0 })
+    }
+    for (const row of incomeList) {
+      const m = result.find(r => r.key === row.date.slice(0, 7))
+      if (m) m.total += row.amount
+    }
+    return result
+  }, [incomeList])
+
+  const maxVal = Math.max(...months.map(m => m.total), 1)
+
+  useEffect(() => {
+    setAnimated(false)
+    const t = setTimeout(() => setAnimated(true), 30)
+    return () => clearTimeout(t)
+  }, [incomeList])
+
+  const hoveredMonth = hoverIdx !== null ? months[hoverIdx] : null
+
+  return (
+    <div
+      className="mx-4 mt-4"
+      style={{ borderRadius: 14, background: '#161E27', border: '0.5px solid #1C2A36', padding: 16 }}
+    >
+      <p style={{ fontSize: 9, fontWeight: 500, letterSpacing: '0.12em', color: '#556070', textTransform: 'uppercase', marginBottom: 12 }}>
+        Last 6 Months
+      </p>
+
+      {/* Bars */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', height: CHART_H }}>
+        {months.map((m, i) => {
+          const opacity   = 0.30 + (m.total / maxVal) * 0.65
+          const heightPct = m.total > 0 ? (m.total / maxVal) * 100 : 0
+          return (
+            <div
+              key={m.key}
+              style={{ width: BAR_W, height: '100%', display: 'flex', alignItems: 'flex-end' }}
+              onMouseEnter={e => { setHoverIdx(i); setTipPos({ x: e.clientX, y: e.clientY }) }}
+              onMouseMove={e  => setTipPos({ x: e.clientX, y: e.clientY })}
+              onMouseLeave={()  => setHoverIdx(null)}
+            >
+              <div style={{
+                width:        BAR_W,
+                height:       animated ? `${heightPct}%` : '0%',
+                minHeight:    m.total > 0 && animated ? 3 : 0,
+                borderRadius: 6,
+                background:   `rgba(34, 197, 94, ${hoverIdx === i ? Math.min(opacity + 0.15, 1) : opacity})`,
+                transition:   'height 600ms cubic-bezier(0.22, 1, 0.36, 1)',
+                flexShrink:   0,
+              }} />
+            </div>
+          )
+        })}
+      </div>
+
+      {/* X-axis labels */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+        {months.map((m, i) => (
+          <div key={m.key} style={{ width: BAR_W, textAlign: 'center' }}>
+            <span style={{ fontSize: 10, color: hoverIdx === i ? '#E2EAF0' : '#556070', transition: 'color 150ms' }}>
+              {m.label}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Tooltip */}
+      {hoverIdx !== null && hoveredMonth && (
+        <div
+          className="pointer-events-none"
+          style={{
+            position:     'fixed',
+            zIndex:       50,
+            top:          tipPos.y - 58,
+            left:         tipPos.x + 12,
+            background:   '#0E151D',
+            border:       '0.5px solid #243040',
+            borderRadius: 8,
+            padding:      '6px 10px',
+          }}
+        >
+          <p style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.10em', color: '#22c55e', textTransform: 'uppercase', marginBottom: 2 }}>
+            {hoveredMonth.label}
+          </p>
+          <p style={{ fontSize: 13, fontWeight: 600, color: '#E2EAF0', fontFamily: 'var(--font-big-shoulders)' }}>
+            ${Math.round(hoveredMonth.total).toLocaleString('en-US')}
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function StatCard({ label, value, sub, loading }: { label: string; value: number; sub?: string; loading: boolean }) {
   return (
     <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
@@ -747,6 +856,8 @@ export default function InPage() {
 
         {/* ── History ─────────────────────────────────────────────────────── */}
         {!loading && tab === 'History' && (
+          <>
+          <IncomeBarChart incomeList={incomeList} />
           <div className="mx-4 mt-4 space-y-5">
             {incomeLoading ? (
               <div className="space-y-2">
@@ -785,6 +896,7 @@ export default function InPage() {
               </>
             )}
           </div>
+          </>
         )}
 
         {/* ── Streams ─────────────────────────────────────────────────────── */}
