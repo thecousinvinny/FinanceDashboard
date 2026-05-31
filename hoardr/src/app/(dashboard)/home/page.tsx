@@ -38,14 +38,15 @@ interface ActivityRow {
 }
 
 interface HomeCache {
-  spent:       number
-  earned:      number
-  monthlySubs: number
-  hoardTotal:  number
-  upcoming:    UpcomingSub[]
-  enRoute:     EnRouteItem[]
-  activity:    ActivityRow[]
-  sparkPoints: DayPoint[]
+  spent:             number
+  earned:            number
+  monthlySubs:       number
+  hoardTotal:        number
+  upcoming:          UpcomingSub[]
+  enRoute:           EnRouteItem[]
+  activity:          ActivityRow[]
+  sparkPoints:       DayPoint[]
+  annualSparkPoints: DayPoint[]
 }
 
 export default function HomePage() {
@@ -58,8 +59,9 @@ export default function HomePage() {
   const [upcoming,      setUpcoming]      = useState<UpcomingSub[]>(cached?.upcoming ?? [])
   const [enRoute,       setEnRoute]       = useState<EnRouteItem[]>(cached?.enRoute ?? [])
   const [activity,      setActivity]      = useState<ActivityRow[]>(cached?.activity ?? [])
-  const [sparkPoints,   setSparkPoints]   = useState<DayPoint[]>(cached?.sparkPoints ?? [])
-  const [loading,       setLoading]       = useState(!cached)
+  const [sparkPoints,        setSparkPoints]        = useState<DayPoint[]>(cached?.sparkPoints ?? [])
+  const [annualSparkPoints,  setAnnualSparkPoints]  = useState<DayPoint[]>(cached?.annualSparkPoints ?? [])
+  const [loading,            setLoading]            = useState(!cached)
   const [fabOpen,       setFabOpen]       = useState(false)
   const [expenseOpen,   setExpenseOpen]   = useState(false)
   const [wishlistOpen,  setWishlistOpen]  = useState(false)
@@ -82,6 +84,7 @@ export default function HomePage() {
       const [y, m, dStr]  = todayStr.split('-')
       const monthStart    = `${y}-${m}-01`
       const monthEnd      = `${y}-${m}-${new Date(Number(y), Number(m), 0).getDate()}`
+      const yearStart     = `${y}-01-01`
       const sig           = controller.signal
 
       // Build last-14-days array (may cross a month boundary)
@@ -106,6 +109,8 @@ export default function HomePage() {
         { data: allTimeInc },
         { data: chartExp },
         { data: chartInc },
+        { data: yearExp },
+        { data: yearInc },
       ] = await Promise.all([
         supabase.from('expenses').select('cost, date, name').gte('date', monthStart).lte('date', monthEnd).abortSignal(sig),
         supabase.from('income').select('amount, date').gte('date', monthStart).lte('date', monthEnd).abortSignal(sig),
@@ -138,6 +143,8 @@ export default function HomePage() {
         supabase.from('income').select('amount').abortSignal(sig),
         supabase.from('expenses').select('cost, date, name').gte('date', chartStart).lte('date', todayStr).abortSignal(sig),
         supabase.from('income').select('amount, date').gte('date', chartStart).lte('date', todayStr).abortSignal(sig),
+        supabase.from('expenses').select('cost, date, name').gte('date', yearStart).lte('date', todayStr).abortSignal(sig),
+        supabase.from('income').select('amount, date').gte('date', yearStart).lte('date', todayStr).abortSignal(sig),
       ])
 
       if (gen !== loadGen.current) return
@@ -216,11 +223,40 @@ export default function HomePage() {
         sub:   chartDailySub[dateStr] ?? 0,
       }))
 
+      // Annual chart — group year expenses + income by month (Jan → current month)
+      const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+      const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December']
+      const annualExpByMonth: Record<string, number> = {}
+      const annualSubByMonth: Record<string, number> = {}
+      const annualIncByMonth: Record<string, number> = {}
+      for (const e of yearExp ?? []) {
+        const mk = String(e.date).slice(0, 7)
+        if (subNameSet.has(String(e.name ?? '').toLowerCase())) {
+          annualSubByMonth[mk] = (annualSubByMonth[mk] ?? 0) + Number(e.cost)
+        } else {
+          annualExpByMonth[mk] = (annualExpByMonth[mk] ?? 0) + Number(e.cost)
+        }
+      }
+      for (const i of yearInc ?? []) {
+        const mk = String(i.date).slice(0, 7)
+        annualIncByMonth[mk] = (annualIncByMonth[mk] ?? 0) + Number(i.amount)
+      }
+      const newAnnualSparkPoints: DayPoint[] = Array.from({ length: Number(m) }, (_, i) => {
+        const mk = `${y}-${String(i + 1).padStart(2, '0')}`
+        return {
+          day:   MONTH_ABBR[i],
+          label: `${MONTH_FULL[i]} ${y}`,
+          exp:   annualExpByMonth[mk] ?? 0,
+          inc:   annualIncByMonth[mk] ?? 0,
+          sub:   annualSubByMonth[mk] ?? 0,
+        }
+      })
+
       pageCache.set('home', {
         spent: newSpent, earned: newEarned,
         monthlySubs: newMonthlySubs, hoardTotal: newHoardTotal,
         upcoming: newUpcoming, enRoute: newEnRoute, activity: newActivity,
-        sparkPoints: newSparkPoints,
+        sparkPoints: newSparkPoints, annualSparkPoints: newAnnualSparkPoints,
       })
 
       setSpent(newSpent)
@@ -231,6 +267,7 @@ export default function HomePage() {
       setEnRoute(newEnRoute)
       setActivity(newActivity)
       setSparkPoints(newSparkPoints)
+      setAnnualSparkPoints(newAnnualSparkPoints)
       setLoading(false)
     } catch (err) {
       if ((err as Error)?.name === 'AbortError') return
@@ -351,7 +388,7 @@ export default function HomePage() {
 
       {!loading && (
         <>
-          <HomeHero spent={spent} points={sparkPoints} />
+          <HomeHero spent={spent} points={sparkPoints} annualPoints={annualSparkPoints} />
 
           {/* ── Hoard pile ──────────────────────────────────────────────── */}
           <HoardChest hoardTotal={hoardTotal} thisMonthNet={saved} />
