@@ -92,10 +92,19 @@ export function HomeHero({ spent, points, annualPoints }: Props) {
         </div>
       </div>
 
+      {/* Dark gradient overlay — protects text readability, transparent on right */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: 'linear-gradient(90deg, rgba(22,30,39,0.85) 0%, rgba(22,30,39,0.5) 45%, rgba(22,30,39,0.0) 70%)',
+          zIndex: 1,
+        }}
+      />
+
       {/* Text overlay — hero number + legend */}
       <div
         className="absolute left-0 right-0 pointer-events-none"
-        style={{ top: 0, padding: 20, zIndex: 10 }}
+        style={{ top: 0, padding: '14px 16px', zIndex: 2 }}
       >
         {/* Label + page dots */}
         <div className="flex items-center gap-2 mb-1">
