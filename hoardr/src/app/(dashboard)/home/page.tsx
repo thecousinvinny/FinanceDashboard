@@ -78,11 +78,21 @@ export default function HomePage() {
     const gen = ++loadGen.current
 
     try {
-      const todayStr   = localToday()
-      const [y, m]     = todayStr.split('-')
-      const monthStart = `${y}-${m}-01`
-      const monthEnd   = `${y}-${m}-${new Date(Number(y), Number(m), 0).getDate()}`
-      const sig        = controller.signal
+      const todayStr      = localToday()
+      const [y, m, dStr]  = todayStr.split('-')
+      const monthStart    = `${y}-${m}-01`
+      const monthEnd      = `${y}-${m}-${new Date(Number(y), Number(m), 0).getDate()}`
+      const sig           = controller.signal
+
+      // Build last-14-days array (may cross a month boundary)
+      const chart14Days: string[] = []
+      for (let back = 13; back >= 0; back--) {
+        const dt = new Date(Number(y), Number(m) - 1, Number(dStr) - back)
+        chart14Days.push(
+          `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+        )
+      }
+      const chartStart = chart14Days[0]
 
       const [
         { data: monthExp },
@@ -94,6 +104,8 @@ export default function HomePage() {
         { data: recentInc },
         { data: allTimeExp },
         { data: allTimeInc },
+        { data: chartExp },
+        { data: chartInc },
       ] = await Promise.all([
         supabase.from('expenses').select('cost, date, name').gte('date', monthStart).lte('date', monthEnd).abortSignal(sig),
         supabase.from('income').select('amount, date').gte('date', monthStart).lte('date', monthEnd).abortSignal(sig),
@@ -124,6 +136,8 @@ export default function HomePage() {
           .abortSignal(sig),
         supabase.from('expenses').select('cost').abortSignal(sig),
         supabase.from('income').select('amount').abortSignal(sig),
+        supabase.from('expenses').select('cost, date, name').gte('date', chartStart).lte('date', todayStr).abortSignal(sig),
+        supabase.from('income').select('amount, date').gte('date', chartStart).lte('date', todayStr).abortSignal(sig),
       ])
 
       if (gen !== loadGen.current) return
@@ -178,40 +192,29 @@ export default function HomePage() {
         .sort((a, b) => b.date.localeCompare(a.date))
         .slice(0, 3)
 
-      // Cumulative monthly sparkline — day 1 → today, 3 series
-      const todayDay = Number(todayStr.split('-')[2])
-      const monthDays: string[] = []
-      for (let d = 1; d <= todayDay; d++) {
-        monthDays.push(`${y}-${m.padStart(2, '0')}-${String(d).padStart(2, '0')}`)
-      }
-      const dailyExp: Record<string, number> = {}
-      const dailyInc: Record<string, number> = {}
-      const dailySub: Record<string, number> = {}
-      for (const e of monthExp ?? []) {
+      // Daily 14-day chart — each DayPoint is that day's amounts, not cumulative
+      const chartDailyExp: Record<string, number> = {}
+      const chartDailyInc: Record<string, number> = {}
+      const chartDailySub: Record<string, number> = {}
+      for (const e of chartExp ?? []) {
         const k = String(e.date)
         if (subNameSet.has(String(e.name ?? '').toLowerCase())) {
-          dailySub[k] = (dailySub[k] ?? 0) + Number(e.cost)
+          chartDailySub[k] = (chartDailySub[k] ?? 0) + Number(e.cost)
         } else {
-          dailyExp[k] = (dailyExp[k] ?? 0) + Number(e.cost)
+          chartDailyExp[k] = (chartDailyExp[k] ?? 0) + Number(e.cost)
         }
       }
-      for (const i of monthInc ?? []) {
+      for (const i of chartInc ?? []) {
         const k = String(i.date)
-        dailyInc[k] = (dailyInc[k] ?? 0) + Number(i.amount)
+        chartDailyInc[k] = (chartDailyInc[k] ?? 0) + Number(i.amount)
       }
-      let cumExp = 0, cumInc = 0, cumSub = 0
-      const newSparkPoints: DayPoint[] = monthDays.map(dateStr => {
-        cumExp += dailyExp[dateStr] ?? 0
-        cumInc += dailyInc[dateStr] ?? 0
-        cumSub += dailySub[dateStr] ?? 0
-        return {
-          day:   String(Number(dateStr.split('-')[2])),
-          label: new Date(dateStr + 'T12:00:00').toLocaleString('en-US', { month: 'short', day: 'numeric' }),
-          exp:   cumExp,
-          inc:   cumInc,
-          sub:   cumSub,
-        }
-      })
+      const newSparkPoints: DayPoint[] = chart14Days.map(dateStr => ({
+        day:   String(Number(dateStr.split('-')[2])),
+        label: new Date(dateStr + 'T12:00:00').toLocaleString('en-US', { month: 'short', day: 'numeric' }),
+        exp:   chartDailyExp[dateStr] ?? 0,
+        inc:   chartDailyInc[dateStr] ?? 0,
+        sub:   chartDailySub[dateStr] ?? 0,
+      }))
 
       pageCache.set('home', {
         spent: newSpent, earned: newEarned,

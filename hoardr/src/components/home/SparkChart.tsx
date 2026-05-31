@@ -32,7 +32,7 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
     let d = `M${pts[0].x},${pts[0].y}`
     for (let i = 0; i < pts.length - 1; i++) {
       const p1 = pts[i], p2 = pts[i + 1]
-      const dx = (p2.x - p1.x) * 0.45
+      const dx = (p2.x - p1.x) * 0.4
       d += ` C${(p1.x + dx).toFixed(1)},${p1.y.toFixed(1)} ${(p2.x - dx).toFixed(1)},${p2.y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`
     }
     return d
@@ -47,16 +47,19 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
   const expVals = points.map(p => p.exp)
   const incVals = points.map(p => p.inc)
   const subVals = points.map(p => p.sub)
-  const totalExp = expVals[n - 1] ?? 0
-  const totalInc = incVals[n - 1] ?? 0
-  const totalSub = subVals[n - 1] ?? 0
+  // 14-day totals (for legend non-hover state)
+  const totalExp = expVals.reduce((s, v) => s + v, 0)
+  const totalInc = incVals.reduce((s, v) => s + v, 0)
+  const totalSub = subVals.reduce((s, v) => s + v, 0)
 
-  // Per-series peak Y in SVG coordinates — used for 3-stop gradient placement.
-  // Taller series peaks at a lower Y value (higher on screen), so incPeakY/H is
-  // small → gradient ramps to 0.9 opacity quickly near the top.
+  // Per-series peak Y in SVG coordinates.
+  // Each series has its own gradient peak; fadeY is the midpoint between peak and bottom.
   const incPeakY = toY(Math.max(...incVals, 0))
   const expPeakY = toY(Math.max(...expVals, 0))
   const subPeakY = toY(Math.max(...subVals, 0))
+  const incFadeY = incPeakY + (H - incPeakY) * 0.5
+  const expFadeY = expPeakY + (H - expPeakY) * 0.5
+  const subFadeY = subPeakY + (H - subPeakY) * 0.5
 
   const animKey = `${n}-${Math.round(totalExp + totalInc)}`
   const hovered = hoverIdx !== null ? points[hoverIdx] : null
@@ -79,10 +82,10 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
     ? tooltipFixed.x > containerRef.current.getBoundingClientRect().right - 170
     : false
 
-  // Sparse day labels — at most 5, always day 1 and today
+  // Up to 7 evenly-spaced day labels (matches the 14-day window)
   const labelIndices: number[] = n <= 7
     ? Array.from({ length: n }, (_, i) => i)
-    : [0, Math.round(n * 0.25), Math.round(n * 0.5), Math.round(n * 0.75), n - 1]
+    : Array.from({ length: 7 }, (_, i) => Math.round(i * (n - 1) / 6))
   const labelSet = new Set(labelIndices)
 
   return (
@@ -114,22 +117,25 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
           overflow="visible"
         >
           <defs>
-            {/* 3-stop gradient: 0 at top → 0.9 at series peak → 0 at bottom.
+            {/* 4-stop gradient per series: 0 at top → 0.88 at peak → 0.08 at fadeY → 0 at bottom.
                 userSpaceOnUse so stop offsets map to real SVG Y coordinates. */}
             <linearGradient id="inc-grad" x1="0" y1="0" x2="0" y2={H} gradientUnits="userSpaceOnUse">
-              <stop offset={0}              style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0   }}/>
-              <stop offset={incPeakY / H}   style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.9 }}/>
-              <stop offset={1}              style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0   }}/>
+              <stop offset={0}              style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0    }}/>
+              <stop offset={incPeakY / H}   style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.88 }}/>
+              <stop offset={incFadeY / H}   style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0.08 }}/>
+              <stop offset={1}              style={{ stopColor: 'var(--sem-income,  #4ADE80)', stopOpacity: 0    }}/>
             </linearGradient>
             <linearGradient id="exp-grad" x1="0" y1="0" x2="0" y2={H} gradientUnits="userSpaceOnUse">
-              <stop offset={0}              style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0   }}/>
-              <stop offset={expPeakY / H}   style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.9 }}/>
-              <stop offset={1}              style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0   }}/>
+              <stop offset={0}              style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0    }}/>
+              <stop offset={expPeakY / H}   style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.88 }}/>
+              <stop offset={expFadeY / H}   style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0.08 }}/>
+              <stop offset={1}              style={{ stopColor: 'var(--sem-expense, #D4AF37)', stopOpacity: 0    }}/>
             </linearGradient>
             <linearGradient id="sub-grad" x1="0" y1="0" x2="0" y2={H} gradientUnits="userSpaceOnUse">
-              <stop offset={0}              stopColor="rgb(226,234,240)" stopOpacity="0"/>
-              <stop offset={subPeakY / H}   stopColor="rgb(226,234,240)" stopOpacity="0.55"/>
-              <stop offset={1}              stopColor="rgb(226,234,240)" stopOpacity="0"/>
+              <stop offset={0}            stopColor="rgb(180,185,200)" stopOpacity="0"/>
+              <stop offset={subPeakY / H} stopColor="rgb(180,185,200)" stopOpacity="0.55"/>
+              <stop offset={subFadeY / H} stopColor="rgb(180,185,200)" stopOpacity="0.08"/>
+              <stop offset={1}            stopColor="rgb(180,185,200)" stopOpacity="0"/>
             </linearGradient>
           </defs>
 
@@ -183,7 +189,7 @@ export function SparkChart({ points }: { points: DayPoint[] }) {
       <div className="absolute bottom-0 left-0 right-0 px-4 pb-3 pointer-events-none" style={{ zIndex: 10 }}>
         <div className="flex items-center justify-between mb-1.5">
           <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint">
-            {hovered ? hovered.label : 'Month to date'}
+            {hovered ? hovered.label : '14 days'}
           </p>
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1 text-[10px] font-medium text-emerald" style={{ fontFamily: 'var(--font-big-shoulders)' }}>
