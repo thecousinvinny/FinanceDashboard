@@ -76,13 +76,29 @@ function mapStreamRow(s: any): RevenueStreamConfig {
 
 const MONTH_ABBRS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
+function readCssVar(name: string, fallback: string): string {
+  if (typeof window === 'undefined') return fallback
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
+}
+
 function IncomeBarChart({ incomeList }: { incomeList: IncomeRow[] }) {
-  const [animated,   setAnimated]   = useState(false)
-  const [hoverIdx,   setHoverIdx]   = useState<number | null>(null)
-  const [tipPos,     setTipPos]     = useState({ x: 0, y: 0 })
+  const [animated,  setAnimated]  = useState(false)
+  const [hoverIdx,  setHoverIdx]  = useState<number | null>(null)
+  const [tipPos,    setTipPos]    = useState({ x: 0, y: 0 })
+  const [colorRev,  setColorRev]  = useState(0)
 
   const CHART_H = 100
   const BAR_W   = 28
+
+  useEffect(() => {
+    const handler = () => setColorRev(r => r + 1)
+    window.addEventListener('sem-colors-changed', handler)
+    return () => window.removeEventListener('sem-colors-changed', handler)
+  }, [])
+
+  // Read live from CSS vars so Settings > Appearance changes apply instantly
+  const incRgb   = readCssVar('--sem-income-rgb', '34,197,94')  // fallback = emerald
+  const incColor = readCssVar('--sem-income',     '#22c55e')
 
   const months = useMemo(() => {
     const today  = new Date()
@@ -97,7 +113,8 @@ function IncomeBarChart({ incomeList }: { incomeList: IncomeRow[] }) {
       if (m) m.total += row.amount
     }
     return result
-  }, [incomeList])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incomeList, colorRev])
 
   const maxVal = Math.max(...months.map(m => m.total), 1)
 
@@ -136,7 +153,7 @@ function IncomeBarChart({ incomeList }: { incomeList: IncomeRow[] }) {
                 height:       animated ? `${heightPct}%` : '0%',
                 minHeight:    m.total > 0 && animated ? 3 : 0,
                 borderRadius: 6,
-                background:   `rgba(34, 197, 94, ${hoverIdx === i ? Math.min(opacity + 0.15, 1) : opacity})`,
+                background:   `rgba(${incRgb},${hoverIdx === i ? Math.min(opacity + 0.15, 1) : opacity})`,
                 transition:   'height 600ms cubic-bezier(0.22, 1, 0.36, 1)',
                 flexShrink:   0,
               }} />
@@ -171,7 +188,7 @@ function IncomeBarChart({ incomeList }: { incomeList: IncomeRow[] }) {
             padding:      '6px 10px',
           }}
         >
-          <p style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.10em', color: '#22c55e', textTransform: 'uppercase', marginBottom: 2 }}>
+          <p style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.10em', color: incColor, textTransform: 'uppercase', marginBottom: 2 }}>
             {hoveredMonth.label}
           </p>
           <p style={{ fontSize: 13, fontWeight: 600, color: 'rgb(var(--rgb-ink))', fontFamily: 'var(--font-big-shoulders)' }}>
