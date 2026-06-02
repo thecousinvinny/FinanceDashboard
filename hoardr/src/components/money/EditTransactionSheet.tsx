@@ -311,9 +311,11 @@ export function EditTransactionSheet({ tx, open, onClose, onSave, cards = [], ba
                     style={{ colorScheme: 'dark' }}
                   >
                     <option value="">None</option>
-                    {banks.map(b => (
-                      <option key={b.id} value={b.id}>{b.name}</option>
-                    ))}
+                    {[...banks]
+                      .sort((a, b) => (a.id === bankId ? -1 : b.id === bankId ? 1 : 0))
+                      .map(b => (
+                        <option key={b.id} value={b.id}>{b.name}</option>
+                      ))}
                   </select>
                   <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
                 </div>

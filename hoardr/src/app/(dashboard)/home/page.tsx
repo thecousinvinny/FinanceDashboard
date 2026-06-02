@@ -502,6 +502,7 @@ export default function HomePage() {
       cards={cards}
       banks={banks}
       defaultCardId={defaultCardId}
+      defaultBankId={getAppPrefs().defaultBankId ?? null}
       defaultCategory={getAppPrefs().defaultExpCat}
     />
     <AddWishlistSheet

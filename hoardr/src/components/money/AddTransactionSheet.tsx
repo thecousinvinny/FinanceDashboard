@@ -23,10 +23,11 @@ interface Props {
   cards?:            CardOption[]
   banks?:            BankOption[]
   defaultCardId?:    string | null
+  defaultBankId?:    string | null
   defaultCategory?:  string | null
 }
 
-export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = [], defaultCardId, defaultCategory }: Props) {
+export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = [], defaultCardId, defaultBankId, defaultCategory }: Props) {
   const [type,        setType]        = useState<TxType>('Expense')
   const [amount,      setAmount]      = useState('')
   const [name,        setName]        = useState('')
@@ -142,7 +143,7 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
         setCategory(defaultCategory ?? null)
         setDate(localToday())
         setCardId(defaultCardId ?? null)
-        setBankId(null)
+        setBankId(defaultBankId ?? null)
       }, 300)
       return () => clearTimeout(t)
     }
@@ -307,9 +308,11 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
                     style={{ colorScheme: 'dark' }}
                   >
                     <option value="">None</option>
-                    {banks.map(b => (
-                      <option key={b.id} value={b.id}>{b.name}</option>
-                    ))}
+                    {[...banks]
+                      .sort((a, b) => (a.id === defaultBankId ? -1 : b.id === defaultBankId ? 1 : 0))
+                      .map(b => (
+                        <option key={b.id} value={b.id}>{b.name}</option>
+                      ))}
                   </select>
                   <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
                 </div>

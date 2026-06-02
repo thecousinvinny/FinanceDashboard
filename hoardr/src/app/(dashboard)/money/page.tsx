@@ -970,6 +970,7 @@ export default function OutPage() {
       cards={cards}
       banks={banks}
       defaultCardId={defaultCardId}
+      defaultBankId={getAppPrefs().defaultBankId ?? null}
       defaultCategory={getAppPrefs().defaultExpCat}
     />
     <EditTransactionSheet
