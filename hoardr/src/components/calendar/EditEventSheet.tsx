@@ -107,7 +107,8 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
   const locSvcRef    = useRef<unknown>(null)
   const locTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
   const locRowRef    = useRef<HTMLDivElement>(null)
-  const locTextareaRef = useRef<HTMLTextAreaElement>(null)
+  const locTextareaRef  = useRef<HTMLTextAreaElement>(null)
+  const notesRef        = useRef<HTMLTextAreaElement>(null)
   const backdropRef  = useRef<HTMLDivElement>(null)
   const dragStartY   = useRef<number | null>(null)
   const sheetRef     = useRef<HTMLDivElement>(null)
@@ -174,6 +175,14 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
     el.style.height = 'auto'
     el.style.height = `${el.scrollHeight}px`
   }, [locValue])
+
+  // Auto-resize notes textarea
+  useEffect(() => {
+    const el = notesRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [form?.notes])
 
   // Lock background scroll while sheet is open
   useEffect(() => {
@@ -616,14 +625,15 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
               <div style={{ ...rowStyle, alignItems: 'flex-start' }}>
                 <AlignLeft size={16} color={MUTED} style={{ flexShrink: 0, marginTop: 2 }} />
                 <textarea
+                  ref={notesRef}
                   placeholder="Notes"
                   value={form.notes}
                   onChange={e => set('notes', e.target.value)}
-                  rows={2}
+                  rows={3}
                   style={{
                     flex: 1, background: 'none', border: 'none', outline: 'none', resize: 'none',
                     fontSize: 14, color: 'var(--color-ink)', fontFamily: M,
-                    lineHeight: 1.5,
+                    lineHeight: 1.5, overflowY: 'hidden',
                   }}
                 />
               </div>
@@ -680,7 +690,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
                     border: 'none', borderRadius: 14,
                     cursor: canSave && !saving ? 'pointer' : 'not-allowed',
                     fontSize: 16, fontWeight: 500, fontFamily: M,
-                    color: '#1a1200',
+                    color: '#fff',
                     boxShadow: canSave && !saving ? '0 4px 12px rgba(0,0,0,0.3)' : 'none',
                     transition: 'background 0.15s, box-shadow 0.15s',
                   }}
