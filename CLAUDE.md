@@ -169,25 +169,37 @@ All six tabs are wired to live Supabase. `src/lib/data/transactions.ts` still ex
 - `wallet/AddCardSheet.tsx` / `EditCardSheet.tsx` — card add/edit sheets with grouped 12-style color picker and 8-texture picker; `NewCard` and `CardEdits` interfaces both include `texture: CardTexture`
 - `ui/SemanticColorSheet.tsx` — bottom sheet for customizing semantic accent colors (Income, Expense, Subscriptions). Uses `react-colorful` (`HexColorPicker` + `HexColorInput`). Each of the three color types cycles through two views: a flat color picker and a gradient builder (from/to hex + angle chips: 45/90/135/180°). Persists via `setSemanticColors()` from `@/lib/semantic-colors`, which also dispatches `sem-colors-changed` so `SparkChart` and other components re-read CSS vars immediately. Opened from Settings → Appearance.
 - `calendar/RecurrencePicker.tsx` — bottom sheet for choosing/building a recurrence rule. Props: `{ open, date, value, onClose, onChange }`. Two views: preset list (7 options derived from the event date via `makePresets(dateStr)`) and a custom builder (frequency chips, interval stepper, weekday toggles, end condition). Renders at `z-[70]` above AddEventSheet/EditEventSheet (`z-[60]` backdrop).
-- `calendar/EditEventSheet.tsx` — edit an existing custom calendar event. Exports `EditableEvent` (the event to edit), `EventEdits` (the patch), and `RecurrenceScope = 'this' | 'following' | 'all'`. Two-step flow: a scope picker (shown only when `event.recurrenceRule` is set) then the full edit form matching AddEventSheet. Delete button opens a scope confirmation sheet at `z-[60]`/`z-[70]`. **Location field is a `<textarea rows={2}>`** (not `<input type="text">`) so long addresses display fully; `locationRef` is typed `useRef<HTMLTextAreaElement>` and cast via `as unknown as HTMLInputElement` when passed to Google Places Autocomplete.
+- `calendar/EditEventSheet.tsx` — iPhone bottom sheet for creating and editing calendar events. `EditableEvent.id` is optional — sheets with no `id` are "create" mode (Delete button hidden, Save full-width). Two-step flow: scope picker (recurring events) → full form (title, all-day toggle, FROM/TO date pills, START/END time pills with duration, Repeat row, Location row, Notes textarea). Location row taps open `LocationPickerSheet`. Cross-midnight auto-advance: when `endTime < startTime` and `endDate === date`, `endDate` bumps +1 day. Exports `EditableEvent`, `EventEdits`, `RecurrenceScope`.
+- `calendar/LocationPickerSheet.tsx` — full-screen location search sheet (`z-[55]`), opened from EditEventSheet's location row. Sections: Favorites (starred, `localStorage('cal-location-favorites')`), Recents (last 10, `localStorage('cal-location-history')`), Suggestions (Google Places `AutocompleteService` with 200ms debounce). Star button on every row to toggle favorites. Back arrow closes and returns to EditEventSheet. Height: `calc(100dvh - env(safe-area-inset-top, 44px) - 8px)` — same as all sheets.
 - `calendar/CalendarPopover.tsx` — anchored Notion-style popover for creating/editing events on large screens (iPad/Mac). Falls back to a centered modal when `anchorRect === null` (iPhone). `calcPlacement(rect)` tries right → left → bottom. Exports `PopoverFormData`, `defaultTimes()` (current time rounded to nearest 30 min, end = start+1h). `isModal = anchorRect === null` branches several fields: **Date row**: always FROM → TO for all events (not just all-day); end date highlights gold when it differs from start; `endDate` auto-advances if start date is moved past it; native `<input type="date">` overlaid behind a clickable label. **Time picker**: on iPhone (`isModal`) uses native `<input type="time">` (iOS drum picker); on desktop uses `position: fixed` 48-item scrollable dropdowns at `z-202` that open below the button and auto-scroll to the current selection. **Calendar dropdown**: `[dot] [name] [ChevronDown]` opens a `position: fixed` dropdown at `z-201` above the row, listing all `googleCals` with colored dots and a gold ✓; closes without closing the popover. **Google Places**: `locationRef` + `acRef` lazy-load `gmaps-script` on mount; use `defaultValue` (not `value`) on the input since Places mutates the DOM directly.
 
 **Wallet sub stats** (Sub/Mo, Sub/Yr, All Time) are computed by cross-referencing actual paid expenses against subscription names via a case-insensitive `Set`: `new Set(cardSubs.map(s => s.name.toLowerCase()))`. The subscription name in the `subscriptions` table **must exactly match** the expense name (case-insensitive) for payments to be counted. A name mismatch silently drops those payments from the stats.
 - `home/HomeHero.tsx` — the sparkline card on the Home tab. Props: `{ spent, points, annualPoints }`. Two views (month / year) on a **two-panel horizontal sliding rail**: outer div is `width: 200%`, inner contains both `<SparkChart>` instances side by side; `transform: translateX(0/-50%)` drives the slide. A dark left-to-right gradient overlay (`rgba(22,30,39,0.85) → transparent`) sits at `z-index: 1` so text stays readable over the chart. Text overlay at `z-index: 2` contains: eyebrow label + two pill-dots page indicator, compact legend row (updates live on hover), and the `SlotNumber` hero number. Swipe detection uses **capture-phase** touch handlers (`onTouchStartCapture/MoveCapture/EndCapture`) so horizontal swipes are intercepted before SparkChart's bubble-phase hover logic sees them. `useEffect` clears `hoveredPoint` on view switch so the legend resets. `annualPoints` use month abbreviations (`'Jan'…'Dec'`) as the `day` field; the home page builds them by grouping monthly totals from Jan to the current month.
-- `home/HoardChest.tsx` — animated SVG gold pile that fills to a user-set savings goal. Props: `{ hoardTotal, thisMonthNet }`. Fill % is `hoardTotal / goal`, animated via `transform: scaleY(fillPct)` on a `<g>` with `transformOrigin: '50% 100%'`. Floating 🪙 coin emoji spawns every 1.8s when `thisMonthNet > 0` (CSS keyframe `hoardCoinFloat`). SMIL `<animate>` shimmer on the pile gradient top stop. Goal stored in `localStorage('hoard-goal')`, default `$50,000`, editable via a centered modal with a gold Save button. Sparkle crosses (`hoardSparkle` keyframe) render above the pile when the month is net positive.
+- `home/HoardChest.tsx` — animated SVG gold pile that fills to a user-set savings goal. Props: `{ hoardTotal, thisMonthNet }`. `hoardTotal` = sum of bank balances from the `banks` table. Fill % is `hoardTotal / goal`. **Currently commented out** on the home page — the component exists but is not rendered. Goal stored in `localStorage('hoard-goal')`, default `$50,000`.
 - `home/SparkChart.tsx` — area chart used by `HomeHero`. Three series: `inc` (income), `exp` (non-sub expenses), `sub` (subscription payments). Values are **individual daily amounts** (not cumulative). `DayPoint { day, label, exp, inc, sub }` — `day` is either a date number (`"1"`, `"31"`) for the monthly view or a month abbreviation (`"Jan"`) for the annual view. X-axis: up to 7 sparse absolute-positioned landmark labels; default `text-ink-faint`, white on hover, `text-ink-muted font-bold` for the last/rightmost label. Gradients use `gradientUnits="userSpaceOnUse"` with per-series `peakY` so opacity 0.95 falls exactly at each series' highest data point. Hover dots are absolutely-positioned `<div>` elements (not SVG `<circle>`) to avoid oval distortion from `preserveAspectRatio="none"`. Fill colors read from CSS variables via `getComputedStyle` (not inline `var()` — WebKit SVG doesn't resolve CSS vars in stop-color). Listens for `sem-colors-changed` custom event to re-read colors when the user changes the semantic color settings; `colorRev` is included in `animKey` to force SVG remount.
 - `home/UpcomingBills.tsx` — receives `initial: UpcomingSub[]` from the home client page. Right-swipe pays (creates an expense + advances `next_renewal`), left-swipe cancels (sets status `Cancelled`). Home data refreshes via pull-to-refresh or the 60s cache TTL (not `router.refresh()` — home has no server component).
 
 ### Card / bank picker pattern
 
-All Add and Edit sheets accept `cards?: CardOption[]` and/or `banks?: BankOption[]`. Expenses attach to a card; income attaches to a bank; subscriptions attach to a card. The picker renders a horizontal chip strip with a "None" chip first:
+All Add and Edit sheets accept `cards?: CardOption[]` and/or `banks?: BankOption[]`. Expenses attach to a card; income attaches to a bank; subscriptions attach to a card. The picker is a styled `<select>` dropdown (not a horizontal pill strip):
 
 ```tsx
 // CardOption: { id: string; name: string; last4?: string | null }
 // BankOption: { id: string; name: string }
+
+<div className="relative">
+  <select value={cardId ?? ''} onChange={e => setCardId(e.target.value || null)}
+    className="w-full bg-bg-overlay border border-white/[0.06] rounded-[14px] px-4 py-3 text-[15px] text-ink appearance-none outline-none pr-10"
+    style={{ colorScheme: 'dark' }}>
+    <option value="">None</option>
+    {[...cards].sort((a, b) => (a.id === defaultCardId ? -1 : b.id === defaultCardId ? 1 : 0))
+      .map(c => <option key={c.id} value={c.id}>{c.name}{c.last4 ? ` ••••${c.last4}` : ''}</option>)}
+  </select>
+  <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
+</div>
 ```
 
-Load wallet data once on mount in a **separate** `useEffect` (not inside `loadData` which runs after mutations) to avoid redundant queries.
+Sort cards/banks so the default (from `AppPrefs` or current transaction) appears first. `AddTransactionSheet` accepts `defaultCardId` and `defaultBankId` props; pass `getAppPrefs().defaultBankId ?? null` from the caller. Load wallet data once on mount in a **separate** `useEffect` (not inside `loadData` which runs after mutations) to avoid redundant queries.
 
 ### Tap-to-edit pattern
 
@@ -199,6 +211,7 @@ Wrap each list row in `<SwipeToDelete onDelete={...} onTap={() => setEditTarget(
 
 - `DailyBarChart`: 30-day net bars, `requestAnimationFrame` triggers CSS height transition, emerald/gold/zero coloring (not ruby), gold dot for today
 - `CategoryPillBar` (inline in `/money` page): chunky 32px animated pill bar used in all three OUT tab breakdowns (Expenses, Subs, Wishlist). Track background `#1C2A36`, fill is a gold gradient (`rgba(245,158,11,0.35) → rgba(245,158,11,0.10)`), `borderRadius: 8`. Staggered entrance: `animPct` starts at 0, a `setTimeout(50 + index * 80ms)` sets it to `cat.pct` triggering a `600ms cubic-bezier(0.22,1,0.36,1)` width transition. `isWide = cat.pct > 50`: wide bars render `CategoryIcon` + name + amount **inside** the fill (clipped naturally by `overflow: hidden`); narrow bars render icon+name inside and amount **outside** to the right (color `#556070`). `isSub` prop switches icon color to `text-white/60`.
+- `IncomeBarChart` (inline in `/in` page): 6-month income bar chart rendered at the top of the History tab. Bars use `rgba(--sem-income-rgb, opacity)` so they respond to Settings → Appearance color changes. Subscribes to `sem-colors-changed` event and includes `colorRev` in the `months` memo deps to force a re-render. Same `readCssVar` pattern as `SparkChart`.
 - `StatCard` (inline in `/in` page): `SlotNumber`-animated income stat tile. Matches Out tab tile style (`flex-1`, `rounded-[22px] p-4`, `text-[26px] font-bold`, `$f` format). Tab-specific: History → This Month / This Year (actual DB income + projected future stream payments via `projectStreamPayments`) / Next In; Streams → Per Month / Per Year (all stream frequencies normalized: Weekly ×52/12, Biweekly ×26/12, Semimonthly ×24/12, plus interest); Accounts → Total Saved / Int Per Year from `bankCfg`.
 
 ### Design system
@@ -355,16 +368,17 @@ JSX structure — `ref={sheetRef}` on sheet, `ref={scrollAreaRef}` on the scroll
 ```tsx
 <div
   ref={sheetRef}
-  className={cn('fixed inset-x-0 bottom-0 z-[60] rounded-t-[24px] bg-bg-surface transition-transform duration-300', open ? 'translate-y-0' : 'translate-y-full')}
-  style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+  className={cn('fixed inset-x-0 bottom-0 z-[60] rounded-t-[24px] bg-bg-surface transition-transform duration-300 flex flex-col', open ? 'translate-y-0' : 'translate-y-full')}
+  style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+           height: 'calc(100dvh - env(safe-area-inset-top, 44px) - 8px)' }}
 >
   <div onTouchStart={onDragStart} onTouchMove={onDragMove} onTouchEnd={onDragEnd}
-    className="flex justify-center pt-3 pb-3" style={{ touchAction: 'none' }}>
+    className="flex justify-center pt-3 pb-3 flex-shrink-0" style={{ touchAction: 'none' }}>
     <div className="w-9 h-1 rounded-full bg-white/20" />
   </div>
-  ...header...
+  ...header (flex-shrink-0)...
   <div ref={scrollAreaRef} className="px-5 space-y-5 overflow-y-auto"
-    style={{ maxHeight: '65vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
+    style={{ flex: 1, paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
     ...form fields...
   </div>
 </div>
@@ -372,12 +386,42 @@ JSX structure — `ref={sheetRef}` on sheet, `ref={scrollAreaRef}` on the scroll
 
 The Tailwind `translate-y-0/full` classes handle open/close; direct DOM mutation handles mid-drag. On dismiss, inline styles are cleared inside the `setTimeout` callback *before* `onClose()` fires so the next open doesn't start with a stale transform.
 
+**Fixed-height sheets**: Every sheet now uses `height: calc(100dvh - env(safe-area-inset-top, 44px) - 8px)` (not `maxHeight`) with `flex flex-col` on the outer div and `flex: 1` on the scroll area. This stops 8px below the Dynamic Island / status bar and makes all sheets the same consistent height.
+
+**Keyboard-aware scroll** (required on every sheet with text inputs):
+```typescript
+useEffect(() => {
+  if (!open) return
+  const vv = window.visualViewport
+  if (!vv) return
+  const onResize = () => {
+    const sc = scrollAreaRef.current
+    if (!sc) return
+    const kbH = Math.max(0, window.innerHeight - vv.height)
+    if (kbH > 50) {
+      sc.style.paddingBottom = `${kbH + 24}px`
+      requestAnimationFrame(() => {
+        const focused = document.activeElement as HTMLElement | null
+        if (!focused || !sc.contains(focused)) return
+        const clearance = vv.height - 16
+        if (focused.getBoundingClientRect().bottom > clearance)
+          sc.scrollTop += focused.getBoundingClientRect().bottom - clearance
+      })
+    } else { sc.style.paddingBottom = '' }
+  }
+  vv.addEventListener('resize', onResize)
+  return () => { vv.removeEventListener('resize', onResize); if (scrollAreaRef.current) scrollAreaRef.current.style.paddingBottom = '' }
+}, [open])
+```
+This pads the scroll container by the keyboard height and scrolls the focused field above the keyboard. Without it the keyboard will cover inputs on iOS.
+
 **`usePullToRefresh` + body-lock interaction (iOS):** The hook skips activation when `document.body.style.position === 'fixed'`. This is essential — when any sheet is open, the body is fixed (scrollY = 0 always), so every downward swipe inside the sheet would otherwise trigger the pull indicator and snap back. Do not remove this guard from the hook.
 
 **Critical iOS scroll rules for bottom sheets:**
 - **Never** set `document.body.style.overflow = 'hidden'` — breaks touch scroll on all children in iOS Safari
-- Use a static handle+header block, then a separate scrollable `<div ref={scrollAreaRef}>` with **inline styles** (not Tailwind): `style={{ maxHeight: '65vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}`
-- Outer sheet wrapper: `style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}`
+- Outer sheet: `flex flex-col` + `height: calc(100dvh - env(safe-area-inset-top, 44px) - 8px)` (not `maxHeight`) — so the sheet always fills to just below the Dynamic Island. Scroll area: `flex: 1` (not `maxHeight`).
+- Scroll area uses **inline styles** (not Tailwind): `style={{ flex: 1, paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}`
+- Outer sheet wrapper: `style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)', height: 'calc(100dvh - env(safe-area-inset-top, 44px) - 8px)' }}`
 - Wrap `<input type="date">` and `<input type="time">` in an `overflow-hidden` container div — iOS Safari native controls don't clip to `border-radius` otherwise
 - Use `style={{ colorScheme: 'dark' }}` on date/time inputs (not Tailwind `[color-scheme:dark]`)
 
@@ -413,14 +457,14 @@ Every page root `<div>` should include `tab-enter` for the mount animation. Each
 ### Theme system (`src/lib/theme.ts`)
 
 Shared module — import from here, never re-define locally:
-- `Theme` type: `'obsidian' | 'charcoal-slate' | 'cool-linen'`
-- `THEMES: ThemeDef[]` — array of 3 theme definitions with `id`, `label`, `subtitle`, `swatches`
+- `Theme` type: `'obsidian' | 'charcoal-slate' | 'slate-mist' | 'midnight-teal'`
+- `THEMES: ThemeDef[]` — array of 4 theme definitions with `id`, `label`, `subtitle`, `swatches`
 - `applyTheme(t)` — sets html class, colorScheme, background, meta theme-color, localStorage
 - `readTheme()` — reads localStorage, returns `'obsidian'` as default
 
-CSS variables per theme live in `globals.css` under `:root`, `html.charcoal-slate`, `html.cool-linen`. Inline React `style={{}}` props should use `var(--color-bg-base/surface/elevated/ink/grid-border)` (solid `rgb()` string helpers) or `rgb(var(--rgb-X) / alpha)` for opacity variants. Never hardcode dark-mode hex colors (`#0A0A0B`, `#1c1c2a`, etc.) in inline styles — they break the light themes.
+CSS variables per theme live in `globals.css` under `:root`, `html.charcoal-slate`, `html.slate-mist`, `html.midnight-teal`. `slate-mist` is the light theme (`color-scheme: light`; base `#D8DCE2`). Inline React `style={{}}` props should use `var(--color-bg-base/surface/elevated/ink/grid-border)` (solid `rgb()` string helpers) or `rgb(var(--rgb-X) / alpha)` for opacity variants. Never hardcode dark-mode hex colors (`#0A0A0B`, `#1c1c2a`, etc.) in inline styles — they break the light themes.
 
-`src/app/layout.tsx` includes a pre-render inline script that applies the stored theme class and background before React hydrates, preventing a flash.
+`src/app/layout.tsx` includes a pre-render inline script that applies the stored theme class and background before React hydrates, preventing a flash. The viewport export includes `interactiveWidget: 'resizes-visual'` so the iOS keyboard only resizes the visual viewport — fixed elements like the nav bar never shift when a keyboard appears.
 
 ### Category metadata (`src/lib/category-meta.ts`)
 
@@ -502,7 +546,7 @@ The rail uses `transform: translateX(-${viewIndex * 100}vw)` with a 320ms cubic-
 
 **iPhone split view taps**:
 - **Event card tap**: `onClick` on each event button calls `handleOpenEdit(ev)` if `ev.id` is set (opens `EditEventSheet`); financial events (no `id`) fall back to `setSelectedDay(ds); setViewIndex(1)` (navigate to day detail). `e.stopPropagation()` prevents the blank-space handler from also firing.
-- **Blank space tap**: `onClick` on the events container div calls `openCreatePopover(null, ds)` — opens `CalendarPopover` as a centered modal (iPhone) to add a new event on that day. Fires only when clicking the empty area, not event cards (because cards stopPropagation).
+- **Blank space tap**: `onClick` on the events container div calls `openCreateSheet(ds)` — opens `EditEventSheet` in create mode (no `id`) pre-filled with the tapped date. Fires only when clicking the empty area, not event cards (because cards stopPropagation). `CalendarPopover` is used for large-screen (iPad/Mac) event creation only; iPhone always uses `EditEventSheet`.
 
 **Swipe navigation** — touch and mouse drag both supported (60px threshold, `|dx| > |dy| × 1.5`):
 - Day row → Panel 1: left swipe on a day row sets `setViewIndex(1)`
