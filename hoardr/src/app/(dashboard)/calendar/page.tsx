@@ -746,7 +746,7 @@ export default function CalendarPage() {
     const parts = ev.amount?.split(' – ').map(t => t.trim()) ?? []
     const allDay = !ev.amount?.trim()
     setSelectedEvId(ev.id)
-    setPopover({ anchorRect, mode: 'edit', data: { eventId: ev.id, title: ev.title, date, endDate: date, allDay, startTime: !allDay && parts[0] ? parts[0] : '09:00', endTime: !allDay && parts[1] ? parts[1] : '10:00', location: ev.location ?? '', notes: ev.notes ?? '', recurrenceRule: '', calendarId: ev.calendarId ?? 'primary' } })
+    setPopover({ anchorRect, mode: 'edit', data: { eventId: ev.id, title: ev.title, date, endDate: ev.endDate ?? date, allDay, startTime: !allDay && parts[0] ? parts[0] : '09:00', endTime: !allDay && parts[1] ? parts[1] : '10:00', location: ev.location ?? '', notes: ev.notes ?? '', recurrenceRule: '', calendarId: ev.calendarId ?? 'primary' } })
   }
 
   async function handlePopoverSave(data: PopoverFormData) {
