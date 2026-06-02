@@ -39,10 +39,11 @@ export function AddEventSheet({ open, defaultDate, defaultCalendarId, googleCals
   const [saving,             setSaving]             = useState(false)
   const [recurrencePickerOpen, setRecurrencePickerOpen] = useState(false)
   const [dragY,              setDragY]              = useState(0)
-  const locationRef  = useRef<HTMLInputElement>(null)
-  const acRef        = useRef<unknown>(null)
-  const backdropRef  = useRef<HTMLDivElement>(null)
-  const dragStartY   = useRef<number | null>(null)
+  const locationRef   = useRef<HTMLInputElement>(null)
+  const acRef         = useRef<unknown>(null)
+  const backdropRef   = useRef<HTMLDivElement>(null)
+  const dragStartY    = useRef<number | null>(null)
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (open) {
@@ -105,6 +106,53 @@ export function AddEventSheet({ open, defaultDate, defaultCalendarId, googleCals
     return () => el.removeEventListener('touchmove', prevent)
   }, [open])
 
+  // Body position lock
+  useEffect(() => {
+    if (!open) return
+    const scrollY = window.scrollY
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${scrollY}px`
+    document.body.style.width = '100%'
+    document.documentElement.style.overscrollBehavior = 'none'
+    return () => {
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.width = ''
+      document.documentElement.style.overscrollBehavior = ''
+      window.scrollTo(0, scrollY)
+    }
+  }, [open])
+
+  // Keyboard-aware scroll: scroll focused field above keyboard
+  useEffect(() => {
+    if (!open) return
+    const vv = window.visualViewport
+    if (!vv) return
+    const onResize = () => {
+      const sc = scrollAreaRef.current
+      if (!sc) return
+      const kbH = Math.max(0, window.innerHeight - vv.height)
+      if (kbH > 50) {
+        sc.style.paddingBottom = `${kbH + 24}px`
+        requestAnimationFrame(() => {
+          const focused = document.activeElement as HTMLElement | null
+          if (!focused || !sc.contains(focused)) return
+          const clearance = vv.height - 16
+          if (focused.getBoundingClientRect().bottom > clearance) {
+            sc.scrollTop += focused.getBoundingClientRect().bottom - clearance
+          }
+        })
+      } else {
+        sc.style.paddingBottom = ''
+      }
+    }
+    vv.addEventListener('resize', onResize)
+    return () => {
+      vv.removeEventListener('resize', onResize)
+      if (scrollAreaRef.current) scrollAreaRef.current.style.paddingBottom = ''
+    }
+  }, [open])
+
   // Reset drag when sheet closes
   useEffect(() => { if (!open) setDragY(0) }, [open])
 
@@ -147,6 +195,9 @@ export function AddEventSheet({ open, defaultDate, defaultCalendarId, googleCals
         style={{
           willChange: 'transform',
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          height: 'calc(100dvh - env(safe-area-inset-top, 44px) - 8px)',
+          display: 'flex',
+          flexDirection: 'column',
           transform: open ? `translateY(${dragY}px)` : 'translateY(100%)',
           transition: dragY > 0 ? 'none' : 'transform 0.3s cubic-bezier(0.4,0,0.2,1)',
         }}
@@ -172,8 +223,9 @@ export function AddEventSheet({ open, defaultDate, defaultCalendarId, googleCals
 
         {/* Scrollable content */}
         <div
+          ref={scrollAreaRef}
           className="px-5 space-y-3 overflow-y-auto"
-          style={{ maxHeight: '70vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}
+          style={{ flex: 1, paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}
         >
           {/* Title */}
           <input

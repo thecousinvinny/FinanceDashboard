@@ -94,6 +94,36 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
     }
   }, [open])
 
+  // Keyboard-aware scroll: scroll focused field above keyboard
+  useEffect(() => {
+    if (!open) return
+    const vv = window.visualViewport
+    if (!vv) return
+    const onResize = () => {
+      const sc = scrollAreaRef.current
+      if (!sc) return
+      const kbH = Math.max(0, window.innerHeight - vv.height)
+      if (kbH > 50) {
+        sc.style.paddingBottom = `${kbH + 24}px`
+        requestAnimationFrame(() => {
+          const focused = document.activeElement as HTMLElement | null
+          if (!focused || !sc.contains(focused)) return
+          const clearance = vv.height - 16
+          if (focused.getBoundingClientRect().bottom > clearance) {
+            sc.scrollTop += focused.getBoundingClientRect().bottom - clearance
+          }
+        })
+      } else {
+        sc.style.paddingBottom = ''
+      }
+    }
+    vv.addEventListener('resize', onResize)
+    return () => {
+      vv.removeEventListener('resize', onResize)
+      if (scrollAreaRef.current) scrollAreaRef.current.style.paddingBottom = ''
+    }
+  }, [open])
+
   function onDragStart(e: React.TouchEvent) { dragStartY.current = e.touches[0].clientY }
   function onDragMove(e: React.TouchEvent) {
     if (dragStartY.current === null || !sheetRef.current) return
@@ -159,7 +189,7 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
       <div
         ref={sheetRef}
         className={cn('fixed inset-x-0 bottom-0 z-[60] rounded-t-[24px] bg-bg-surface transition-transform duration-300', open ? 'translate-y-0' : 'translate-y-full')}
-        style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)', height: 'calc(100dvh - env(safe-area-inset-top, 44px) - 8px)', display: 'flex', flexDirection: 'column' }}
       >
         <div onTouchStart={onDragStart} onTouchMove={onDragMove} onTouchEnd={onDragEnd}
           className="flex justify-center pt-3 pb-3" style={{ touchAction: 'none' }}>
@@ -174,7 +204,7 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
         </div>
 
         <div ref={scrollAreaRef} className="px-5 space-y-4 overflow-y-auto"
-          style={{ maxHeight: '70vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
+          style={{ flex: 1, paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
 
           {/* Label */}
           <div>

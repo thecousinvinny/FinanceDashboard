@@ -248,6 +248,36 @@ export function SemanticColorSheet({ open, onClose }: Props) {
     }
   }, [open])
 
+  // Keyboard-aware scroll: scroll focused field above keyboard
+  useEffect(() => {
+    if (!open) return
+    const vv = window.visualViewport
+    if (!vv) return
+    const onResize = () => {
+      const sc = scrollAreaRef.current
+      if (!sc) return
+      const kbH = Math.max(0, window.innerHeight - vv.height)
+      if (kbH > 50) {
+        sc.style.paddingBottom = `${kbH + 24}px`
+        requestAnimationFrame(() => {
+          const focused = document.activeElement as HTMLElement | null
+          if (!focused || !sc.contains(focused)) return
+          const clearance = vv.height - 16
+          if (focused.getBoundingClientRect().bottom > clearance) {
+            sc.scrollTop += focused.getBoundingClientRect().bottom - clearance
+          }
+        })
+      } else {
+        sc.style.paddingBottom = ''
+      }
+    }
+    vv.addEventListener('resize', onResize)
+    return () => {
+      vv.removeEventListener('resize', onResize)
+      if (scrollAreaRef.current) scrollAreaRef.current.style.paddingBottom = ''
+    }
+  }, [open])
+
   function openEditor(key: keyof SemanticColors) {
     const meta = TYPES.find(t => t.key === key)!
     setDraft(colors[key] ?? { type: 'flat', hex: meta.defaultHex })
@@ -324,7 +354,7 @@ export function SemanticColorSheet({ open, onClose }: Props) {
           'fixed inset-x-0 bottom-0 z-[60] rounded-t-[24px] bg-bg-surface transition-transform duration-300',
           open ? 'translate-y-0' : 'translate-y-full',
         )}
-        style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)', height: 'calc(100dvh - env(safe-area-inset-top, 44px) - 8px)', display: 'flex', flexDirection: 'column' }}
       >
         {/* Drag handle */}
         <div
@@ -360,7 +390,7 @@ export function SemanticColorSheet({ open, onClose }: Props) {
           ref={scrollAreaRef}
           className="px-5 overflow-y-auto"
           style={{
-            maxHeight:          '75vh',
+            flex:               1,
             paddingBottom:      'calc(env(safe-area-inset-bottom, 0px) + 32px)',
             overflowX:          'hidden',
             overscrollBehavior: 'contain',
