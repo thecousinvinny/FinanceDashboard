@@ -650,56 +650,45 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
                 </div>
               )}
 
-              {/* Spacer so content clears the footer */}
-              <div style={{ height: 100 }} />
-            </div>
-
-            {/* ── Footer: Delete + Save side by side ── */}
-            <div
-              className="flex-shrink-0"
-              style={{
-                borderTop: `0.5px solid ${SEP}`,
-                padding: '12px 16px 16px',
-                display: 'flex',
-                gap: 8,
-              }}
-            >
-              {/* Delete — only when editing an existing event */}
-              {event?.id && (
+              {/* ── Delete + Save — scroll with content ── */}
+              <div style={{ display: 'flex', gap: 8, padding: '16px 16px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}>
+                {event?.id && (
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    style={{
+                      flex: 1, height: 52,
+                      background: 'linear-gradient(135deg, #DC2626, #B91C1C)',
+                      border: 'none', borderRadius: 14, cursor: 'pointer',
+                      fontSize: 16, fontWeight: 500, fontFamily: M,
+                      color: '#fff',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                    }}
+                  >
+                    Delete
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={handleDelete}
+                  onClick={handleSave}
+                  disabled={!canSave || saving}
                   style={{
                     flex: 1, height: 52,
-                    background: 'linear-gradient(135deg, #DC2626, #B91C1C)',
-                    border: 'none', borderRadius: 14, cursor: 'pointer',
+                    background: canSave && !saving
+                      ? 'linear-gradient(135deg, #C9A84C, #A8873C)'
+                      : 'rgba(201,168,76,0.35)',
+                    border: 'none', borderRadius: 14,
+                    cursor: canSave && !saving ? 'pointer' : 'not-allowed',
                     fontSize: 16, fontWeight: 500, fontFamily: M,
-                    color: '#fff',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                    color: '#1a1200',
+                    boxShadow: canSave && !saving ? '0 4px 12px rgba(0,0,0,0.3)' : 'none',
+                    transition: 'background 0.15s, box-shadow 0.15s',
                   }}
                 >
-                  Delete
+                  {saving ? 'Saving…' : 'Save'}
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={!canSave || saving}
-                style={{
-                  flex: 1, height: 52,
-                  background: canSave && !saving
-                    ? 'linear-gradient(135deg, #C9A84C, #A8873C)'
-                    : 'rgba(201,168,76,0.35)',
-                  border: 'none', borderRadius: 14,
-                  cursor: canSave && !saving ? 'pointer' : 'not-allowed',
-                  fontSize: 16, fontWeight: 500, fontFamily: M,
-                  color: '#1a1200',
-                  boxShadow: canSave && !saving ? '0 4px 12px rgba(0,0,0,0.3)' : 'none',
-                  transition: 'background 0.15s, box-shadow 0.15s',
-                }}
-              >
-                {saving ? 'Saving…' : 'Save'}
-              </button>
+              </div>
+
             </div>
           </>
         )}
