@@ -216,6 +216,7 @@ export default function CalendarPage() {
   const [settingsOpen,   setSettingsOpen]   = useState(false)
   const [weatherMap,     setWeatherMap]     = useState<Record<string, DayWeather>>({})
   const [editEvent,      setEditEvent]      = useState<EditableEvent | null>(null)
+  const [createEvent,    setCreateEvent]    = useState<EditableEvent | null>(null)
   const [popover,        setPopover]        = useState<{ anchorRect: DOMRect | null; mode: 'create' | 'edit'; data: PopoverFormData } | null>(null)
   const [popoverSaving,  setPopoverSaving]  = useState(false)
   const [dataLoaded,     setDataLoaded]     = useState(false)
@@ -739,6 +740,30 @@ export default function CalendarPage() {
       ?? 'primary'
     const { startTime, endTime } = defaultTimes()
     setPopover({ anchorRect, mode: 'create', data: { title: '', date, endDate: date, allDay: false, startTime, endTime, location: '', notes: '', recurrenceRule: '', calendarId: calId } })
+  }
+
+  function openCreateSheet(date: string) {
+    const calId = prefs.defaultCalendarId
+      ?? googleCals.find(c => prefs.googleCalendarIds.includes(c.id))?.id
+      ?? prefs.googleCalendarIds[0]
+      ?? 'primary'
+    const { startTime, endTime } = defaultTimes()
+    setCreateEvent({ title: '', date, endDate: date, allDay: false, startTime, endTime, location: '', notes: '', recurrenceRule: '', calendarId: calId })
+  }
+
+  async function handleCreateEvent(edits: EventEdits, _scope: RecurrenceScope) {
+    const gcalEndDate = (() => {
+      const d = new Date((edits.endDate || edits.date) + 'T00:00:00'); d.setDate(d.getDate() + 1)
+      return d.toISOString().slice(0, 10)
+    })()
+    const body: GCalEvent = edits.allDay
+      ? { summary: edits.title, description: edits.notes || undefined, location: edits.location || undefined, start: { date: edits.date }, end: { date: gcalEndDate } }
+      : { summary: edits.title, description: edits.notes || undefined, location: edits.location || undefined, start: { dateTime: `${edits.date}T${edits.startTime}:00`, timeZone: 'America/Los_Angeles' }, end: { dateTime: `${edits.endDate || edits.date}T${edits.endTime}:00`, timeZone: 'America/Los_Angeles' } }
+    if (edits.recurrenceRule) body.recurrence = [`RRULE:${edits.recurrenceRule}`]
+    await createCalEvent(body, edits.calendarId)
+    showToast('Event created', { type: 'add' })
+    setCreateEvent(null)
+    setGRefreshKey(k => k + 1)
   }
 
   function openEditPopover(anchorRect: DOMRect | null, ev: CalEvent, date: string) {
@@ -1856,7 +1881,7 @@ export default function CalendarPage() {
                         <div style={{ width: 1, flexShrink: 0, background: isTod ? 'rgba(201,168,76,0.35)' : 'rgb(var(--rgb-ink) / 0.04)', marginTop: 8, marginBottom: 8 }} />
                         {/* Events */}
                         <div
-                          onClick={() => { navigator.vibrate?.(6); openCreatePopover(null, ds) }}
+                          onClick={() => { navigator.vibrate?.(6); openCreateSheet(ds) }}
                           style={{ flex: 1, paddingLeft: 12, paddingRight: 14, paddingTop: 6, paddingBottom: 6, display: 'flex', flexDirection: 'column', gap: 2, minHeight: 112, background: stripe ? 'var(--color-bg-surface)' : 'var(--color-bg-elevated)', cursor: 'text' }}>
                           {events.map((ev, idx) => {
                             const bar  = ev.color ?? DETAIL_DOT[ev.type]
@@ -1967,17 +1992,28 @@ export default function CalendarPage() {
       </div>{/* end sliding rail */}
     </div>{/* end root */}
 
-    {/* FAB — iPhone day view: create event */}
-    {!isLargeScreen && viewIndex === 1 && prefs.googleCalendarIds.length > 0 && (
+    {/* FAB — iPhone split view: create event */}
+    {!isLargeScreen && viewIndex === 0 && prefs.googleCalendarIds.length > 0 && (
       <button
-        onClick={() => openCreatePopover(null, selectedDay ?? todayStr)}
+        onClick={() => openCreateSheet(gridSel ?? todayStr)}
         className="fixed gradient-gold rounded-full flex items-center justify-center text-white font-light select-none"
         style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, zIndex: 40, boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)' }}
         aria-label="Add event"
       >+</button>
     )}
 
-    <EditEventSheet open={!!editEvent} event={editEvent} googleCals={googleCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => setEditEvent(null)} onSave={handleEditEvent} onDelete={_scope => { if (editEvent) { const ev: CalEvent = { id: editEvent.id, title: editEvent.title, type: 'google', amount: '', calendarId: editEvent.calendarId }; handleDeleteCalEvent(ev) } setEditEvent(null) }} />
+    {/* FAB — iPhone day detail: create event */}
+    {!isLargeScreen && viewIndex === 1 && prefs.googleCalendarIds.length > 0 && (
+      <button
+        onClick={() => openCreateSheet(selectedDay ?? todayStr)}
+        className="fixed gradient-gold rounded-full flex items-center justify-center text-white font-light select-none"
+        style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, zIndex: 40, boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)' }}
+        aria-label="Add event"
+      >+</button>
+    )}
+
+    <EditEventSheet open={!!editEvent} event={editEvent} googleCals={googleCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => setEditEvent(null)} onSave={handleEditEvent} onDelete={_scope => { if (editEvent) { const ev: CalEvent = { id: editEvent.id ?? '', title: editEvent.title, type: 'google', amount: '', calendarId: editEvent.calendarId }; handleDeleteCalEvent(ev) } setEditEvent(null) }} />
+    <EditEventSheet open={!!createEvent} event={createEvent} googleCals={googleCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => setCreateEvent(null)} onSave={handleCreateEvent} onDelete={() => setCreateEvent(null)} />
     <CalendarSettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} prefs={prefs} googleCals={googleCals} calsLoading={calsLoading} calsError={calsError} onSave={savePrefs} />
 
     {/* Color swatch picker */}

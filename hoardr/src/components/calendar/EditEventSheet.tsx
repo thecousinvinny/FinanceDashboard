@@ -8,7 +8,7 @@ import { RecurrencePicker } from './RecurrencePicker'
 import type { GCalendar } from './CalendarSettingsSheet'
 
 export interface EditableEvent {
-  id:             string
+  id?:            string
   title:          string
   allDay:         boolean
   date:           string
