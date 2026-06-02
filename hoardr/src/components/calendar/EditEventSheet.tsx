@@ -247,6 +247,44 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
     }
   }, [open])
 
+  // Keyboard-aware scroll: when keyboard opens, pad scroll container and
+  // scroll the focused field above the keyboard so it's always visible
+  useEffect(() => {
+    if (!open) return
+    const vv = window.visualViewport
+    if (!vv) return
+
+    const onResize = () => {
+      const sc = scrollRef.current
+      if (!sc) return
+
+      const kbH = Math.max(0, window.innerHeight - vv.height)
+
+      if (kbH > 50) {
+        // Keyboard open — give scroll room below content + scroll focused into view
+        sc.style.paddingBottom = `${kbH + 24}px`
+        requestAnimationFrame(() => {
+          const focused = document.activeElement as HTMLElement | null
+          if (!focused || !sc.contains(focused)) return
+          const elRect   = focused.getBoundingClientRect()
+          const clearance = vv.height - 16   // target: element bottom at most this far down
+          if (elRect.bottom > clearance) {
+            sc.scrollTop += elRect.bottom - clearance
+          }
+        })
+      } else {
+        // Keyboard closed — remove extra padding
+        sc.style.paddingBottom = ''
+      }
+    }
+
+    vv.addEventListener('resize', onResize)
+    return () => {
+      vv.removeEventListener('resize', onResize)
+      if (scrollRef.current) scrollRef.current.style.paddingBottom = ''
+    }
+  }, [open])
+
   function handleLocChange(val: string) {
     setLocValue(val)
     setForm(f => f ? { ...f, location: val } : f)
