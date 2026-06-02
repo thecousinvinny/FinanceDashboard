@@ -229,13 +229,22 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
     }
   }, [open, onClose])
 
-  // Lock background scroll while sheet is open
+  // Body-position lock: prevents iOS from shifting the viewport (and the nav bar)
+  // when the keyboard appears inside the sheet
   useEffect(() => {
-    const el = backdropRef.current
-    if (!el || !open) return
-    const prevent = (e: TouchEvent) => e.preventDefault()
-    el.addEventListener('touchmove', prevent, { passive: false })
-    return () => el.removeEventListener('touchmove', prevent)
+    if (!open) return
+    const scrollY = window.scrollY
+    document.body.style.position = 'fixed'
+    document.body.style.top      = `-${scrollY}px`
+    document.body.style.width    = '100%'
+    document.documentElement.style.overscrollBehavior = 'none'
+    return () => {
+      document.body.style.position = ''
+      document.body.style.top      = ''
+      document.body.style.width    = ''
+      document.documentElement.style.overscrollBehavior = ''
+      window.scrollTo(0, scrollY)
+    }
   }, [open])
 
   function handleLocChange(val: string) {
