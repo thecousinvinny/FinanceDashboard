@@ -5,6 +5,7 @@ import { MapPin, Clock, AlignLeft, X, ChevronDown, RefreshCw, Calendar } from 'l
 import { localToday } from '@/lib/utils'
 import { rruleLabel } from '@/lib/rrule'
 import { RecurrencePicker } from './RecurrencePicker'
+import { LocationPickerSheet } from './LocationPickerSheet'
 import type { GCalendar } from './CalendarSettingsSheet'
 
 export interface EditableEvent {
@@ -97,6 +98,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
   const [saving, setSaving]               = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [recurrencePickerOpen, setRecurrencePickerOpen] = useState(false)
+  const [locPickerOpen,        setLocPickerOpen]        = useState(false)
 
   // Location autocomplete state
   const [locValue,       setLocValue]       = useState('')
@@ -644,81 +646,22 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
                 <ChevronDown size={14} color={MUTED} style={{ flexShrink: 0 }} />
               </button>
 
-              {/* 6 — Location with inline autocomplete dropdown */}
-              <div ref={locRowRef} style={{ ...rowStyle, alignItems: 'flex-start' }}>
-                <MapPin size={16} color={MUTED} style={{ flexShrink: 0, marginTop: 2 }} />
-                <textarea
-                  ref={locTextareaRef}
-                  placeholder="Location"
-                  value={locValue}
-                  onChange={e => handleLocChange(e.target.value)}
-                  onFocus={handleLocFocus}
-                  onBlur={() => setTimeout(() => setLocOpen(false), 150)}
-                  rows={1}
-                  style={{
-                    flex: 1, background: 'none', border: 'none', outline: 'none', resize: 'none',
-                    fontSize: 14, color: 'var(--color-ink)', fontFamily: M,
-                    lineHeight: 1.5, overflowX: 'hidden', overflowY: 'hidden',
-                  }}
-                />
-              </div>
-
-              {/* Location suggestions — inline, appears below the row */}
-              {showLocDropdown && (
-                <div
-                  style={{
-                    marginLeft: 16, marginRight: 16, marginBottom: 4,
-                    background: '#1C2A36',
-                    border: `0.5px solid rgba(255,255,255,0.10)`,
-                    borderRadius: 10,
-                    overflow: 'hidden',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.45)',
-                  }}
-                >
-                  {!locValue && recentLoc && (
-                    <button
-                      onMouseDown={e => e.preventDefault()}
-                      onClick={() => selectLoc(recentLoc)}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '12px 14px', width: '100%',
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        borderBottom: locSuggestions.length > 0 ? `0.5px solid rgba(255,255,255,0.08)` : 'none',
-                        textAlign: 'left',
-                      }}
-                    >
-                      <Clock size={14} color={MUTED} style={{ flexShrink: 0 }} />
-                      <span style={{ fontSize: 13, color: 'var(--color-ink)', fontFamily: M }}>{recentLoc}</span>
-                    </button>
-                  )}
-                  {locSuggestions.map((sug, i) => (
-                    <button
-                      key={sug.placeId}
-                      onMouseDown={e => e.preventDefault()}
-                      onClick={() => selectLoc(sug.description)}
-                      style={{
-                        display: 'flex', alignItems: 'flex-start', gap: 10,
-                        padding: '12px 14px', width: '100%',
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        borderBottom: i < locSuggestions.length - 1 ? `0.5px solid rgba(255,255,255,0.08)` : 'none',
-                        textAlign: 'left',
-                      }}
-                    >
-                      <MapPin size={14} color={MUTED} style={{ flexShrink: 0, marginTop: 2 }} />
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 14, color: 'var(--color-ink)', fontFamily: M, lineHeight: 1.4 }}>
-                          {highlightMatch(sug.mainText, locValue)}
-                        </div>
-                        {sug.secText && (
-                          <div style={{ fontSize: 12, color: MUTED, fontFamily: M, lineHeight: 1.4, marginTop: 2 }}>
-                            {sug.secText}
-                          </div>
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
+              {/* 6 — Location — taps open LocationPickerSheet */}
+              <button
+                type="button"
+                onClick={() => setLocPickerOpen(true)}
+                style={{ ...rowStyle, cursor: 'pointer', background: 'none', border: 'none', textAlign: 'left' }}
+              >
+                <MapPin size={16} color={MUTED} style={{ flexShrink: 0 }} />
+                <span style={{
+                  flex: 1, fontSize: 14, fontFamily: M,
+                  color: locValue ? 'var(--color-ink)' : MUTED,
+                  textAlign: 'left', lineHeight: 1.4,
+                }}>
+                  {locValue || 'Location'}
+                </span>
+                <ChevronDown size={14} color={MUTED} style={{ flexShrink: 0 }} />
+              </button>
 
               {/* 7 — Notes */}
               <div style={{ ...rowStyle, alignItems: 'flex-start' }}>
@@ -844,6 +787,13 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
         value={form?.recurrenceRule ?? ''}
         onClose={() => setRecurrencePickerOpen(false)}
         onChange={rule => set('recurrenceRule', rule)}
+      />
+
+      <LocationPickerSheet
+        open={locPickerOpen}
+        initial={locValue}
+        onClose={() => setLocPickerOpen(false)}
+        onSelect={loc => { setLocValue(loc); setForm(f => f ? { ...f, location: loc } : f) }}
       />
     </>
   )
