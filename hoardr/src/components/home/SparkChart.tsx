@@ -199,7 +199,8 @@ export function SparkChart({ points, onHover, gestureMode }: {
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full"
+      className="relative w-full h-full select-none"
+      style={{ WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
     >
