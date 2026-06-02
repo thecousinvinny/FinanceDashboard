@@ -30,12 +30,13 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  width:        'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  themeColor:   '#080810',
-  viewportFit:  'cover',
+  width:             'device-width',
+  initialScale:      1,
+  maximumScale:      1,
+  userScalable:      false,
+  themeColor:        '#080810',
+  viewportFit:       'cover',
+  interactiveWidget: 'resizes-visual',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
