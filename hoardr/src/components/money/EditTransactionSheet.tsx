@@ -8,6 +8,7 @@ import {
   type SeedTx,
 } from '@/lib/data/transactions'
 import { cn } from '@/lib/utils'
+import { ChevronDown } from 'lucide-react'
 import type { CardOption, BankOption } from './AddTransactionSheet'
 
 export interface TxEdits {
@@ -273,21 +274,23 @@ export function EditTransactionSheet({ tx, open, onClose, onSave, cards = [], ba
               {cards.length === 0 ? (
                 <p className="text-[12px] text-ink-faint py-2">No cards yet — add one in Wallet</p>
               ) : (
-                <div className="flex gap-2 overflow-x-auto pb-1 -mx-5 px-5">
-                  <button
-                    onClick={() => setCardId(null)}
-                    className={cn('flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all select-none', cardId === null ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}
+                <div className="relative">
+                  <select
+                    value={cardId ?? ''}
+                    onChange={e => setCardId(e.target.value || null)}
+                    className="w-full bg-bg-overlay border border-white/[0.06] rounded-[14px] px-4 py-3 text-[15px] text-ink appearance-none outline-none pr-10"
+                    style={{ colorScheme: 'dark' }}
                   >
-                    None
-                  </button>
-                  {cards.map(c => (
-                    <button
-                      key={c.id} onClick={() => setCardId(c.id)}
-                      className={cn('flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all select-none', cardId === c.id ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}
-                    >
-                      {c.name}{c.last4 ? ` ••••${c.last4}` : ''}
-                    </button>
-                  ))}
+                    <option value="">None</option>
+                    {[...cards]
+                      .sort((a, b) => (a.id === cardId ? -1 : b.id === cardId ? 1 : 0))
+                      .map(c => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}{c.last4 ? ` ••••${c.last4}` : ''}
+                        </option>
+                      ))}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
                 </div>
               )}
             </div>
@@ -300,21 +303,19 @@ export function EditTransactionSheet({ tx, open, onClose, onSave, cards = [], ba
               {banks.length === 0 ? (
                 <p className="text-[12px] text-ink-faint py-2">No banks yet — add one in Wallet</p>
               ) : (
-                <div className="flex gap-2 overflow-x-auto pb-1 -mx-5 px-5">
-                  <button
-                    onClick={() => setBankId(null)}
-                    className={cn('flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all select-none', bankId === null ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}
+                <div className="relative">
+                  <select
+                    value={bankId ?? ''}
+                    onChange={e => setBankId(e.target.value || null)}
+                    className="w-full bg-bg-overlay border border-white/[0.06] rounded-[14px] px-4 py-3 text-[15px] text-ink appearance-none outline-none pr-10"
+                    style={{ colorScheme: 'dark' }}
                   >
-                    None
-                  </button>
-                  {banks.map(b => (
-                    <button
-                      key={b.id} onClick={() => setBankId(b.id)}
-                      className={cn('flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all select-none', bankId === b.id ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}
-                    >
-                      {b.name}
-                    </button>
-                  ))}
+                    <option value="">None</option>
+                    {banks.map(b => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
                 </div>
               )}
             </div>
