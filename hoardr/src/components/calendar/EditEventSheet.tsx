@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { MapPin, Clock, AlignLeft, X, ChevronDown, RefreshCw, Trash2 } from 'lucide-react'
+import { MapPin, Clock, AlignLeft, X, ChevronDown, RefreshCw, Calendar } from 'lucide-react'
 import { localToday } from '@/lib/utils'
 import { rruleLabel } from '@/lib/rrule'
 import { RecurrencePicker } from './RecurrencePicker'
@@ -47,20 +47,55 @@ interface Props {
   onDelete:    (scope: RecurrenceScope) => void
 }
 
-const M = 'var(--font-montserrat)'
+const M    = 'var(--font-montserrat)'
+const GOLD = '#C9A84C'
+const MUTED = 'rgb(var(--rgb-ink-muted))'
+const SEP   = 'rgba(var(--rgb-ink-faint) / 0.25)'
+
+function fmt12(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number)
+  const period = h >= 12 ? 'PM' : 'AM'
+  const h12 = h % 12 || 12
+  return `${h12}:${String(m).padStart(2, '0')} ${period}`
+}
+
+function fmtDatePill(dateStr: string): string {
+  if (!dateStr) return ''
+  const [y, mo, d] = dateStr.split('-').map(Number)
+  return new Date(y, mo - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+function addOneDay(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00'); d.setDate(d.getDate() + 1)
+  return d.toISOString().slice(0, 10)
+}
+
+function calcDuration(date: string, startTime: string, endDate: string, endTime: string): string {
+  const start    = new Date(`${date}T${startTime}:00`)
+  const end      = new Date(`${endDate}T${endTime}:00`)
+  const totalMin = Math.round((end.getTime() - start.getTime()) / 60000)
+  if (totalMin <= 0) return ''
+  const h = Math.floor(totalMin / 60)
+  const m = totalMin % 60
+  if (h === 0) return `${m}m`
+  if (m === 0) return `${h}h`
+  return `${h}h ${m}m`
+}
 
 export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, onDelete }: Props) {
-  const [step, setStep]             = useState<'scope' | 'form'>('form')
-  const [scope, setScope]           = useState<RecurrenceScope>('this')
-  const [form, setForm]             = useState<EventEdits | null>(null)
-  const [saving, setSaving]         = useState(false)
+  const [step, setStep]                   = useState<'scope' | 'form'>('form')
+  const [scope, setScope]                 = useState<RecurrenceScope>('this')
+  const [form, setForm]                   = useState<EventEdits | null>(null)
+  const [saving, setSaving]               = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [recurrencePickerOpen, setRecurrencePickerOpen] = useState(false)
-  const [dragY,              setDragY]              = useState(0)
+  const [calDropOpen, setCalDropOpen]     = useState(false)
   const locationRef  = useRef<HTMLTextAreaElement>(null)
   const acRef        = useRef<unknown>(null)
   const backdropRef  = useRef<HTMLDivElement>(null)
   const dragStartY   = useRef<number | null>(null)
+  const dragYRef     = useRef(0)
+  const sheetRef     = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (open && event) {
@@ -68,6 +103,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
       setScope('this')
       setSaving(false)
       setConfirmDelete(false)
+      setCalDropOpen(false)
       setForm({
         title:          event.title,
         date:           event.date,
@@ -124,20 +160,45 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
     return () => el.removeEventListener('touchmove', prevent)
   }, [open])
 
-  useEffect(() => { if (!open) setDragY(0) }, [open])
-
   function onDragStart(e: React.TouchEvent) { dragStartY.current = e.touches[0].clientY }
   function onDragMove(e: React.TouchEvent) {
-    if (dragStartY.current === null) return
-    setDragY(Math.max(0, e.touches[0].clientY - dragStartY.current))
+    if (dragStartY.current === null || !sheetRef.current) return
+    const dy = Math.max(0, e.touches[0].clientY - dragStartY.current)
+    dragYRef.current = dy
+    sheetRef.current.style.transform  = `translateY(${dy}px)`
+    sheetRef.current.style.transition = 'none'
   }
-  function onDragEnd() {
-    const dy = dragY; dragStartY.current = null; setDragY(0)
-    if (dy > 80) onClose()
+  function onDragEnd(e: React.TouchEvent) {
+    if (!sheetRef.current) return
+    const dy = dragStartY.current !== null ? Math.max(0, e.changedTouches[0].clientY - dragStartY.current) : 0
+    dragStartY.current = null
+    if (dy > 80) {
+      sheetRef.current.style.transition = 'transform 0.28s cubic-bezier(0.4,0,0.2,1)'
+      sheetRef.current.style.transform  = 'translateY(100%)'
+      setTimeout(() => {
+        if (sheetRef.current) { sheetRef.current.style.transform = ''; sheetRef.current.style.transition = '' }
+        onClose()
+      }, 280)
+    } else {
+      sheetRef.current.style.transform  = ''
+      sheetRef.current.style.transition = ''
+    }
   }
 
   function set(k: keyof EventEdits, v: string | boolean) {
-    setForm(f => f ? { ...f, [k]: v } : f)
+    setForm(f => {
+      if (!f) return f
+      const next = { ...f, [k]: v }
+      // Cross-midnight auto-advance: end time before start time on same date → +1 day
+      if (k === 'endTime' && typeof v === 'string' && !next.allDay) {
+        if (v < next.startTime && next.endDate === next.date) next.endDate = addOneDay(next.date)
+      }
+      // Start date moved past end date → clamp end date
+      if (k === 'date' && typeof v === 'string' && next.endDate < v) {
+        next.endDate = v
+      }
+      return next
+    })
   }
 
   async function handleSave() {
@@ -159,6 +220,42 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
 
   const canSave = !!form?.title.trim() && !!form?.date && form.date.length === 10
 
+  const selectedCal  = googleCals.find(c => (c.primary ? 'primary' : c.id) === form?.calendarId) ?? googleCals[0]
+  const calDotColor  = selectedCal?.backgroundColor ?? '#4285F4'
+  const calName      = selectedCal?.summary ?? 'Calendar'
+
+  const rowStyle: React.CSSProperties = {
+    display: 'flex', alignItems: 'center', gap: 12,
+    padding: '14px 16px',
+    borderBottom: `0.5px solid ${SEP}`,
+  }
+
+  const pillStyle = (active?: boolean): React.CSSProperties => ({
+    position: 'relative',
+    display: 'inline-flex', alignItems: 'center',
+    background: active ? 'rgba(201,168,76,0.12)' : 'rgba(255,255,255,0.06)',
+    borderRadius: 8, padding: '5px 10px',
+    fontSize: 13, fontWeight: 500, fontFamily: M,
+    color: active ? GOLD : 'var(--color-ink)',
+    overflow: 'hidden', cursor: 'pointer', userSelect: 'none',
+  })
+
+  const hiddenInput: React.CSSProperties = {
+    position: 'absolute', inset: 0, opacity: 0,
+    width: '100%', height: '100%', cursor: 'pointer',
+    colorScheme: 'dark',
+  }
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: 9, fontWeight: 600, letterSpacing: '0.1em',
+    textTransform: 'uppercase', color: MUTED, marginBottom: 4,
+    fontFamily: M,
+  }
+
+  const durationStr = form && !form.allDay
+    ? calcDuration(form.date, form.startTime, form.endDate, form.endTime)
+    : ''
+
   return (
     <>
       {/* Backdrop */}
@@ -171,20 +268,23 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
 
       {/* Sheet */}
       <div
-        className="fixed inset-x-0 bottom-0 z-50 rounded-t-[24px] bg-bg-surface"
+        ref={sheetRef}
+        className="fixed inset-x-0 bottom-0 z-50 rounded-t-[24px] flex flex-col"
         style={{
-          willChange: 'transform',
+          background:    'var(--color-bg-surface)',
+          maxHeight:     '85vh',
+          willChange:    'transform',
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-          transform: open ? `translateY(${dragY}px)` : 'translateY(100%)',
-          transition: dragY > 0 ? 'none' : 'transform 0.3s cubic-bezier(0.4,0,0.2,1)',
+          transform:     open ? 'translateY(0)' : 'translateY(100%)',
+          transition:    'transform 0.3s cubic-bezier(0.4,0,0.2,1)',
         }}
       >
-        {/* Handle — drag target */}
+        {/* Drag handle */}
         <div
           onTouchStart={onDragStart}
           onTouchMove={onDragMove}
           onTouchEnd={onDragEnd}
-          className="flex justify-center pt-3 pb-3"
+          className="flex justify-center pt-3 pb-2 flex-shrink-0"
           style={{ touchAction: 'none' }}
         >
           <div className="w-9 h-1 rounded-full bg-white/20" />
@@ -193,14 +293,14 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
         {/* ── Step 1: Scope picker (recurring events only) ── */}
         {step === 'scope' && (
           <>
-            <div className="flex items-center justify-between px-5 mb-4">
-              <h2 className="text-[18px] font-bold text-ink">Edit Recurring Event</h2>
+            <div className="flex items-center justify-between px-4 pb-3 flex-shrink-0">
+              <h2 style={{ fontFamily: M, fontSize: 17, fontWeight: 700, color: 'var(--color-ink)' }}>Edit Recurring Event</h2>
               <button onClick={onClose} className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center">
                 <X size={14} className="text-ink-muted" />
               </button>
             </div>
-            <p className="px-5 text-[13px] text-ink-muted mb-4">Which events do you want to edit?</p>
-            <div className="mx-5 bg-bg-overlay border border-white/[0.08] rounded-[14px] overflow-hidden mb-5">
+            <p className="px-4 pb-4 text-[13px] text-ink-muted">Which events do you want to edit?</p>
+            <div className="mx-4 bg-bg-overlay border border-white/[0.08] rounded-[14px] overflow-hidden mb-4">
               {([
                 { scope: 'this'      as RecurrenceScope, label: 'This event' },
                 { scope: 'following' as RecurrenceScope, label: 'This and following events' },
@@ -214,7 +314,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
                 </button>
               ))}
             </div>
-            <div className="px-5 pb-4">
+            <div className="px-4 pb-4">
               <button onClick={onClose} className="w-full py-3.5 rounded-[14px] bg-bg-overlay border border-white/[0.08] text-[15px] font-medium text-ink-muted">Cancel</button>
             </div>
           </>
@@ -223,139 +323,216 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
         {/* ── Step 2: Edit form ── */}
         {step === 'form' && form && (
           <>
-            <div className="flex items-center justify-between px-5 mb-4">
-              <h2 className="text-[18px] font-bold text-ink">Edit Event</h2>
+            {/* Header — × only */}
+            <div className="flex items-center justify-end px-4 pb-2 flex-shrink-0">
               <button onClick={onClose} className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center">
                 <X size={14} className="text-ink-muted" />
               </button>
             </div>
 
-            <div className="px-5 space-y-3 overflow-y-auto"
-              style={{ maxHeight: '70vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
+            {/* Scrollable form */}
+            <div
+              className="flex-1 overflow-y-auto"
+              style={{ overscrollBehavior: 'contain', overflowX: 'hidden' }}
+            >
 
-              {/* Title */}
-              <input type="text" placeholder="Event title" value={form.title} onChange={e => set('title', e.target.value)}
-                className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40" />
+              {/* 1 — Title */}
+              <input
+                type="text"
+                placeholder="Event name"
+                value={form.title}
+                onChange={e => set('title', e.target.value)}
+                style={{
+                  width: '100%', display: 'block',
+                  padding: '12px 16px',
+                  fontSize: 18, fontWeight: 500, fontFamily: M,
+                  color: 'var(--color-ink)',
+                  background: 'none', border: 'none', outline: 'none',
+                  borderBottom: `0.5px solid ${SEP}`,
+                }}
+              />
 
-              {/* Date — From / To */}
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <p className="text-[10px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-1.5 pl-1">From</p>
-                  <div className="bg-bg-overlay border border-white/[0.08] rounded-[14px] overflow-hidden">
-                    <input type="date" value={form.date}
-                      onChange={e => {
-                        const v = e.target.value
-                        set('date', v)
-                        if (form.endDate && v > form.endDate) set('endDate', v)
-                      }}
-                      className="w-full px-4 py-3 text-[15px] text-ink bg-transparent outline-none"
-                      style={{ colorScheme: 'dark' }} />
+              {/* 2 — All day toggle */}
+              <button
+                type="button"
+                onClick={() => set('allDay', !form.allDay)}
+                style={{ ...rowStyle, width: '100%', cursor: 'pointer', background: 'none', border: 'none', textAlign: 'left' }}
+              >
+                <Clock size={16} color={MUTED} style={{ flexShrink: 0 }} />
+                <span style={{ flex: 1, fontSize: 14, color: 'var(--color-ink)', fontFamily: M }}>All day</span>
+                <span style={{
+                  width: 44, height: 24, borderRadius: 12, padding: 2,
+                  background: form.allDay ? GOLD : 'rgba(255,255,255,0.1)',
+                  display: 'inline-flex', alignItems: 'center',
+                  justifyContent: form.allDay ? 'flex-end' : 'flex-start',
+                  flexShrink: 0, transition: 'background 0.15s',
+                }}>
+                  <span style={{ width: 20, height: 20, borderRadius: 10, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+                </span>
+              </button>
+
+              {/* 3 — From / To dates */}
+              <div style={rowStyle}>
+                <Calendar size={16} color={MUTED} style={{ flexShrink: 0 }} />
+                <div style={{ display: 'flex', gap: 10, flex: 1 }}>
+                  <div>
+                    <p style={labelStyle}>FROM</p>
+                    <div style={pillStyle()}>
+                      <span>{fmtDatePill(form.date)}</span>
+                      <input type="date" value={form.date} style={hiddenInput}
+                        onChange={e => set('date', e.target.value)} />
+                    </div>
                   </div>
-                </div>
-                <div className="flex-1">
-                  <p className="text-[10px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-1.5 pl-1">To</p>
-                  <div className={`bg-bg-overlay rounded-[14px] overflow-hidden ${form.endDate && form.endDate !== form.date ? 'border border-gold/50' : 'border border-white/[0.08]'}`}>
-                    <input type="date" value={form.endDate || form.date}
-                      min={form.date}
-                      onChange={e => set('endDate', e.target.value)}
-                      className="w-full px-4 py-3 text-[15px] text-ink bg-transparent outline-none"
-                      style={{ colorScheme: 'dark' }} />
+                  <div>
+                    <p style={labelStyle}>TO</p>
+                    <div style={pillStyle(form.endDate !== form.date)}>
+                      <span style={{ color: form.endDate !== form.date ? GOLD : 'var(--color-ink)' }}>
+                        {fmtDatePill(form.endDate || form.date)}
+                      </span>
+                      <input type="date" value={form.endDate || form.date} min={form.date} style={hiddenInput}
+                        onChange={e => set('endDate', e.target.value)} />
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Calendar dropdown */}
-              {googleCals.length > 0 && (
-                <div>
-                  <p className="text-[10px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-2 pl-1">Calendar</p>
-                  <div className="relative w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] overflow-hidden">
-                    <select value={form.calendarId} onChange={e => set('calendarId', e.target.value)}
-                      className="w-full px-4 py-3 pr-10 text-[15px] text-ink bg-transparent outline-none appearance-none"
-                      style={{ colorScheme: 'dark' }}>
-                      {googleCals.map(cal => (
-                        <option key={cal.id} value={cal.primary ? 'primary' : cal.id}>
-                          {cal.summary}{cal.primary ? ' (primary)' : ''}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
-                  </div>
-                </div>
-              )}
-
-              {/* All-day toggle */}
-              <button type="button" onClick={() => set('allDay', !form.allDay)}
-                className="w-full flex items-center justify-between bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 text-left">
-                <div className="flex items-center gap-2.5 pointer-events-none">
-                  <Clock size={15} className="text-ink-muted" />
-                  <span className="text-[14px] text-ink">All day</span>
-                </div>
-                <span className={`w-11 h-6 rounded-full relative flex-shrink-0 inline-block transition-colors pointer-events-none ${form.allDay ? 'gradient-gold' : 'bg-bg-base border border-white/10'}`}>
-                  <span className={`absolute top-0.5 left-0 w-5 h-5 rounded-full bg-white shadow transition-transform ${form.allDay ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
-                </span>
-              </button>
-
-              {/* Time pickers */}
+              {/* 4 — Start / End time + duration */}
               {!form.allDay && (
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <p className="text-[10px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-1.5 pl-1">Start</p>
-                    <div className="bg-bg-overlay border border-white/[0.08] rounded-[14px] overflow-hidden">
-                      <input type="time" value={form.startTime} onChange={e => set('startTime', e.target.value)}
-                        className="w-full px-4 py-3 text-[15px] text-ink bg-transparent outline-none" style={{ colorScheme: 'dark' }} />
+                <div style={rowStyle}>
+                  <Clock size={16} color={MUTED} style={{ flexShrink: 0 }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', flex: 1 }}>
+                    <div>
+                      <p style={labelStyle}>START</p>
+                      <div style={pillStyle()}>
+                        <span>{fmt12(form.startTime)}</span>
+                        <input type="time" value={form.startTime} style={{ ...hiddenInput, colorScheme: 'dark' }}
+                          onChange={e => set('startTime', e.target.value)} />
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-[10px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-1.5 pl-1">End</p>
-                    <div className="bg-bg-overlay border border-white/[0.08] rounded-[14px] overflow-hidden">
-                      <input type="time" value={form.endTime} onChange={e => set('endTime', e.target.value)}
-                        className="w-full px-4 py-3 text-[15px] text-ink bg-transparent outline-none" style={{ colorScheme: 'dark' }} />
+                    <div>
+                      <p style={labelStyle}>END</p>
+                      <div style={pillStyle()}>
+                        <span>{fmt12(form.endTime)}</span>
+                        <input type="time" value={form.endTime} style={{ ...hiddenInput, colorScheme: 'dark' }}
+                          onChange={e => set('endTime', e.target.value)} />
+                      </div>
                     </div>
+                    {durationStr && (
+                      <span style={{ fontSize: 12, color: MUTED, fontFamily: M, alignSelf: 'flex-end', paddingBottom: 2 }}>
+                        {durationStr}
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
 
-              {/* Repeat */}
-              <button type="button" onClick={() => setRecurrencePickerOpen(true)}
-                className="w-full flex items-center justify-between bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 text-left">
-                <div className="flex items-center gap-2.5 pointer-events-none">
-                  <RefreshCw size={15} className="text-ink-muted" />
-                  <span className="text-[14px] text-ink">Repeat</span>
-                </div>
-                <span className="text-[13px] text-ink-muted">
+              {/* 5 — Repeat */}
+              <button
+                type="button"
+                onClick={() => setRecurrencePickerOpen(true)}
+                style={{ ...rowStyle, width: '100%', cursor: 'pointer', background: 'none', border: 'none', textAlign: 'left' }}
+              >
+                <RefreshCw size={16} color={MUTED} style={{ flexShrink: 0 }} />
+                <span style={{ flex: 1, fontSize: 14, color: 'var(--color-ink)', fontFamily: M }}>Repeat</span>
+                <span style={{ fontSize: 13, color: MUTED, fontFamily: M, marginRight: 4 }}>
                   {form.recurrenceRule ? rruleLabel(form.recurrenceRule, form.date || localToday()) : 'Never'}
                 </span>
+                <ChevronDown size={14} color={MUTED} style={{ flexShrink: 0 }} />
               </button>
 
-              {/* Location */}
-              <div className="relative">
-                <MapPin size={15} className="absolute left-4 top-3.5 text-ink-muted pointer-events-none" />
-                <textarea ref={locationRef} placeholder="Add location" defaultValue={form.location}
+              {/* 6 — Location */}
+              <div style={{ ...rowStyle, alignItems: 'flex-start' }}>
+                <MapPin size={16} color={MUTED} style={{ flexShrink: 0, marginTop: 2 }} />
+                <textarea
+                  ref={locationRef}
+                  placeholder="Location"
+                  defaultValue={form.location}
                   onChange={e => set('location', e.target.value)}
+                  rows={1}
+                  style={{
+                    flex: 1, background: 'none', border: 'none', outline: 'none', resize: 'none',
+                    fontSize: 14, color: 'var(--color-ink)', fontFamily: M,
+                    lineHeight: 1.5, overflowX: 'hidden',
+                  }}
+                />
+              </div>
+
+              {/* 7 — Notes */}
+              <div style={{ ...rowStyle, alignItems: 'flex-start' }}>
+                <AlignLeft size={16} color={MUTED} style={{ flexShrink: 0, marginTop: 2 }} />
+                <textarea
+                  placeholder="Notes"
+                  value={form.notes}
+                  onChange={e => set('notes', e.target.value)}
                   rows={2}
-                  className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] pl-10 pr-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40 resize-none" />
+                  style={{
+                    flex: 1, background: 'none', border: 'none', outline: 'none', resize: 'none',
+                    fontSize: 14, color: 'var(--color-ink)', fontFamily: M,
+                    lineHeight: 1.5,
+                  }}
+                />
               </div>
 
-              {/* Notes */}
-              <div className="relative">
-                <AlignLeft size={15} className="absolute left-4 top-4 text-ink-muted pointer-events-none" />
-                <textarea placeholder="Notes" value={form.notes} onChange={e => set('notes', e.target.value)} rows={3}
-                  className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] pl-10 pr-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40 resize-none" />
-              </div>
+              {/* 8 — Calendar selector */}
+              {googleCals.length > 0 && (
+                <div style={{ position: 'relative' }}>
+                  <div style={rowStyle}>
+                    <span style={{ width: 10, height: 10, borderRadius: 3, background: calDotColor, flexShrink: 0, display: 'inline-block' }} />
+                    <span style={{ flex: 1, fontSize: 14, color: 'var(--color-ink)', fontFamily: M }}>{calName}</span>
+                    <ChevronDown size={14} color={MUTED} style={{ flexShrink: 0 }} />
+                  </div>
+                  <select
+                    value={form.calendarId}
+                    onChange={e => set('calendarId', e.target.value)}
+                    style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }}
+                  >
+                    {googleCals.map(cal => (
+                      <option key={cal.id} value={cal.primary ? 'primary' : cal.id}>
+                        {cal.summary}{cal.primary ? ' (primary)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-              {/* Save */}
-              <button type="button" onClick={handleSave} disabled={!canSave || saving}
-                className="w-full gradient-gold rounded-[14px] py-3.5 text-[15px] font-bold text-white disabled:opacity-40 transition-opacity">
-                {saving ? 'Saving…' : 'Save'}
-              </button>
+              {/* Spacer so content clears the fixed footer */}
+              <div style={{ height: 120 }} />
+            </div>
 
-              {/* Delete */}
-              <button type="button" onClick={handleDelete}
-                className="w-full bg-bg-overlay border border-ruby/30 rounded-[14px] py-3.5 text-[15px] font-medium text-ruby flex items-center justify-center gap-2">
-                <Trash2 size={15} />
+            {/* Fixed footer — Delete + Save */}
+            <div
+              className="flex-shrink-0"
+              style={{
+                borderTop: `0.5px solid ${SEP}`,
+                padding: '12px 16px 16px',
+              }}
+            >
+              <button
+                type="button"
+                onClick={handleDelete}
+                style={{
+                  display: 'block', background: 'none', border: 'none', cursor: 'pointer',
+                  fontSize: 14, fontFamily: M, color: '#ef4444',
+                  padding: '4px 0 12px', textAlign: 'left',
+                }}
+              >
                 Delete Event
               </button>
-
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={!canSave || saving}
+                style={{
+                  width: '100%', padding: '14px',
+                  background: GOLD, border: 'none', borderRadius: 14,
+                  fontSize: 15, fontWeight: 700, fontFamily: M,
+                  color: '#1a1200', cursor: canSave && !saving ? 'pointer' : 'not-allowed',
+                  opacity: canSave && !saving ? 1 : 0.4,
+                  transition: 'opacity 0.15s',
+                }}
+              >
+                {saving ? 'Saving…' : 'Save'}
+              </button>
             </div>
           </>
         )}
@@ -365,28 +542,28 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
       {confirmDelete && (
         <>
           <div className="fixed inset-0 z-[60]" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={() => setConfirmDelete(false)} />
-          <div className="fixed inset-x-0 bottom-0 z-[70] rounded-t-[24px]" style={{ background: '#1a1a1a', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+          <div className="fixed inset-x-0 bottom-0 z-[70] rounded-t-[24px]" style={{ background: 'var(--color-bg-elevated)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
             <div className="flex justify-center pt-3 pb-2">
-              <div className="w-9 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.2)' }} />
+              <div className="w-9 h-1 rounded-full bg-white/20" />
             </div>
-            <div className="px-5 mb-4">
-              <h2 style={{ fontFamily: M, fontSize: 17, fontWeight: 700, color: '#fff' }}>Delete Recurring Event</h2>
-              <p style={{ fontFamily: M, fontSize: 13, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>Which events do you want to delete?</p>
+            <div className="px-4 pb-4">
+              <h2 style={{ fontFamily: M, fontSize: 17, fontWeight: 700, color: 'var(--color-ink)' }}>Delete Recurring Event</h2>
+              <p style={{ fontFamily: M, fontSize: 13, color: MUTED, marginTop: 4 }}>Which events do you want to delete?</p>
             </div>
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ borderTop: `0.5px solid ${SEP}` }}>
               {([
-                { s: 'this'      as RecurrenceScope, label: 'This event',                  danger: false },
-                { s: 'following' as RecurrenceScope, label: 'This and following events',   danger: false },
-                { s: 'all'       as RecurrenceScope, label: 'All events',                  danger: true  },
+                { s: 'this'      as RecurrenceScope, label: 'This event',                danger: false },
+                { s: 'following' as RecurrenceScope, label: 'This and following events', danger: false },
+                { s: 'all'       as RecurrenceScope, label: 'All events',                danger: true  },
               ]).map(({ s, label, danger }, i) => (
                 <button key={s} onClick={() => confirmDeleteWithScope(s)}
-                  className="w-full px-5 py-4 text-left"
-                  style={{ borderBottom: i < 2 ? '1px solid rgba(255,255,255,0.06)' : 'none', background: 'none', cursor: 'pointer' }}>
-                  <span style={{ fontFamily: M, fontSize: 15, fontWeight: 500, color: danger ? '#ef4444' : '#fff' }}>{label}</span>
+                  className="w-full px-4 py-4 text-left"
+                  style={{ borderBottom: i < 2 ? `0.5px solid ${SEP}` : 'none', background: 'none', cursor: 'pointer' }}>
+                  <span style={{ fontFamily: M, fontSize: 15, fontWeight: 500, color: danger ? '#ef4444' : 'var(--color-ink)' }}>{label}</span>
                 </button>
               ))}
             </div>
-            <div className="px-5 py-4">
+            <div className="px-4 py-4">
               <button onClick={() => setConfirmDelete(false)}
                 className="w-full py-3.5 rounded-[14px] bg-white/[0.06] text-[15px] font-medium text-ink-muted">
                 Cancel
