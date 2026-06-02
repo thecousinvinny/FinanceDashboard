@@ -18,8 +18,9 @@ export function HomeHero({ spent, points, annualPoints }: Props) {
   const [hoveredPoint, setHoveredPoint] = useState<DayPoint | null>(null)
   const [view,         setView]         = useState<'month' | 'year'>('month')
 
-  const swipeStart  = useRef<{ x: number; y: number } | null>(null)
-  const isSwiping   = useRef(false)
+  const swipeStart   = useRef<{ x: number; y: number } | null>(null)
+  const isSwiping    = useRef(false)
+  const gestureMode  = useRef<'undecided' | 'swiping' | 'scrubbing'>('undecided')
 
   useEffect(() => { setHoveredPoint(null) }, [view])
 
@@ -41,26 +42,32 @@ export function HomeHero({ spent, points, annualPoints }: Props) {
   const legendSub  = hoveredPoint ? hoveredPoint.sub : isYear ? annualSub : totalSub
   const hasSub     = isYear ? annualSub > 0 : totalSub > 0
 
-  // Capture-phase swipe detection — intercepts horizontal drags before SparkChart sees them
+  // Capture-phase swipe detection — intercepts quick horizontal flicks before SparkChart sees them.
+  // gestureMode coordinates with SparkChart's long-press scrub: once scrubbing, swipe is suppressed.
   function onTouchStartCapture(e: React.TouchEvent) {
-    swipeStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
-    isSwiping.current  = false
+    swipeStart.current  = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    isSwiping.current   = false
+    gestureMode.current = 'undecided'
   }
   function onTouchMoveCapture(e: React.TouchEvent) {
     if (!swipeStart.current) return
+    if (gestureMode.current === 'scrubbing') return  // SparkChart owns this gesture
     const dx = e.touches[0].clientX - swipeStart.current.x
     const dy = e.touches[0].clientY - swipeStart.current.y
     if (!isSwiping.current && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-      isSwiping.current = true
+      isSwiping.current   = true
+      gestureMode.current = 'swiping'
     }
     if (isSwiping.current) e.stopPropagation()
   }
   function onTouchEndCapture(e: React.TouchEvent) {
-    if (!swipeStart.current || !isSwiping.current) return
-    const dx = e.changedTouches[0].clientX - swipeStart.current.x
-    if (Math.abs(dx) > 40) setView(v => v === 'month' ? 'year' : 'month')
-    swipeStart.current = null
-    isSwiping.current  = false
+    if (!swipeStart.current) return
+    if (isSwiping.current) {
+      const dx = e.changedTouches[0].clientX - swipeStart.current.x
+      if (Math.abs(dx) > 40) setView(v => v === 'month' ? 'year' : 'month')
+    }
+    swipeStart.current  = null
+    isSwiping.current   = false
   }
 
   return (
@@ -85,10 +92,10 @@ export function HomeHero({ spent, points, annualPoints }: Props) {
         }}
       >
         <div style={{ width: '50%', height: '100%', position: 'relative' }}>
-          <SparkChart points={points} onHover={setHoveredPoint} />
+          <SparkChart points={points} onHover={setHoveredPoint} gestureMode={gestureMode} />
         </div>
         <div style={{ width: '50%', height: '100%', position: 'relative' }}>
-          <SparkChart points={annualPoints} onHover={setHoveredPoint} />
+          <SparkChart points={annualPoints} onHover={setHoveredPoint} gestureMode={gestureMode} />
         </div>
       </div>
 

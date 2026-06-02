@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { $fc } from '@/lib/utils'
+import { useState, useRef, useEffect, type MutableRefObject } from 'react'
+import { $fc, haptic } from '@/lib/utils'
 
 export interface DayPoint {
   day:   string  // "1", "12", "31"
@@ -18,11 +18,94 @@ function readColor(varName: string, fallback: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(varName).trim() || fallback
 }
 
-export function SparkChart({ points, onHover }: { points: DayPoint[]; onHover?: (p: DayPoint | null) => void }) {
+type GestureMode = 'undecided' | 'swiping' | 'scrubbing'
+
+export function SparkChart({ points, onHover, gestureMode }: {
+  points: DayPoint[]
+  onHover?: (p: DayPoint | null) => void
+  gestureMode?: MutableRefObject<GestureMode>
+}) {
   const [hoverIdx,     setHoverIdx]     = useState<number | null>(null)
   const [tooltipFixed, setTooltipFixed] = useState<{ x: number; y: number } | null>(null)
   const [colorRev,     setColorRev]     = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // Keep mutable refs current so native event listeners don't close over stale values
+  const pointsRef  = useRef(points)
+  const onHoverRef = useRef(onHover)
+  useEffect(() => { pointsRef.current  = points  }, [points])
+  useEffect(() => { onHoverRef.current = onHover }, [onHover])
+
+  // Touch: long-press activates scrub mode; quick swipe is handled by HomeHero
+  const touchStartRef   = useRef<{ x: number; y: number } | null>(null)
+  const longPressTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const scrubbingRef    = useRef(false)
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+
+    function cancelTimer() {
+      if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null }
+    }
+
+    function onStart(e: TouchEvent) {
+      touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+      scrubbingRef.current  = false
+      longPressTimer.current = setTimeout(() => {
+        longPressTimer.current = null
+        // Don't activate if HomeHero already classified this touch as a swipe
+        if (gestureMode && gestureMode.current !== 'undecided') return
+        scrubbingRef.current = true
+        if (gestureMode) gestureMode.current = 'scrubbing'
+        haptic('tap')
+      }, 300)
+    }
+
+    function onMove(e: TouchEvent) {
+      if (!touchStartRef.current) return
+      // HomeHero detected a swipe — cancel long-press and get out of the way
+      if (gestureMode?.current === 'swiping') { cancelTimer(); return }
+      if (!scrubbingRef.current) {
+        // Cancel long-press if finger has moved more than 8 px
+        const dx = Math.abs(e.touches[0].clientX - touchStartRef.current.x)
+        const dy = Math.abs(e.touches[0].clientY - touchStartRef.current.y)
+        if (dx > 8 || dy > 8) cancelTimer()
+        return
+      }
+      // Scrub mode: track finger position → update hover values
+      e.preventDefault()
+      const rect = el!.getBoundingClientRect()
+      const pts  = pointsRef.current
+      const n    = pts.length
+      const idx  = Math.round(((e.touches[0].clientX - rect.left) / rect.width) * (n - 1))
+      const clamped = Math.max(0, Math.min(n - 1, idx))
+      setHoverIdx(clamped)
+      onHoverRef.current?.(pts[clamped] ?? null)
+    }
+
+    function onEnd() {
+      cancelTimer()
+      scrubbingRef.current = false
+      if (gestureMode && gestureMode.current === 'scrubbing') gestureMode.current = 'undecided'
+      touchStartRef.current = null
+      setHoverIdx(null)
+      onHoverRef.current?.(null)
+    }
+
+    el.addEventListener('touchstart',  onStart, { passive: true  })
+    el.addEventListener('touchmove',   onMove,  { passive: false })
+    el.addEventListener('touchend',    onEnd,   { passive: true  })
+    el.addEventListener('touchcancel', onEnd,   { passive: true  })
+
+    return () => {
+      el.removeEventListener('touchstart',  onStart)
+      el.removeEventListener('touchmove',   onMove)
+      el.removeEventListener('touchend',    onEnd)
+      el.removeEventListener('touchcancel', onEnd)
+      cancelTimer()
+    }
+  }, [])  // empty deps: gestureMode is a stable ref object; setters are stable
 
   useEffect(() => {
     const handler = () => setColorRev(r => r + 1)
@@ -119,16 +202,6 @@ export function SparkChart({ points, onHover }: { points: DayPoint[]; onHover?: 
       className="relative w-full h-full"
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      onTouchMove={e => {
-        e.preventDefault()
-        const rect = containerRef.current?.getBoundingClientRect()
-        if (!rect) return
-        const idx = Math.round(((e.touches[0].clientX - rect.left) / rect.width) * (n - 1))
-        const clamped = Math.max(0, Math.min(n - 1, idx))
-        setHoverIdx(clamped)
-        onHover?.(points[clamped] ?? null)
-      }}
-      onTouchEnd={() => { setHoverIdx(null); onHover?.(null) }}
     >
       {/* key remounts this div on new data, restarting the clip animation */}
       <div
