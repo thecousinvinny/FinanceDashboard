@@ -112,6 +112,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
   const backdropRef  = useRef<HTMLDivElement>(null)
   const dragStartY   = useRef<number | null>(null)
   const sheetRef     = useRef<HTMLDivElement>(null)
+  const scrollRef    = useRef<HTMLDivElement>(null)
 
   // Initialize AutocompleteService once
   useEffect(() => {
@@ -183,6 +184,50 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
     el.style.height = 'auto'
     el.style.height = `${el.scrollHeight}px`
   }, [form?.notes])
+
+  // Scroll-area swipe-down dismiss: when already at top, pull-down closes the sheet
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el || !open) return
+    let startY = 0
+    let dragging = false
+    const onStart = (e: TouchEvent) => {
+      startY = e.touches[0].clientY
+      dragging = (el.scrollTop <= 0)
+    }
+    const onMove = (e: TouchEvent) => {
+      if (!dragging || !sheetRef.current) return
+      const dy = e.touches[0].clientY - startY
+      if (dy <= 0) { dragging = false; return }
+      e.preventDefault()
+      sheetRef.current.style.transform  = `translateY(${dy}px)`
+      sheetRef.current.style.transition = 'none'
+    }
+    const onEnd = (e: TouchEvent) => {
+      if (!dragging || !sheetRef.current) return
+      dragging = false
+      const dy = Math.max(0, e.changedTouches[0].clientY - startY)
+      if (dy > 80) {
+        sheetRef.current.style.transition = 'transform 0.28s cubic-bezier(0.4,0,0.2,1)'
+        sheetRef.current.style.transform  = 'translateY(100%)'
+        setTimeout(() => {
+          if (sheetRef.current) { sheetRef.current.style.transform = ''; sheetRef.current.style.transition = '' }
+          onClose()
+        }, 280)
+      } else {
+        sheetRef.current.style.transform  = ''
+        sheetRef.current.style.transition = ''
+      }
+    }
+    el.addEventListener('touchstart', onStart, { passive: true })
+    el.addEventListener('touchmove',  onMove,  { passive: false })
+    el.addEventListener('touchend',   onEnd,   { passive: true })
+    return () => {
+      el.removeEventListener('touchstart', onStart)
+      el.removeEventListener('touchmove',  onMove)
+      el.removeEventListener('touchend',   onEnd)
+    }
+  }, [open, onClose])
 
   // Lock background scroll while sheet is open
   useEffect(() => {
@@ -384,25 +429,23 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
           transition:    'transform 0.3s cubic-bezier(0.4,0,0.2,1)',
         }}
       >
-        {/* Drag handle */}
-        <div
-          onTouchStart={onDragStart}
-          onTouchMove={onDragMove}
-          onTouchEnd={onDragEnd}
-          className="flex justify-center pt-3 pb-2 flex-shrink-0"
-          style={{ touchAction: 'none' }}
-        >
-          <div className="w-9 h-1 rounded-full bg-white/20" />
-        </div>
-
         {/* ── Step 1: Scope picker ── */}
         {step === 'scope' && (
           <>
-            <div className="flex items-center justify-between px-4 pb-3 flex-shrink-0">
-              <h2 style={{ fontFamily: M, fontSize: 17, fontWeight: 700, color: 'var(--color-ink)' }}>Edit Recurring Event</h2>
-              <button onClick={onClose} className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center">
-                <X size={14} className="text-ink-muted" />
-              </button>
+            {/* Drag zone covers handle + header row */}
+            <div
+              onTouchStart={onDragStart} onTouchMove={onDragMove} onTouchEnd={onDragEnd}
+              className="flex-shrink-0" style={{ touchAction: 'none' }}
+            >
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="w-9 h-1 rounded-full bg-white/20" />
+              </div>
+              <div className="flex items-center justify-between px-4 py-3">
+                <h2 style={{ fontFamily: M, fontSize: 17, fontWeight: 700, color: 'var(--color-ink)' }}>Edit Recurring Event</h2>
+                <button onTouchStart={e => e.stopPropagation()} onClick={onClose} className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center">
+                  <X size={14} className="text-ink-muted" />
+                </button>
+              </div>
             </div>
             <p className="px-4 pb-4 text-[13px] text-ink-muted">Which events do you want to edit?</p>
             <div className="mx-4 bg-bg-overlay border border-white/[0.08] rounded-[14px] overflow-hidden mb-4">
@@ -428,15 +471,24 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
         {/* ── Step 2: Edit form ── */}
         {step === 'form' && form && (
           <>
-            {/* Header — × only */}
-            <div className="flex items-center justify-end px-4 pb-2 flex-shrink-0">
-              <button onClick={onClose} className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center">
-                <X size={14} className="text-ink-muted" />
-              </button>
+            {/* Drag zone covers handle + × header — large touch target */}
+            <div
+              onTouchStart={onDragStart} onTouchMove={onDragMove} onTouchEnd={onDragEnd}
+              className="flex-shrink-0" style={{ touchAction: 'none' }}
+            >
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="w-9 h-1 rounded-full bg-white/20" />
+              </div>
+              <div className="flex items-center justify-end px-4 pb-2">
+                <button onTouchStart={e => e.stopPropagation()} onClick={onClose} className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center">
+                  <X size={14} className="text-ink-muted" />
+                </button>
+              </div>
             </div>
 
             {/* Scrollable form */}
             <div
+              ref={scrollRef}
               className="flex-1 overflow-y-auto"
               style={{ overscrollBehavior: 'contain', overflowX: 'hidden' }}
             >
