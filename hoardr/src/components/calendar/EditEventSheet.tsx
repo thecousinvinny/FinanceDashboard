@@ -38,6 +38,14 @@ export interface EventEdits {
 
 export type RecurrenceScope = 'this' | 'following' | 'all'
 
+interface LocSuggestion {
+  placeId:           string
+  mainText:          string
+  secText:           string
+  description:       string
+  matchedSubstrings: Array<{ offset: number; length: number }>
+}
+
 interface Props {
   open:        boolean
   event:       EditableEvent | null
@@ -89,13 +97,49 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
   const [saving, setSaving]               = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [recurrencePickerOpen, setRecurrencePickerOpen] = useState(false)
-  const [calDropOpen, setCalDropOpen]     = useState(false)
-  const locationRef  = useRef<HTMLTextAreaElement>(null)
-  const acRef        = useRef<unknown>(null)
+
+  // Location autocomplete state
+  const [locValue,       setLocValue]       = useState('')
+  const [locSuggestions, setLocSuggestions] = useState<LocSuggestion[]>([])
+  const [locOpen,        setLocOpen]        = useState(false)
+  const [recentLoc,      setRecentLoc]      = useState('')
+
+  const locSvcRef    = useRef<unknown>(null)
+  const locTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const locRowRef    = useRef<HTMLDivElement>(null)
+  const locTextareaRef = useRef<HTMLTextAreaElement>(null)
   const backdropRef  = useRef<HTMLDivElement>(null)
   const dragStartY   = useRef<number | null>(null)
-  const dragYRef     = useRef(0)
   const sheetRef     = useRef<HTMLDivElement>(null)
+
+  // Initialize AutocompleteService once
+  useEffect(() => {
+    const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+    if (!key) return
+    const saved = localStorage.getItem('cal-recent-location')
+    if (saved) setRecentLoc(saved)
+
+    function init() {
+      const g = (window as unknown as Record<string, unknown>).google as {
+        maps?: { places?: { AutocompleteService: new () => unknown } }
+      } | undefined
+      if (!g?.maps?.places) return
+      locSvcRef.current = new g.maps.places.AutocompleteService()
+    }
+
+    const g = (window as unknown as Record<string, unknown>).google as { maps?: { places?: unknown } } | undefined
+    if (g?.maps?.places) { init() }
+    else {
+      const existing = document.getElementById('gmaps-script')
+      if (!existing) {
+        const s = document.createElement('script'); s.id = 'gmaps-script'
+        s.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`; s.async = true; s.onload = init
+        document.head.appendChild(s)
+      } else { existing.addEventListener('load', init, { once: true }) }
+    }
+    return () => { locSvcRef.current = null }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (open && event) {
@@ -103,7 +147,9 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
       setScope('this')
       setSaving(false)
       setConfirmDelete(false)
-      setCalDropOpen(false)
+      setLocValue(event.location)
+      setLocOpen(false)
+      setLocSuggestions([])
       setForm({
         title:          event.title,
         date:           event.date,
@@ -117,39 +163,17 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
         calendarId:     event.calendarId || 'primary',
       })
     } else {
-      setTimeout(() => { setForm(null); setSaving(false); setConfirmDelete(false) }, 300)
+      setTimeout(() => { setForm(null); setSaving(false); setConfirmDelete(false); setLocValue(''); setLocOpen(false); setLocSuggestions([]) }, 300)
     }
   }, [open, event])
 
-  // Google Places Autocomplete
+  // Auto-resize location textarea
   useEffect(() => {
-    if (!open || step !== 'form' || !locationRef.current) return
-    const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-    if (!key) return
-    function init() {
-      if (!locationRef.current) return
-      const g = (window as unknown as Record<string, unknown>).google as { maps?: { places?: { Autocomplete: new (el: HTMLInputElement, opts: unknown) => { addListener: (ev: string, fn: () => void) => void; getPlace: () => { formatted_address?: string; name?: string } } } } } | undefined
-      if (!g?.maps?.places) return
-      acRef.current = new g.maps.places.Autocomplete(locationRef.current as unknown as HTMLInputElement, { types: ['geocode', 'establishment'] })
-      ;(acRef.current as { addListener: (ev: string, fn: () => void) => void }).addListener('place_changed', () => {
-        const place = (acRef.current as { getPlace: () => { formatted_address?: string; name?: string } }).getPlace()
-        const addr  = place.formatted_address || place.name || ''
-        setForm(f => f ? { ...f, location: addr } : f)
-        if (locationRef.current) locationRef.current.value = addr
-      })
-    }
-    const gObj = (window as unknown as Record<string, unknown>).google as { maps?: { places?: unknown } } | undefined
-    if (gObj?.maps?.places) { init() }
-    else {
-      const existing = document.getElementById('gmaps-script')
-      if (!existing) {
-        const s = document.createElement('script'); s.id = 'gmaps-script'
-        s.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`; s.async = true; s.onload = init
-        document.head.appendChild(s)
-      } else { existing.addEventListener('load', init, { once: true }) }
-    }
-    return () => { acRef.current = null }
-  }, [open, step])
+    const el = locTextareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [locValue])
 
   // Lock background scroll while sheet is open
   useEffect(() => {
@@ -160,11 +184,83 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
     return () => el.removeEventListener('touchmove', prevent)
   }, [open])
 
+  function handleLocChange(val: string) {
+    setLocValue(val)
+    setForm(f => f ? { ...f, location: val } : f)
+    if (locTimerRef.current) clearTimeout(locTimerRef.current)
+    if (!val.trim()) {
+      setLocSuggestions([])
+      setLocOpen(recentLoc ? true : false)
+      return
+    }
+    locTimerRef.current = setTimeout(() => {
+      const svc = locSvcRef.current as {
+        getPlacePredictions: (req: unknown, cb: (results: unknown[] | null, status: string) => void) => void
+      } | null
+      if (!svc) return
+      svc.getPlacePredictions(
+        { input: val, types: ['geocode', 'establishment'] },
+        (results: unknown[] | null, status: string) => {
+          if (status === 'OK' && results && results.length > 0) {
+            const mapped = (results as Array<{
+              place_id: string
+              structured_formatting: {
+                main_text: string
+                secondary_text?: string
+                main_text_matched_substrings: Array<{ offset: number; length: number }>
+              }
+              description: string
+            }>).slice(0, 5).map(r => ({
+              placeId:           r.place_id,
+              mainText:          r.structured_formatting.main_text,
+              secText:           r.structured_formatting.secondary_text ?? '',
+              description:       r.description,
+              matchedSubstrings: r.structured_formatting.main_text_matched_substrings ?? [],
+            }))
+            setLocSuggestions(mapped)
+            setLocOpen(true)
+          } else {
+            setLocSuggestions([])
+            setLocOpen(false)
+          }
+        }
+      )
+    }, 200)
+  }
+
+  function handleLocFocus() {
+    if (locSuggestions.length > 0) { setLocOpen(true); return }
+    if (!locValue && recentLoc) setLocOpen(true)
+  }
+
+  function selectLoc(text: string) {
+    setLocValue(text)
+    setForm(f => f ? { ...f, location: text } : f)
+    setLocOpen(false)
+    setLocSuggestions([])
+    localStorage.setItem('cal-recent-location', text)
+    setRecentLoc(text)
+  }
+
+  function highlightMatch(text: string, query: string) {
+    if (!query.trim()) return <>{text}</>
+    const lower  = text.toLowerCase()
+    const qLower = query.toLowerCase()
+    const idx    = lower.indexOf(qLower)
+    if (idx < 0) return <>{text}</>
+    return (
+      <>
+        {text.slice(0, idx)}
+        <span style={{ color: GOLD }}>{text.slice(idx, idx + query.length)}</span>
+        {text.slice(idx + query.length)}
+      </>
+    )
+  }
+
   function onDragStart(e: React.TouchEvent) { dragStartY.current = e.touches[0].clientY }
   function onDragMove(e: React.TouchEvent) {
     if (dragStartY.current === null || !sheetRef.current) return
     const dy = Math.max(0, e.touches[0].clientY - dragStartY.current)
-    dragYRef.current = dy
     sheetRef.current.style.transform  = `translateY(${dy}px)`
     sheetRef.current.style.transition = 'none'
   }
@@ -189,11 +285,9 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
     setForm(f => {
       if (!f) return f
       const next = { ...f, [k]: v }
-      // Cross-midnight auto-advance: end time before start time on same date → +1 day
       if (k === 'endTime' && typeof v === 'string' && !next.allDay) {
         if (v < next.startTime && next.endDate === next.date) next.endDate = addOneDay(next.date)
       }
-      // Start date moved past end date → clamp end date
       if (k === 'date' && typeof v === 'string' && next.endDate < v) {
         next.endDate = v
       }
@@ -220,9 +314,9 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
 
   const canSave = !!form?.title.trim() && !!form?.date && form.date.length === 10
 
-  const selectedCal  = googleCals.find(c => (c.primary ? 'primary' : c.id) === form?.calendarId) ?? googleCals[0]
-  const calDotColor  = selectedCal?.backgroundColor ?? '#4285F4'
-  const calName      = selectedCal?.summary ?? 'Calendar'
+  const selectedCal = googleCals.find(c => (c.primary ? 'primary' : c.id) === form?.calendarId) ?? googleCals[0]
+  const calDotColor = selectedCal?.backgroundColor ?? '#4285F4'
+  const calName     = selectedCal?.summary ?? 'Calendar'
 
   const rowStyle: React.CSSProperties = {
     display: 'flex', alignItems: 'center', gap: 12,
@@ -255,6 +349,8 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
   const durationStr = form && !form.allDay
     ? calcDuration(form.date, form.startTime, form.endDate, form.endTime)
     : ''
+
+  const showLocDropdown = locOpen && (locSuggestions.length > 0 || (!locValue && recentLoc))
 
   return (
     <>
@@ -290,7 +386,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
           <div className="w-9 h-1 rounded-full bg-white/20" />
         </div>
 
-        {/* ── Step 1: Scope picker (recurring events only) ── */}
+        {/* ── Step 1: Scope picker ── */}
         {step === 'scope' && (
           <>
             <div className="flex items-center justify-between px-4 pb-3 flex-shrink-0">
@@ -440,22 +536,81 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
                 <ChevronDown size={14} color={MUTED} style={{ flexShrink: 0 }} />
               </button>
 
-              {/* 6 — Location */}
-              <div style={{ ...rowStyle, alignItems: 'flex-start' }}>
+              {/* 6 — Location with inline autocomplete dropdown */}
+              <div ref={locRowRef} style={{ ...rowStyle, alignItems: 'flex-start' }}>
                 <MapPin size={16} color={MUTED} style={{ flexShrink: 0, marginTop: 2 }} />
                 <textarea
-                  ref={locationRef}
+                  ref={locTextareaRef}
                   placeholder="Location"
-                  defaultValue={form.location}
-                  onChange={e => set('location', e.target.value)}
+                  value={locValue}
+                  onChange={e => handleLocChange(e.target.value)}
+                  onFocus={handleLocFocus}
+                  onBlur={() => setTimeout(() => setLocOpen(false), 150)}
                   rows={1}
                   style={{
                     flex: 1, background: 'none', border: 'none', outline: 'none', resize: 'none',
                     fontSize: 14, color: 'var(--color-ink)', fontFamily: M,
-                    lineHeight: 1.5, overflowX: 'hidden',
+                    lineHeight: 1.5, overflowX: 'hidden', overflowY: 'hidden',
                   }}
                 />
               </div>
+
+              {/* Location suggestions — inline, appears below the row */}
+              {showLocDropdown && (
+                <div
+                  style={{
+                    marginLeft: 16, marginRight: 16, marginBottom: 4,
+                    background: '#1C2A36',
+                    border: `0.5px solid rgba(255,255,255,0.10)`,
+                    borderRadius: 10,
+                    overflow: 'hidden',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.45)',
+                  }}
+                >
+                  {!locValue && recentLoc && (
+                    <button
+                      onMouseDown={e => e.preventDefault()}
+                      onClick={() => selectLoc(recentLoc)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '12px 14px', width: '100%',
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        borderBottom: locSuggestions.length > 0 ? `0.5px solid rgba(255,255,255,0.08)` : 'none',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <Clock size={14} color={MUTED} style={{ flexShrink: 0 }} />
+                      <span style={{ fontSize: 13, color: 'var(--color-ink)', fontFamily: M }}>{recentLoc}</span>
+                    </button>
+                  )}
+                  {locSuggestions.map((sug, i) => (
+                    <button
+                      key={sug.placeId}
+                      onMouseDown={e => e.preventDefault()}
+                      onClick={() => selectLoc(sug.description)}
+                      style={{
+                        display: 'flex', alignItems: 'flex-start', gap: 10,
+                        padding: '12px 14px', width: '100%',
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        borderBottom: i < locSuggestions.length - 1 ? `0.5px solid rgba(255,255,255,0.08)` : 'none',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <MapPin size={14} color={MUTED} style={{ flexShrink: 0, marginTop: 2 }} />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 14, color: 'var(--color-ink)', fontFamily: M, lineHeight: 1.4 }}>
+                          {highlightMatch(sug.mainText, locValue)}
+                        </div>
+                        {sug.secText && (
+                          <div style={{ fontSize: 12, color: MUTED, fontFamily: M, lineHeight: 1.4, marginTop: 2 }}>
+                            {sug.secText}
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* 7 — Notes */}
               <div style={{ ...rowStyle, alignItems: 'flex-start' }}>
@@ -495,40 +650,52 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
                 </div>
               )}
 
-              {/* Spacer so content clears the fixed footer */}
-              <div style={{ height: 120 }} />
+              {/* Spacer so content clears the footer */}
+              <div style={{ height: 100 }} />
             </div>
 
-            {/* Fixed footer — Delete + Save */}
+            {/* ── Footer: Delete + Save side by side ── */}
             <div
               className="flex-shrink-0"
               style={{
                 borderTop: `0.5px solid ${SEP}`,
                 padding: '12px 16px 16px',
+                display: 'flex',
+                gap: 8,
               }}
             >
-              <button
-                type="button"
-                onClick={handleDelete}
-                style={{
-                  display: 'block', background: 'none', border: 'none', cursor: 'pointer',
-                  fontSize: 14, fontFamily: M, color: '#ef4444',
-                  padding: '4px 0 12px', textAlign: 'left',
-                }}
-              >
-                Delete Event
-              </button>
+              {/* Delete — only when editing an existing event */}
+              {event?.id && (
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  style={{
+                    flex: 1, height: 52,
+                    background: 'linear-gradient(135deg, #DC2626, #B91C1C)',
+                    border: 'none', borderRadius: 14, cursor: 'pointer',
+                    fontSize: 16, fontWeight: 500, fontFamily: M,
+                    color: '#fff',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                  }}
+                >
+                  Delete
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleSave}
                 disabled={!canSave || saving}
                 style={{
-                  width: '100%', padding: '14px',
-                  background: GOLD, border: 'none', borderRadius: 14,
-                  fontSize: 15, fontWeight: 700, fontFamily: M,
-                  color: '#1a1200', cursor: canSave && !saving ? 'pointer' : 'not-allowed',
-                  opacity: canSave && !saving ? 1 : 0.4,
-                  transition: 'opacity 0.15s',
+                  flex: 1, height: 52,
+                  background: canSave && !saving
+                    ? 'linear-gradient(135deg, #C9A84C, #A8873C)'
+                    : 'rgba(201,168,76,0.35)',
+                  border: 'none', borderRadius: 14,
+                  cursor: canSave && !saving ? 'pointer' : 'not-allowed',
+                  fontSize: 16, fontWeight: 500, fontFamily: M,
+                  color: '#1a1200',
+                  boxShadow: canSave && !saving ? '0 4px 12px rgba(0,0,0,0.3)' : 'none',
+                  transition: 'background 0.15s, box-shadow 0.15s',
                 }}
               >
                 {saving ? 'Saving…' : 'Save'}
