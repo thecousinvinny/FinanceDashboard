@@ -173,10 +173,10 @@ export function LocationPickerSheet({ open, initial, onClose, onSelect }: Props)
       {/* Sheet */}
       <div
         ref={sheetRef}
-        className="fixed inset-x-0 inset-y-0 z-[55] rounded-t-[24px] flex flex-col"
+        className="fixed inset-x-0 bottom-0 z-[55] rounded-t-[24px] flex flex-col"
         style={{
           background:  'var(--color-bg-surface)',
-          maxHeight:   '100dvh',
+          maxHeight:   'calc(100dvh - env(safe-area-inset-top, 44px) - 8px)',
           willChange:  'transform',
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
           transform:   open ? 'translateY(0)' : 'translateY(100%)',
