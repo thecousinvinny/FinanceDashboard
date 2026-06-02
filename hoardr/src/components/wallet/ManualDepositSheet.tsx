@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useMemo } from 'react'
-import { X, Banknote } from 'lucide-react'
+import { X, Banknote, ChevronDown } from 'lucide-react'
 import { cn, localToday, $fd } from '@/lib/utils'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import { showToast } from '@/lib/toast'
@@ -227,19 +227,21 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
           {banks.length > 0 && (
             <div>
               <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Bank account</p>
-              <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-                <button onClick={() => setBankId(null)}
-                  className={cn('flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all select-none',
-                    bankId === null ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
-                  None
-                </button>
-                {banks.map(b => (
-                  <button key={b.id} onClick={() => setBankId(b.id)}
-                    className={cn('flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all select-none',
-                      bankId === b.id ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
-                    {b.name}
-                  </button>
-                ))}
+              <div className="relative">
+                <select
+                  value={bankId ?? ''}
+                  onChange={e => setBankId(e.target.value || null)}
+                  className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 text-[15px] text-ink appearance-none outline-none pr-10 focus:border-gold/40"
+                  style={{ colorScheme: 'dark' }}
+                >
+                  <option value="">None</option>
+                  {[...banks]
+                    .sort((a, b) => (a.id === defaultBankId ? -1 : b.id === defaultBankId ? 1 : 0))
+                    .map(b => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
               </div>
             </div>
           )}
