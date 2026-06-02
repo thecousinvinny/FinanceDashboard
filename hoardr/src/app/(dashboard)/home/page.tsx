@@ -105,12 +105,11 @@ export default function HomePage() {
         { data: enRouteData },
         { data: recentExp },
         { data: recentInc },
-        { data: allTimeExp },
-        { data: allTimeInc },
         { data: chartExp },
         { data: chartInc },
         { data: yearExp },
         { data: yearInc },
+        { data: bankBalances },
       ] = await Promise.all([
         supabase.from('expenses').select('cost, date, name').gte('date', monthStart).lte('date', monthEnd).abortSignal(sig),
         supabase.from('income').select('amount, date').gte('date', monthStart).lte('date', monthEnd).abortSignal(sig),
@@ -139,12 +138,11 @@ export default function HomePage() {
           .order('created_at', { ascending: false })
           .limit(5)
           .abortSignal(sig),
-        supabase.from('expenses').select('cost').abortSignal(sig),
-        supabase.from('income').select('amount').abortSignal(sig),
         supabase.from('expenses').select('cost, date, name').gte('date', chartStart).lte('date', todayStr).abortSignal(sig),
         supabase.from('income').select('amount, date').gte('date', chartStart).lte('date', todayStr).abortSignal(sig),
         supabase.from('expenses').select('cost, date, name').gte('date', yearStart).lte('date', todayStr).abortSignal(sig),
         supabase.from('income').select('amount, date').gte('date', yearStart).lte('date', todayStr).abortSignal(sig),
+        supabase.from('banks').select('balance').abortSignal(sig),
       ])
 
       if (gen !== loadGen.current) return
@@ -152,9 +150,8 @@ export default function HomePage() {
       const newSpent        = (monthExp    ?? []).reduce((s, e) => s + Number(e.cost),              0)
       const newEarned       = (monthInc    ?? []).reduce((s, i) => s + Number(i.amount),             0)
       const newMonthlySubs  = (activeSubs ?? []).reduce((s, r) => s + Number(r.monthly_cost ?? 0), 0)
-      const newHoardIncome  = (allTimeInc ?? []).reduce((s, r) => s + Number(r.amount),            0)
-      const newHoardExpense = (allTimeExp ?? []).reduce((s, r) => s + Number(r.cost),              0)
-      const newHoardTotal   = newHoardIncome - newHoardExpense
+      // Hoard = sum of bank balances — reflects actual saved cash, updates when user updates balances
+      const newHoardTotal = (bankBalances ?? []).reduce((s, b) => s + Number((b as { balance?: number | null }).balance ?? 0), 0)
 
       const newUpcoming: UpcomingSub[] = (upcomingData ?? []).map(s => ({
         id:           String(s.id),

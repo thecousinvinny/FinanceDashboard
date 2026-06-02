@@ -68,7 +68,7 @@ export function HoardChest({ hoardTotal, thisMonthNet }: Props) {
       <div className="bg-bg-surface border border-white/[0.06] rounded-card px-4 pt-4 pb-5 relative">
 
         <div className="flex items-center justify-between mb-1">
-          <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint">Your Hoard</p>
+          <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint">Your Hoard · Total Saved</p>
           <button
             onClick={() => { setGoalInput(String(goal)); setEditing(true) }}
             className="text-[10px] text-gold/50 active:text-gold transition-colors select-none"
