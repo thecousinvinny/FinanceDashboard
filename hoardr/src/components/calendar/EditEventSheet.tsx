@@ -12,6 +12,7 @@ export interface EditableEvent {
   title:          string
   allDay:         boolean
   date:           string
+  endDate:        string
   startTime:      string
   endTime:        string
   location:       string
@@ -25,6 +26,7 @@ export interface EditableEvent {
 export interface EventEdits {
   title:          string
   date:           string
+  endDate:        string
   allDay:         boolean
   startTime:      string
   endTime:        string
@@ -69,6 +71,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
       setForm({
         title:          event.title,
         date:           event.date,
+        endDate:        event.endDate || event.date,
         allDay:         event.allDay,
         startTime:      event.startTime || '09:00',
         endTime:        event.endTime   || '10:00',
@@ -234,11 +237,31 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
               <input type="text" placeholder="Event title" value={form.title} onChange={e => set('title', e.target.value)}
                 className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40" />
 
-              {/* Date */}
-              <div className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] overflow-hidden">
-                <input type="date" value={form.date} onChange={e => set('date', e.target.value)}
-                  className="w-full px-4 py-3 text-[15px] text-ink bg-transparent outline-none"
-                  style={{ colorScheme: 'dark' }} />
+              {/* Date — From / To */}
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <p className="text-[10px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-1.5 pl-1">From</p>
+                  <div className="bg-bg-overlay border border-white/[0.08] rounded-[14px] overflow-hidden">
+                    <input type="date" value={form.date}
+                      onChange={e => {
+                        const v = e.target.value
+                        set('date', v)
+                        if (form.endDate && v > form.endDate) set('endDate', v)
+                      }}
+                      className="w-full px-4 py-3 text-[15px] text-ink bg-transparent outline-none"
+                      style={{ colorScheme: 'dark' }} />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <p className="text-[10px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-1.5 pl-1">To</p>
+                  <div className={`bg-bg-overlay rounded-[14px] overflow-hidden ${form.endDate && form.endDate !== form.date ? 'border border-gold/50' : 'border border-white/[0.08]'}`}>
+                    <input type="date" value={form.endDate || form.date}
+                      min={form.date}
+                      onChange={e => set('endDate', e.target.value)}
+                      className="w-full px-4 py-3 text-[15px] text-ink bg-transparent outline-none"
+                      style={{ colorScheme: 'dark' }} />
+                  </div>
+                </div>
               </div>
 
               {/* Calendar dropdown */}

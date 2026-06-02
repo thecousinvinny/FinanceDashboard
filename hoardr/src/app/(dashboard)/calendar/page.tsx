@@ -498,7 +498,7 @@ export default function CalendarPage() {
     Promise.all(calIds.map(calId =>
       fetch(`/api/calendar?action=events&calendarId=${encodeURIComponent(calId)}&timeMin=${encodeURIComponent(tMin)}&timeMax=${encodeURIComponent(tMax)}`)
         .then(r => r.json())
-        .then((d: { items?: Array<{ id: string; summary?: string; location?: string; start: { date?: string; dateTime?: string }; end: { date?: string; dateTime?: string } }> }) => ({ calId, items: d.items ?? [] }))
+        .then((d: { items?: Array<{ id: string; summary?: string; description?: string; location?: string; start: { date?: string; dateTime?: string }; end: { date?: string; dateTime?: string } }> }) => ({ calId, items: d.items ?? [] }))
         .catch(() => ({ calId, items: [] }))
     )).then(results => {
       if (gen !== gEvGen.current) return
@@ -519,7 +519,7 @@ export default function CalendarPage() {
             if (incl !== date) endDate = incl
           }
           if (!map[date]) map[date] = []
-          map[date].push({ id: ev.id, title: ev.summary ?? '(no title)', type: 'google', amount: st ? `${st}${et ? ` – ${et}` : ''}` : '', location: ev.location, color, endDate, calendarId: calId, instanceDate: date })
+          map[date].push({ id: ev.id, title: ev.summary ?? '(no title)', type: 'google', amount: st ? `${st}${et ? ` – ${et}` : ''}` : '', location: ev.location, notes: ev.description, color, endDate, calendarId: calId, instanceDate: date })
         }
       }
       setGoogleEvMap(map)
@@ -716,7 +716,8 @@ export default function CalendarPage() {
     const allDay = !ev.amount?.trim()
     setEditEvent({
       id: ev.id, title: ev.title, allDay,
-      date: ev.instanceDate ?? '',
+      date:    ev.instanceDate ?? '',
+      endDate: ev.endDate ?? ev.instanceDate ?? '',
       startTime: !allDay && parts[0] ? parts[0] : '09:00',
       endTime:   !allDay && parts[1] ? parts[1] : '10:00',
       location: ev.location ?? '', notes: ev.notes ?? '',
@@ -781,9 +782,15 @@ export default function CalendarPage() {
   async function handleEditEvent(edits: EventEdits, _scope: RecurrenceScope) {
     const ev = editEvent
     if (!ev?.id) return
+    // Google all-day end dates are exclusive — add 1 day to the inclusive endDate
+    const gcalEndDate = (() => {
+      const d = new Date((edits.endDate || edits.date) + 'T00:00:00')
+      d.setDate(d.getDate() + 1)
+      return d.toISOString().slice(0, 10)
+    })()
     const body: GCalEvent = edits.allDay
-      ? { summary: edits.title, description: edits.notes || undefined, location: edits.location || undefined, start: { date: edits.date }, end: { date: edits.date } }
-      : { summary: edits.title, description: edits.notes || undefined, location: edits.location || undefined, start: { dateTime: `${edits.date}T${edits.startTime}:00`, timeZone: 'America/Los_Angeles' }, end: { dateTime: `${edits.date}T${edits.endTime}:00`, timeZone: 'America/Los_Angeles' } }
+      ? { summary: edits.title, description: edits.notes || undefined, location: edits.location || undefined, start: { date: edits.date }, end: { date: gcalEndDate } }
+      : { summary: edits.title, description: edits.notes || undefined, location: edits.location || undefined, start: { dateTime: `${edits.date}T${edits.startTime}:00`, timeZone: 'America/Los_Angeles' }, end: { dateTime: `${edits.endDate || edits.date}T${edits.endTime}:00`, timeZone: 'America/Los_Angeles' } }
     await updateCalEvent(ev.id, body, ev.calendarId ?? 'primary')
     showToast('Event updated', { type: 'payment' })
     setEditEvent(null)
