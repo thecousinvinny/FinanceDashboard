@@ -471,7 +471,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
         className="fixed inset-x-0 bottom-0 z-50 rounded-t-[24px] flex flex-col"
         style={{
           background:    'var(--color-bg-surface)',
-          maxHeight:     '85vh',
+          height:        'calc(100dvh - env(safe-area-inset-top, 44px) - 8px)',
           willChange:    'transform',
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
           transform:     open ? 'translateY(0)' : 'translateY(100%)',
