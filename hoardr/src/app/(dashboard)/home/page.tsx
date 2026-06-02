@@ -388,7 +388,7 @@ export default function HomePage() {
           <HomeHero spent={spent} points={sparkPoints} annualPoints={annualSparkPoints} />
 
           {/* ── Hoard pile ──────────────────────────────────────────────── */}
-          <HoardChest hoardTotal={hoardTotal} thisMonthNet={saved} />
+          {/* <HoardChest hoardTotal={hoardTotal} thisMonthNet={saved} /> */}
 
           <UpcomingBills initial={upcoming} onPaid={handleSubPaid} />
 
