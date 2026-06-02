@@ -517,6 +517,10 @@ export default function CalendarPage() {
             const d = new Date(ev.end.date + 'T00:00:00'); d.setDate(d.getDate() - 1)
             const incl = d.toISOString().slice(0, 10)
             if (incl !== date) endDate = incl
+          } else if (!isAllDay && ev.end.dateTime) {
+            // Timed event ending on a different day (e.g. 11:30 PM → 5:00 AM next day)
+            const endDay = ev.end.dateTime.slice(0, 10)
+            if (endDay !== date) endDate = endDay
           }
           if (!map[date]) map[date] = []
           map[date].push({ id: ev.id, title: ev.summary ?? '(no title)', type: 'google', amount: st ? `${st}${et ? ` – ${et}` : ''}` : '', location: ev.location, notes: ev.description, color, endDate, calendarId: calId, instanceDate: date })

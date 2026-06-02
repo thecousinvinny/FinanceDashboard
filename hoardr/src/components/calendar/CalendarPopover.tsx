@@ -102,6 +102,28 @@ function fmtDateLabel(dateStr: string): string {
   return new Date(y, mo - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+function fmtDateUnder(dateStr: string): string {
+  const [y, mo, d] = dateStr.split('-').map(Number)
+  return new Date(y, mo - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).replace(',', '')
+}
+
+function calcDuration(date: string, startTime: string, endDate: string, endTime: string): string {
+  const start    = new Date(`${date}T${startTime}:00`)
+  const end      = new Date(`${endDate}T${endTime}:00`)
+  const totalMin = Math.round((end.getTime() - start.getTime()) / 60000)
+  if (totalMin <= 0) return ''
+  const h = Math.floor(totalMin / 60)
+  const m = totalMin % 60
+  if (h === 0) return `${m}m`
+  if (m === 0) return `${h}h`
+  return `${h}h ${m}m`
+}
+
+function addOneDay(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00'); d.setDate(d.getDate() + 1)
+  return d.toISOString().slice(0, 10)
+}
+
 export function defaultTimes(): { startTime: string; endTime: string } {
   const now       = new Date()
   const totalMins = now.getHours() * 60 + now.getMinutes()
@@ -271,6 +293,12 @@ export function CalendarPopover({
         const [h, m] = val.split(':').map(Number)
         const eh = (h + 1) % 24
         next.endTime = `${String(eh).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+        // If adding 1h crossed midnight (e.g. start 23:30 → end 00:30), advance endDate
+        if (eh < h && next.endDate === next.date) next.endDate = addOneDay(next.date)
+      }
+      if (key === 'endTime' && typeof val === 'string' && !next.allDay) {
+        // End time is before start time on the same date → must be next day
+        if (val < next.startTime && next.endDate === next.date) next.endDate = addOneDay(next.date)
       }
       if (key === 'date' && typeof val === 'string' && next.endDate < val) {
         next.endDate = val
@@ -655,26 +683,42 @@ export function CalendarPopover({
           </div>
 
           {/* Time row — hidden when all-day */}
-          {!form.allDay && (
-            <div style={rowStyle}>
-              <Clock size={16} color={MUTED} style={{ flexShrink: 0 }} />
-              {isModal ? (
-                /* iPhone: native time inputs → iOS drum picker */
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
-                  <input type="time" value={form.startTime} onChange={e => setField('startTime', e.target.value)} style={nativeTimeStyle} />
-                  <span style={{ color: MUTED, fontSize: 13, flexShrink: 0 }}>→</span>
-                  <input type="time" value={form.endTime} onChange={e => setField('endTime', e.target.value)} style={nativeTimeStyle} />
+          {!form.allDay && (() => {
+            const crossDay    = form.endDate !== form.date
+            const durationStr = calcDuration(form.date, form.startTime, form.endDate, form.endTime)
+            return (
+              <div style={{ ...rowStyle, alignItems: crossDay ? 'flex-start' : 'center' }}>
+                <Clock size={16} color={MUTED} style={{ flexShrink: 0, marginTop: crossDay ? 3 : 0 }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+                  {/* Times + duration */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {isModal ? (
+                      <>
+                        <input type="time" value={form.startTime} onChange={e => setField('startTime', e.target.value)} style={nativeTimeStyle} />
+                        <span style={{ color: MUTED, fontSize: 13, flexShrink: 0 }}>→</span>
+                        <input type="time" value={form.endTime} onChange={e => setField('endTime', e.target.value)} style={nativeTimeStyle} />
+                      </>
+                    ) : (
+                      <>
+                        <button ref={startBtnRef} onClick={openStartDrop} style={timeBtnStyle(startOpen)}>{fmt12(form.startTime)}</button>
+                        <span style={{ color: MUTED, fontSize: 13, flexShrink: 0 }}>→</span>
+                        <button ref={endBtnRef} onClick={openEndDrop} style={timeBtnStyle(endOpen)}>{fmt12(form.endTime)}</button>
+                      </>
+                    )}
+                    {durationStr && <span style={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>{durationStr}</span>}
+                  </div>
+                  {/* Date labels — only shown when event crosses midnight */}
+                  {crossDay && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 11, color: MUTED, flexShrink: 0 }}>{fmtDateUnder(form.date)}</span>
+                      <span style={{ fontSize: 13, color: 'transparent', flexShrink: 0, userSelect: 'none' }}>→</span>
+                      <span style={{ fontSize: 11, color: GOLD, flexShrink: 0 }}>{fmtDateUnder(form.endDate)}</span>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                /* Desktop: custom dropdown (fixed-position, won't push calendar out of view) */
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
-                  <button ref={startBtnRef} onClick={openStartDrop} style={timeBtnStyle(startOpen)}>{fmt12(form.startTime)}</button>
-                  <span style={{ color: MUTED, fontSize: 13, flexShrink: 0 }}>→</span>
-                  <button ref={endBtnRef} onClick={openEndDrop} style={timeBtnStyle(endOpen)}>{fmt12(form.endTime)}</button>
-                </div>
-              )}
-            </div>
-          )}
+              </div>
+            )
+          })()}
 
           {/* All-day toggle */}
           <div style={rowStyle}>
