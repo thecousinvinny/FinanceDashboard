@@ -7,7 +7,8 @@ import { getWeekStartsMonday } from '@/lib/week-start'
 import { cn, nextRenewalDate } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
 import { COLOR_PALETTE } from '@/lib/category-meta'
-import { Plus, SlidersHorizontal, Eye, EyeOff, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning, type LucideIcon } from 'lucide-react'
+import { Plus, SlidersHorizontal, Eye, EyeOff, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning, CalendarPlus, Repeat2, MapPin, type LucideIcon } from 'lucide-react'
+import { GlobalFAB } from '@/components/ui/GlobalFAB'
 import { EditEventSheet, type EditableEvent, type EventEdits, type RecurrenceScope } from '@/components/calendar/EditEventSheet'
 import { CalendarSettingsSheet, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
 import { CalendarPopover, defaultTimes, type PopoverFormData } from '@/components/calendar/CalendarPopover'
@@ -1992,24 +1993,13 @@ export default function CalendarPage() {
       </div>{/* end sliding rail */}
     </div>{/* end root */}
 
-    {/* FAB — iPhone split view: create event */}
-    {!isLargeScreen && viewIndex === 0 && prefs.googleCalendarIds.length > 0 && (
-      <button
-        onClick={() => openCreateSheet(gridSel ?? todayStr)}
-        className="fixed gradient-gold rounded-full flex items-center justify-center text-white font-light select-none"
-        style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, zIndex: 40, boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)' }}
-        aria-label="Add event"
-      >+</button>
-    )}
-
-    {/* FAB — iPhone day detail: create event */}
-    {!isLargeScreen && viewIndex === 1 && prefs.googleCalendarIds.length > 0 && (
-      <button
-        onClick={() => openCreateSheet(selectedDay ?? todayStr)}
-        className="fixed gradient-gold rounded-full flex items-center justify-center text-white font-light select-none"
-        style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, zIndex: 40, boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)' }}
-        aria-label="Add event"
-      >+</button>
+    {/* FAB — iPhone only, requires at least one Google calendar enabled */}
+    {!isLargeScreen && prefs.googleCalendarIds.length > 0 && (
+      <GlobalFAB key={viewIndex} actions={[
+        { Icon: CalendarPlus, label: 'New Event',    onTap: () => openCreateSheet(viewIndex === 0 ? (gridSel ?? todayStr) : (selectedDay ?? todayStr)) },
+        { Icon: Repeat2,      label: 'New Recurring', onTap: () => openCreateSheet(viewIndex === 0 ? (gridSel ?? todayStr) : (selectedDay ?? todayStr)) },
+        { Icon: MapPin,       label: 'Add Location Event', onTap: () => openCreateSheet(viewIndex === 0 ? (gridSel ?? todayStr) : (selectedDay ?? todayStr)) },
+      ]} />
     )}
 
     <EditEventSheet open={!!editEvent} event={editEvent} googleCals={googleCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => setEditEvent(null)} onSave={handleEditEvent} onDelete={_scope => { if (editEvent) { const ev: CalEvent = { id: editEvent.id ?? '', title: editEvent.title, type: 'google', amount: '', calendarId: editEvent.calendarId }; handleDeleteCalEvent(ev) } setEditEvent(null) }} />

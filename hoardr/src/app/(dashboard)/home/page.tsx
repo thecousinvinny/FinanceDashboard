@@ -17,8 +17,10 @@ import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import type { DayPoint } from '@/components/home/SparkChart'
 import type { SeedTx } from '@/lib/data/transactions'
-import { Truck } from 'lucide-react'
+import { Truck, PlusCircle, CalendarPlus, Star } from 'lucide-react'
 import { HoardChest } from '@/components/home/HoardChest'
+import { useRouter } from 'next/navigation'
+import { GlobalFAB, type FABAction } from '@/components/ui/GlobalFAB'
 
 interface EnRouteItem {
   id:          string
@@ -50,6 +52,7 @@ interface HomeCache {
 }
 
 export default function HomePage() {
+  const router = useRouter()
   const cached = pageCache.get<HomeCache>('home')
 
   const [spent,         setSpent]         = useState(cached?.spent ?? 0)
@@ -62,7 +65,6 @@ export default function HomePage() {
   const [sparkPoints,        setSparkPoints]        = useState<DayPoint[]>(cached?.sparkPoints ?? [])
   const [annualSparkPoints,  setAnnualSparkPoints]  = useState<DayPoint[]>(cached?.annualSparkPoints ?? [])
   const [loading,            setLoading]            = useState(!cached)
-  const [fabOpen,       setFabOpen]       = useState(false)
   const [expenseOpen,   setExpenseOpen]   = useState(false)
   const [wishlistOpen,  setWishlistOpen]  = useState(false)
   const [cards,         setCards]         = useState<CardOption[]>([])
@@ -470,27 +472,11 @@ export default function HomePage() {
     </div>
 
     {/* ── FAB ─────────────────────────────────────────────────────────── */}
-    {fabOpen && (
-      <div className="fixed inset-0" style={{ zIndex: 39 }} onClick={() => setFabOpen(false)} />
-    )}
-    {fabOpen && (
-      <div className="fixed flex flex-col gap-4" style={{ right: 16, bottom: 148, zIndex: 41, width: 104 }}>
-        <button className="w-full" onClick={() => { setFabOpen(false); setWishlistOpen(true) }}
-          style={{ animation: 'fab-item-in 0.32s cubic-bezier(0.34,1.56,0.64,1) 0.06s both' }}>
-          <span className="block w-full text-center text-[13px] font-semibold text-white gradient-gold rounded-full py-2 shadow-lg">Wishlist</span>
-        </button>
-        <button className="w-full" onClick={() => { setFabOpen(false); setExpenseOpen(true) }}
-          style={{ animation: 'fab-item-in 0.32s cubic-bezier(0.34,1.56,0.64,1) 0s both' }}>
-          <span className="block w-full text-center text-[13px] font-semibold text-white gradient-gold rounded-full py-2 shadow-lg">Expense</span>
-        </button>
-      </div>
-    )}
-    <button
-      onClick={() => setFabOpen(f => !f)}
-      className="fixed gradient-gold rounded-full flex items-center justify-center text-white font-light select-none"
-      style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, zIndex: 40, boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)', transform: fabOpen ? 'rotate(45deg)' : undefined, transition: 'transform 0.2s ease' }}
-      aria-label="Add"
-    >+</button>
+    <GlobalFAB actions={[
+      { Icon: PlusCircle,  label: 'Add Transaction', onTap: () => setExpenseOpen(true)       },
+      { Icon: CalendarPlus, label: 'Add Event',      onTap: () => router.push('/calendar')   },
+      { Icon: Star,        label: 'Add to Wishlist', onTap: () => setWishlistOpen(true)      },
+    ]} />
 
     <AddTransactionSheet
       open={expenseOpen}

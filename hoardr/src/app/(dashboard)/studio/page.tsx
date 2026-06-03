@@ -12,6 +12,8 @@ import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { PullIndicator } from '@/components/ui/PullIndicator'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { pageCache } from '@/lib/page-cache'
+import { Paintbrush, ImagePlus, UserPlus } from 'lucide-react'
+import { GlobalFAB } from '@/components/ui/GlobalFAB'
 
 type Filter = 'All' | 'Pending' | 'Approved' | 'In Progress'
 
@@ -361,14 +363,11 @@ export default function StudioPage() {
     </div>
 
     {/* ── FAB ───────────────────────────────────────────────────────── */}
-    <button
-      onClick={() => setSheetOpen(true)}
-      className="fixed gradient-gold rounded-full flex items-center justify-center text-white font-light select-none"
-      style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, zIndex: 40, boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)' }}
-      aria-label="Add commission"
-    >
-      +
-    </button>
+    <GlobalFAB actions={[
+      { Icon: Paintbrush, label: 'New Commission', onTap: () => setSheetOpen(true)                     },
+      { Icon: ImagePlus,  label: 'Add Artwork',    onTap: () => showToast('Coming soon', { type: 'add' }) },
+      { Icon: UserPlus,   label: 'New Client',     onTap: () => showToast('Coming soon', { type: 'add' }) },
+    ]} />
 
     <AddCommissionSheet
       open={sheetOpen}

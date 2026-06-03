@@ -13,7 +13,8 @@ import { CardVisual } from '@/components/wallet/CardVisual'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import type { Card, Bank } from '@/types'
-import { Banknote, X } from 'lucide-react'
+import { Banknote, X, ArrowUpCircle, ArrowLeftRight, PlusCircle } from 'lucide-react'
+import { GlobalFAB } from '@/components/ui/GlobalFAB'
 import { cn, $f, $fd, $fk, fmtDate, haptic, groupByMonth, localToday, daysUntilLabel } from '@/lib/utils'
 import type { Frequency } from '@/components/wallet/RevenueStreamSheet'
 import { showToast } from '@/lib/toast'
@@ -232,7 +233,6 @@ export default function InPage() {
   const [loading,       setLoading]      = useState(!cached)
   const [cardSheetOpen, setCardSheetOpen] = useState(false)
   const [bankSheetOpen, setBankSheetOpen] = useState(false)
-  const [fabOpen,       setFabOpen]      = useState(false)
   const [streamOpen,    setStreamOpen]   = useState(false)
   const [incomeOpen,    setIncomeOpen]   = useState(false)
   const [editIncome,    setEditIncome]   = useState<IncomeInitial | null>(null)
@@ -377,8 +377,6 @@ export default function InPage() {
   }, [loadIncome])
 
   const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } = usePullToRefresh(loadData)
-
-  useEffect(() => { setFabOpen(false) }, [tab])
 
   useEffect(() => {
     if (!interestBank) return
@@ -1052,33 +1050,11 @@ export default function InPage() {
       </div>
 
       {/* ── FAB ──────────────────────────────────────────────────────────── */}
-      {tab === 'Accounts' && fabOpen && (
-        <div className="fixed inset-0" style={{ zIndex: 39 }} onClick={() => setFabOpen(false)} />
-      )}
-      {tab === 'Accounts' && fabOpen && (
-        <div className="fixed flex flex-col gap-3" style={{ right: 16, bottom: 148, zIndex: 41, width: 120 }}>
-          <button className="w-full" onClick={() => { setFabOpen(false); setBankSheetOpen(true) }}
-            style={{ animation: 'fab-item-in 0.32s cubic-bezier(0.34,1.56,0.64,1) 0.06s both' }}>
-            <span className="block w-full text-center text-[13px] font-semibold text-white gradient-gold rounded-full py-2 shadow-lg">Bank</span>
-          </button>
-          <button className="w-full" onClick={() => { setFabOpen(false); setCardSheetOpen(true) }}
-            style={{ animation: 'fab-item-in 0.32s cubic-bezier(0.34,1.56,0.64,1) 0s both' }}>
-            <span className="block w-full text-center text-[13px] font-semibold text-white gradient-gold rounded-full py-2 shadow-lg">Card</span>
-          </button>
-        </div>
-      )}
-      <button
-        onClick={() => {
-          if (tab === 'History')  { setIncomeOpen(true); return }
-          if (tab === 'Streams')  { setEditStream(null); setStreamOpen(true); return }
-          setFabOpen(f => !f)
-        }}
-        className="fixed gradient-gold rounded-full flex items-center justify-center text-white font-light select-none"
-        style={{ right: 16, bottom: 80, width: 56, height: 56, fontSize: 28, zIndex: 40,
-                 boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.25)',
-                 transform: tab === 'Accounts' && fabOpen ? 'rotate(45deg)' : undefined, transition: 'transform 0.2s ease' }}
-        aria-label="Add"
-      >+</button>
+      <GlobalFAB key={tab} actions={[
+        { Icon: ArrowUpCircle,  label: 'New Income',   onTap: () => setIncomeOpen(true)    },
+        { Icon: ArrowLeftRight, label: 'New Transfer',  onTap: () => showToast('Coming soon', { type: 'add' }) },
+        { Icon: PlusCircle,     label: 'Add Account',  onTap: () => setBankSheetOpen(true) },
+      ]} />
 
       <AddCardSheet
         open={cardSheetOpen}
