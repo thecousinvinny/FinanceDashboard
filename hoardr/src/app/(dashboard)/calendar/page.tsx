@@ -307,8 +307,7 @@ export default function CalendarPage() {
   // Swipe gesture refs
   const v3Swipe        = useRef<{ x: number; y: number } | null>(null)
   const rowSwipe       = useRef<{ x: number; y: number; ds: string } | null>(null)
-  const p0Swipe        = useRef<{ x: number; y: number } | null>(null)
-  const suppressPrepend   = useRef(true)   // true initially — cleared after scroll-to-today so prepend IO doesn't clobber initial position
+const suppressPrepend   = useRef(true)   // true initially — cleared after scroll-to-today so prepend IO doesn't clobber initial position
   const scrolledToToday   = useRef(false)
   const googleRescrollDone = useRef(false) // prevents re-scroll after the first Google events load
   const monthLblTapRef  = useRef<number>(0)
@@ -1104,21 +1103,6 @@ export default function CalendarPage() {
     if (dx > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) setViewIndex(0)
   }, [])
 
-  // Panel 0 (split view) → adjacent tab: edge-zone swipe
-  const p0Start = useCallback((e: React.TouchEvent) => {
-    if (document.body.style.position === 'fixed') return
-    const t = e.touches[0], w = window.innerWidth
-    if (t.clientX <= EDGE_PX || t.clientX >= w - EDGE_PX) {
-      p0Swipe.current = { x: t.clientX, y: t.clientY }
-    }
-  }, [])
-  const p0End = useCallback((e: React.TouchEvent) => {
-    const s = p0Swipe.current; p0Swipe.current = null; if (!s) return
-    const t = e.changedTouches[0], dx = t.clientX - s.x, dy = t.clientY - s.y
-    if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx) / 1.5) return
-    if (dx > 0 && CAL_IDX > 0)               router.push(TABS[CAL_IDX - 1]) // right → Plans
-    if (dx < 0 && CAL_IDX < TABS.length - 1) router.push(TABS[CAL_IDX + 1]) // left  → Studio
-  }, [router])
   const v3MouseDown = useCallback((e: React.MouseEvent) => {
     v3Swipe.current = { x: e.clientX, y: e.clientY }
   }, [])
@@ -1734,7 +1718,7 @@ export default function CalendarPage() {
           </div>
         ) : (
           /* ── Mobile: Fantastical-style split view ── */
-          <div onTouchStart={p0Start} onTouchEnd={p0End} style={{ width: '100vw', height: '100%', flex: 'none', display: 'flex', flexDirection: 'column', background: 'var(--color-bg-base)', userSelect: 'none', paddingTop: SAFE_TOP, boxSizing: 'border-box' }}>
+          <div style={{ width: '100vw', height: '100%', flex: 'none', display: 'flex', flexDirection: 'column', background: 'var(--color-bg-base)', userSelect: 'none', paddingTop: SAFE_TOP, boxSizing: 'border-box' }}>
 
             {/* Compact month grid — collapsible */}
             <div style={{ height: gridH, overflow: 'hidden', flexShrink: 0, transition: isDraggingHandle ? 'none' : 'height 0.3s cubic-bezier(0.4,0,0.2,1)', background: 'var(--color-bg-surface)' }}>

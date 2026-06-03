@@ -30,10 +30,8 @@ export function usePillSwipe<T extends string>(
       const idx = options.indexOf(tab)
       if (dx < 0) {
         if (idx < options.length - 1) setTab(options[idx + 1])
-        else if (nextRoute) router.push(nextRoute)
       } else {
         if (idx > 0) setTab(options[idx - 1])
-        else if (prevRoute) router.push(prevRoute)
       }
     }
     document.addEventListener('touchstart', onStart, { passive: true })
