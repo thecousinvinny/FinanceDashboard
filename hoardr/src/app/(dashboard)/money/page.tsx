@@ -378,7 +378,7 @@ export default function OutPage() {
         const { data: created } = await supabase.from('categories').insert({ user_id: user.id, name: tx.category }).select('id').single()
         categoryId = created?.id ?? null
       }
-      const { error } = await supabase.from('expenses').insert({ user_id: user.id, name: tx.name, cost: tx.amount, date: tx.date, description: tx.description ?? null, category_id: categoryId, status: 'Procured', card_id: tx.card_id ?? null })
+      const { error } = await supabase.from('expenses').insert({ user_id: user.id, name: tx.name, cost: tx.amount, original_cost: tx.original_cost ?? null, date: tx.date, description: tx.description ?? null, category_id: categoryId, status: 'Procured', card_id: tx.card_id ?? null })
       if (error) console.error('expense insert error:', JSON.stringify(error))
     } else {
       const { error } = await supabase.from('income').insert({ user_id: user.id, name: tx.name, amount: tx.amount, date: tx.date, description: tx.description ?? null, source: tx.category, bank_id: tx.bank_id ?? null })

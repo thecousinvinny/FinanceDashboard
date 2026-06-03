@@ -8,7 +8,7 @@ import {
   INCOME_CATEGORIES,
   type SeedTx,
 } from '@/lib/data/transactions'
-import { localToday, cn } from '@/lib/utils'
+import { localToday, cn, $fd } from '@/lib/utils'
 import { ChevronDown } from 'lucide-react'
 
 type TxType = 'Expense' | 'Income'
@@ -28,18 +28,23 @@ interface Props {
 }
 
 export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = [], defaultCardId, defaultBankId, defaultCategory }: Props) {
-  const [type,        setType]        = useState<TxType>('Expense')
-  const [amount,      setAmount]      = useState('')
-  const [name,        setName]        = useState('')
-  const [description, setDescription] = useState('')
-  const [category,    setCategory]    = useState<string | null>(null)
-  const [date,        setDate]        = useState(localToday())
-  const [cardId,      setCardId]      = useState<string | null>(null)
-  const [bankId,      setBankId]      = useState<string | null>(null)
+  const [type,          setType]          = useState<TxType>('Expense')
+  const [amount,        setAmount]        = useState('')
+  const [originalPrice, setOriginalPrice] = useState('')
+  const [hasDiscount,   setHasDiscount]   = useState(false)
+  const [name,          setName]          = useState('')
+  const [description,   setDescription]   = useState('')
+  const [category,      setCategory]      = useState<string | null>(null)
+  const [date,          setDate]          = useState(localToday())
+  const [cardId,        setCardId]        = useState<string | null>(null)
+  const [bankId,        setBankId]        = useState<string | null>(null)
 
   const categories = type === 'Expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES
 
-  useEffect(() => { setCategory(null) }, [type])
+  useEffect(() => {
+    setCategory(null)
+    if (type === 'Income') { setHasDiscount(false); setOriginalPrice('') }
+  }, [type])
 
   const backdropRef = useRef<HTMLDivElement>(null)
   const sheetRef    = useRef<HTMLDivElement>(null)
@@ -138,6 +143,8 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
       const t = setTimeout(() => {
         setType('Expense')
         setAmount('')
+        setOriginalPrice('')
+        setHasDiscount(false)
         setName('')
         setDescription('')
         setCategory(defaultCategory ?? null)
@@ -153,25 +160,34 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
   function handleAmountChange(raw: string) {
     if (raw === '' || /^\d*\.?\d{0,2}$/.test(raw)) setAmount(raw)
   }
+  function handleOriginalChange(raw: string) {
+    if (raw === '' || /^\d*\.?\d{0,2}$/.test(raw)) setOriginalPrice(raw)
+  }
+
+  const parsedPaid     = parseFloat(amount)     || 0
+  const parsedOriginal = parseFloat(originalPrice) || 0
+  const savings        = hasDiscount && parsedOriginal > parsedPaid && parsedOriginal > 0 && parsedPaid > 0
+                           ? parsedOriginal - parsedPaid : 0
 
   function handleAdd() {
-    const parsed = parseFloat(amount)
-    if (!parsed || !name.trim() || !category) return
+    if (!parsedPaid || !name.trim() || !category) return
     onAdd({
-      id:          `t${Date.now()}`,
+      id:            `t${Date.now()}`,
       type,
-      name:        name.trim(),
-      description: description.trim() || null,
+      name:          name.trim(),
+      description:   description.trim() || null,
       category,
       date,
-      amount:      parsed,
-      card_id:     type === 'Expense' ? cardId : undefined,
-      bank_id:     type === 'Income'  ? bankId : undefined,
+      amount:        parsedPaid,
+      original_cost: hasDiscount && parsedOriginal > 0 ? parsedOriginal : null,
+      card_id:       type === 'Expense' ? cardId : undefined,
+      bank_id:       type === 'Income'  ? bankId : undefined,
     })
     onClose()
   }
 
-  const canAdd = !!parseFloat(amount) && !!name.trim() && !!category
+  const canAdd = !!parsedPaid && !!name.trim() && !!category &&
+                 (!hasDiscount || !!parsedOriginal)
 
   return (
     <>
@@ -213,15 +229,59 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
           <PillGroup options={['Expense', 'Income'] as TxType[]} value={type} onChange={setType} />
 
           <div>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Amount</p>
-            <div className="flex items-center gap-1.5 bg-bg-overlay rounded-[14px] px-4 py-2.5">
-              <span className="text-[20px] font-light text-ink-muted font-mono">$</span>
-              <input
-                type="text" inputMode="decimal" placeholder="0.00" value={amount}
-                onChange={e => handleAmountChange(e.target.value)}
-                className="flex-1 bg-transparent text-[22px] font-bold font-mono text-ink outline-none placeholder:text-ink-faint"
-              />
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint">Amount</p>
+              {type === 'Expense' && (
+                <button
+                  onClick={() => { setHasDiscount(v => !v); setOriginalPrice('') }}
+                  className={cn(
+                    'text-[9px] font-semibold tracking-[0.08em] uppercase px-2.5 py-1 rounded-full transition-all select-none',
+                    hasDiscount ? 'bg-emerald/15 text-emerald' : 'bg-bg-overlay text-ink-faint',
+                  )}
+                >
+                  Discount
+                </button>
+              )}
             </div>
+
+            {hasDiscount ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5 bg-bg-overlay rounded-[14px] px-4 py-2.5">
+                  <span className="text-[16px] font-light text-ink-faint font-mono">$</span>
+                  <input
+                    type="text" inputMode="decimal" placeholder="0.00"
+                    value={originalPrice}
+                    onChange={e => handleOriginalChange(e.target.value)}
+                    className="flex-1 bg-transparent text-[18px] font-semibold font-mono text-ink-muted outline-none placeholder:text-ink-faint"
+                  />
+                  <span className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint">original</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-bg-overlay rounded-[14px] px-4 py-2.5">
+                  <span className="text-[20px] font-light text-ink-muted font-mono">$</span>
+                  <input
+                    type="text" inputMode="decimal" placeholder="0.00"
+                    value={amount}
+                    onChange={e => handleAmountChange(e.target.value)}
+                    className="flex-1 bg-transparent text-[22px] font-bold font-mono text-ink outline-none placeholder:text-ink-faint"
+                  />
+                  <span className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint">paid</span>
+                </div>
+                {savings > 0 && (
+                  <p className="text-[11px] font-semibold text-emerald font-mono text-right pr-1">
+                    You save {$fd(savings)}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 bg-bg-overlay rounded-[14px] px-4 py-2.5">
+                <span className="text-[20px] font-light text-ink-muted font-mono">$</span>
+                <input
+                  type="text" inputMode="decimal" placeholder="0.00" value={amount}
+                  onChange={e => handleAmountChange(e.target.value)}
+                  className="flex-1 bg-transparent text-[22px] font-bold font-mono text-ink outline-none placeholder:text-ink-faint"
+                />
+              </div>
+            )}
           </div>
 
           <div>

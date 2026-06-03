@@ -1,14 +1,15 @@
 export interface SeedTx {
-  id:           string
-  type:         'Expense' | 'Income'
-  name:         string
-  category:     string
-  date:         string           // YYYY-MM-DD
-  amount:       number           // always positive
-  savings?:     number | null    // expenses only — generated col: original_cost - cost
-  description?: string | null
-  card_id?:     string | null    // expenses only
-  bank_id?:     string | null    // income only
+  id:             string
+  type:           'Expense' | 'Income'
+  name:           string
+  category:       string
+  date:           string           // YYYY-MM-DD
+  amount:         number           // always positive (the paid/discounted cost)
+  original_cost?: number | null    // expenses only — set when a discount was applied
+  savings?:       number | null    // expenses only — generated col: original_cost - cost
+  description?:   string | null
+  card_id?:       string | null    // expenses only
+  bank_id?:       string | null    // income only
 }
 
 export interface TxCategory {
