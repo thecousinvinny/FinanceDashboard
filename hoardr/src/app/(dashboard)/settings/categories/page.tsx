@@ -397,7 +397,7 @@ export default function CategoriesPage() {
     <>
       <div className="min-h-screen bg-bg-base tab-enter pb-28">
         {/* Header */}
-        <div className="px-5 pt-12 pb-4">
+        <div className="px-5 pb-5" style={{ paddingTop: 'calc(env(safe-area-inset-top, 44px) + 16px)' }}>
           <button onClick={() => router.back()} className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center">
             <ArrowLeft size={15} className="text-ink-muted" strokeWidth={1.75} />
           </button>

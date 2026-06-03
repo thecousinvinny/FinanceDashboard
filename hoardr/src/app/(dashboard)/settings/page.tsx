@@ -126,7 +126,12 @@ export default function SettingsPage() {
 
   return (
     <>
-    <div className="min-h-screen bg-bg-base tab-enter pb-28 pt-10">
+    <div className="min-h-screen bg-bg-base tab-enter pb-28">
+
+      {/* Header */}
+      <div className="px-5 pb-6" style={{ paddingTop: 'calc(env(safe-area-inset-top, 44px) + 16px)' }}>
+        <h1 className="text-[28px] font-medium tracking-[-0.02em] text-ink">Settings</h1>
+      </div>
 
       {/* ── Accounts ───────────────────────────────────────────────────────── */}
       <div className="px-5 mb-6">
