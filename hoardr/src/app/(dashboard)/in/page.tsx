@@ -1051,9 +1051,9 @@ export default function InPage() {
 
       {/* ── FAB ──────────────────────────────────────────────────────────── */}
       <GlobalFAB key={tab} actions={[
-        { Icon: ArrowUpCircle,  label: 'New Income',   onTap: () => setIncomeOpen(true)    },
-        { Icon: ArrowLeftRight, label: 'New Transfer',  onTap: () => showToast('Coming soon', { type: 'add' }) },
+        { Icon: ArrowLeftRight, label: 'New Transfer', onTap: () => showToast('Coming soon', { type: 'add' }) },
         { Icon: PlusCircle,     label: 'Add Account',  onTap: () => setBankSheetOpen(true) },
+        { Icon: ArrowUpCircle,  label: 'New Income',   onTap: () => setIncomeOpen(true)    },
       ]} />
 
       <AddCardSheet

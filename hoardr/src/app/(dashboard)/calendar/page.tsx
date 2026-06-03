@@ -7,7 +7,7 @@ import { getWeekStartsMonday } from '@/lib/week-start'
 import { cn, nextRenewalDate } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
 import { COLOR_PALETTE } from '@/lib/category-meta'
-import { Plus, SlidersHorizontal, Eye, EyeOff, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning, CalendarPlus, Repeat2, MapPin, type LucideIcon } from 'lucide-react'
+import { Plus, SlidersHorizontal, Eye, EyeOff, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning, CalendarPlus, type LucideIcon } from 'lucide-react'
 import { GlobalFAB } from '@/components/ui/GlobalFAB'
 import { EditEventSheet, type EditableEvent, type EventEdits, type RecurrenceScope } from '@/components/calendar/EditEventSheet'
 import { CalendarSettingsSheet, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
@@ -1996,9 +1996,7 @@ export default function CalendarPage() {
     {/* FAB — iPhone only, requires at least one Google calendar enabled */}
     {!isLargeScreen && prefs.googleCalendarIds.length > 0 && (
       <GlobalFAB key={viewIndex} actions={[
-        { Icon: CalendarPlus, label: 'New Event',    onTap: () => openCreateSheet(viewIndex === 0 ? (gridSel ?? todayStr) : (selectedDay ?? todayStr)) },
-        { Icon: Repeat2,      label: 'New Recurring', onTap: () => openCreateSheet(viewIndex === 0 ? (gridSel ?? todayStr) : (selectedDay ?? todayStr)) },
-        { Icon: MapPin,       label: 'Add Location Event', onTap: () => openCreateSheet(viewIndex === 0 ? (gridSel ?? todayStr) : (selectedDay ?? todayStr)) },
+        { Icon: CalendarPlus, label: 'New Event', onTap: () => openCreateSheet(viewIndex === 0 ? (gridSel ?? todayStr) : (selectedDay ?? todayStr)) },
       ]} />
     )}
 

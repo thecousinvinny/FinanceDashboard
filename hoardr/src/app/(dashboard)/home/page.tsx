@@ -17,10 +17,9 @@ import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import type { DayPoint } from '@/components/home/SparkChart'
 import type { SeedTx } from '@/lib/data/transactions'
-import { Truck, PlusCircle, CalendarPlus, Star } from 'lucide-react'
+import { Truck, PlusCircle, Star } from 'lucide-react'
 import { HoardChest } from '@/components/home/HoardChest'
-import { useRouter } from 'next/navigation'
-import { GlobalFAB, type FABAction } from '@/components/ui/GlobalFAB'
+import { GlobalFAB } from '@/components/ui/GlobalFAB'
 
 interface EnRouteItem {
   id:          string
@@ -52,7 +51,6 @@ interface HomeCache {
 }
 
 export default function HomePage() {
-  const router = useRouter()
   const cached = pageCache.get<HomeCache>('home')
 
   const [spent,         setSpent]         = useState(cached?.spent ?? 0)
@@ -473,9 +471,8 @@ export default function HomePage() {
 
     {/* ── FAB ─────────────────────────────────────────────────────────── */}
     <GlobalFAB actions={[
-      { Icon: PlusCircle,  label: 'Add Transaction', onTap: () => setExpenseOpen(true)       },
-      { Icon: CalendarPlus, label: 'Add Event',      onTap: () => router.push('/calendar')   },
-      { Icon: Star,        label: 'Add to Wishlist', onTap: () => setWishlistOpen(true)      },
+      { Icon: Star,       label: 'Add to Wishlist', onTap: () => setWishlistOpen(true) },
+      { Icon: PlusCircle, label: 'Add Transaction', onTap: () => setExpenseOpen(true)  },
     ]} />
 
     <AddTransactionSheet

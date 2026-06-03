@@ -938,9 +938,9 @@ export default function OutPage() {
 
     {/* ── FAB ───────────────────────────────────────────────────────────── */}
     <GlobalFAB actions={[
-      { Icon: MinusCircle,  label: 'New Expense',     onTap: () => setSheetOpen(true)  },
-      { Icon: Repeat2,      label: 'New Subscription', onTap: () => setSubSheet(true)  },
-      { Icon: ShoppingCart, label: 'Add to Wishlist', onTap: () => setWishSheet(true)  },
+      { Icon: Repeat2,      label: 'New Subscription', onTap: () => setSubSheet(true)   },
+      { Icon: ShoppingCart, label: 'Add to Wishlist',  onTap: () => setWishSheet(true)  },
+      { Icon: MinusCircle,  label: 'New Expense',      onTap: () => setSheetOpen(true)  },
     ]} />
 
     <AddTransactionSheet
