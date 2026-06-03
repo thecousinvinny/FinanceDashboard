@@ -397,14 +397,10 @@ export default function CategoriesPage() {
     <>
       <div className="min-h-screen bg-bg-base tab-enter pb-28">
         {/* Header */}
-        <div className="px-5 pt-14 pb-6 flex items-center gap-3">
-          <button onClick={() => router.back()} className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center flex-shrink-0">
+        <div className="px-5 pt-12 pb-4">
+          <button onClick={() => router.back()} className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center">
             <ArrowLeft size={15} className="text-ink-muted" strokeWidth={1.75} />
           </button>
-          <div>
-            <p className="text-[10px] font-medium tracking-[0.14em] uppercase text-gold">Settings</p>
-            <h1 className="text-[26px] font-bold tracking-[-0.04em] text-ink leading-tight">Categories</h1>
-          </div>
         </div>
 
         {loading ? (

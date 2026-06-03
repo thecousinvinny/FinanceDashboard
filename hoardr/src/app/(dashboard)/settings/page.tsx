@@ -126,12 +126,7 @@ export default function SettingsPage() {
 
   return (
     <>
-    <div className="min-h-screen bg-bg-base tab-enter pb-28">
-      {/* Header */}
-      <div className="px-5 pt-14 pb-6">
-        <p className="text-[10px] font-medium tracking-[0.14em] uppercase text-gold mb-1">Hoardr</p>
-        <h1 className="text-[32px] font-bold tracking-[-0.04em] text-ink">Settings</h1>
-      </div>
+    <div className="min-h-screen bg-bg-base tab-enter pb-28 pt-10">
 
       {/* ── Accounts ───────────────────────────────────────────────────────── */}
       <div className="px-5 mb-6">
