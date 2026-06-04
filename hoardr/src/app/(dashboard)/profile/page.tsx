@@ -221,68 +221,68 @@ function MonthAnnualCard({ label, monthStat, annualStat, renderMonth, renderAnnu
   )
 }
 
-// ─── Cashflow chart (income up / expense down) ────────────────────────────────
+// ─── Sparkline (smooth SVG area chart) ───────────────────────────────────────
 
-function CashflowBars({ bars, active, sparse }: { bars: BarData[]; active: boolean; sparse?: boolean }) {
-  const [anim, setAnim] = useState(false)
-  const HALF = 72
-  const maxVal = useMemo(() => Math.max(...bars.flatMap(b => [b.income, b.expense]), 1), [bars])
+function Sparkline({ values, color, gradId }: { values: number[]; color: string; gradId: string }) {
+  if (values.length < 2) return <div style={{ height: 60 }} />
+  const W = 300, H = 56, pad = 3
+  const max = Math.max(...values, 1)
 
-  const labelIdx = useMemo(() => {
-    if (!sparse) return bars.map((_, i) => i)
-    const last = bars.length - 1
-    return [...new Set([0, 6, 13, 20, last].filter(i => i <= last))]
-  }, [bars, sparse])
+  const pts = values.map((v, i) => ({
+    x: pad + (i / (values.length - 1)) * (W - pad * 2),
+    y: (H - pad) - (v / max) * (H - pad * 2 - 4),
+  }))
 
-  useEffect(() => {
-    if (!active) { setAnim(false); return }
-    const t = setTimeout(() => setAnim(true), 60)
-    return () => clearTimeout(t)
-  }, [active])
+  // Smooth cubic bezier through points (midpoint control)
+  let line = `M ${pts[0].x} ${pts[0].y}`
+  for (let i = 1; i < pts.length; i++) {
+    const cx = (pts[i - 1].x + pts[i].x) / 2
+    line += ` C ${cx} ${pts[i - 1].y} ${cx} ${pts[i].y} ${pts[i].x} ${pts[i].y}`
+  }
+  const area = `${line} L ${pts[pts.length - 1].x} ${H} L ${pts[0].x} ${H} Z`
 
   return (
-    <div>
-      <div className="relative flex" style={{ height: HALF * 2 + 1 }}>
-        <div className="absolute left-0 right-0" style={{ top: HALF, height: 1, background: 'rgba(255,255,255,0.12)', zIndex: 1 }} />
-        {bars.map((bar, i) => {
-          const incH = anim ? Math.max((bar.income  / maxVal) * HALF, bar.income  > 0 ? 2 : 0) : 0
-          const expH = anim ? Math.max((bar.expense / maxVal) * HALF, bar.expense > 0 ? 2 : 0) : 0
-          const d    = i * 12
-          return (
-            <div key={i} className="flex-1 flex flex-col">
-              <div style={{ height: HALF, display: 'flex', alignItems: 'flex-end' }}>
-                <div className="w-full rounded-t-[2px]" style={{ height: incH, background: 'var(--sem-income)', transition: `height 480ms cubic-bezier(0.22,1,0.36,1) ${d}ms` }} />
-              </div>
-              <div style={{ height: HALF, display: 'flex', alignItems: 'flex-start' }}>
-                <div className="w-full rounded-b-[2px]" style={{ height: expH, background: '#D4AF37', opacity: 0.7, transition: `height 480ms cubic-bezier(0.22,1,0.36,1) ${d}ms` }} />
-              </div>
-            </div>
-          )
-        })}
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none"
+      style={{ width: '100%', height: 60, display: 'block' }}>
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stopColor={color} stopOpacity="0.28" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.01" />
+        </linearGradient>
+      </defs>
+      <path d={area} fill={`url(#${gradId})`} />
+      <path d={line} fill="none" stroke={color} strokeWidth="1.75"
+        strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function SparklinePanel({ bars, idSuffix }: { bars: BarData[]; idSuffix: string }) {
+  const incValues = bars.map(b => b.income)
+  const expValues = bars.map(b => b.expense)
+  return (
+    <div className="space-y-3">
+      <div>
+        <div className="flex items-center gap-1.5 mb-1">
+          <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#22c55e' }} />
+          <span className="text-[10px] font-medium tracking-wide uppercase text-ink-faint">Income</span>
+        </div>
+        <Sparkline values={incValues} color="#22c55e" gradId={`inc-${idSuffix}`} />
       </div>
-      <div className="flex mt-1">
-        {bars.map((bar, i) => (
-          <div key={i} className="flex-1 text-center">
-            {labelIdx.includes(i) && <span className="text-[8px] text-ink-faint">{bar.label}</span>}
-          </div>
-        ))}
+      <div>
+        <div className="flex items-center gap-1.5 mb-1">
+          <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#D4AF37' }} />
+          <span className="text-[10px] font-medium tracking-wide uppercase text-ink-faint">Spending</span>
+        </div>
+        <Sparkline values={expValues} color="#D4AF37" gradId={`exp-${idSuffix}`} />
       </div>
     </div>
   )
 }
 
-function CashflowChart({ monthBars, annualBars, moInc, moSpend, cashflow, spendTrend, hasTrend }: {
-  monthBars: BarData[]; annualBars: BarData[]
-  moInc: number; moSpend: number; cashflow: number; spendTrend: number; hasTrend: boolean
-}) {
-  const [view,    setView]    = useState<0 | 1>(0)
-  const [barAnim, setBarAnim] = useState(false)
+function CashflowChart({ monthBars, annualBars }: { monthBars: BarData[]; annualBars: BarData[] }) {
+  const [view, setView] = useState<0 | 1>(0)
   const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const t = setTimeout(() => setBarAnim(true), 80)
-    return () => clearTimeout(t)
-  }, [])
 
   useEffect(() => {
     const el = ref.current
@@ -302,81 +302,26 @@ function CashflowChart({ monthBars, annualBars, moInc, moSpend, cashflow, spendT
     return () => { el.removeEventListener('touchstart', onStart); el.removeEventListener('touchend', onEnd) }
   }, [view])
 
-  const maxBar = Math.max(moInc, moSpend, 1)
-  const incPct = barAnim ? (moInc   / maxBar) * 100 : 0
-  const expPct = barAnim ? (moSpend / maxBar) * 100 : 0
-
   return (
     <div ref={ref} className="bg-bg-surface border border-white/[0.06] rounded-card p-4">
-
-      {/* ── Horizontal comparison bars ─────────────────────────────────────── */}
-      <div className="space-y-2 mb-4">
-        {[
-          { label: 'Income',   pct: incPct, value: moInc,   color: 'linear-gradient(90deg, rgba(34,197,94,0.4), rgba(34,197,94,0.12))',     labelColor: '#22c55e' },
-          { label: 'Spending', pct: expPct, value: moSpend, color: 'linear-gradient(90deg, rgba(212,175,55,0.4), rgba(212,175,55,0.12))', labelColor: '#D4AF37' },
-        ].map(row => (
-          <div key={row.label} className="flex items-center gap-3">
-            <div className="relative flex-1 flex items-center rounded-[8px] overflow-hidden"
-              style={{ height: 34, background: '#1C2A36' }}>
-              <div className="absolute inset-y-0 left-0 rounded-[8px]"
-                style={{ width: `${row.pct}%`, background: row.color, transition: 'width 600ms cubic-bezier(0.22,1,0.36,1)' }} />
-              <span className="relative px-3 text-[12px] font-medium z-10"
-                style={{ color: row.labelColor }}>{row.label}</span>
-            </div>
-            <span className="text-[14px] font-bold font-mono text-ink w-20 text-right flex-shrink-0">
-              {$f(row.value)}
-            </span>
-          </div>
+      <div className="flex gap-2 mb-4">
+        {(['Month', 'Annual'] as const).map((l, i) => (
+          <button key={l} onClick={() => setView(i as 0 | 1)}
+            className={cn('px-3 py-1 rounded-full text-[11px] font-semibold transition-colors',
+              view === i ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
+            {l}
+          </button>
         ))}
-      </div>
-
-      {/* ── Net + trend ────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between mb-4 pb-4 border-b border-white/[0.06]">
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-[24px] font-bold" style={{
-            fontFamily: 'var(--font-big-shoulders)',
-            color: cashflow >= 0 ? 'var(--sem-income)' : '#ef4444',
-          }}>
-            {cashflow >= 0 ? '+' : '−'}{$f(Math.abs(cashflow))}
-          </span>
-          <span className="text-[11px] text-ink-muted">net</span>
-        </div>
-        {hasTrend && (
-          <span className={cn('text-[11px] font-semibold', spendTrend > 0 ? 'text-ruby' : 'text-emerald')}>
-            {spendTrend > 0 ? '↑' : '↓'}{Math.abs(spendTrend).toFixed(0)}% spend vs last mo.
-          </span>
-        )}
-      </div>
-
-      {/* ── Chart ──────────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 mb-4">
-        <div className="flex gap-1.5">
-          {(['Month', 'Annual'] as const).map((l, i) => (
-            <button key={l} onClick={() => setView(i as 0 | 1)}
-              className={cn('px-3 py-1 rounded-full text-[11px] font-semibold transition-colors',
-                view === i ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
-              {l}
-            </button>
-          ))}
-        </div>
-        <div className="flex gap-3 ml-auto items-center">
-          {[{ color: 'var(--sem-income)', label: 'In' }, { color: '#D4AF37', label: 'Out' }].map(l => (
-            <div key={l.label} className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full opacity-70" style={{ background: l.color }} />
-              <span className="text-[9px] text-ink-faint">{l.label}</span>
-            </div>
-          ))}
-        </div>
       </div>
 
       <div style={{ overflow: 'hidden' }}>
         <div style={{ display: 'flex', width: '200%', transform: `translateX(${view === 0 ? 0 : -50}%)`, transition: 'transform 320ms cubic-bezier(0.4,0,0.2,1)' }}>
-          <div style={{ width: '50%' }}><CashflowBars bars={monthBars}  active={view === 0} sparse /></div>
-          <div style={{ width: '50%' }}><CashflowBars bars={annualBars} active={view === 1} /></div>
+          <div style={{ width: '50%' }}><SparklinePanel bars={monthBars}  idSuffix="mo"  /></div>
+          <div style={{ width: '50%' }}><SparklinePanel bars={annualBars} idSuffix="ann" /></div>
         </div>
       </div>
 
-      <div className="flex justify-center gap-1.5 mt-3">
+      <div className="flex justify-center gap-1.5 mt-4">
         {[0, 1].map(i => (
           <div key={i} className="rounded-full transition-all duration-300" style={{
             width: view === i ? 14 : 5, height: 5,
@@ -720,11 +665,7 @@ export default function ProfilePage() {
       {/* ── Cashflow ─────────────────────────────────────────────────────────── */}
       {!loading && (
         <div className="px-5 mb-5">
-          <CashflowChart
-            monthBars={monthBars} annualBars={annualBars}
-            moInc={moIncAmt} moSpend={moSpend}
-            cashflow={moCashflow} spendTrend={spendTrend} hasTrend={lmSpend > 0}
-          />
+          <CashflowChart monthBars={monthBars} annualBars={annualBars} />
         </div>
       )}
 
