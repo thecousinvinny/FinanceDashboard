@@ -576,11 +576,11 @@ export default function ProfilePage() {
 
   // Subscriptions
   const subsSortedMo  = useMemo<PillItem[]>(() =>
-    [...subs].sort((a, b) => b.monthly_cost - a.monthly_cost)
+    [...subs].sort((a, b) => b.monthly_cost - a.monthly_cost).slice(0, 5)
       .map(s => ({ name: s.name, value: s.monthly_cost, display: $fd(s.monthly_cost) }))
   , [subs])
   const subsSortedAnn = useMemo<PillItem[]>(() =>
-    [...subs].sort((a, b) => b.annual_cost - a.annual_cost)
+    [...subs].sort((a, b) => b.annual_cost - a.annual_cost).slice(0, 5)
       .map(s => ({ name: s.name, value: s.annual_cost, display: $fd(s.annual_cost) }))
   , [subs])
   const totalSubMo  = useMemo(() => subs.reduce((s, sub) => s + sub.monthly_cost, 0), [subs])
@@ -689,8 +689,6 @@ export default function ProfilePage() {
       <div className="px-5 mb-5">
         <MonthAnnualCard
           label="Expenses"
-          monthStat={$f(moSpend)}
-          annualStat={$f(annExpTotal)}
           renderMonth={active => <SimpleBars bars={moExpBars}  active={active} color="rgba(212,175,55,0.75)" sparse />}
           renderAnnual={active => <SimpleBars bars={annExpBars} active={active} color="rgba(212,175,55,0.75)" />}
         />
@@ -700,8 +698,6 @@ export default function ProfilePage() {
       <div className="px-5 mb-5">
         <MonthAnnualCard
           label="Top Categories"
-          monthStat={moCats[0]?.name}
-          annualStat={annCats[0]?.name}
           renderMonth={active  => <CategoryPills cats={moCats}  active={active} />}
           renderAnnual={active => <CategoryPills cats={annCats} active={active} />}
         />
@@ -711,8 +707,6 @@ export default function ProfilePage() {
       <div className="px-5 mb-5">
         <MonthAnnualCard
           label="Subscriptions"
-          monthStat={`${$fd(totalSubMo)}/mo`}
-          annualStat={`${$fk(totalSubAnn)}/yr`}
           renderMonth={active  => <CostPills items={subsSortedMo}  active={active} />}
           renderAnnual={active => <CostPills items={subsSortedAnn} active={active} />}
         />
@@ -722,8 +716,6 @@ export default function ProfilePage() {
       <div className="px-5 mb-5">
         <MonthAnnualCard
           label="Income"
-          monthStat={$f(moIncAmt)}
-          annualStat={$f(annIncTotal)}
           renderMonth={active  => <SimpleBars bars={moIncBars}  active={active} color="var(--sem-income)" sparse />}
           renderAnnual={active => <SimpleBars bars={annIncBars} active={active} color="var(--sem-income)" />}
         />
