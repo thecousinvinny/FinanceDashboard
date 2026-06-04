@@ -9,16 +9,20 @@ import { getCategoryIcon } from '@/components/ui/CategoryIcon'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface ExpRow  { cost: number; savings: number | null; category: string; date: string; name: string }
+interface ExpRow  { cost: number; original_cost: number | null; category: string; date: string; name: string }
 interface IncRow  { amount: number; source: string | null; date: string; name: string | null }
-interface BarData { label: string; net: number }
+interface BarData { label: string; income: number; expense: number }
 
-// ─── Inline: cashflow bar chart ───────────────────────────────────────────────
+// ─── Inline: cashflow bar chart (income up / expense down) ───────────────────
 
 function CashflowBars({ bars, active, sparse }: { bars: BarData[]; active: boolean; sparse?: boolean }) {
   const [anim, setAnim] = useState(false)
-  const maxAbs = Math.max(...bars.map(b => Math.abs(b.net)), 1)
-  const CHART_H = 88
+  const HALF = 72 // px per half (above / below zero line)
+
+  const maxVal = useMemo(
+    () => Math.max(...bars.flatMap(b => [b.income, b.expense]), 1),
+    [bars],
+  )
 
   useEffect(() => {
     if (!active) { setAnim(false); return }
@@ -26,37 +30,55 @@ function CashflowBars({ bars, active, sparse }: { bars: BarData[]; active: boole
     return () => clearTimeout(t)
   }, [active])
 
-  // which bar indices get a label (sparse = month view: 1, ~7, ~14, ~21, last)
   const labelIndices = useMemo(() => {
-    if (!sparse) return bars.map((_, i) => i) // annual: all
+    if (!sparse) return bars.map((_, i) => i)
     const last = bars.length - 1
-    const candidates = [0, 6, 13, 20, last]
-    return [...new Set(candidates.filter(i => i <= last))]
+    return [...new Set([0, 6, 13, 20, last].filter(i => i <= last))]
   }, [bars, sparse])
 
   return (
     <div>
-      {/* Bars */}
-      <div className="flex items-end gap-px" style={{ height: CHART_H }}>
+      <div className="relative flex" style={{ height: HALF * 2 + 1 }}>
+        {/* Zero line */}
+        <div
+          className="absolute left-0 right-0"
+          style={{ top: HALF, height: 1, background: 'rgba(255,255,255,0.12)', zIndex: 1 }}
+        />
         {bars.map((bar, i) => {
-          const pct  = Math.abs(bar.net) / maxAbs
-          const h    = anim ? Math.max(pct * CHART_H, bar.net !== 0 ? 2 : 0) : 0
-          const color = bar.net >= 0 ? 'var(--sem-income)' : '#ef4444'
+          const incH = anim ? Math.max((bar.income  / maxVal) * HALF, bar.income  > 0 ? 2 : 0) : 0
+          const expH = anim ? Math.max((bar.expense / maxVal) * HALF, bar.expense > 0 ? 2 : 0) : 0
+          const delay = i * 12
           return (
-            <div
-              key={i}
-              className="flex-1 rounded-t-[2px]"
-              style={{
-                height:     h,
-                background: color,
-                transition: `height 450ms cubic-bezier(0.22,1,0.36,1) ${i * 14}ms`,
-              }}
-            />
+            <div key={i} className="flex-1 flex flex-col" style={{ gap: 0 }}>
+              {/* Income bar — grows up from zero line */}
+              <div style={{ height: HALF, display: 'flex', alignItems: 'flex-end' }}>
+                <div
+                  className="w-full rounded-t-[2px]"
+                  style={{
+                    height:     incH,
+                    background: 'var(--sem-income)',
+                    transition: `height 480ms cubic-bezier(0.22,1,0.36,1) ${delay}ms`,
+                  }}
+                />
+              </div>
+              {/* Expense bar — grows down from zero line */}
+              <div style={{ height: HALF, display: 'flex', alignItems: 'flex-start' }}>
+                <div
+                  className="w-full rounded-b-[2px]"
+                  style={{
+                    height:     expH,
+                    background: '#D4AF37',
+                    opacity:    0.7,
+                    transition: `height 480ms cubic-bezier(0.22,1,0.36,1) ${delay}ms`,
+                  }}
+                />
+              </div>
+            </div>
           )
         })}
       </div>
       {/* X-axis labels */}
-      <div className="flex mt-1.5" style={{ gap: 1 }}>
+      <div className="flex mt-1" style={{ gap: 0 }}>
         {bars.map((bar, i) => (
           <div key={i} className="flex-1 text-center">
             {labelIndices.includes(i) && (
@@ -70,8 +92,8 @@ function CashflowBars({ bars, active, sparse }: { bars: BarData[]; active: boole
 }
 
 function CashflowChart({ monthBars, annualBars }: { monthBars: BarData[]; annualBars: BarData[] }) {
-  const [view, setView] = useState<0 | 1>(0)
-  const containerRef   = useRef<HTMLDivElement>(null)
+  const [view, setView]     = useState<0 | 1>(0)
+  const containerRef        = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const el = containerRef.current
@@ -93,8 +115,8 @@ function CashflowChart({ monthBars, annualBars }: { monthBars: BarData[]; annual
 
   return (
     <div ref={containerRef}>
-      {/* Toggle pills */}
-      <div className="flex gap-2 mb-4">
+      {/* Header row: pills + legend */}
+      <div className="flex items-center gap-2 mb-4">
         {(['Month', 'Annual'] as const).map((label, i) => (
           <button
             key={label}
@@ -105,11 +127,15 @@ function CashflowChart({ monthBars, annualBars }: { monthBars: BarData[]; annual
             )}
           >{label}</button>
         ))}
-        <div className="flex gap-1.5 ml-auto items-center">
-          <div className="w-2 h-2 rounded-full" style={{ background: 'var(--sem-income)' }} />
-          <span className="text-[9px] text-ink-faint">+ve</span>
-          <div className="w-2 h-2 rounded-full bg-ruby ml-2" />
-          <span className="text-[9px] text-ink-faint">−ve</span>
+        <div className="flex gap-3 ml-auto items-center">
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 rounded-full" style={{ background: 'var(--sem-income)' }} />
+            <span className="text-[9px] text-ink-faint">Income</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 rounded-full bg-gold opacity-70" />
+            <span className="text-[9px] text-ink-faint">Spend</span>
+          </div>
         </div>
       </div>
 
@@ -117,9 +143,9 @@ function CashflowChart({ monthBars, annualBars }: { monthBars: BarData[]; annual
       <div style={{ overflow: 'hidden' }}>
         <div
           style={{
-            display:   'flex',
-            width:     '200%',
-            transform: `translateX(${view === 0 ? 0 : -50}%)`,
+            display:    'flex',
+            width:      '200%',
+            transform:  `translateX(${view === 0 ? 0 : -50}%)`,
             transition: 'transform 320ms cubic-bezier(0.4,0,0.2,1)',
           }}
         >
@@ -132,7 +158,7 @@ function CashflowChart({ monthBars, annualBars }: { monthBars: BarData[]; annual
         </div>
       </div>
 
-      {/* Swipe hint dots */}
+      {/* Page dots */}
       <div className="flex justify-center gap-1.5 mt-3">
         {[0, 1].map(i => (
           <div
@@ -297,10 +323,13 @@ export default function ProfilePage() {
     try {
       const [bRes, eRes, iRes] = await Promise.all([
         supabase.from('banks').select('balance').abortSignal(ctrl.signal),
-        supabase.from('expenses').select('cost, savings, category, date, name').abortSignal(ctrl.signal),
-        supabase.from('income').select('amount, source, date, name').abortSignal(ctrl.signal),
+        supabase.from('expenses').select('cost, original_cost, category, date, name').limit(5000).abortSignal(ctrl.signal),
+        supabase.from('income').select('amount, source, date, name').limit(5000).abortSignal(ctrl.signal),
       ])
       if (gen !== loadGen.current) return
+      if (bRes.error) console.error('[Profile] banks:', bRes.error)
+      if (eRes.error) console.error('[Profile] expenses:', eRes.error)
+      if (iRes.error) console.error('[Profile] income:', iRes.error)
       const banks = (bRes.data ?? []) as { balance: number }[]
       setNetWorth(banks.reduce((s, b) => s + ((b.balance as number) ?? 0), 0))
       setExpenses((eRes.data ?? []) as ExpRow[])
@@ -308,6 +337,8 @@ export default function ProfilePage() {
       setLoading(false)
     } catch (err) {
       if ((err as Error)?.name === 'AbortError') return
+      console.error('[Profile] loadData:', err)
+      setLoading(false)
     }
   }, [supabase])
 
@@ -372,8 +403,10 @@ export default function ProfilePage() {
   const lastMoSpend = useMemo(() => lastMoExp.reduce((s, e) => s + e.cost,    0), [lastMoExp])
   const spendTrend  = lastMoSpend > 0 ? ((moSpend - lastMoSpend) / lastMoSpend) * 100 : 0
 
-  const allTimeSpent   = useMemo(() => expenses.reduce((s, e) => s + e.cost,             0), [expenses])
-  const allTimeSavings = useMemo(() => expenses.reduce((s, e) => s + (e.savings ?? 0),   0), [expenses])
+  const allTimeSpent   = useMemo(() => expenses.reduce((s, e) => s + e.cost, 0), [expenses])
+  const allTimeSavings = useMemo(() =>
+    expenses.reduce((s, e) => s + Math.max(0, (e.original_cost ?? e.cost) - e.cost), 0),
+  [expenses])
   const savingsRate    = moIncomeAmt > 0 ? Math.max(0, ((moIncomeAmt - moSpend) / moIncomeAmt) * 100) : 0
 
   // Average monthly spend (last 12 months of data that exist)
@@ -414,7 +447,7 @@ export default function ProfilePage() {
       const date = `${moKey}-${String(d).padStart(2, '0')}`
       const inc  = income.filter(i => i.date === date).reduce((s, i) => s + i.amount, 0)
       const exp  = expenses.filter(e => e.date === date).reduce((s, e) => s + e.cost, 0)
-      return { label: String(d), net: inc - exp }
+      return { label: String(d), income: inc, expense: exp }
     })
   }, [expenses, income, moKey, now])
 
@@ -424,7 +457,7 @@ export default function ProfilePage() {
       const key  = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
       const inc  = income.filter(i => i.date.startsWith(key)).reduce((s, i) => s + i.amount, 0)
       const exp  = expenses.filter(e => e.date.startsWith(key)).reduce((s, e) => s + e.cost, 0)
-      return { label: MONTH_NAMES[date.getMonth()], net: inc - exp }
+      return { label: MONTH_NAMES[date.getMonth()], income: inc, expense: exp }
     })
   }, [expenses, income, now])
 
