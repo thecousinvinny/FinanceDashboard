@@ -9,7 +9,7 @@ import { getCategoryIcon } from '@/components/ui/CategoryIcon'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface ExpRow  { cost: number; original_cost: number | null; category: string; date: string; name: string }
+interface ExpRow  { cost: number; savings: number; date: string; name: string; categories: { name: string }[] | null }
 interface IncRow  { amount: number; source: string | null; date: string; name: string | null }
 interface BarData { label: string; income: number; expense: number }
 
@@ -323,7 +323,7 @@ export default function ProfilePage() {
     try {
       const [bRes, eRes, iRes] = await Promise.all([
         supabase.from('banks').select('balance').abortSignal(ctrl.signal),
-        supabase.from('expenses').select('cost, original_cost, category, date, name').limit(5000).abortSignal(ctrl.signal),
+        supabase.from('expenses').select('cost, savings, date, name, categories(name)').limit(5000).abortSignal(ctrl.signal),
         supabase.from('income').select('amount, source, date, name').limit(5000).abortSignal(ctrl.signal),
       ])
       if (gen !== loadGen.current) return
@@ -403,10 +403,8 @@ export default function ProfilePage() {
   const lastMoSpend = useMemo(() => lastMoExp.reduce((s, e) => s + e.cost,    0), [lastMoExp])
   const spendTrend  = lastMoSpend > 0 ? ((moSpend - lastMoSpend) / lastMoSpend) * 100 : 0
 
-  const allTimeSpent   = useMemo(() => expenses.reduce((s, e) => s + e.cost, 0), [expenses])
-  const allTimeSavings = useMemo(() =>
-    expenses.reduce((s, e) => s + Math.max(0, (e.original_cost ?? e.cost) - e.cost), 0),
-  [expenses])
+  const allTimeSpent   = useMemo(() => expenses.reduce((s, e) => s + e.cost,           0), [expenses])
+  const allTimeSavings = useMemo(() => expenses.reduce((s, e) => s + (e.savings ?? 0), 0), [expenses])
   const savingsRate    = moIncomeAmt > 0 ? Math.max(0, ((moIncomeAmt - moSpend) / moIncomeAmt) * 100) : 0
 
   // Average monthly spend (last 12 months of data that exist)
@@ -423,7 +421,10 @@ export default function ProfilePage() {
   // Top 5 categories by all-time spend
   const topCategories = useMemo(() => {
     const map = new Map<string, number>()
-    expenses.forEach(e => { map.set(e.category, (map.get(e.category) ?? 0) + e.cost) })
+    expenses.forEach(e => {
+      const cat = e.categories?.[0]?.name ?? 'Other'
+      map.set(cat, (map.get(cat) ?? 0) + e.cost)
+    })
     const sorted = [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
     const top1   = sorted[0]?.[1] ?? 1
     return sorted.map(([name, total]) => ({ name, total, pct: (total / top1) * 100 }))
