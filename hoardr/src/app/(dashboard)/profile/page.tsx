@@ -2,27 +2,37 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Camera, Check, Settings2, TrendingDown, TrendingUp, Pencil } from 'lucide-react'
+import { ArrowLeft, Camera, Check, Settings2, Pencil } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { cn, $f, $fk } from '@/lib/utils'
+import { cn, $f, $fk, $fd } from '@/lib/utils'
 import { getCategoryIcon } from '@/components/ui/CategoryIcon'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface ExpRow  { cost: number; savings: number; date: string; name: string; categories: unknown }
-interface IncRow  { amount: number; source: string | null; date: string; name: string | null }
+interface ExpRow { cost: number; savings: number; date: string; name: string; categories: unknown }
+interface IncRow { amount: number; source: string | null; date: string; name: string | null }
+interface SubRow { name: string; monthly_cost: number; annual_cost: number }
 interface BarData { label: string; income: number; expense: number }
+interface SimpleBar { label: string; value: number }
+interface PillItem  { name: string; value: number; display: string }
+interface CatItem   { name: string; total: number; pct: number }
 
-// ─── Inline: cashflow bar chart (income up / expense down) ───────────────────
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
-function CashflowBars({ bars, active, sparse }: { bars: BarData[]; active: boolean; sparse?: boolean }) {
+// ─── Shared: simple from-bottom bar chart ────────────────────────────────────
+
+function SimpleBars({ bars, active, color, sparse }: {
+  bars: SimpleBar[]; active: boolean; color: string; sparse?: boolean
+}) {
   const [anim, setAnim] = useState(false)
-  const HALF = 72 // px per half (above / below zero line)
+  const max = useMemo(() => Math.max(...bars.map(b => b.value), 1), [bars])
+  const H   = 72
 
-  const maxVal = useMemo(
-    () => Math.max(...bars.flatMap(b => [b.income, b.expense]), 1),
-    [bars],
-  )
+  const labelIdx = useMemo(() => {
+    if (!sparse) return bars.map((_, i) => i)
+    const last = bars.length - 1
+    return [...new Set([0, 6, 13, 20, last].filter(i => i <= last))]
+  }, [bars, sparse])
 
   useEffect(() => {
     if (!active) { setAnim(false); return }
@@ -30,60 +40,230 @@ function CashflowBars({ bars, active, sparse }: { bars: BarData[]; active: boole
     return () => clearTimeout(t)
   }, [active])
 
-  const labelIndices = useMemo(() => {
+  return (
+    <div>
+      <div className="flex items-end gap-px" style={{ height: H }}>
+        {bars.map((b, i) => (
+          <div key={i} className="flex-1 rounded-t-[2px]" style={{
+            height:     anim ? Math.max((b.value / max) * H, b.value > 0 ? 2 : 0) : 0,
+            background: color,
+            transition: `height 450ms cubic-bezier(0.22,1,0.36,1) ${i * 11}ms`,
+          }} />
+        ))}
+      </div>
+      <div className="flex mt-1">
+        {bars.map((b, i) => (
+          <div key={i} className="flex-1 text-center">
+            {labelIdx.includes(i) && <span className="text-[8px] text-ink-faint">{b.label}</span>}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Shared: category pill bars ───────────────────────────────────────────────
+
+function CategoryPills({ cats, active }: { cats: CatItem[]; active: boolean }) {
+  const [animPcts, setAnimPcts] = useState<number[]>(cats.map(() => 0))
+
+  useEffect(() => {
+    if (!active) { setAnimPcts(cats.map(() => 0)); return }
+    const timers = cats.map((_, i) =>
+      setTimeout(() => setAnimPcts(prev => {
+        const next = [...prev]; next[i] = cats[i].pct; return next
+      }), 60 + i * 90),
+    )
+    return () => timers.forEach(clearTimeout)
+  }, [cats, active])
+
+  if (cats.length === 0) return <p className="text-[12px] text-ink-faint text-center py-4">No data</p>
+
+  return (
+    <div className="space-y-2.5">
+      {cats.map((cat, i) => {
+        const Icon = getCategoryIcon(cat.name, 'Expense')
+        return (
+          <div key={cat.name} className="flex items-center gap-2">
+            <div className="relative flex-1 flex items-center rounded-[8px] overflow-hidden"
+              style={{ height: 32, background: '#1C2A36' }}>
+              <div className="absolute inset-y-0 left-0 rounded-[8px]" style={{
+                width: `${animPcts[i] ?? 0}%`,
+                background: 'linear-gradient(90deg, rgba(212,175,55,0.35), rgba(212,175,55,0.10))',
+                transition: `width 600ms cubic-bezier(0.22,1,0.36,1) ${i * 80}ms`,
+              }} />
+              <div className="relative flex items-center gap-2 px-2.5 z-10">
+                <Icon size={13} className="text-gold flex-shrink-0" strokeWidth={1.75} />
+                <span className="text-[12px] font-medium text-ink truncate">{cat.name}</span>
+              </div>
+            </div>
+            <span className="text-[12px] font-semibold font-mono text-ink-muted w-12 text-right flex-shrink-0">
+              {$fk(cat.total)}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Shared: generic pill bars (subs / income sources) ───────────────────────
+
+function CostPills({ items, active }: { items: PillItem[]; active: boolean }) {
+  const maxVal = useMemo(() => Math.max(...items.map(i => i.value), 1), [items])
+  const [animPcts, setAnimPcts] = useState<number[]>([])
+
+  useEffect(() => {
+    setAnimPcts(items.map(() => 0))
+    if (!active) return
+    const timers = items.map((item, i) =>
+      setTimeout(() => setAnimPcts(prev => {
+        const next = [...prev]; next[i] = (item.value / maxVal) * 100; return next
+      }), 60 + i * 80),
+    )
+    return () => timers.forEach(clearTimeout)
+  }, [active, items, maxVal])
+
+  if (items.length === 0) return <p className="text-[12px] text-ink-faint text-center py-4">No data</p>
+
+  return (
+    <div className="space-y-2">
+      {items.map((item, i) => (
+        <div key={item.name + i} className="flex items-center gap-2">
+          <div className="relative flex-1 flex items-center rounded-[8px] overflow-hidden"
+            style={{ height: 30, background: '#1C2A36' }}>
+            <div className="absolute inset-y-0 left-0 rounded-[8px]" style={{
+              width: `${animPcts[i] ?? 0}%`,
+              background: 'linear-gradient(90deg, rgba(212,175,55,0.35), rgba(212,175,55,0.10))',
+              transition: `width 600ms cubic-bezier(0.22,1,0.36,1) ${i * 80}ms`,
+            }} />
+            <span className="relative px-2.5 text-[12px] font-medium text-ink z-10 truncate">{item.name}</span>
+          </div>
+          <span className="text-[12px] font-semibold font-mono text-ink-muted w-14 text-right flex-shrink-0">
+            {item.display}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── Shared: Month / Annual swipeable card ────────────────────────────────────
+
+function MonthAnnualCard({ label, monthStat, annualStat, renderMonth, renderAnnual }: {
+  label:        string
+  monthStat?:   string
+  annualStat?:  string
+  renderMonth:  (active: boolean) => React.ReactNode
+  renderAnnual: (active: boolean) => React.ReactNode
+}) {
+  const [view, setView] = useState<0 | 1>(0)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    let sx = 0, sy = 0
+    const onStart = (e: TouchEvent) => { sx = e.touches[0].clientX; sy = e.touches[0].clientY }
+    const onEnd   = (e: TouchEvent) => {
+      const dx = e.changedTouches[0].clientX - sx
+      const dy = e.changedTouches[0].clientY - sy
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        if (dx < 0 && view === 0) setView(1)
+        if (dx > 0 && view === 1) setView(0)
+      }
+    }
+    el.addEventListener('touchstart', onStart, { passive: true })
+    el.addEventListener('touchend',   onEnd,   { passive: true })
+    return () => { el.removeEventListener('touchstart', onStart); el.removeEventListener('touchend', onEnd) }
+  }, [view])
+
+  const stat = view === 0 ? monthStat : annualStat
+
+  return (
+    <div ref={ref} className="bg-bg-surface border border-white/[0.06] rounded-card p-4">
+      <div className="flex items-center gap-2 mb-4">
+        <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-gold">{label}</p>
+        <div className="flex gap-1.5 ml-auto items-center">
+          {(['Month', 'Annual'] as const).map((l, i) => (
+            <button key={l} onClick={() => setView(i as 0 | 1)}
+              className={cn('px-3 py-1 rounded-full text-[11px] font-semibold transition-colors',
+                view === i ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
+              {l}
+            </button>
+          ))}
+        </div>
+        {stat && <span className="text-[14px] font-bold font-mono text-ink ml-2">{stat}</span>}
+      </div>
+
+      <div style={{ overflow: 'hidden' }}>
+        <div style={{
+          display:    'flex',
+          width:      '200%',
+          transform:  `translateX(${view === 0 ? 0 : -50}%)`,
+          transition: 'transform 320ms cubic-bezier(0.4,0,0.2,1)',
+        }}>
+          <div style={{ width: '50%' }}>{renderMonth(view === 0)}</div>
+          <div style={{ width: '50%' }}>{renderAnnual(view === 1)}</div>
+        </div>
+      </div>
+
+      <div className="flex justify-center gap-1.5 mt-3">
+        {[0, 1].map(i => (
+          <div key={i} className="rounded-full transition-all duration-300" style={{
+            width:      view === i ? 14 : 5,
+            height:     5,
+            background: view === i ? '#D4AF37' : 'rgba(255,255,255,0.2)',
+          }} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Cashflow chart (income up / expense down) ────────────────────────────────
+
+function CashflowBars({ bars, active, sparse }: { bars: BarData[]; active: boolean; sparse?: boolean }) {
+  const [anim, setAnim] = useState(false)
+  const HALF = 72
+  const maxVal = useMemo(() => Math.max(...bars.flatMap(b => [b.income, b.expense]), 1), [bars])
+
+  const labelIdx = useMemo(() => {
     if (!sparse) return bars.map((_, i) => i)
     const last = bars.length - 1
     return [...new Set([0, 6, 13, 20, last].filter(i => i <= last))]
   }, [bars, sparse])
 
+  useEffect(() => {
+    if (!active) { setAnim(false); return }
+    const t = setTimeout(() => setAnim(true), 60)
+    return () => clearTimeout(t)
+  }, [active])
+
   return (
     <div>
       <div className="relative flex" style={{ height: HALF * 2 + 1 }}>
-        {/* Zero line */}
-        <div
-          className="absolute left-0 right-0"
-          style={{ top: HALF, height: 1, background: 'rgba(255,255,255,0.12)', zIndex: 1 }}
-        />
+        <div className="absolute left-0 right-0" style={{ top: HALF, height: 1, background: 'rgba(255,255,255,0.12)', zIndex: 1 }} />
         {bars.map((bar, i) => {
           const incH = anim ? Math.max((bar.income  / maxVal) * HALF, bar.income  > 0 ? 2 : 0) : 0
           const expH = anim ? Math.max((bar.expense / maxVal) * HALF, bar.expense > 0 ? 2 : 0) : 0
-          const delay = i * 12
+          const d    = i * 12
           return (
-            <div key={i} className="flex-1 flex flex-col" style={{ gap: 0 }}>
-              {/* Income bar — grows up from zero line */}
+            <div key={i} className="flex-1 flex flex-col">
               <div style={{ height: HALF, display: 'flex', alignItems: 'flex-end' }}>
-                <div
-                  className="w-full rounded-t-[2px]"
-                  style={{
-                    height:     incH,
-                    background: 'var(--sem-income)',
-                    transition: `height 480ms cubic-bezier(0.22,1,0.36,1) ${delay}ms`,
-                  }}
-                />
+                <div className="w-full rounded-t-[2px]" style={{ height: incH, background: 'var(--sem-income)', transition: `height 480ms cubic-bezier(0.22,1,0.36,1) ${d}ms` }} />
               </div>
-              {/* Expense bar — grows down from zero line */}
               <div style={{ height: HALF, display: 'flex', alignItems: 'flex-start' }}>
-                <div
-                  className="w-full rounded-b-[2px]"
-                  style={{
-                    height:     expH,
-                    background: '#D4AF37',
-                    opacity:    0.7,
-                    transition: `height 480ms cubic-bezier(0.22,1,0.36,1) ${delay}ms`,
-                  }}
-                />
+                <div className="w-full rounded-b-[2px]" style={{ height: expH, background: '#D4AF37', opacity: 0.7, transition: `height 480ms cubic-bezier(0.22,1,0.36,1) ${d}ms` }} />
               </div>
             </div>
           )
         })}
       </div>
-      {/* X-axis labels */}
-      <div className="flex mt-1" style={{ gap: 0 }}>
+      <div className="flex mt-1">
         {bars.map((bar, i) => (
           <div key={i} className="flex-1 text-center">
-            {labelIndices.includes(i) && (
-              <span className="text-[8px] text-ink-faint">{bar.label}</span>
-            )}
+            {labelIdx.includes(i) && <span className="text-[8px] text-ink-faint">{bar.label}</span>}
           </div>
         ))}
       </div>
@@ -92,11 +272,11 @@ function CashflowBars({ bars, active, sparse }: { bars: BarData[]; active: boole
 }
 
 function CashflowChart({ monthBars, annualBars }: { monthBars: BarData[]; annualBars: BarData[] }) {
-  const [view, setView]     = useState<0 | 1>(0)
-  const containerRef        = useRef<HTMLDivElement>(null)
+  const [view, setView] = useState<0 | 1>(0)
+  const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const el = containerRef.current
+    const el = ref.current
     if (!el) return
     let sx = 0, sy = 0
     const onStart = (e: TouchEvent) => { sx = e.touches[0].clientX; sy = e.touches[0].clientY }
@@ -114,129 +294,57 @@ function CashflowChart({ monthBars, annualBars }: { monthBars: BarData[]; annual
   }, [view])
 
   return (
-    <div ref={containerRef}>
-      {/* Header row: pills + legend */}
+    <div ref={ref} className="bg-bg-surface border border-white/[0.06] rounded-card p-4">
       <div className="flex items-center gap-2 mb-4">
-        {(['Month', 'Annual'] as const).map((label, i) => (
-          <button
-            key={label}
-            onClick={() => setView(i as 0 | 1)}
-            className={cn(
-              'px-3 py-1 rounded-full text-[11px] font-semibold transition-colors',
-              view === i ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted',
-            )}
-          >{label}</button>
-        ))}
-        <div className="flex gap-3 ml-auto items-center">
+        <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-gold">Cashflow</p>
+        <div className="flex gap-1.5 ml-auto items-center">
+          {(['Month', 'Annual'] as const).map((l, i) => (
+            <button key={l} onClick={() => setView(i as 0 | 1)}
+              className={cn('px-3 py-1 rounded-full text-[11px] font-semibold transition-colors',
+                view === i ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
+              {l}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2 ml-2 items-center">
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-full" style={{ background: 'var(--sem-income)' }} />
-            <span className="text-[9px] text-ink-faint">Income</span>
+            <span className="text-[9px] text-ink-faint">In</span>
           </div>
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-full bg-gold opacity-70" />
-            <span className="text-[9px] text-ink-faint">Spend</span>
+            <span className="text-[9px] text-ink-faint">Out</span>
           </div>
         </div>
       </div>
 
-      {/* Sliding rail */}
       <div style={{ overflow: 'hidden' }}>
-        <div
-          style={{
-            display:    'flex',
-            width:      '200%',
-            transform:  `translateX(${view === 0 ? 0 : -50}%)`,
-            transition: 'transform 320ms cubic-bezier(0.4,0,0.2,1)',
-          }}
-        >
-          <div style={{ width: '50%' }}>
-            <CashflowBars bars={monthBars} active={view === 0} sparse />
-          </div>
-          <div style={{ width: '50%' }}>
-            <CashflowBars bars={annualBars} active={view === 1} />
-          </div>
+        <div style={{ display: 'flex', width: '200%', transform: `translateX(${view === 0 ? 0 : -50}%)`, transition: 'transform 320ms cubic-bezier(0.4,0,0.2,1)' }}>
+          <div style={{ width: '50%' }}><CashflowBars bars={monthBars}  active={view === 0} sparse /></div>
+          <div style={{ width: '50%' }}><CashflowBars bars={annualBars} active={view === 1} /></div>
         </div>
       </div>
 
-      {/* Page dots */}
       <div className="flex justify-center gap-1.5 mt-3">
         {[0, 1].map(i => (
-          <div
-            key={i}
-            className="rounded-full transition-all duration-300"
-            style={{
-              width:      view === i ? 14 : 5,
-              height:     5,
-              background: view === i ? '#D4AF37' : 'rgba(255,255,255,0.2)',
-            }}
-          />
+          <div key={i} className="rounded-full transition-all duration-300" style={{
+            width: view === i ? 14 : 5, height: 5,
+            background: view === i ? '#D4AF37' : 'rgba(255,255,255,0.2)',
+          }} />
         ))}
       </div>
     </div>
   )
 }
 
-// ─── Inline: category pill bars ───────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function CategoryPills({ cats }: { cats: { name: string; total: number; pct: number }[] }) {
-  const [animPcts, setAnimPcts] = useState<number[]>(cats.map(() => 0))
-
-  useEffect(() => {
-    const timers = cats.map((_, i) =>
-      setTimeout(() => setAnimPcts(prev => {
-        const next = [...prev]; next[i] = cats[i].pct; return next
-      }), 60 + i * 90),
-    )
-    return () => timers.forEach(clearTimeout)
-  }, [cats])
-
-  return (
-    <div className="space-y-2.5">
-      {cats.map((cat, i) => {
-        const Icon = getCategoryIcon(cat.name, 'Expense')
-        return (
-          <div key={cat.name} className="flex items-center gap-2">
-            {/* Bar */}
-            <div
-              className="relative flex-1 flex items-center rounded-[8px] overflow-hidden"
-              style={{ height: 32, background: '#1C2A36' }}
-            >
-              <div
-                className="absolute inset-y-0 left-0 rounded-[8px]"
-                style={{
-                  width:      `${animPcts[i]}%`,
-                  background: 'linear-gradient(90deg, rgba(212,175,55,0.35), rgba(212,175,55,0.10))',
-                  transition: `width 600ms cubic-bezier(0.22,1,0.36,1) ${i * 80}ms`,
-                }}
-              />
-              <div className="relative flex items-center gap-2 px-2.5 z-10">
-                <Icon size={13} className="text-gold flex-shrink-0" strokeWidth={1.75} />
-                <span className="text-[12px] font-medium text-ink truncate">{cat.name}</span>
-              </div>
-            </div>
-            {/* Amount — always right of bar, never below */}
-            <span className="text-[12px] font-semibold font-mono text-ink-muted w-12 text-right flex-shrink-0">
-              {$fk(cat.total)}
-            </span>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function sectionLabel(text: string) {
-  return <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">{text}</p>
-}
-
-function StatTile({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
+function StatTile({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <div className="bg-bg-overlay rounded-[16px] p-3.5">
       <p className="text-[9px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-1">{label}</p>
-      <p className="text-[22px] font-bold text-ink leading-none" style={{ fontFamily: 'var(--font-big-shoulders)', color: color ?? 'inherit' }}>{value}</p>
-      {sub && <p className="text-[10px] text-ink-muted mt-1">{sub}</p>}
+      <p className="text-[22px] font-bold text-ink leading-none"
+        style={{ fontFamily: 'var(--font-big-shoulders)', color: color ?? 'inherit' }}>{value}</p>
     </div>
   )
 }
@@ -253,7 +361,16 @@ function Row({ label, value, sub, accent }: { label: string; value: string; sub?
   )
 }
 
-const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+function catItems(expenses: ExpRow[], filter: (e: ExpRow) => boolean): CatItem[] {
+  const map = new Map<string, number>()
+  expenses.filter(filter).forEach(e => {
+    const cat = (e.categories as { name: string } | null)?.name ?? 'Other'
+    map.set(cat, (map.get(cat) ?? 0) + e.cost)
+  })
+  const sorted = [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
+  const top1   = sorted[0]?.[1] ?? 1
+  return sorted.map(([name, total]) => ({ name, total, pct: (total / top1) * 100 }))
+}
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
@@ -261,23 +378,24 @@ export default function ProfilePage() {
   const router   = useRouter()
   const supabase = useMemo(() => createClient(), [])
 
-  // User identity
-  const [userId,        setUserId]        = useState<string | null>(null)
-  const [email,         setEmail]         = useState<string | null>(null)
-  const [googleAvatar,  setGoogleAvatar]  = useState<string | null>(null)
-  const [customAvatar,  setCustomAvatar]  = useState<string | null>(null)
-  const [displayName,   setDisplayName]   = useState<string | null>(null)
-  const [editingName,   setEditingName]   = useState(false)
-  const [nameInput,     setNameInput]     = useState('')
-  const [uploading,     setUploading]     = useState(false)
+  // User
+  const [userId,       setUserId]       = useState<string | null>(null)
+  const [email,        setEmail]        = useState<string | null>(null)
+  const [googleAvatar, setGoogleAvatar] = useState<string | null>(null)
+  const [customAvatar, setCustomAvatar] = useState<string | null>(null)
+  const [displayName,  setDisplayName]  = useState<string | null>(null)
+  const [editingName,  setEditingName]  = useState(false)
+  const [nameInput,    setNameInput]    = useState('')
+  const [uploading,    setUploading]    = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
 
-  // Raw data
-  const [expenses,   setExpenses]   = useState<ExpRow[]>([])
-  const [income,     setIncome]     = useState<IncRow[]>([])
-  const [netWorth,   setNetWorth]   = useState(0)
-  const [loading,    setLoading]    = useState(true)
+  // Data
+  const [expenses, setExpenses] = useState<ExpRow[]>([])
+  const [income,   setIncome]   = useState<IncRow[]>([])
+  const [subs,     setSubs]     = useState<SubRow[]>([])
+  const [netWorth, setNetWorth] = useState(0)
+  const [loading,  setLoading]  = useState(true)
 
   // ── Load user ──────────────────────────────────────────────────────────────
 
@@ -288,7 +406,6 @@ export default function ProfilePage() {
       setUserId(u.id)
       setEmail(u.email ?? null)
       setGoogleAvatar(u.user_metadata?.avatar_url ?? u.user_metadata?.picture ?? null)
-      // fallback name from OAuth metadata
       const metaName = u.user_metadata?.full_name ?? u.user_metadata?.name ?? null
       setDisplayName(prev => prev ?? metaName)
     })
@@ -312,19 +429,22 @@ export default function ProfilePage() {
     abortRef.current = ctrl
     const gen = ++loadGen.current
     try {
-      const [bRes, eRes, iRes] = await Promise.all([
+      const [bRes, eRes, iRes, sRes] = await Promise.all([
         supabase.from('banks').select('balance').abortSignal(ctrl.signal),
         supabase.from('expenses').select('cost, savings, date, name, categories(name)').limit(5000).abortSignal(ctrl.signal),
         supabase.from('income').select('amount, source, date, name').limit(5000).abortSignal(ctrl.signal),
+        supabase.from('subscriptions').select('name, monthly_cost, annual_cost').eq('status', 'Active').limit(200).abortSignal(ctrl.signal),
       ])
       if (gen !== loadGen.current) return
-      if (bRes.error) console.error('[Profile] banks:', bRes.error)
+      if (bRes.error) console.error('[Profile] banks:',   bRes.error)
       if (eRes.error) console.error('[Profile] expenses:', eRes.error)
-      if (iRes.error) console.error('[Profile] income:', iRes.error)
+      if (iRes.error) console.error('[Profile] income:',  iRes.error)
+      if (sRes.error) console.error('[Profile] subs:',    sRes.error)
       const banks = (bRes.data ?? []) as { balance: number }[]
       setNetWorth(banks.reduce((s, b) => s + ((b.balance as number) ?? 0), 0))
       setExpenses((eRes.data ?? []) as ExpRow[])
       setIncome((iRes.data ?? []) as IncRow[])
+      setSubs((sRes.data ?? []) as SubRow[])
       setLoading(false)
     } catch (err) {
       if ((err as Error)?.name === 'AbortError') return
@@ -338,7 +458,7 @@ export default function ProfilePage() {
     return () => { loadGen.current++; abortRef.current?.abort() }
   }, [loadData])
 
-  // ── Display name editing ───────────────────────────────────────────────────
+  // ── Name editing ───────────────────────────────────────────────────────────
 
   function startEditName() {
     setNameInput(displayName ?? '')
@@ -379,79 +499,92 @@ export default function ProfilePage() {
 
   // ── Derived analytics ──────────────────────────────────────────────────────
 
-  const now        = new Date()
-  const moKey      = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-  const lastMoDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-  const lastMoKey  = `${lastMoDate.getFullYear()}-${String(lastMoDate.getMonth() + 1).padStart(2, '0')}`
+  const now    = useMemo(() => new Date(), [])
+  const moKey  = useMemo(() =>
+    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`, [now])
+  const lmKey  = useMemo(() => {
+    const d = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  }, [now])
+  const yr12Key = useMemo(() => {
+    const d = new Date(now.getFullYear(), now.getMonth() - 11, 1)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  }, [now])
 
-  const moExpenses  = useMemo(() => expenses.filter(e => e.date.startsWith(moKey)), [expenses, moKey])
-  const moIncome    = useMemo(() => income.filter(i => i.date.startsWith(moKey)),   [income, moKey])
-  const lastMoExp   = useMemo(() => expenses.filter(e => e.date.startsWith(lastMoKey)), [expenses, lastMoKey])
+  const moExp    = useMemo(() => expenses.filter(e => e.date.startsWith(moKey)), [expenses, moKey])
+  const moInc    = useMemo(() => income.filter(i => i.date.startsWith(moKey)),   [income,   moKey])
+  const lmExp    = useMemo(() => expenses.filter(e => e.date.startsWith(lmKey)), [expenses, lmKey])
 
-  const moSpend     = useMemo(() => moExpenses.reduce((s, e) => s + e.cost,   0), [moExpenses])
-  const moIncomeAmt = useMemo(() => moIncome.reduce((s, i) => s + i.amount,   0), [moIncome])
-  const moCashflow  = moIncomeAmt - moSpend
-  const lastMoSpend = useMemo(() => lastMoExp.reduce((s, e) => s + e.cost,    0), [lastMoExp])
-  const spendTrend  = lastMoSpend > 0 ? ((moSpend - lastMoSpend) / lastMoSpend) * 100 : 0
+  const moSpend     = useMemo(() => moExp.reduce((s, e) => s + e.cost,    0), [moExp])
+  const moIncAmt    = useMemo(() => moInc.reduce((s, i) => s + i.amount,  0), [moInc])
+  const moCashflow  = moIncAmt - moSpend
+  const lmSpend     = useMemo(() => lmExp.reduce((s, e) => s + e.cost,    0), [lmExp])
+  const spendTrend  = lmSpend > 0 ? ((moSpend - lmSpend) / lmSpend) * 100 : 0
 
   const allTimeSpent   = useMemo(() => expenses.reduce((s, e) => s + e.cost,           0), [expenses])
   const allTimeSavings = useMemo(() => expenses.reduce((s, e) => s + (e.savings ?? 0), 0), [expenses])
-  const savingsRate    = moIncomeAmt > 0 ? Math.max(0, ((moIncomeAmt - moSpend) / moIncomeAmt) * 100) : 0
+  const savingsRate    = moIncAmt > 0 ? Math.max(0, ((moIncAmt - moSpend) / moIncAmt) * 100) : 0
 
-  // Average monthly spend (last 12 months of data that exist)
   const avgMonthlySpend = useMemo(() => {
     const monthly = new Map<string, number>()
-    expenses.forEach(e => {
-      const k = e.date.slice(0, 7)
-      monthly.set(k, (monthly.get(k) ?? 0) + e.cost)
-    })
+    expenses.forEach(e => { const k = e.date.slice(0, 7); monthly.set(k, (monthly.get(k) ?? 0) + e.cost) })
     if (monthly.size === 0) return 0
     return [...monthly.values()].reduce((s, v) => s + v, 0) / monthly.size
   }, [expenses])
 
-  // Top 5 categories by all-time spend
-  const topCategories = useMemo(() => {
-    const map = new Map<string, number>()
-    expenses.forEach(e => {
-      const cat = (e.categories as { name: string } | null)?.name ?? 'Other'
-      map.set(cat, (map.get(cat) ?? 0) + e.cost)
-    })
-    const sorted = [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
-    const top1   = sorted[0]?.[1] ?? 1
-    return sorted.map(([name, total]) => ({ name, total, pct: (total / top1) * 100 }))
-  }, [expenses])
-
-  // Best income source (by all-time total)
   const bestIncomeSource = useMemo(() => {
     const map = new Map<string, number>()
-    income.forEach(i => {
-      const key = i.name || i.source || 'Other'
-      map.set(key, (map.get(key) ?? 0) + i.amount)
-    })
+    income.forEach(i => { const k = i.name || i.source || 'Other'; map.set(k, (map.get(k) ?? 0) + i.amount) })
     return [...map.entries()].sort((a, b) => b[1] - a[1])[0] ?? null
   }, [income])
 
-  // Cashflow chart data
+  // ── Chart data ─────────────────────────────────────────────────────────────
+
   const monthBars = useMemo<BarData[]>(() => {
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
-    return Array.from({ length: daysInMonth }, (_, idx) => {
-      const d    = idx + 1
-      const date = `${moKey}-${String(d).padStart(2, '0')}`
+    const days = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+    return Array.from({ length: days }, (_, idx) => {
+      const date = `${moKey}-${String(idx + 1).padStart(2, '0')}`
       const inc  = income.filter(i => i.date === date).reduce((s, i) => s + i.amount, 0)
       const exp  = expenses.filter(e => e.date === date).reduce((s, e) => s + e.cost, 0)
-      return { label: String(d), income: inc, expense: exp }
+      return { label: String(idx + 1), income: inc, expense: exp }
     })
   }, [expenses, income, moKey, now])
 
-  const annualBars = useMemo<BarData[]>(() => {
-    return Array.from({ length: 12 }, (_, idx) => {
-      const date = new Date(now.getFullYear(), now.getMonth() - 11 + idx, 1)
-      const key  = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-      const inc  = income.filter(i => i.date.startsWith(key)).reduce((s, i) => s + i.amount, 0)
-      const exp  = expenses.filter(e => e.date.startsWith(key)).reduce((s, e) => s + e.cost, 0)
-      return { label: MONTH_NAMES[date.getMonth()], income: inc, expense: exp }
+  const annualBars = useMemo<BarData[]>(() =>
+    Array.from({ length: 12 }, (_, idx) => {
+      const d   = new Date(now.getFullYear(), now.getMonth() - 11 + idx, 1)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const inc = income.filter(i => i.date.startsWith(key)).reduce((s, i) => s + i.amount, 0)
+      const exp = expenses.filter(e => e.date.startsWith(key)).reduce((s, e) => s + e.cost, 0)
+      return { label: MONTH_NAMES[d.getMonth()], income: inc, expense: exp }
     })
-  }, [expenses, income, now])
+  , [expenses, income, now])
+
+  // Expenses bars
+  const moExpBars  = useMemo<SimpleBar[]>(() => monthBars.map(b => ({ label: b.label, value: b.expense })), [monthBars])
+  const annExpBars = useMemo<SimpleBar[]>(() => annualBars.map(b => ({ label: b.label, value: b.expense })), [annualBars])
+  const annExpTotal = useMemo(() => annExpBars.reduce((s, b) => s + b.value, 0), [annExpBars])
+
+  // Income bars
+  const moIncBars  = useMemo<SimpleBar[]>(() => monthBars.map(b => ({ label: b.label, value: b.income })), [monthBars])
+  const annIncBars = useMemo<SimpleBar[]>(() => annualBars.map(b => ({ label: b.label, value: b.income })), [annualBars])
+  const annIncTotal = useMemo(() => annIncBars.reduce((s, b) => s + b.value, 0), [annIncBars])
+
+  // Categories
+  const moCats  = useMemo(() => catItems(expenses, e => e.date.startsWith(moKey)),    [expenses, moKey])
+  const annCats = useMemo(() => catItems(expenses, e => e.date.slice(0,7) >= yr12Key), [expenses, yr12Key])
+
+  // Subscriptions
+  const subsSortedMo  = useMemo<PillItem[]>(() =>
+    [...subs].sort((a, b) => b.monthly_cost - a.monthly_cost)
+      .map(s => ({ name: s.name, value: s.monthly_cost, display: $fd(s.monthly_cost) }))
+  , [subs])
+  const subsSortedAnn = useMemo<PillItem[]>(() =>
+    [...subs].sort((a, b) => b.annual_cost - a.annual_cost)
+      .map(s => ({ name: s.name, value: s.annual_cost, display: $fd(s.annual_cost) }))
+  , [subs])
+  const totalSubMo  = useMemo(() => subs.reduce((s, sub) => s + sub.monthly_cost, 0), [subs])
+  const totalSubAnn = useMemo(() => subs.reduce((s, sub) => s + sub.annual_cost,  0), [subs])
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -464,34 +597,25 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-bg-base tab-enter pb-28">
 
-      {/* ── Top bar ─────────────────────────────────────────────────────────── */}
-      <div
-        className="flex items-center justify-between px-4 pb-2"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top, 44px) + 8px)' }}
-      >
-        <button
-          onClick={() => router.back()}
-          className="w-9 h-9 flex items-center justify-center rounded-full bg-bg-overlay text-ink-muted active:opacity-70"
-        >
+      {/* ── Top bar ──────────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between px-4 pb-2"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 44px) + 8px)' }}>
+        <button onClick={() => router.back()}
+          className="w-9 h-9 flex items-center justify-center rounded-full bg-bg-overlay text-ink-muted active:opacity-70">
           <ArrowLeft size={18} strokeWidth={2} />
         </button>
-        <button
-          onClick={() => router.push('/settings')}
-          className="w-9 h-9 flex items-center justify-center rounded-full bg-bg-overlay text-ink-muted active:opacity-70"
-        >
+        <button onClick={() => router.push('/settings')}
+          className="w-9 h-9 flex items-center justify-center rounded-full bg-bg-overlay text-ink-muted active:opacity-70">
           <Settings2 size={18} strokeWidth={1.75} />
         </button>
       </div>
 
-      {/* ── Avatar + identity ───────────────────────────────────────────────── */}
+      {/* ── Avatar + identity ─────────────────────────────────────────────────── */}
       <div className="flex flex-col items-center px-5 pt-4 pb-6">
         <div className="relative mb-4">
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
+          <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
             className="w-24 h-24 rounded-full overflow-hidden block active:opacity-80 transition-opacity"
-            style={{ boxShadow: '0 0 0 2.5px rgba(212,175,55,0.5)' }}
-          >
+            style={{ boxShadow: '0 0 0 2.5px rgba(212,175,55,0.5)' }}>
             {avatarSrc
               ? <img src={avatarSrc} alt="avatar" className="w-full h-full object-cover" />
               : <div className="w-full h-full gradient-gold flex items-center justify-center">
@@ -504,125 +628,123 @@ export default function ProfilePage() {
               </div>
             )}
           </button>
-          {/* Camera badge — only when no photo is set */}
           {!hasPhoto && (
-            <div
-              className="absolute bottom-0.5 right-0.5 w-7 h-7 gradient-gold rounded-full flex items-center justify-center pointer-events-none"
-              style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.4)' }}
-            >
+            <div className="absolute bottom-0.5 right-0.5 w-7 h-7 gradient-gold rounded-full flex items-center justify-center pointer-events-none"
+              style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.4)' }}>
               <Camera size={13} className="text-white" strokeWidth={2} />
             </div>
           )}
         </div>
 
-        {/* Editable display name */}
         {editingName ? (
           <div className="flex items-center gap-2 mb-1">
-            <input
-              ref={nameInputRef}
-              value={nameInput}
-              onChange={e => setNameInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') saveName() }}
-              onBlur={saveName}
+            <input ref={nameInputRef} value={nameInput} onChange={e => setNameInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') saveName() }} onBlur={saveName}
               className="bg-bg-overlay rounded-[10px] px-3 py-1.5 text-[20px] font-bold text-ink text-center outline-none border border-gold/40"
-              style={{ maxWidth: 240, colorScheme: 'dark' }}
-            />
+              style={{ maxWidth: 240, colorScheme: 'dark' }} />
             <button onClick={saveName} className="w-7 h-7 gradient-gold rounded-full flex items-center justify-center flex-shrink-0">
               <Check size={12} className="text-white" strokeWidth={2.5} />
             </button>
           </div>
         ) : (
-          <button
-            onClick={startEditName}
-            className="flex items-center gap-1.5 mb-1 group active:opacity-70"
-          >
+          <button onClick={startEditName} className="flex items-center gap-1.5 mb-1 group active:opacity-70">
             <span className="text-[22px] font-bold text-ink tracking-[-0.02em]">
               {displayName ?? 'Set your name'}
             </span>
             <Pencil size={13} className="text-ink-faint group-active:text-gold transition-colors" strokeWidth={1.75} />
           </button>
         )}
-
         {email && <p className="text-[12px] text-ink-muted">{email}</p>}
       </div>
 
-      {/* ── Stats trio ──────────────────────────────────────────────────────── */}
+      {/* ── Stats trio ───────────────────────────────────────────────────────── */}
       <div className="px-5 mb-5">
         <div className="grid grid-cols-3 gap-2">
-          <StatTile label="Net Worth"  value={$fk(netWorth)}    color="#D4AF37" />
-          <StatTile label="Mo. Spend"  value={$fk(moSpend)}     />
-          <StatTile label="Mo. Income" value={$fk(moIncomeAmt)} color="var(--sem-income)" />
+          <StatTile label="Net Worth"  value={$fk(netWorth)}  color="#D4AF37" />
+          <StatTile label="Mo. Spend"  value={$fk(moSpend)}   />
+          <StatTile label="Mo. Income" value={$fk(moIncAmt)}  color="var(--sem-income)" />
         </div>
       </div>
 
-      {/* ── Cashflow ────────────────────────────────────────────────────────── */}
+      {/* ── Cashflow ─────────────────────────────────────────────────────────── */}
       <div className="px-5 mb-5">
-        {sectionLabel('Cashflow')}
-        <div className="bg-bg-surface border border-white/[0.06] rounded-card p-4">
-          {/* Hero net number */}
+        <div className="bg-bg-surface border border-white/[0.06] rounded-card p-4 mb-3">
           <div className="flex items-baseline gap-2 mb-4">
-            <span
-              className="text-[32px] font-bold leading-none"
-              style={{ fontFamily: 'var(--font-big-shoulders)', color: moCashflow >= 0 ? 'var(--sem-income)' : '#ef4444' }}
-            >
+            <span className="text-[32px] font-bold leading-none"
+              style={{ fontFamily: 'var(--font-big-shoulders)', color: moCashflow >= 0 ? 'var(--sem-income)' : '#ef4444' }}>
               {moCashflow >= 0 ? '+' : '−'}{$f(Math.abs(moCashflow))}
             </span>
             <span className="text-[12px] text-ink-muted">this month</span>
-            {lastMoSpend > 0 && (
+            {lmSpend > 0 && (
               <span className={cn('text-[11px] font-semibold ml-auto', spendTrend > 0 ? 'text-ruby' : 'text-emerald')}>
-                {spendTrend > 0 ? '↑' : '↓'}{Math.abs(spendTrend).toFixed(0)}% spend vs last mo.
+                {spendTrend > 0 ? '↑' : '↓'}{Math.abs(spendTrend).toFixed(0)}% vs last mo.
               </span>
             )}
           </div>
-          {!loading && <CashflowChart monthBars={monthBars} annualBars={annualBars} />}
         </div>
+        {!loading && <CashflowChart monthBars={monthBars} annualBars={annualBars} />}
       </div>
 
-      {/* ── Top 5 categories ────────────────────────────────────────────────── */}
-      {topCategories.length > 0 && (
-        <div className="px-5 mb-5">
-          {sectionLabel('Top Spending Categories')}
-          <div className="bg-bg-surface border border-white/[0.06] rounded-card p-4">
-            <CategoryPills cats={topCategories} />
-          </div>
-        </div>
-      )}
-
-      {/* ── Income breakdown ────────────────────────────────────────────────── */}
+      {/* ── Expenses ─────────────────────────────────────────────────────────── */}
       <div className="px-5 mb-5">
-        {sectionLabel('Income')}
+        <MonthAnnualCard
+          label="Expenses"
+          monthStat={$f(moSpend)}
+          annualStat={$f(annExpTotal)}
+          renderMonth={active => <SimpleBars bars={moExpBars}  active={active} color="rgba(212,175,55,0.75)" sparse />}
+          renderAnnual={active => <SimpleBars bars={annExpBars} active={active} color="rgba(212,175,55,0.75)" />}
+        />
+      </div>
+
+      {/* ── Top Spending Categories ───────────────────────────────────────────── */}
+      <div className="px-5 mb-5">
+        <MonthAnnualCard
+          label="Top Categories"
+          monthStat={moCats[0]?.name}
+          annualStat={annCats[0]?.name}
+          renderMonth={active  => <CategoryPills cats={moCats}  active={active} />}
+          renderAnnual={active => <CategoryPills cats={annCats} active={active} />}
+        />
+      </div>
+
+      {/* ── Subscriptions ────────────────────────────────────────────────────── */}
+      <div className="px-5 mb-5">
+        <MonthAnnualCard
+          label="Subscriptions"
+          monthStat={`${$fd(totalSubMo)}/mo`}
+          annualStat={`${$fk(totalSubAnn)}/yr`}
+          renderMonth={active  => <CostPills items={subsSortedMo}  active={active} />}
+          renderAnnual={active => <CostPills items={subsSortedAnn} active={active} />}
+        />
+      </div>
+
+      {/* ── Income ───────────────────────────────────────────────────────────── */}
+      <div className="px-5 mb-5">
+        <MonthAnnualCard
+          label="Income"
+          monthStat={$f(moIncAmt)}
+          annualStat={$f(annIncTotal)}
+          renderMonth={active  => <SimpleBars bars={moIncBars}  active={active} color="var(--sem-income)" sparse />}
+          renderAnnual={active => <SimpleBars bars={annIncBars} active={active} color="var(--sem-income)" />}
+        />
+      </div>
+
+      {/* ── All Time ─────────────────────────────────────────────────────────── */}
+      <div className="px-5 mb-5">
+        <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">All Time</p>
         <div className="bg-bg-surface border border-white/[0.06] rounded-card px-4">
+          <Row label="Total Spent"       value={$f(allTimeSpent)}                  />
+          <Row label="Total Saved"       value={$f(allTimeSavings)} accent={allTimeSavings > 0} />
+          <Row label="Avg Monthly Spend" value={$f(avgMonthlySpend)}               />
+          <Row label="Savings Rate"      value={`${savingsRate.toFixed(0)}%`} accent={savingsRate > 20} />
           {bestIncomeSource && (
-            <Row
-              label="Top Generator"
-              value={$fk(bestIncomeSource[1])}
-              sub={bestIncomeSource[0]}
-              accent
-            />
+            <Row label="Top Income Source" value={$fk(bestIncomeSource[1])} sub={bestIncomeSource[0]} accent />
           )}
-          <Row label="This Month"   value={$f(moIncomeAmt)}      accent />
-          <Row label="Savings Rate" value={`${savingsRate.toFixed(0)}%`} accent={savingsRate > 20} />
         </div>
       </div>
 
-      {/* ── All time ────────────────────────────────────────────────────────── */}
-      <div className="px-5 mb-5">
-        {sectionLabel('All Time')}
-        <div className="bg-bg-surface border border-white/[0.06] rounded-card px-4">
-          <Row label="Total Spent"       value={$f(allTimeSpent)}     />
-          <Row label="Total Saved"       value={$f(allTimeSavings)}   accent={allTimeSavings > 0} />
-          <Row label="Avg Monthly Spend" value={$f(avgMonthlySpend)}  />
-        </div>
-      </div>
-
-      {/* ── Hidden file input ───────────────────────────────────────────────── */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={e => { const f = e.target.files?.[0]; if (f) handleAvatarFile(f); e.target.value = '' }}
-      />
+      <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
+        onChange={e => { const f = e.target.files?.[0]; if (f) handleAvatarFile(f); e.target.value = '' }} />
     </div>
   )
 }
