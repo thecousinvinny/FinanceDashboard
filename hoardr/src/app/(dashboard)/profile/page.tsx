@@ -191,17 +191,16 @@ function CategoryPills({ cats }: { cats: { name: string; total: number; pct: num
   }, [cats])
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       {cats.map((cat, i) => {
-        const Icon   = getCategoryIcon(cat.name, 'Expense')
-        const isWide = animPcts[i] > 55
+        const Icon = getCategoryIcon(cat.name, 'Expense')
         return (
-          <div key={cat.name}>
+          <div key={cat.name} className="flex items-center gap-2">
+            {/* Bar */}
             <div
-              className="relative flex items-center rounded-[8px] overflow-hidden"
+              className="relative flex-1 flex items-center rounded-[8px] overflow-hidden"
               style={{ height: 32, background: '#1C2A36' }}
             >
-              {/* Fill */}
               <div
                 className="absolute inset-y-0 left-0 rounded-[8px]"
                 style={{
@@ -210,23 +209,15 @@ function CategoryPills({ cats }: { cats: { name: string; total: number; pct: num
                   transition: `width 600ms cubic-bezier(0.22,1,0.36,1) ${i * 80}ms`,
                 }}
               />
-              {/* Content inside fill */}
               <div className="relative flex items-center gap-2 px-2.5 z-10">
                 <Icon size={13} className="text-gold flex-shrink-0" strokeWidth={1.75} />
                 <span className="text-[12px] font-medium text-ink truncate">{cat.name}</span>
               </div>
-              {/* Amount: inside (wide) or outside (narrow) */}
-              {isWide ? (
-                <span className="absolute right-2.5 text-[12px] font-semibold font-mono text-ink z-10">
-                  {$fk(cat.total)}
-                </span>
-              ) : null}
             </div>
-            {!isWide && (
-              <div className="flex justify-end mt-0.5 pr-1">
-                <span className="text-[11px] font-semibold font-mono text-ink-muted">{$fk(cat.total)}</span>
-              </div>
-            )}
+            {/* Amount — always right of bar, never below */}
+            <span className="text-[12px] font-semibold font-mono text-ink-muted w-12 text-right flex-shrink-0">
+              {$fk(cat.total)}
+            </span>
           </div>
         )
       })}
