@@ -9,7 +9,7 @@ import { getCategoryIcon } from '@/components/ui/CategoryIcon'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface ExpRow  { cost: number; savings: number; date: string; name: string; categories: { name: string }[] | null }
+interface ExpRow  { cost: number; savings: number; date: string; name: string; categories: unknown }
 interface IncRow  { amount: number; source: string | null; date: string; name: string | null }
 interface BarData { label: string; income: number; expense: number }
 
@@ -422,7 +422,7 @@ export default function ProfilePage() {
   const topCategories = useMemo(() => {
     const map = new Map<string, number>()
     expenses.forEach(e => {
-      const cat = e.categories?.[0]?.name ?? 'Other'
+      const cat = (e.categories as { name: string } | null)?.name ?? 'Other'
       map.set(cat, (map.get(cat) ?? 0) + e.cost)
     })
     const sorted = [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
