@@ -6,12 +6,9 @@ const MIN_DX  = 60
 const H_RATIO = 1.5
 
 export function usePillSwipe<T extends string>(
-  tab:       T,
-  setTab:    (v: T) => void,
-  options:   readonly T[],
-  prevRoute: string | null,
-  nextRoute: string | null,
-  router:    { push: (href: string) => void },
+  tab:     T,
+  setTab:  (v: T) => void,
+  options: readonly T[],
 ) {
   useEffect(() => {
     let start: { x: number; y: number } | null = null
@@ -40,5 +37,5 @@ export function usePillSwipe<T extends string>(
       document.removeEventListener('touchstart', onStart)
       document.removeEventListener('touchend',   onEnd)
     }
-  }, [tab, setTab, options, prevRoute, nextRoute, router])
+  }, [tab, setTab, options])
 }

@@ -65,6 +65,7 @@ export default function BottomNav() {
           <Link
             key={href}
             href={href}
+            replace
             className={cn(
               'flex flex-col items-center justify-center gap-[3px] flex-1 min-w-0 transition-colors duration-200 select-none',
               active ? 'text-gold' : 'text-ink-faint',

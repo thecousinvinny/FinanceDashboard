@@ -19,7 +19,6 @@ import { cn, $f, $fd, $fk, fmtDate, haptic, groupByMonth, localToday, daysUntilL
 import type { Frequency } from '@/components/wallet/RevenueStreamSheet'
 import { showToast } from '@/lib/toast'
 import { SlotNumber } from '@/components/ui/SlotNumber'
-import { useRouter } from 'next/navigation'
 import { usePillSwipe } from '@/hooks/usePillSwipe'
 import { getAppPrefs } from '@/lib/app-prefs'
 import { pageCache } from '@/lib/page-cache'
@@ -222,9 +221,8 @@ function StatCard({ label, value, sub, loading }: { label: string; value: number
 let sessionAutoGenDone = false
 
 export default function InPage() {
-  const router = useRouter()
   const [tab,           setTab]          = useState<Tab>('History')
-  usePillSwipe(tab, setTab, PILL_OPTIONS, '/money', '/calendar', router)
+  usePillSwipe(tab, setTab, PILL_OPTIONS)
   type InCache = { cards: Card[]; banks: Bank[]; streams: RevenueStreamConfig[] }
   const cached = pageCache.get<InCache>('in')
   const [cards,         setCards]        = useState<Card[]>(cached?.cards ?? [])
