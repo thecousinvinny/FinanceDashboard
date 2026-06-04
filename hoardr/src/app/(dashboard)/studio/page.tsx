@@ -205,7 +205,8 @@ export default function StudioPage() {
       <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
 
       {/* ── Ledger summary card ──────────────────────────────────────────── */}
-      <div className="mx-4 mt-14 bg-bg-surface border border-white/[0.06] rounded-card p-5">
+      <div style={{ height: 'calc(env(safe-area-inset-top, 44px) + 8px)' }} />
+      <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card p-5">
         <div className="flex items-start justify-between mb-2">
           <p className="text-[9px] font-medium tracking-[0.14em] uppercase text-ink-faint">
             Matte Black Ledger

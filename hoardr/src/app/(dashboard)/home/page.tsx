@@ -374,7 +374,7 @@ export default function HomePage() {
 
       <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
 
-      <div className="pt-12" />
+      <div style={{ height: 'calc(env(safe-area-inset-top, 44px) + 8px)' }} />
 
       {loading && (
         <div className="mx-4 mt-5 flex flex-col gap-3">

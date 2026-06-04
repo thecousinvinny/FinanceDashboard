@@ -184,9 +184,6 @@ function DayEventCard({ ev, dot, timeRange, amt, onDelete, onEdit }: {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-const TABS     = ['/home', '/money', '/in', '/calendar', '/studio', '/settings']
-const CAL_IDX  = TABS.indexOf('/calendar')
-const EDGE_PX  = 35
 
 export default function CalendarPage() {
   const router   = useRouter()

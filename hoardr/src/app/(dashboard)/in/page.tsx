@@ -831,7 +831,7 @@ export default function InPage() {
     <>
       <div className="min-h-screen bg-bg-base tab-enter">
         <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
-        <div className="pt-12" />
+        <div style={{ height: 'calc(env(safe-area-inset-top, 44px) + 8px)' }} />
 
         <div className="mx-4 mt-4">
           <PillGroup options={['History', 'Streams', 'Accounts'] as Tab[]} value={tab} onChange={setTab} />
