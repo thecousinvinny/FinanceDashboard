@@ -2,16 +2,15 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Coins, TrendingDown, TrendingUp, Palette, SlidersHorizontal, CalendarDays } from 'lucide-react'
+import { Coins, TrendingDown, TrendingUp, Palette, CalendarDays } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const tabs = [
-  { href: '/home',     label: 'Hoard',    Icon: Coins             },
-  { href: '/money',    label: 'Out',      Icon: TrendingDown      },
-  { href: '/in',       label: 'In',       Icon: TrendingUp        },
-  { href: '/calendar', label: 'Calendar', Icon: CalendarDays      },
-  { href: '/studio',   label: 'Studio',   Icon: Palette           },
-  { href: '/settings', label: 'Settings', Icon: SlidersHorizontal },
+  { href: '/home',     label: 'Hoard',    Icon: Coins        },
+  { href: '/money',    label: 'Out',      Icon: TrendingDown },
+  { href: '/in',       label: 'In',       Icon: TrendingUp   },
+  { href: '/calendar', label: 'Calendar', Icon: CalendarDays },
+  { href: '/studio',   label: 'Studio',   Icon: Palette      },
 ]
 
 const N       = tabs.length
