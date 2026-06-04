@@ -271,9 +271,18 @@ function CashflowBars({ bars, active, sparse }: { bars: BarData[]; active: boole
   )
 }
 
-function CashflowChart({ monthBars, annualBars }: { monthBars: BarData[]; annualBars: BarData[] }) {
-  const [view, setView] = useState<0 | 1>(0)
+function CashflowChart({ monthBars, annualBars, moInc, moSpend, cashflow, spendTrend, hasTrend }: {
+  monthBars: BarData[]; annualBars: BarData[]
+  moInc: number; moSpend: number; cashflow: number; spendTrend: number; hasTrend: boolean
+}) {
+  const [view,    setView]    = useState<0 | 1>(0)
+  const [barAnim, setBarAnim] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const t = setTimeout(() => setBarAnim(true), 80)
+    return () => clearTimeout(t)
+  }, [])
 
   useEffect(() => {
     const el = ref.current
@@ -293,11 +302,55 @@ function CashflowChart({ monthBars, annualBars }: { monthBars: BarData[]; annual
     return () => { el.removeEventListener('touchstart', onStart); el.removeEventListener('touchend', onEnd) }
   }, [view])
 
+  const maxBar = Math.max(moInc, moSpend, 1)
+  const incPct = barAnim ? (moInc   / maxBar) * 100 : 0
+  const expPct = barAnim ? (moSpend / maxBar) * 100 : 0
+
   return (
     <div ref={ref} className="bg-bg-surface border border-white/[0.06] rounded-card p-4">
+
+      {/* ── Horizontal comparison bars ─────────────────────────────────────── */}
+      <div className="space-y-2 mb-4">
+        {[
+          { label: 'Income',   pct: incPct, value: moInc,   color: 'linear-gradient(90deg, rgba(34,197,94,0.4), rgba(34,197,94,0.12))',     labelColor: '#22c55e' },
+          { label: 'Spending', pct: expPct, value: moSpend, color: 'linear-gradient(90deg, rgba(212,175,55,0.4), rgba(212,175,55,0.12))', labelColor: '#D4AF37' },
+        ].map(row => (
+          <div key={row.label} className="flex items-center gap-3">
+            <div className="relative flex-1 flex items-center rounded-[8px] overflow-hidden"
+              style={{ height: 34, background: '#1C2A36' }}>
+              <div className="absolute inset-y-0 left-0 rounded-[8px]"
+                style={{ width: `${row.pct}%`, background: row.color, transition: 'width 600ms cubic-bezier(0.22,1,0.36,1)' }} />
+              <span className="relative px-3 text-[12px] font-medium z-10"
+                style={{ color: row.labelColor }}>{row.label}</span>
+            </div>
+            <span className="text-[14px] font-bold font-mono text-ink w-20 text-right flex-shrink-0">
+              {$f(row.value)}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Net + trend ────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between mb-4 pb-4 border-b border-white/[0.06]">
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-[24px] font-bold" style={{
+            fontFamily: 'var(--font-big-shoulders)',
+            color: cashflow >= 0 ? 'var(--sem-income)' : '#ef4444',
+          }}>
+            {cashflow >= 0 ? '+' : '−'}{$f(Math.abs(cashflow))}
+          </span>
+          <span className="text-[11px] text-ink-muted">net</span>
+        </div>
+        {hasTrend && (
+          <span className={cn('text-[11px] font-semibold', spendTrend > 0 ? 'text-ruby' : 'text-emerald')}>
+            {spendTrend > 0 ? '↑' : '↓'}{Math.abs(spendTrend).toFixed(0)}% spend vs last mo.
+          </span>
+        )}
+      </div>
+
+      {/* ── Chart ──────────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-2 mb-4">
-        <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-gold">Cashflow</p>
-        <div className="flex gap-1.5 ml-auto items-center">
+        <div className="flex gap-1.5">
           {(['Month', 'Annual'] as const).map((l, i) => (
             <button key={l} onClick={() => setView(i as 0 | 1)}
               className={cn('px-3 py-1 rounded-full text-[11px] font-semibold transition-colors',
@@ -306,15 +359,13 @@ function CashflowChart({ monthBars, annualBars }: { monthBars: BarData[]; annual
             </button>
           ))}
         </div>
-        <div className="flex gap-2 ml-2 items-center">
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full" style={{ background: 'var(--sem-income)' }} />
-            <span className="text-[9px] text-ink-faint">In</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-gold opacity-70" />
-            <span className="text-[9px] text-ink-faint">Out</span>
-          </div>
+        <div className="flex gap-3 ml-auto items-center">
+          {[{ color: 'var(--sem-income)', label: 'In' }, { color: '#D4AF37', label: 'Out' }].map(l => (
+            <div key={l.label} className="flex items-center gap-1">
+              <div className="w-2 h-2 rounded-full opacity-70" style={{ background: l.color }} />
+              <span className="text-[9px] text-ink-faint">{l.label}</span>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -667,23 +718,15 @@ export default function ProfilePage() {
       </div>
 
       {/* ── Cashflow ─────────────────────────────────────────────────────────── */}
-      <div className="px-5 mb-5">
-        <div className="bg-bg-surface border border-white/[0.06] rounded-card p-4 mb-3">
-          <div className="flex items-baseline gap-2 mb-4">
-            <span className="text-[32px] font-bold leading-none"
-              style={{ fontFamily: 'var(--font-big-shoulders)', color: moCashflow >= 0 ? 'var(--sem-income)' : '#ef4444' }}>
-              {moCashflow >= 0 ? '+' : '−'}{$f(Math.abs(moCashflow))}
-            </span>
-            <span className="text-[12px] text-ink-muted">this month</span>
-            {lmSpend > 0 && (
-              <span className={cn('text-[11px] font-semibold ml-auto', spendTrend > 0 ? 'text-ruby' : 'text-emerald')}>
-                {spendTrend > 0 ? '↑' : '↓'}{Math.abs(spendTrend).toFixed(0)}% vs last mo.
-              </span>
-            )}
-          </div>
+      {!loading && (
+        <div className="px-5 mb-5">
+          <CashflowChart
+            monthBars={monthBars} annualBars={annualBars}
+            moInc={moIncAmt} moSpend={moSpend}
+            cashflow={moCashflow} spendTrend={spendTrend} hasTrend={lmSpend > 0}
+          />
         </div>
-        {!loading && <CashflowChart monthBars={monthBars} annualBars={annualBars} />}
-      </div>
+      )}
 
       {/* ── Expenses ─────────────────────────────────────────────────────────── */}
       <div className="px-5 mb-5">
