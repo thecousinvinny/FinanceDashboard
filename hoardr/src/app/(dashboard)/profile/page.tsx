@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Camera, Check, Settings2, Pencil } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { cn, $f, $fk, $fd } from '@/lib/utils'
+import { cn, $f, $fk, $fd, haptic } from '@/lib/utils'
 import { getCategoryIcon } from '@/components/ui/CategoryIcon'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -223,10 +223,100 @@ function MonthAnnualCard({ label, monthStat, annualStat, renderMonth, renderAnnu
 
 // ─── Mirrored sparklines — income up, spending down, shared center axis ───────
 
-function MirroredSparklines({ bars, iId, eId }: { bars: BarData[]; iId: string; eId: string }) {
-  const W = 300, H = 140, CY = 70, AMP = 58, PX = 2
-  if (bars.length < 2) return <div style={{ height: H }} />
+type GestureMode = 'undecided' | 'swiping' | 'scrubbing'
 
+function MirroredSparklines({ bars, iId, eId, gestureMode, active }: {
+  bars:        BarData[]
+  iId:         string
+  eId:         string
+  gestureMode: { current: GestureMode }
+  active:      boolean
+}) {
+  const W = 300, H = 140, CY = 70, AMP = 58, PX = 2
+
+  const [scrubIdx, setScrubIdx] = useState<number | null>(null)
+
+  // Mirror mutable values into refs so closures in the native-listener effect are stable
+  const containerRef = useRef<HTMLDivElement>(null)
+  const barsRef      = useRef(bars)
+  const activeRef    = useRef(active)
+  const timerRef     = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const startRef     = useRef<{ x: number; y: number } | null>(null)
+  const scrubIdxRef  = useRef<number | null>(null)
+
+  useEffect(() => { barsRef.current  = bars   }, [bars])
+  useEffect(() => { activeRef.current = active }, [active])
+
+  // Native listeners — empty deps so passive:false works
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+
+    function getIdx(clientX: number) {
+      const rect  = el!.getBoundingClientRect()
+      const rel   = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+      return Math.round(rel * (barsRef.current.length - 1))
+    }
+
+    function onStart(e: TouchEvent) {
+      if (!activeRef.current) return
+      const t = e.touches[0]
+      startRef.current = { x: t.clientX, y: t.clientY }
+      timerRef.current = setTimeout(() => {
+        if (gestureMode.current !== 'undecided') return
+        gestureMode.current = 'scrubbing'
+        haptic('tap')
+        const idx = getIdx(t.clientX)
+        scrubIdxRef.current = idx
+        setScrubIdx(idx)
+      }, 300)
+    }
+
+    function onMove(e: TouchEvent) {
+      const start = startRef.current
+      if (!start) return
+      const t  = e.touches[0]
+      const dx = t.clientX - start.x
+      const dy = t.clientY - start.y
+
+      if (gestureMode.current === 'scrubbing') {
+        e.preventDefault()
+        const idx = getIdx(t.clientX)
+        if (idx !== scrubIdxRef.current) { scrubIdxRef.current = idx; setScrubIdx(idx) }
+        return
+      }
+
+      // Cancel long-press timer if finger moved too much
+      if (timerRef.current && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+        clearTimeout(timerRef.current)
+        timerRef.current = null
+      }
+    }
+
+    function onEnd() {
+      if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null }
+      startRef.current = null
+      if (gestureMode.current === 'scrubbing') {
+        gestureMode.current = 'undecided'
+        scrubIdxRef.current = null
+        setScrubIdx(null)
+      }
+    }
+
+    el.addEventListener('touchstart',  onStart, { passive: true  })
+    el.addEventListener('touchmove',   onMove,  { passive: false })
+    el.addEventListener('touchend',    onEnd,   { passive: true  })
+    el.addEventListener('touchcancel', onEnd,   { passive: true  })
+    return () => {
+      el.removeEventListener('touchstart',  onStart)
+      el.removeEventListener('touchmove',   onMove)
+      el.removeEventListener('touchend',    onEnd)
+      el.removeEventListener('touchcancel', onEnd)
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [gestureMode]) // gestureMode is a stable ref object
+
+  if (bars.length < 2) return <div style={{ height: H }} />
   const maxVal = Math.max(...bars.flatMap(b => [b.income, b.expense]), 1)
 
   function makePts(vals: number[], dir: 1 | -1) {
@@ -235,58 +325,108 @@ function MirroredSparklines({ bars, iId, eId }: { bars: BarData[]; iId: string; 
       y: CY + dir * (v / maxVal) * AMP,
     }))
   }
-
   function smooth(pts: { x: number; y: number }[]) {
     let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`
     for (let i = 1; i < pts.length; i++) {
       const cx = ((pts[i - 1].x + pts[i].x) / 2).toFixed(1)
-      d += ` C ${cx} ${pts[i - 1].y.toFixed(1)} ${cx} ${pts[i].y.toFixed(1)} ${pts[i].x.toFixed(1)} ${pts[i].y.toFixed(1)}`
+      d += ` C ${cx} ${pts[i-1].y.toFixed(1)} ${cx} ${pts[i].y.toFixed(1)} ${pts[i].x.toFixed(1)} ${pts[i].y.toFixed(1)}`
     }
     return d
   }
 
-  const incPts = makePts(bars.map(b => b.income),  -1)
-  const expPts = makePts(bars.map(b => b.expense),   1)
+  const incPts  = makePts(bars.map(b => b.income),  -1)
+  const expPts  = makePts(bars.map(b => b.expense),   1)
   const incLine = smooth(incPts)
   const expLine = smooth(expPts)
-  const incFill = `${incLine} L ${incPts[incPts.length - 1].x} ${CY} L ${incPts[0].x} ${CY} Z`
-  const expFill = `${expLine} L ${expPts[expPts.length - 1].x} ${CY} L ${expPts[0].x} ${CY} Z`
+  const incFill = `${incLine} L ${incPts[incPts.length-1].x} ${CY} L ${incPts[0].x} ${CY} Z`
+  const expFill = `${expLine} L ${expPts[expPts.length-1].x} ${CY} L ${expPts[0].x} ${CY} Z`
+
+  // Scrub overlay values
+  const sx      = scrubIdx !== null ? PX + (scrubIdx / (bars.length - 1)) * (W - PX * 2) : null
+  const incY    = scrubIdx !== null ? CY - (bars[scrubIdx].income  / maxVal) * AMP : null
+  const expY    = scrubIdx !== null ? CY + (bars[scrubIdx].expense / maxVal) * AMP : null
+  const leftPct = scrubIdx !== null ? (scrubIdx / (bars.length - 1)) * 100 : 0
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none"
-      style={{ width: '100%', height: H, display: 'block' }}>
-      <defs>
-        <linearGradient id={iId} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2={CY}>
-          <stop offset="0%"   stopColor="#22c55e" stopOpacity="0.32" />
-          <stop offset="100%" stopColor="#22c55e" stopOpacity="0.02" />
-        </linearGradient>
-        <linearGradient id={eId} gradientUnits="userSpaceOnUse" x1="0" y1={CY} x2="0" y2={H}>
-          <stop offset="0%"   stopColor="#D4AF37" stopOpacity="0.02" />
-          <stop offset="100%" stopColor="#D4AF37" stopOpacity="0.32" />
-        </linearGradient>
-      </defs>
-      {/* Income — curves up */}
-      <path d={incFill} fill={`url(#${iId})`} />
-      <path d={incLine} fill="none" stroke="#22c55e" strokeWidth="1.75" strokeLinecap="round" />
-      {/* Shared center axis */}
-      <line x1={PX} y1={CY} x2={W - PX} y2={CY} stroke="rgba(255,255,255,0.14)" strokeWidth="1" />
-      {/* Spending — mirrors down */}
-      <path d={expFill} fill={`url(#${eId})`} />
-      <path d={expLine} fill="none" stroke="#D4AF37" strokeWidth="1.75" strokeLinecap="round" />
-    </svg>
+    <div
+      ref={containerRef}
+      className="relative select-none"
+      style={{ WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
+    >
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none"
+        style={{ width: '100%', height: H, display: 'block' }}>
+        <defs>
+          <linearGradient id={iId} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2={CY}>
+            <stop offset="0%"   stopColor="#22c55e" stopOpacity="0.32" />
+            <stop offset="100%" stopColor="#22c55e" stopOpacity="0.02" />
+          </linearGradient>
+          <linearGradient id={eId} gradientUnits="userSpaceOnUse" x1="0" y1={CY} x2="0" y2={H}>
+            <stop offset="0%"   stopColor="#D4AF37" stopOpacity="0.02" />
+            <stop offset="100%" stopColor="#D4AF37" stopOpacity="0.32" />
+          </linearGradient>
+        </defs>
+
+        <path d={incFill} fill={`url(#${iId})`} />
+        <path d={incLine} fill="none" stroke="#22c55e" strokeWidth="1.75" strokeLinecap="round" />
+        <line x1={PX} y1={CY} x2={W - PX} y2={CY} stroke="rgba(255,255,255,0.14)" strokeWidth="1" />
+        <path d={expFill} fill={`url(#${eId})`} />
+        <path d={expLine} fill="none" stroke="#D4AF37" strokeWidth="1.75" strokeLinecap="round" />
+
+        {/* Scrub cursor */}
+        {sx !== null && incY !== null && expY !== null && (
+          <>
+            <line x1={sx} y1={0} x2={sx} y2={H}
+              stroke="rgba(255,255,255,0.3)" strokeWidth="1" strokeDasharray="3 3" />
+            <circle cx={sx} cy={incY} r={3.5} fill="#22c55e" />
+            <circle cx={sx} cy={expY} r={3.5} fill="#D4AF37" />
+          </>
+        )}
+      </svg>
+
+      {/* Scrub callout */}
+      {scrubIdx !== null && (
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            top: 6,
+            ...(leftPct > 55
+              ? { right: `calc(${100 - leftPct}% + 10px)` }
+              : { left:  `calc(${leftPct}% + 10px)` }),
+          }}
+        >
+          <div className="rounded-[10px] px-2.5 py-2 space-y-0.5"
+            style={{ background: 'var(--color-bg-overlay, #1c1c2a)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
+            <p className="text-[9px] text-ink-faint mb-1">{bars[scrubIdx].label}</p>
+            <p className="text-[12px] font-bold font-mono" style={{ color: '#22c55e' }}>
+              +{$f(bars[scrubIdx].income)}
+            </p>
+            <p className="text-[12px] font-bold font-mono" style={{ color: '#D4AF37' }}>
+              −{$f(bars[scrubIdx].expense)}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
 function CashflowChart({ monthBars, annualBars }: { monthBars: BarData[]; annualBars: BarData[] }) {
-  const [view, setView] = useState<0 | 1>(0)
-  const ref = useRef<HTMLDivElement>(null)
+  const [view, setView]   = useState<0 | 1>(0)
+  const ref               = useRef<HTMLDivElement>(null)
+  const gestureMode       = useRef<GestureMode>('undecided')
 
   useEffect(() => {
     const el = ref.current
     if (!el) return
     let sx = 0, sy = 0
-    const onStart = (e: TouchEvent) => { sx = e.touches[0].clientX; sy = e.touches[0].clientY }
-    const onEnd   = (e: TouchEvent) => {
+
+    const onStart = (e: TouchEvent) => {
+      gestureMode.current = 'undecided'
+      sx = e.touches[0].clientX
+      sy = e.touches[0].clientY
+    }
+    const onEnd = (e: TouchEvent) => {
+      if (gestureMode.current === 'scrubbing') return // scrub takes priority
       const dx = e.changedTouches[0].clientX - sx
       const dy = e.changedTouches[0].clientY - sy
       if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) {
@@ -322,19 +462,18 @@ function CashflowChart({ monthBars, annualBars }: { monthBars: BarData[]; annual
         </div>
       </div>
 
-      {/* Sliding rail */}
+      {/* Sliding rail — gestureMode shared so scrub & swipe coordinate */}
       <div style={{ overflow: 'hidden' }}>
         <div style={{ display: 'flex', width: '200%', transform: `translateX(${view === 0 ? 0 : -50}%)`, transition: 'transform 320ms cubic-bezier(0.4,0,0.2,1)' }}>
           <div style={{ width: '50%' }}>
-            <MirroredSparklines bars={monthBars}  iId="cf-i-mo"  eId="cf-e-mo"  />
+            <MirroredSparklines bars={monthBars}  iId="cf-i-mo"  eId="cf-e-mo"  gestureMode={gestureMode} active={view === 0} />
           </div>
           <div style={{ width: '50%' }}>
-            <MirroredSparklines bars={annualBars} iId="cf-i-ann" eId="cf-e-ann" />
+            <MirroredSparklines bars={annualBars} iId="cf-i-ann" eId="cf-e-ann" gestureMode={gestureMode} active={view === 1} />
           </div>
         </div>
       </div>
 
-      {/* Page dots */}
       <div className="flex justify-center gap-1.5 mt-3">
         {[0, 1].map(i => (
           <div key={i} className="rounded-full transition-all duration-300" style={{
