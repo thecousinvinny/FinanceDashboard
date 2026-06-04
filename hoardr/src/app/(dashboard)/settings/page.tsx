@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, ChevronRight, CreditCard, LogOut, CalendarDays, Tag, Settings2, Palette } from 'lucide-react'
+import { ArrowLeft, Check, ChevronRight, CreditCard, LogOut, CalendarDays, Tag, Settings2, Palette } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { type Theme, THEMES, applyTheme, readTheme } from '@/lib/theme'
@@ -129,8 +129,14 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-bg-base tab-enter pb-28">
 
       {/* Header */}
-      <div className="px-5 pb-6" style={{ paddingTop: 'calc(env(safe-area-inset-top, 44px) + 16px)' }}>
-        <h1 className="text-[28px] font-medium tracking-[-0.02em] text-ink">Settings</h1>
+      <div className="flex items-center gap-3 px-4 pb-4" style={{ paddingTop: 'calc(env(safe-area-inset-top, 44px) + 8px)' }}>
+        <button
+          onClick={() => router.back()}
+          className="w-9 h-9 flex items-center justify-center rounded-full bg-bg-overlay text-ink-muted active:opacity-70"
+        >
+          <ArrowLeft size={18} strokeWidth={2} />
+        </button>
+        <h1 className="text-[22px] font-bold tracking-[-0.02em] text-ink">Settings</h1>
       </div>
 
       {/* ── Accounts ───────────────────────────────────────────────────────── */}
