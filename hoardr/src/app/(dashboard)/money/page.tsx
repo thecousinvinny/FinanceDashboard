@@ -144,8 +144,10 @@ const PILL_OPTIONS: Tab[] = ['Expenses', 'Subs', 'Wishlist']
 export default function OutPage() {
   const [tab,           setTab]          = useState<Tab>('Expenses')
   const [expandedSubCat, setExpandedSubCat] = useState<string | null>(null)
+  const [subStatCard, setSubStatCard]    = useState<'month' | 'year'>('month')
   usePillSwipe(tab, setTab, PILL_OPTIONS)
-  useEffect(() => { setExpandedSubCat(null) }, [tab])
+  useEffect(() => { setExpandedSubCat(null); setSubStatCard('month') }, [tab])
+  useEffect(() => { setExpandedSubCat(null) }, [subStatCard])
 
   // Expenses
   const cachedTx = pageCache.get<SeedTx[]>('out')
@@ -596,6 +598,38 @@ export default function OutPage() {
     }
   }, [subNames, subExps])
 
+  const subNameCatMap = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const s of activeSubs) map.set(s.name.toLowerCase(), s.category ?? 'Subscriptions')
+    return map
+  }, [activeSubs])
+
+  const paidMonthCatBreakdown = useMemo(() => {
+    const now = new Date()
+    const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+    const totals: Record<string, number> = {}
+    for (const e of subExps) {
+      if (!subNames.has(e.name.toLowerCase()) || e.date < monthStart) continue
+      const cat = subNameCatMap.get(e.name.toLowerCase()) ?? 'Subscriptions'
+      totals[cat] = (totals[cat] ?? 0) + e.cost
+    }
+    const entries = Object.entries(totals).sort((a, b) => b[1] - a[1])
+    const top = entries[0]?.[1] ?? 1
+    return entries.map(([name, total]) => ({ name, total, pct: Math.round(total / top * 100) }))
+  }, [subExps, subNames, subNameCatMap])
+
+  const paidYearCatBreakdown = useMemo(() => {
+    const totals: Record<string, number> = {}
+    for (const e of subExps) {
+      if (!subNames.has(e.name.toLowerCase())) continue
+      const cat = subNameCatMap.get(e.name.toLowerCase()) ?? 'Subscriptions'
+      totals[cat] = (totals[cat] ?? 0) + e.cost
+    }
+    const entries = Object.entries(totals).sort((a, b) => b[1] - a[1])
+    const top = entries[0]?.[1] ?? 1
+    return entries.map(([name, total]) => ({ name, total, pct: Math.round(total / top * 100) }))
+  }, [subExps, subNames, subNameCatMap])
+
   const wishStats = useMemo(() => {
     const total = interestedWish.reduce((s, w) => s + (w.original_cost ?? 0), 0)
     const saved = wishlist.filter(w => w.status === 'Purchased').reduce((s, w) => {
@@ -684,26 +718,34 @@ export default function OutPage() {
       )}
       {!loading && tab === 'Subs' && (
         <div className="mx-4 mt-4 flex gap-2">
-          <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
+          <button
+            onClick={() => setSubStatCard('month')}
+            className={cn('flex-1 bg-bg-surface border rounded-[22px] p-4 text-left transition-colors select-none',
+              subStatCard === 'month' ? 'border-gold/40' : 'border-white/[0.06]')}
+          >
             <div className="flex items-center justify-between mb-3">
-              <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Per Month</p>
+              <p className={cn('text-[10px] font-semibold tracking-[0.1em] uppercase', subStatCard === 'month' ? 'text-gold' : 'text-ink-muted')}>This Month</p>
               <span className="text-[13px] text-gold">↻</span>
             </div>
             <p className="text-[26px] font-bold tracking-tight text-ink" style={{ fontFamily: 'var(--font-big-shoulders)' }}>
               <SlotNumber value={paidTotals.monthly} format={$fc} />
             </p>
             <p className="text-[11px] font-mono text-ink-faint mt-1">/ <SlotNumber value={subTotals.monthly} format={$fc} /></p>
-          </div>
-          <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
+          </button>
+          <button
+            onClick={() => setSubStatCard('year')}
+            className={cn('flex-1 bg-bg-surface border rounded-[22px] p-4 text-left transition-colors select-none',
+              subStatCard === 'year' ? 'border-gold/40' : 'border-white/[0.06]')}
+          >
             <div className="flex items-center justify-between mb-3">
-              <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Per Year</p>
+              <p className={cn('text-[10px] font-semibold tracking-[0.1em] uppercase', subStatCard === 'year' ? 'text-gold' : 'text-ink-muted')}>This Year</p>
               <span className="text-[13px] text-emerald">∞</span>
             </div>
             <p className="text-[26px] font-bold tracking-tight text-ink" style={{ fontFamily: 'var(--font-big-shoulders)' }}>
               <SlotNumber value={paidTotals.annual} format={$fc} />
             </p>
             <p className="text-[11px] font-mono text-ink-faint mt-1">/ <SlotNumber value={subTotals.annual} format={$fc} /></p>
-          </div>
+          </button>
         </div>
       )}
       {!loading && tab === 'Wishlist' && (
@@ -740,48 +782,72 @@ export default function OutPage() {
           </div>
         </div>
       )}
-      {!loading && tab === 'Subs' && subCatBreakdown.length > 0 && (
-        <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card px-4 py-3">
-          <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Per Month by Category</p>
-          <div className="space-y-2">
-            {subCatBreakdown.map((cat, i) => {
-              const isOpen  = expandedSubCat === cat.name
-              const catSubs = activeSubs.filter(s => (s.category ?? 'Subscriptions') === cat.name)
-              return (
-                <div key={cat.name}>
-                  <CategoryPillBar
-                    cat={cat}
-                    index={i}
-                    onClick={() => setExpandedSubCat(isOpen ? null : cat.name)}
-                    isExpanded={isOpen}
-                  />
-                  <div style={{
-                    overflow: 'hidden',
-                    maxHeight: isOpen ? `${catSubs.length * 52 + 4}px` : 0,
-                    opacity: isOpen ? 1 : 0,
-                    transition: 'max-height 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease',
-                  }}>
-                    <div className="pt-1 divide-y divide-white/[0.04]">
-                      {catSubs.map(sub => (
-                        <div key={sub.id} className="flex items-center gap-3 py-2.5 px-1">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[13px] font-medium text-ink truncate">{sub.name}</p>
-                            <p className="text-[10px] text-ink-faint font-mono">{$fd(sub.cost)}{billingShort(sub.billing)}</p>
+      {!loading && tab === 'Subs' && (() => {
+        const breakdown = subStatCard === 'month' ? paidMonthCatBreakdown : paidYearCatBreakdown
+        if (breakdown.length === 0) return null
+        const now = new Date()
+        const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+        return (
+          <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card px-4 py-3">
+            <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">
+              {subStatCard === 'month' ? 'Paid This Month by Category' : 'Paid This Year by Category'}
+            </p>
+            <div className="space-y-2">
+              {breakdown.map((cat, i) => {
+                const isOpen = expandedSubCat === cat.name
+
+                type DrillItem = { key: string; name: string; amount: number; meta: string }
+                let drillItems: DrillItem[]
+                if (subStatCard === 'month') {
+                  drillItems = subExps
+                    .filter(e => subNames.has(e.name.toLowerCase()) && e.date >= monthStart && (subNameCatMap.get(e.name.toLowerCase()) ?? 'Subscriptions') === cat.name)
+                    .map(e => ({ key: `${e.name}-${e.date}`, name: e.name, amount: e.cost, meta: fmtDate(e.date) }))
+                } else {
+                  const byName = new Map<string, { total: number; count: number }>()
+                  for (const e of subExps) {
+                    if (!subNames.has(e.name.toLowerCase())) continue
+                    if ((subNameCatMap.get(e.name.toLowerCase()) ?? 'Subscriptions') !== cat.name) continue
+                    const cur = byName.get(e.name) ?? { total: 0, count: 0 }
+                    byName.set(e.name, { total: cur.total + e.cost, count: cur.count + 1 })
+                  }
+                  drillItems = [...byName.entries()]
+                    .sort((a, b) => b[1].total - a[1].total)
+                    .map(([name, { total, count }]) => ({ key: name, name, amount: total, meta: `${count}×` }))
+                }
+
+                return (
+                  <div key={cat.name}>
+                    <CategoryPillBar
+                      cat={cat}
+                      index={i}
+                      onClick={() => setExpandedSubCat(isOpen ? null : cat.name)}
+                      isExpanded={isOpen}
+                    />
+                    <div style={{
+                      overflow: 'hidden',
+                      maxHeight: isOpen ? `${drillItems.length * 48 + 4}px` : 0,
+                      opacity: isOpen ? 1 : 0,
+                      transition: 'max-height 300ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease',
+                    }}>
+                      <div className="pt-1 divide-y divide-white/[0.04]">
+                        {drillItems.map(item => (
+                          <div key={item.key} className="flex items-center py-2.5 px-1">
+                            <p className="flex-1 text-[13px] font-medium text-ink truncate">{item.name}</p>
+                            <div className="text-right flex-shrink-0">
+                              <p className="text-[12px] font-semibold font-mono text-gold">{$fd(item.amount)}</p>
+                              <p className="text-[10px] font-mono text-ink-faint">{item.meta}</p>
+                            </div>
                           </div>
-                          <div className="text-right flex-shrink-0">
-                            <p className="text-[12px] font-semibold font-mono text-gold">{$fd(sub.monthly_cost)}<span className="text-ink-faint text-[10px]">/mo</span></p>
-                            <p className="text-[10px] font-mono text-ink-faint">{$fd(sub.annual_cost)}/yr</p>
-                          </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
       {!loading && tab === 'Wishlist' && wishCatBreakdown.length > 0 && (
         <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card px-4 py-3">
           <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Wish List by Category</p>
