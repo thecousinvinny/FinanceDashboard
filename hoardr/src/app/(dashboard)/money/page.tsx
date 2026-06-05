@@ -27,10 +27,12 @@ import { GlobalFAB } from '@/components/ui/GlobalFAB'
 
 type Tab = 'Expenses' | 'Subs' | 'Wishlist'
 
-function CategoryPillBar({ cat, index, isSub = false }: {
+function CategoryPillBar({ cat, index, isSub = false, onClick, isExpanded = false }: {
   cat:   { name: string; total: number; pct: number }
   index: number
   isSub?: boolean
+  onClick?: () => void
+  isExpanded?: boolean
 }) {
   const [animPct, setAnimPct] = useState(0)
 
@@ -42,7 +44,7 @@ function CategoryPillBar({ cat, index, isSub = false }: {
 
   const amountColor = cat.pct > 70 ? '#C9A84C' : '#556070'
 
-  return (
+  const inner = (
     <div style={{ position: 'relative', height: 32, borderRadius: 8, background: '#1C1F22' }}>
       {/* Fill — slides behind content, no overflow or flex */}
       <div style={{
@@ -70,12 +72,31 @@ function CategoryPillBar({ cat, index, isSub = false }: {
             {cat.name}
           </span>
         </div>
-        <span style={{ fontSize: 11, color: amountColor, flexShrink: 0, fontFamily: 'var(--font-big-shoulders)' }}>
-          {$fd(cat.total)}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <span style={{ fontSize: 11, color: amountColor, fontFamily: 'var(--font-big-shoulders)' }}>
+            {$fd(cat.total)}
+          </span>
+          {onClick && (
+            <span style={{
+              fontSize: 12, color: '#45455a',
+              transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+              transition: 'transform 200ms ease',
+              display: 'inline-block', lineHeight: 1,
+            }}>›</span>
+          )}
+        </div>
       </div>
     </div>
   )
+
+  if (onClick) {
+    return (
+      <button onClick={onClick} className="w-full text-left select-none" style={{ WebkitUserSelect: 'none' }}>
+        {inner}
+      </button>
+    )
+  }
+  return inner
 }
 
 const LIMIT = 100
@@ -122,7 +143,9 @@ const PILL_OPTIONS: Tab[] = ['Expenses', 'Subs', 'Wishlist']
 
 export default function OutPage() {
   const [tab,           setTab]          = useState<Tab>('Expenses')
+  const [expandedSubCat, setExpandedSubCat] = useState<string | null>(null)
   usePillSwipe(tab, setTab, PILL_OPTIONS)
+  useEffect(() => { setExpandedSubCat(null) }, [tab])
 
   // Expenses
   const cachedTx = pageCache.get<SeedTx[]>('out')
@@ -721,9 +744,41 @@ export default function OutPage() {
         <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card px-4 py-3">
           <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Per Month by Category</p>
           <div className="space-y-2">
-            {subCatBreakdown.map((cat, i) => (
-              <CategoryPillBar key={cat.name} cat={cat} index={i} />
-            ))}
+            {subCatBreakdown.map((cat, i) => {
+              const isOpen  = expandedSubCat === cat.name
+              const catSubs = activeSubs.filter(s => (s.category ?? 'Subscriptions') === cat.name)
+              return (
+                <div key={cat.name}>
+                  <CategoryPillBar
+                    cat={cat}
+                    index={i}
+                    onClick={() => setExpandedSubCat(isOpen ? null : cat.name)}
+                    isExpanded={isOpen}
+                  />
+                  <div style={{
+                    overflow: 'hidden',
+                    maxHeight: isOpen ? `${catSubs.length * 52 + 4}px` : 0,
+                    opacity: isOpen ? 1 : 0,
+                    transition: 'max-height 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease',
+                  }}>
+                    <div className="pt-1 divide-y divide-white/[0.04]">
+                      {catSubs.map(sub => (
+                        <div key={sub.id} className="flex items-center gap-3 py-2.5 px-1">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-medium text-ink truncate">{sub.name}</p>
+                            <p className="text-[10px] text-ink-faint font-mono">{$fd(sub.cost)}{billingShort(sub.billing)}</p>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-[12px] font-semibold font-mono text-gold">{$fd(sub.monthly_cost)}<span className="text-ink-faint text-[10px]">/mo</span></p>
+                            <p className="text-[10px] font-mono text-ink-faint">{$fd(sub.annual_cost)}/yr</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
