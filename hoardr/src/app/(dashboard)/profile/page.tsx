@@ -362,7 +362,7 @@ function HeroSplitBarChart({ monthly, annual }: {
         ctx.fill()
       }
 
-      // Expense bar: base (gold) + net-loss cap (red)
+      // Expense bar: base (gold) + net-loss cap (ink/white)
       if (expBaseW > 0.5) {
         const g = ctx.createLinearGradient(HERO_PL, 0, HERO_PL + expBaseW, 0)
         g.addColorStop(0, 'rgba(201,168,76,0.9)'); g.addColorStop(1, 'rgba(201,168,76,0.55)')
@@ -372,7 +372,7 @@ function HeroSplitBarChart({ monthly, annual }: {
       }
       if (expCapW > 0.5) {
         const g = ctx.createLinearGradient(HERO_PL + expBaseW, 0, HERO_PL + expBaseW + expCapW, 0)
-        g.addColorStop(0, 'rgba(248,113,113,0.95)'); g.addColorStop(1, 'rgba(239,68,68,1.0)')
+        g.addColorStop(0, 'rgba(240,240,248,0.85)'); g.addColorStop(1, 'rgba(240,240,248,0.4)')
         ctx.fillStyle = g
         drawHeroBar(ctx, HERO_PL + expBaseW, expBarY, expCapW, HERO_BAR_H, expBaseW <= 0.5, true)
         ctx.fill()
@@ -389,7 +389,7 @@ function HeroSplitBarChart({ monthly, annual }: {
         ctx.fillText(`−${heroFmt(b.expense)}`, W - 4, expBarY + HERO_BAR_H / 2)
       } else {
         ctx.font      = '9px -apple-system,system-ui,sans-serif'
-        ctx.fillStyle = net >= 0 ? 'rgba(74,222,128,0.65)' : 'rgba(248,113,113,0.65)'
+        ctx.fillStyle = net >= 0 ? 'rgba(74,222,128,0.65)' : 'rgba(212,175,55,0.65)'
         ctx.fillText(`${net >= 0 ? '+' : '−'}${heroFmt(Math.abs(net))}`, W - 4, rowY + HERO_ROW_H / 2)
       }
     }
@@ -547,8 +547,8 @@ function HeroSplitBarChart({ monthly, annual }: {
           {[
             { bg: 'rgba(45,212,191,0.88)', label: 'Income'   },
             { bg: 'rgba(201,168,76,0.88)', label: 'Expenses' },
-            { bg: 'rgba(16,185,129,0.95)', label: 'Net gain' },
-            { bg: 'rgba(239,68,68,0.95)',  label: 'Net loss' },
+            { bg: 'rgba(16,185,129,0.95)',  label: 'Net gain' },
+            { bg: 'rgba(240,240,248,0.75)', label: 'Net loss' },
           ].map(item => (
             <div key={item.label} className="flex items-center gap-1">
               <div style={{ width: 8, height: 8, borderRadius: 2, background: item.bg, flexShrink: 0 }} />
