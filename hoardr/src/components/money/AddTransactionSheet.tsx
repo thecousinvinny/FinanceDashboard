@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { PillGroup } from '@/components/ui/Pill'
-import { CategoryIcon } from '@/components/ui/CategoryIcon'
+import { getCategoryIcon } from '@/components/ui/CategoryIcon'
 import {
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,
@@ -309,18 +309,22 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
           <div>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Category</p>
             <div className="grid grid-cols-4 gap-2">
-              {categories.map(cat => (
-                <button
-                  key={cat.name} onClick={() => setCategory(cat.name)}
-                  className={cn(
-                    'flex flex-col items-center gap-1 py-2.5 rounded-[14px] transition-all select-none',
-                    category === cat.name ? 'bg-gold/15 ring-1 ring-gold/40' : 'bg-bg-overlay',
-                  )}
-                >
-                  <CategoryIcon category={cat.name} type={type} size={18} className={category === cat.name ? 'text-gold' : 'text-ink-muted'} />
-                  <span className="text-[9px] font-medium text-ink-muted leading-tight text-center px-0.5">{cat.name}</span>
-                </button>
-              ))}
+              {categories.map(cat => {
+                const Icon = getCategoryIcon(cat.name, type)
+                const active = category === cat.name
+                return (
+                  <button
+                    key={cat.name} onClick={() => setCategory(cat.name)}
+                    className={cn(
+                      'flex flex-col items-center gap-1 py-2.5 rounded-[14px] text-[10px] font-semibold transition-all select-none',
+                      active ? 'bg-gold/15 text-gold ring-1 ring-gold/40' : 'bg-bg-overlay text-ink-muted',
+                    )}
+                  >
+                    <Icon size={16} strokeWidth={1.75} />
+                    {cat.name}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
