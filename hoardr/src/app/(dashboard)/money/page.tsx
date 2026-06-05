@@ -493,6 +493,7 @@ export default function OutPage() {
     const { monthly, annual } = calcSubCosts(sub.cost, sub.billing)
     const tempId = `temp-${Date.now()}`
     setSubs(prev => [...prev, { id: tempId, name: sub.name, billing: sub.billing, cost: sub.cost, monthly_cost: monthly, annual_cost: annual, next_renewal: sub.next_renewal, status: 'Active', card_id: sub.card_id, category: sub.category ?? null, cal_event_id: null }])
+    if (sub.card_id) setDefaultCardId(sub.card_id)
     showToast(`${sub.name} added`, { type: 'add' })
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { await loadData(); return }
@@ -506,6 +507,7 @@ export default function OutPage() {
 
   async function handleEditSub(id: string, edits: SubEdits) {
     setSubs(prev => prev.map(s => s.id === id ? { ...s, ...edits } : s))
+    if (edits.card_id) setDefaultCardId(edits.card_id)
     const { error } = await supabase.from('subscriptions').update({ name: edits.name, cost: edits.cost, billing: edits.billing, next_renewal: edits.next_renewal, monthly_cost: edits.monthly_cost, annual_cost: edits.annual_cost, card_id: edits.card_id, category: edits.category ?? null }).eq('id', id)
     if (error) { console.error('edit sub error:', JSON.stringify(error)); await loadData(); return }
     if (edits.next_renewal) {
