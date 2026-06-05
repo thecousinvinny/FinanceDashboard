@@ -223,264 +223,310 @@ function MonthAnnualCard({ label, monthStat, annualStat, renderMonth, renderAnnu
 
 // ─── Mirrored sparklines — income up, spending down, shared center axis ───────
 
-type GestureMode = 'undecided' | 'swiping' | 'scrubbing'
+// ─── Hero Split Bar Chart ────────────────────────────────────────────────────
 
-function MirroredSparklines({ bars, iId, eId, gestureMode, active }: {
-  bars:        BarData[]
-  iId:         string
-  eId:         string
-  gestureMode: { current: GestureMode }
-  active:      boolean
+const HERO_H  = 160  // bar draw area height in CSS px
+const HERO_PL = 34   // left padding (y-axis labels)
+const HERO_PR = 8
+const HERO_PT = 24   // top padding (net cap labels)
+const HERO_PB = 22   // bottom padding (x-axis labels)
+const HERO_CG = 5    // visual gap between base chunk and cap chunk
+
+function drawHeroPill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
+  if (h < 1 || w < 1) return
+  const r = Math.min(w / 2, h / 2, 6)
+  ctx.beginPath()
+  ctx.moveTo(x + r, y)
+  ctx.arcTo(x + w, y,     x + w, y + r,     r)
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r)
+  ctx.arcTo(x,     y + h, x,     y + h - r, r)
+  ctx.arcTo(x,     y,     x + r, y,         r)
+  ctx.closePath()
+}
+
+function heroFmt(v: number): string {
+  const abs = Math.abs(v)
+  if (abs >= 1000) return `$${Number((abs / 1000).toFixed(abs % 1000 === 0 ? 0 : 1))}K`
+  return `$${Math.round(abs)}`
+}
+
+function heroYMax(data: BarData[]): number {
+  const max = Math.max(...data.map(b => Math.max(b.income, b.expense)), 1)
+  const mag = Math.pow(10, Math.floor(Math.log10(max)))
+  return Math.ceil(max / mag) * mag
+}
+
+function heroHeights(data: BarData[], yMax: number): number[] {
+  return data.flatMap(b => {
+    const ih   = yMax > 0 ? (b.income  / yMax) * HERO_H : 0
+    const eh   = yMax > 0 ? (b.expense / yMax) * HERO_H : 0
+    const base = Math.min(ih, eh)
+    return [base, ih - base, base, eh - base]  // [incBase, incCap, expBase, expCap]
+  })
+}
+
+function heroEase(t: number) { return 1 - Math.pow(1 - t, 4) }
+
+function HeroSplitBarChart({ monthly, annual, allTime }: {
+  monthly: BarData[]
+  annual:  BarData[]
+  allTime: BarData[]
 }) {
-  const W = 300, H = 140, CY = 70, AMP = 58, PX = 2
-
-  const [scrubIdx, setScrubIdx] = useState<number | null>(null)
-
-  // Mirror mutable values into refs so closures in the native-listener effect are stable
+  const [toggle, setToggle] = useState<0 | 1 | 2>(0)
+  const canvasRef    = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const barsRef      = useRef(bars)
-  const activeRef    = useRef(active)
-  const timerRef     = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const startRef     = useRef<{ x: number; y: number } | null>(null)
-  const scrubIdxRef  = useRef<number | null>(null)
+  const animRef      = useRef<number | null>(null)
+  const animHRef     = useRef<number[]>([])
+  const scrubXRef    = useRef<number | null>(null)
+  const barsRef      = useRef<BarData[]>(monthly)
+  const yMaxRef      = useRef(1)
 
-  useEffect(() => { barsRef.current  = bars   }, [bars])
-  useEffect(() => { activeRef.current = active }, [active])
+  const redraw = useCallback(() => {
+    const canvas    = canvasRef.current
+    const container = containerRef.current
+    if (!canvas || !container) return
 
-  // Native listeners — empty deps so passive:false works
+    const W      = container.clientWidth || 300
+    const FULL_H = HERO_H + HERO_PT + HERO_PB
+    const dpr    = window.devicePixelRatio || 1
+    const tw = Math.round(W * dpr), th = Math.round(FULL_H * dpr)
+    if (canvas.width !== tw || canvas.height !== th) {
+      canvas.width = tw; canvas.height = th; canvas.style.height = `${FULL_H}px`
+    }
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    ctx.clearRect(0, 0, W, FULL_H)
+
+    const data    = barsRef.current
+    const yMax    = yMaxRef.current
+    const heights = animHRef.current
+    const N       = data.length
+    if (N === 0) return
+
+    const chartW = W - HERO_PL - HERO_PR
+    const groupW = chartW / N
+    const GP     = Math.min(groupW * 0.1, 5)
+    const pairW  = Math.max(groupW - GP * 2, 4)
+    const barW   = Math.max((pairW - 2) / 2, 2)
+    const baseY  = HERO_PT + HERO_H
+
+    // Y axis ticks
+    ctx.font = '9px -apple-system,system-ui,sans-serif'
+    ctx.fillStyle = '#556070'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'
+    for (const tick of [0, yMax / 3, (yMax * 2) / 3, yMax]) {
+      ctx.fillText(heroFmt(tick), HERO_PL - 4, baseY - (yMax > 0 ? tick / yMax : 0) * HERO_H)
+    }
+
+    // Bars
+    for (let gi = 0; gi < N; gi++) {
+      const b   = data[gi]
+      const hIB = Math.max(0, heights[gi * 4 + 0] ?? 0)
+      const hIC = Math.max(0, heights[gi * 4 + 1] ?? 0)
+      const hEB = Math.max(0, heights[gi * 4 + 2] ?? 0)
+      const hEC = Math.max(0, heights[gi * 4 + 3] ?? 0)
+      const gx  = HERO_PL + gi * groupW + GP
+      const ix  = gx, ex = gx + barW + 2
+
+      if (hIB > 0.5) {
+        const g = ctx.createLinearGradient(0, baseY, 0, baseY - hIB)
+        g.addColorStop(0, 'rgba(45,212,191,0.88)'); g.addColorStop(1, 'rgba(45,212,191,0.38)')
+        ctx.fillStyle = g; drawHeroPill(ctx, ix, baseY - hIB, barW, hIB); ctx.fill()
+      }
+      if (hIC > 0.5) {
+        const cy = baseY - hIB - HERO_CG - hIC
+        const g  = ctx.createLinearGradient(0, cy + hIC, 0, cy)
+        g.addColorStop(0, 'rgba(10,120,90,0.98)'); g.addColorStop(1, 'rgba(10,120,90,0.75)')
+        ctx.fillStyle = g; drawHeroPill(ctx, ix, cy, barW, hIC); ctx.fill()
+        const net = b.income - b.expense
+        if (net > 0.5) {
+          ctx.font = 'bold 9px -apple-system,system-ui,sans-serif'
+          ctx.fillStyle = '#4ADE80'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'
+          ctx.fillText(`+${heroFmt(net)}`, ix + barW / 2, cy - 3)
+        }
+      }
+      if (hEB > 0.5) {
+        const g = ctx.createLinearGradient(0, baseY, 0, baseY - hEB)
+        g.addColorStop(0, 'rgba(201,168,76,0.88)'); g.addColorStop(1, 'rgba(201,168,76,0.38)')
+        ctx.fillStyle = g; drawHeroPill(ctx, ex, baseY - hEB, barW, hEB); ctx.fill()
+      }
+      if (hEC > 0.5) {
+        const cy = baseY - hEB - HERO_CG - hEC
+        const g  = ctx.createLinearGradient(0, cy + hEC, 0, cy)
+        g.addColorStop(0, 'rgba(135,92,8,0.98)'); g.addColorStop(1, 'rgba(135,92,8,0.75)')
+        ctx.fillStyle = g; drawHeroPill(ctx, ex, cy, barW, hEC); ctx.fill()
+        const net = b.income - b.expense
+        if (net < -0.5) {
+          ctx.font = 'bold 9px -apple-system,system-ui,sans-serif'
+          ctx.fillStyle = '#F87171'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'
+          ctx.fillText(`−${heroFmt(-net)}`, ex + barW / 2, cy - 3)
+        }
+      }
+
+      // X axis label
+      ctx.font = '10px -apple-system,system-ui,sans-serif'
+      ctx.fillStyle = '#556070'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'
+      ctx.fillText(b.label, gx + pairW / 2, baseY + 4)
+    }
+
+    // Scrub line + tooltip
+    const sx = scrubXRef.current
+    if (sx !== null && sx >= HERO_PL && sx <= W - HERO_PR) {
+      ctx.strokeStyle = 'rgba(201,168,76,0.6)'; ctx.lineWidth = 1
+      ctx.beginPath(); ctx.moveTo(sx, HERO_PT); ctx.lineTo(sx, baseY); ctx.stroke()
+
+      const gi = Math.max(0, Math.min(N - 1, Math.floor((sx - HERO_PL) / groupW)))
+      const b  = data[gi]
+      if (b) {
+        const net   = b.income - b.expense
+        const lines = [
+          { t: b.label,                                                             c: '#8A96A2', s: 9,  bold: false },
+          { t: `Income   +${heroFmt(b.income)}`,                                   c: '#2DD4BF', s: 10, bold: false },
+          { t: `Expenses −${heroFmt(b.expense)}`,                             c: '#C9A84C', s: 10, bold: false },
+          { t: `Net   ${net >= 0 ? '+' : '−'}${heroFmt(Math.abs(net))}`,     c: net >= 0 ? '#4ADE80' : '#F87171', s: 10, bold: true },
+        ]
+        const lh = 15, ttW = 130, ttH = lines.length * lh + 14
+        const flp = sx > W * 0.6
+        const tx  = Math.max(HERO_PL, flp ? sx - ttW - 8 : Math.min(sx + 8, W - ttW - HERO_PR))
+        const ty  = HERO_PT + 2
+
+        ctx.fillStyle = '#0E151D'; ctx.strokeStyle = '#243040'; ctx.lineWidth = 0.5
+        ctx.beginPath()
+        ctx.moveTo(tx + 8, ty)
+        ctx.arcTo(tx + ttW, ty,        tx + ttW, ty + 8,        8)
+        ctx.arcTo(tx + ttW, ty + ttH,  tx + ttW - 8, ty + ttH,  8)
+        ctx.arcTo(tx,       ty + ttH,  tx,       ty + ttH - 8,  8)
+        ctx.arcTo(tx,       ty,        tx + 8,   ty,            8)
+        ctx.closePath()
+        ctx.fill(); ctx.stroke()
+
+        ctx.textAlign = 'left'; ctx.textBaseline = 'top'
+        lines.forEach((ln, i) => {
+          ctx.font = `${ln.bold ? 'bold ' : ''}${ln.s}px -apple-system,system-ui,sans-serif`
+          ctx.fillStyle = ln.c
+          ctx.fillText(ln.t, tx + 8, ty + 7 + i * lh)
+        })
+      }
+    }
+  }, []) // reads module-level constants + stable refs only
+
+  // Animate to new data on toggle / data change
+  useEffect(() => {
+    const data = toggle === 0 ? monthly : toggle === 1 ? annual : allTime
+    barsRef.current = data
+    yMaxRef.current = heroYMax(data)
+    const target = heroHeights(data, yMaxRef.current)
+    const from   = new Array(target.length).fill(0)
+    animHRef.current = [...from]
+    if (animRef.current) cancelAnimationFrame(animRef.current)
+    const t0 = performance.now()
+    function tick(now: number) {
+      const t = Math.min((now - t0) / 400, 1), ease = heroEase(t)
+      for (let i = 0; i < target.length; i++) animHRef.current[i] = from[i] + (target[i] - from[i]) * ease
+      redraw()
+      if (t < 1) animRef.current = requestAnimationFrame(tick)
+      else animRef.current = null
+    }
+    animRef.current = requestAnimationFrame(tick)
+    return () => { if (animRef.current) cancelAnimationFrame(animRef.current) }
+  }, [toggle, monthly, annual, allTime, redraw])
+
+  // Redraw on container resize
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
+    const ro = new ResizeObserver(() => redraw())
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [redraw])
 
-    function getIdx(clientX: number) {
-      const rect  = el!.getBoundingClientRect()
-      const rel   = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
-      return Math.round(rel * (barsRef.current.length - 1))
-    }
-
-    function onStart(e: TouchEvent) {
-      if (!activeRef.current) return
-      const t = e.touches[0]
-      startRef.current = { x: t.clientX, y: t.clientY }
-      timerRef.current = setTimeout(() => {
-        if (gestureMode.current !== 'undecided') return
-        gestureMode.current = 'scrubbing'
-        haptic('tap')
-        const idx = getIdx(t.clientX)
-        scrubIdxRef.current = idx
-        setScrubIdx(idx)
-      }, 300)
-    }
-
-    function onMove(e: TouchEvent) {
-      const start = startRef.current
-      if (!start) return
-      const t  = e.touches[0]
-      const dx = t.clientX - start.x
-      const dy = t.clientY - start.y
-
-      if (gestureMode.current === 'scrubbing') {
-        e.preventDefault()
-        const idx = getIdx(t.clientX)
-        if (idx !== scrubIdxRef.current) { scrubIdxRef.current = idx; setScrubIdx(idx) }
-        return
-      }
-
-      // Cancel long-press timer if finger moved too much
-      if (timerRef.current && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
-        clearTimeout(timerRef.current)
-        timerRef.current = null
-      }
-    }
-
-    function onEnd() {
-      if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null }
-      startRef.current = null
-      if (gestureMode.current === 'scrubbing') {
-        gestureMode.current = 'undecided'
-        scrubIdxRef.current = null
-        setScrubIdx(null)
-      }
-    }
-
-    el.addEventListener('touchstart',  onStart, { passive: true  })
-    el.addEventListener('touchmove',   onMove,  { passive: false })
-    el.addEventListener('touchend',    onEnd,   { passive: true  })
-    el.addEventListener('touchcancel', onEnd,   { passive: true  })
+  // Touch + mouse scrub
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const getX = (cx: number) => cx - el.getBoundingClientRect().left
+    const onTS = (e: TouchEvent) => { scrubXRef.current = getX(e.touches[0].clientX); redraw() }
+    const onTM = (e: TouchEvent) => { e.preventDefault(); scrubXRef.current = getX(e.touches[0].clientX); redraw() }
+    const onTE = () => { scrubXRef.current = null; redraw() }
+    const onMD = (e: MouseEvent) => { scrubXRef.current = getX(e.clientX); redraw() }
+    const onMM = (e: MouseEvent) => { if (scrubXRef.current !== null) { scrubXRef.current = getX(e.clientX); redraw() } }
+    const onMU = () => { scrubXRef.current = null; redraw() }
+    el.addEventListener('touchstart',  onTS, { passive: true  })
+    el.addEventListener('touchmove',   onTM, { passive: false })
+    el.addEventListener('touchend',    onTE, { passive: true  })
+    el.addEventListener('touchcancel', onTE, { passive: true  })
+    el.addEventListener('mousedown',  onMD)
+    el.addEventListener('mousemove',  onMM)
+    el.addEventListener('mouseup',    onMU)
+    el.addEventListener('mouseleave', onMU)
     return () => {
-      el.removeEventListener('touchstart',  onStart)
-      el.removeEventListener('touchmove',   onMove)
-      el.removeEventListener('touchend',    onEnd)
-      el.removeEventListener('touchcancel', onEnd)
-      if (timerRef.current) clearTimeout(timerRef.current)
+      el.removeEventListener('touchstart',  onTS)
+      el.removeEventListener('touchmove',   onTM)
+      el.removeEventListener('touchend',    onTE)
+      el.removeEventListener('touchcancel', onTE)
+      el.removeEventListener('mousedown',  onMD)
+      el.removeEventListener('mousemove',  onMM)
+      el.removeEventListener('mouseup',    onMU)
+      el.removeEventListener('mouseleave', onMU)
     }
-  }, [gestureMode]) // gestureMode is a stable ref object
+  }, [redraw])
 
-  if (bars.length < 2) return <div style={{ height: H }} />
-  const maxVal = Math.max(...bars.flatMap(b => [b.income, b.expense]), 1)
-
-  function makePts(vals: number[], dir: 1 | -1) {
-    return vals.map((v, i) => ({
-      x: PX + (i / (vals.length - 1)) * (W - PX * 2),
-      y: CY + dir * (v / maxVal) * AMP,
-    }))
-  }
-  function smooth(pts: { x: number; y: number }[]) {
-    let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`
-    for (let i = 1; i < pts.length; i++) {
-      const cx = ((pts[i - 1].x + pts[i].x) / 2).toFixed(1)
-      d += ` C ${cx} ${pts[i-1].y.toFixed(1)} ${cx} ${pts[i].y.toFixed(1)} ${pts[i].x.toFixed(1)} ${pts[i].y.toFixed(1)}`
-    }
-    return d
-  }
-
-  const incPts  = makePts(bars.map(b => b.income),  -1)
-  const expPts  = makePts(bars.map(b => b.expense),   1)
-  const incLine = smooth(incPts)
-  const expLine = smooth(expPts)
-  const incFill = `${incLine} L ${incPts[incPts.length-1].x} ${CY} L ${incPts[0].x} ${CY} Z`
-  const expFill = `${expLine} L ${expPts[expPts.length-1].x} ${CY} L ${expPts[0].x} ${CY} Z`
-
-  // Scrub overlay values
-  const sx      = scrubIdx !== null ? PX + (scrubIdx / (bars.length - 1)) * (W - PX * 2) : null
-  const incY    = scrubIdx !== null ? CY - (bars[scrubIdx].income  / maxVal) * AMP : null
-  const expY    = scrubIdx !== null ? CY + (bars[scrubIdx].expense / maxVal) * AMP : null
-  const leftPct = scrubIdx !== null ? (scrubIdx / (bars.length - 1)) * 100 : 0
+  const activeBars = toggle === 0 ? monthly : toggle === 1 ? annual : allTime
+  const netTotal   = activeBars.reduce((s, b) => s + b.income - b.expense, 0)
 
   return (
-    <div
-      ref={containerRef}
-      className="relative select-none"
-      style={{ WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
-    >
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none"
-        style={{ width: '100%', height: H, display: 'block' }}>
-        <defs>
-          <linearGradient id={iId} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2={CY}>
-            <stop offset="0%"   stopColor="#22c55e" stopOpacity="0.32" />
-            <stop offset="100%" stopColor="#22c55e" stopOpacity="0.02" />
-          </linearGradient>
-          <linearGradient id={eId} gradientUnits="userSpaceOnUse" x1="0" y1={CY} x2="0" y2={H}>
-            <stop offset="0%"   stopColor="#D4AF37" stopOpacity="0.02" />
-            <stop offset="100%" stopColor="#D4AF37" stopOpacity="0.32" />
-          </linearGradient>
-        </defs>
-
-        <path d={incFill} fill={`url(#${iId})`} />
-        <path d={incLine} fill="none" stroke="#22c55e" strokeWidth="1.75" strokeLinecap="round" />
-        <line x1={PX} y1={CY} x2={W - PX} y2={CY} stroke="rgba(255,255,255,0.14)" strokeWidth="1" />
-        <path d={expFill} fill={`url(#${eId})`} />
-        <path d={expLine} fill="none" stroke="#D4AF37" strokeWidth="1.75" strokeLinecap="round" />
-
-        {/* Scrub cursor */}
-        {sx !== null && incY !== null && expY !== null && (
-          <>
-            <line x1={sx} y1={0} x2={sx} y2={H}
-              stroke="rgba(255,255,255,0.3)" strokeWidth="1" strokeDasharray="3 3" />
-            <circle cx={sx} cy={incY} r={3.5} fill="#22c55e" />
-            <circle cx={sx} cy={expY} r={3.5} fill="#D4AF37" />
-          </>
-        )}
-      </svg>
-
-      {/* Scrub callout */}
-      {scrubIdx !== null && (
-        <div
-          className="absolute pointer-events-none"
-          style={{
-            top: 6,
-            ...(leftPct > 55
-              ? { right: `calc(${100 - leftPct}% + 10px)` }
-              : { left:  `calc(${leftPct}% + 10px)` }),
-          }}
-        >
-          <div className="rounded-[10px] px-2.5 py-2 space-y-0.5"
-            style={{ background: 'var(--color-bg-overlay, #1c1c2a)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
-            <p className="text-[9px] text-ink-faint mb-1">{bars[scrubIdx].label}</p>
-            <p className="text-[12px] font-bold font-mono" style={{ color: '#22c55e' }}>
-              +{$f(bars[scrubIdx].income)}
-            </p>
-            <p className="text-[12px] font-bold font-mono" style={{ color: '#D4AF37' }}>
-              −{$f(bars[scrubIdx].expense)}
-            </p>
+    <div className="px-5 mb-6">
+      <div style={{
+        background: 'var(--color-bg-surface)', borderRadius: 16,
+        border: '0.5px solid rgba(201,168,76,0.25)',
+        boxShadow: 'inset 0 0 20px rgba(201,168,76,0.05)', padding: 16,
+      }}>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-2.5">
+          <p style={{ fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#556070', fontWeight: 600 }}>
+            Income vs Expenses
+          </p>
+          <div style={{ display: 'flex', background: '#1C2530', borderRadius: 20, padding: 2, gap: 1 }}>
+            {(['Monthly', 'Annual', 'All Time'] as const).map((lbl, i) => (
+              <button key={lbl} onClick={() => setToggle(i as 0 | 1 | 2)} className="select-none"
+                style={{
+                  fontSize: 10, fontWeight: 600, padding: '4px 8px', borderRadius: 18, border: 'none',
+                  cursor: 'pointer', transition: 'all 200ms ease',
+                  background: toggle === i ? 'linear-gradient(135deg,#C9A84C,#A8873C)' : 'transparent',
+                  color: toggle === i ? '#1A1510' : '#556070',
+                }}
+              >{lbl}</button>
+            ))}
           </div>
         </div>
-      )}
-    </div>
-  )
-}
 
-function CashflowChart({ monthBars, annualBars }: { monthBars: BarData[]; annualBars: BarData[] }) {
-  const [view, setView]   = useState<0 | 1>(0)
-  const ref               = useRef<HTMLDivElement>(null)
-  const gestureMode       = useRef<GestureMode>('undecided')
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    let sx = 0, sy = 0
-
-    const onStart = (e: TouchEvent) => {
-      gestureMode.current = 'undecided'
-      sx = e.touches[0].clientX
-      sy = e.touches[0].clientY
-    }
-    const onEnd = (e: TouchEvent) => {
-      if (gestureMode.current === 'scrubbing') return // scrub takes priority
-      const dx = e.changedTouches[0].clientX - sx
-      const dy = e.changedTouches[0].clientY - sy
-      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-        if (dx < 0 && view === 0) setView(1)
-        if (dx > 0 && view === 1) setView(0)
-      }
-    }
-    el.addEventListener('touchstart', onStart, { passive: true })
-    el.addEventListener('touchend',   onEnd,   { passive: true })
-    return () => { el.removeEventListener('touchstart', onStart); el.removeEventListener('touchend', onEnd) }
-  }, [view])
-
-  return (
-    <div ref={ref} className="bg-bg-surface border border-white/[0.06] rounded-card p-4">
-      {/* Pills + legend */}
-      <div className="flex items-center gap-2 mb-3">
-        <div className="flex gap-1.5">
-          {(['Month', 'Annual'] as const).map((l, i) => (
-            <button key={l} onClick={() => setView(i as 0 | 1)}
-              className={cn('px-3 py-1 rounded-full text-[11px] font-semibold transition-colors',
-                view === i ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
-              {l}
-            </button>
-          ))}
-        </div>
-        <div className="flex gap-3 ml-auto">
-          {[['#22c55e', 'Income'], ['#D4AF37', 'Spending']].map(([c, l]) => (
-            <div key={l} className="flex items-center gap-1">
-              <div className="w-1.5 h-1.5 rounded-full" style={{ background: c }} />
-              <span className="text-[9px] text-ink-faint">{l}</span>
+        {/* Legend */}
+        <div className="flex items-center gap-3 mb-3" style={{ flexWrap: 'wrap' }}>
+          {[
+            { bg: 'rgba(45,212,191,0.88)', label: 'Income'   },
+            { bg: 'rgba(201,168,76,0.88)', label: 'Expenses' },
+            { bg: 'rgba(10,120,90,0.98)',  label: 'Net gain' },
+            { bg: 'rgba(135,92,8,0.98)',   label: 'Net loss' },
+          ].map(item => (
+            <div key={item.label} className="flex items-center gap-1">
+              <div style={{ width: 8, height: 8, borderRadius: 2, background: item.bg, flexShrink: 0 }} />
+              <span style={{ fontSize: 10, color: '#556070' }}>{item.label}</span>
             </div>
           ))}
-        </div>
-      </div>
-
-      {/* Sliding rail — gestureMode shared so scrub & swipe coordinate */}
-      <div style={{ overflow: 'hidden' }}>
-        <div style={{ display: 'flex', width: '200%', transform: `translateX(${view === 0 ? 0 : -50}%)`, transition: 'transform 320ms cubic-bezier(0.4,0,0.2,1)' }}>
-          <div style={{ width: '50%' }}>
-            <MirroredSparklines bars={monthBars}  iId="cf-i-mo"  eId="cf-e-mo"  gestureMode={gestureMode} active={view === 0} />
-          </div>
-          <div style={{ width: '50%' }}>
-            <MirroredSparklines bars={annualBars} iId="cf-i-ann" eId="cf-e-ann" gestureMode={gestureMode} active={view === 1} />
+          <div className="ml-auto flex flex-col items-end" style={{ gap: 1 }}>
+            <span style={{ fontSize: 9, color: '#556070', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Net This Period</span>
+            <span style={{ fontSize: 15, fontWeight: 700, fontFamily: 'var(--font-big-shoulders)', color: netTotal >= 0 ? '#4ADE80' : '#F87171' }}>
+              {netTotal >= 0 ? '+' : '−'}{heroFmt(Math.abs(netTotal))}
+            </span>
           </div>
         </div>
-      </div>
 
-      <div className="flex justify-center gap-1.5 mt-3">
-        {[0, 1].map(i => (
-          <div key={i} className="rounded-full transition-all duration-300" style={{
-            width: view === i ? 14 : 5, height: 5,
-            background: view === i ? '#D4AF37' : 'rgba(255,255,255,0.2)',
-          }} />
-        ))}
+        {/* Canvas */}
+        <div ref={containerRef} className="select-none"
+          style={{ width: '100%', cursor: 'crosshair', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' } as React.CSSProperties}>
+          <canvas ref={canvasRef} style={{ width: '100%', display: 'block' }} />
+        </div>
       </div>
     </div>
   )
@@ -735,6 +781,40 @@ export default function ProfilePage() {
   const totalSubMo  = useMemo(() => subs.reduce((s, sub) => s + sub.monthly_cost, 0), [subs])
   const totalSubAnn = useMemo(() => subs.reduce((s, sub) => s + sub.annual_cost,  0), [subs])
 
+  // Hero chart data
+  const heroMonthly = useMemo<BarData[]>(() =>
+    Array.from({ length: 6 }, (_, i) => {
+      const d   = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const inc = income.filter(r => r.date.startsWith(key)).reduce((s, r) => s + r.amount, 0)
+      const exp = expenses.filter(r => r.date.startsWith(key)).reduce((s, r) => s + r.cost, 0)
+      return { label: MONTH_NAMES[d.getMonth()], income: inc, expense: exp }
+    })
+  , [income, expenses, now])
+
+  const heroAnnual = useMemo<BarData[]>(() => {
+    const yr = now.getFullYear()
+    return Array.from({ length: 6 }, (_, i) => {
+      const year = yr - 5 + i
+      const key  = `${year}-`
+      const inc  = income.filter(r => r.date.startsWith(key)).reduce((s, r) => s + r.amount, 0)
+      const exp  = expenses.filter(r => r.date.startsWith(key)).reduce((s, r) => s + r.cost, 0)
+      return { label: String(year), income: inc, expense: exp }
+    })
+  }, [income, expenses, now])
+
+  const heroAllTime = useMemo<BarData[]>(() => {
+    const years = new Set<number>()
+    income.forEach(r  => { const y = parseInt(r.date.slice(0, 4)); if (!isNaN(y) && y > 2000) years.add(y) })
+    expenses.forEach(r => { const y = parseInt(r.date.slice(0, 4)); if (!isNaN(y) && y > 2000) years.add(y) })
+    return [...years].sort().map(year => {
+      const key = `${year}-`
+      const inc = income.filter(r => r.date.startsWith(key)).reduce((s, r) => s + r.amount, 0)
+      const exp = expenses.filter(r => r.date.startsWith(key)).reduce((s, r) => s + r.cost, 0)
+      return { label: String(year), income: inc, expense: exp }
+    })
+  }, [income, expenses])
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   const avatarSrc = customAvatar || googleAvatar
@@ -817,9 +897,7 @@ export default function ProfilePage() {
 
       {/* ── Cashflow ─────────────────────────────────────────────────────────── */}
       {!loading && (
-        <div className="px-5 mb-5">
-          <CashflowChart monthBars={monthBars} annualBars={annualBars} />
-        </div>
+        <HeroSplitBarChart monthly={heroMonthly} annual={heroAnnual} allTime={heroAllTime} />
       )}
 
       {/* ── Expenses ─────────────────────────────────────────────────────────── */}

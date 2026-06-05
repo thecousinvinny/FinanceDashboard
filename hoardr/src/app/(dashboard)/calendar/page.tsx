@@ -1721,9 +1721,13 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
             <div style={{ height: gridH, overflow: 'hidden', flexShrink: 0, transition: isDraggingHandle ? 'none' : 'height 0.3s cubic-bezier(0.4,0,0.2,1)', background: 'var(--color-bg-surface)' }}>
               <div style={{ height: GRID_EXPANDED, display: 'flex', flexDirection: 'column' }}>
                 {/* Month header */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 16, paddingRight: 12, paddingTop: 12, paddingBottom: 6, flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', paddingLeft: 16, paddingRight: 56, paddingTop: 12, paddingBottom: 6, flexShrink: 0 }}>
+                  <button
+                    onClick={() => { goToToday(); scrollListToToday() }}
+                    style={{ fontSize: 11, fontWeight: 600, color: '#D4AF37', background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px 0 0', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.02em', flexShrink: 0 }}
+                  >Today</button>
                   <span
-                    style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', userSelect: 'none', cursor: 'pointer', letterSpacing: '-0.01em' }}
+                    style={{ flex: 1, textAlign: 'center', fontSize: 16, fontWeight: 700, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', userSelect: 'none', cursor: 'pointer', letterSpacing: '-0.01em' }}
                     onDoubleClick={scrollListToToday}
                     onTouchEnd={(e) => {
                       e.preventDefault()
@@ -1734,10 +1738,6 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                   >
                     {gridMonthLbl}
                   </span>
-                  <button
-                    onClick={() => { goToToday(); scrollListToToday() }}
-                    style={{ fontSize: 11, fontWeight: 600, color: '#D4AF37', background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.02em' }}
-                  >Today</button>
                 </div>
                 {/* DOW labels */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', paddingLeft: 8, paddingRight: 8, paddingBottom: 4, flexShrink: 0 }}>
