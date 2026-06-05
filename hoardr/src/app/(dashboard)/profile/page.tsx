@@ -86,7 +86,7 @@ function CategoryPills({ cats, active }: { cats: CatItem[]; active: boolean }) {
         return (
           <div key={cat.name} className="flex items-center gap-2">
             <div className="relative flex-1 flex items-center rounded-[8px] overflow-hidden"
-              style={{ height: 32, background: '#1C2A36' }}>
+              style={{ height: 32, background: '#1C1F22' }}>
               <div className="absolute inset-y-0 left-0 rounded-[8px]" style={{
                 width: `${animPcts[i] ?? 0}%`,
                 background: 'linear-gradient(90deg, rgba(212,175,55,0.35), rgba(212,175,55,0.10))',
@@ -131,7 +131,7 @@ function CostPills({ items, active }: { items: PillItem[]; active: boolean }) {
       {items.map((item, i) => (
         <div key={item.name + i} className="flex items-center gap-2">
           <div className="relative flex-1 flex items-center rounded-[8px] overflow-hidden"
-            style={{ height: 30, background: '#1C2A36' }}>
+            style={{ height: 30, background: '#1C1F22' }}>
             <div className="absolute inset-y-0 left-0 rounded-[8px]" style={{
               width: `${animPcts[i] ?? 0}%`,
               background: 'linear-gradient(90deg, rgba(212,175,55,0.35), rgba(212,175,55,0.10))',
