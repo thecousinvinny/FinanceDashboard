@@ -27,12 +27,13 @@ import { GlobalFAB } from '@/components/ui/GlobalFAB'
 
 type Tab = 'Expenses' | 'Subs' | 'Wishlist'
 
-function CategoryPillBar({ cat, index, isSub = false, onClick, isExpanded = false }: {
+function CategoryPillBar({ cat, index, isSub = false, onClick, isExpanded = false, variant = 'gold' }: {
   cat:   { name: string; total: number; pct: number }
   index: number
   isSub?: boolean
   onClick?: () => void
   isExpanded?: boolean
+  variant?: 'gold' | 'emerald'
 }) {
   const [animPct, setAnimPct] = useState(0)
 
@@ -42,7 +43,12 @@ function CategoryPillBar({ cat, index, isSub = false, onClick, isExpanded = fals
     return () => clearTimeout(t)
   }, [cat.pct, index])
 
-  const amountColor = cat.pct > 70 ? '#C9A84C' : '#556070'
+  const fillGradient = variant === 'emerald'
+    ? 'linear-gradient(90deg, rgba(34,197,94,0.40), rgba(34,197,94,0.12))'
+    : 'linear-gradient(90deg, rgba(201,168,76,0.40), rgba(201,168,76,0.12))'
+  const amountColor = cat.pct > 70
+    ? (variant === 'emerald' ? '#22c55e' : '#C9A84C')
+    : '#556070'
 
   const inner = (
     <div style={{ position: 'relative', height: 32, borderRadius: 8, background: '#1C1F22' }}>
@@ -52,7 +58,7 @@ function CategoryPillBar({ cat, index, isSub = false, onClick, isExpanded = fals
         left: 0, top: 0, bottom: 0,
         width:      `${animPct}%`,
         borderRadius: 8,
-        background: 'linear-gradient(90deg, rgba(201,168,76,0.40), rgba(201,168,76,0.12))',
+        background: fillGradient,
         transition: 'width 600ms cubic-bezier(0.22, 1, 0.36, 1)',
       }} />
       {/* Content overlay — always full track width, never clipped */}
@@ -727,10 +733,10 @@ export default function OutPage() {
           <button
             onClick={() => setExpStatCard('saved')}
             className={cn('flex-1 bg-bg-surface border rounded-[22px] p-4 text-left transition-colors select-none',
-              expStatCard === 'saved' ? 'border-gold/40' : 'border-white/[0.06]')}
+              expStatCard === 'saved' ? 'border-emerald/40' : 'border-white/[0.06]')}
           >
             <div className="flex items-center justify-between mb-3">
-              <p className={cn('text-[10px] font-semibold tracking-[0.1em] uppercase', expStatCard === 'saved' ? 'text-gold' : 'text-ink-muted')}>Saved This Month</p>
+              <p className={cn('text-[10px] font-semibold tracking-[0.1em] uppercase', expStatCard === 'saved' ? 'text-emerald' : 'text-ink-muted')}>Saved This Month</p>
               <span className="text-[13px] text-emerald">✦</span>
             </div>
             <p className="text-[26px] font-bold tracking-tight text-emerald" style={{ fontFamily: 'var(--font-big-shoulders)' }}>
@@ -805,7 +811,7 @@ export default function OutPage() {
             </p>
             <div className="space-y-2">
               {breakdown.map((cat, i) => (
-                <CategoryPillBar key={cat.name} cat={cat} index={i} isSub={subNames.has(cat.name.toLowerCase())} />
+                <CategoryPillBar key={cat.name} cat={cat} index={i} isSub={subNames.has(cat.name.toLowerCase())} variant={expStatCard === 'saved' ? 'emerald' : 'gold'} />
               ))}
             </div>
           </div>
