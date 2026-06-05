@@ -223,14 +223,15 @@ function MonthAnnualCard({ label, monthStat, annualStat, renderMonth, renderAnnu
 
 // ─── Mirrored sparklines — income up, spending down, shared center axis ───────
 
-// ─── Hero Split Bar Chart ────────────────────────────────────────────────────
+// ─── Hero Cashflow Chart ─────────────────────────────────────────────────────
 
-const HERO_H  = 160  // bar draw area height in CSS px
-const HERO_PL = 34   // left padding (y-axis labels)
-const HERO_PR = 8
-const HERO_PT = 24   // top padding (net cap labels)
-const HERO_PB = 22   // bottom padding (x-axis labels)
-const HERO_CG = 5    // visual gap between base chunk and cap chunk
+const HERO_PL    = 30   // left: period label column
+const HERO_PR    = 52   // right: amounts column
+const HERO_PT    = 6    // top padding
+const HERO_PB    = 6    // bottom padding
+const HERO_ROW_H = 26   // height per period row
+const HERO_BAR_H = 8    // individual bar height
+const HERO_BAR_G = 4    // gap between income and expense bars
 
 function drawHeroPill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
   if (h < 1 || w < 1) return
@@ -256,38 +257,37 @@ function heroYMax(data: BarData[]): number {
   return Math.ceil(max / mag) * mag
 }
 
-function heroHeights(data: BarData[], yMax: number): number[] {
-  return data.flatMap(b => {
-    const ih   = yMax > 0 ? (b.income  / yMax) * HERO_H : 0
-    const eh   = yMax > 0 ? (b.expense / yMax) * HERO_H : 0
-    const base = Math.min(ih, eh)
-    return [base, ih - base, base, eh - base]  // [incBase, incCap, expBase, expCap]
-  })
+function heroWidths(data: BarData[], yMax: number): number[] {
+  return data.flatMap(b => [
+    yMax > 0 ? b.income  / yMax : 0,
+    yMax > 0 ? b.expense / yMax : 0,
+  ])
 }
 
 function heroEase(t: number) { return 1 - Math.pow(1 - t, 4) }
 
-function HeroSplitBarChart({ monthly, annual, allTime }: {
+function HeroSplitBarChart({ monthly, annual }: {
   monthly: BarData[]
   annual:  BarData[]
-  allTime: BarData[]
 }) {
-  const [toggle, setToggle] = useState<0 | 1 | 2>(0)
+  const [toggle, setToggle] = useState<0 | 1>(0)
   const canvasRef    = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const animRef      = useRef<number | null>(null)
-  const animHRef     = useRef<number[]>([])
-  const scrubXRef    = useRef<number | null>(null)
+  const animWRef     = useRef<number[]>([])
+  const scrubRowRef  = useRef<number | null>(null)
   const barsRef      = useRef<BarData[]>(monthly)
-  const yMaxRef      = useRef(1)
 
   const redraw = useCallback(() => {
     const canvas    = canvasRef.current
     const container = containerRef.current
     if (!canvas || !container) return
 
-    const W      = container.clientWidth || 300
-    const FULL_H = HERO_H + HERO_PT + HERO_PB
+    const W    = container.clientWidth || 300
+    const data = barsRef.current
+    const N    = data.length
+    if (N === 0) return
+    const FULL_H = N * HERO_ROW_H + HERO_PT + HERO_PB
     const dpr    = window.devicePixelRatio || 1
     const tw = Math.round(W * dpr), th = Math.round(FULL_H * dpr)
     if (canvas.width !== tw || canvas.height !== th) {
@@ -299,140 +299,86 @@ function HeroSplitBarChart({ monthly, annual, allTime }: {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, W, FULL_H)
 
-    const data    = barsRef.current
-    const yMax    = yMaxRef.current
-    const heights = animHRef.current
-    const N       = data.length
-    if (N === 0) return
+    const widths  = animWRef.current
+    const chartW  = W - HERO_PL - HERO_PR
+    const hov     = scrubRowRef.current
 
-    const chartW = W - HERO_PL - HERO_PR
-    const groupW = chartW / N
-    const GP     = Math.min(groupW * 0.1, 5)
-    const pairW  = Math.max(groupW - GP * 2, 4)
-    const barW   = Math.max((pairW - 2) / 2, 2)
-    const baseY  = HERO_PT + HERO_H
-
-    // Y axis ticks
-    ctx.font = '9px -apple-system,system-ui,sans-serif'
-    ctx.fillStyle = '#556070'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'
-    for (const tick of [0, yMax / 3, (yMax * 2) / 3, yMax]) {
-      ctx.fillText(heroFmt(tick), HERO_PL - 4, baseY - (yMax > 0 ? tick / yMax : 0) * HERO_H)
-    }
-
-    // Bars
     for (let gi = 0; gi < N; gi++) {
-      const b   = data[gi]
-      const hIB = Math.max(0, heights[gi * 4 + 0] ?? 0)
-      const hIC = Math.max(0, heights[gi * 4 + 1] ?? 0)
-      const hEB = Math.max(0, heights[gi * 4 + 2] ?? 0)
-      const hEC = Math.max(0, heights[gi * 4 + 3] ?? 0)
-      const gx  = HERO_PL + gi * groupW + GP
-      const ix  = gx, ex = gx + barW + 2
+      const b       = data[gi]
+      const rowY    = HERO_PT + gi * HERO_ROW_H
+      const incFrac = Math.max(0, widths[gi * 2 + 0] ?? 0)
+      const expFrac = Math.max(0, widths[gi * 2 + 1] ?? 0)
+      const incW    = incFrac * chartW
+      const expW    = expFrac * chartW
+      const net     = b.income - b.expense
+      const isHov   = hov === gi
+      const incBarY = rowY + (HERO_ROW_H - HERO_BAR_H * 2 - HERO_BAR_G) / 2
+      const expBarY = incBarY + HERO_BAR_H + HERO_BAR_G
 
-      if (hIB > 0.5) {
-        const g = ctx.createLinearGradient(0, baseY, 0, baseY - hIB)
-        g.addColorStop(0, 'rgba(45,212,191,0.88)'); g.addColorStop(1, 'rgba(45,212,191,0.38)')
-        ctx.fillStyle = g; drawHeroPill(ctx, ix, baseY - hIB, barW, hIB); ctx.fill()
-      }
-      if (hIC > 0.5) {
-        const cy = baseY - hIB - HERO_CG - hIC
-        const g  = ctx.createLinearGradient(0, cy + hIC, 0, cy)
-        g.addColorStop(0, 'rgba(10,120,90,0.98)'); g.addColorStop(1, 'rgba(10,120,90,0.75)')
-        ctx.fillStyle = g; drawHeroPill(ctx, ix, cy, barW, hIC); ctx.fill()
-        const net = b.income - b.expense
-        if (net > 0.5) {
-          ctx.font = 'bold 9px -apple-system,system-ui,sans-serif'
-          ctx.fillStyle = '#4ADE80'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'
-          ctx.fillText(`+${heroFmt(net)}`, ix + barW / 2, cy - 3)
-        }
-      }
-      if (hEB > 0.5) {
-        const g = ctx.createLinearGradient(0, baseY, 0, baseY - hEB)
-        g.addColorStop(0, 'rgba(201,168,76,0.88)'); g.addColorStop(1, 'rgba(201,168,76,0.38)')
-        ctx.fillStyle = g; drawHeroPill(ctx, ex, baseY - hEB, barW, hEB); ctx.fill()
-      }
-      if (hEC > 0.5) {
-        const cy = baseY - hEB - HERO_CG - hEC
-        const g  = ctx.createLinearGradient(0, cy + hEC, 0, cy)
-        g.addColorStop(0, 'rgba(135,92,8,0.98)'); g.addColorStop(1, 'rgba(135,92,8,0.75)')
-        ctx.fillStyle = g; drawHeroPill(ctx, ex, cy, barW, hEC); ctx.fill()
-        const net = b.income - b.expense
-        if (net < -0.5) {
-          ctx.font = 'bold 9px -apple-system,system-ui,sans-serif'
-          ctx.fillStyle = '#F87171'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'
-          ctx.fillText(`−${heroFmt(-net)}`, ex + barW / 2, cy - 3)
-        }
+      // Row highlight
+      if (isHov) {
+        ctx.fillStyle = 'rgba(201,168,76,0.07)'
+        ctx.fillRect(0, rowY, W, HERO_ROW_H)
       }
 
-      // X axis label
-      ctx.font = '10px -apple-system,system-ui,sans-serif'
-      ctx.fillStyle = '#556070'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'
-      ctx.fillText(b.label, gx + pairW / 2, baseY + 4)
-    }
+      // Period label
+      ctx.font         = `${isHov ? '600 ' : ''}10px -apple-system,system-ui,sans-serif`
+      ctx.fillStyle    = isHov ? '#C9A84C' : '#455060'
+      ctx.textAlign    = 'right'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(b.label, HERO_PL - 4, rowY + HERO_ROW_H / 2)
 
-    // Scrub line + tooltip
-    const sx = scrubXRef.current
-    if (sx !== null && sx >= HERO_PL && sx <= W - HERO_PR) {
-      ctx.strokeStyle = 'rgba(201,168,76,0.6)'; ctx.lineWidth = 1
-      ctx.beginPath(); ctx.moveTo(sx, HERO_PT); ctx.lineTo(sx, baseY); ctx.stroke()
+      // Income bar
+      if (incW > 0.5) {
+        const g = ctx.createLinearGradient(HERO_PL, 0, HERO_PL + Math.max(incW, 1), 0)
+        g.addColorStop(0, 'rgba(45,212,191,0.9)'); g.addColorStop(1, 'rgba(45,212,191,0.4)')
+        ctx.fillStyle = g; drawHeroPill(ctx, HERO_PL, incBarY, incW, HERO_BAR_H); ctx.fill()
+      }
 
-      const gi = Math.max(0, Math.min(N - 1, Math.floor((sx - HERO_PL) / groupW)))
-      const b  = data[gi]
-      if (b) {
-        const net   = b.income - b.expense
-        const lines = [
-          { t: b.label,                                                             c: '#8A96A2', s: 9,  bold: false },
-          { t: `Income   +${heroFmt(b.income)}`,                                   c: '#2DD4BF', s: 10, bold: false },
-          { t: `Expenses −${heroFmt(b.expense)}`,                             c: '#C9A84C', s: 10, bold: false },
-          { t: `Net   ${net >= 0 ? '+' : '−'}${heroFmt(Math.abs(net))}`,     c: net >= 0 ? '#4ADE80' : '#F87171', s: 10, bold: true },
-        ]
-        const lh = 15, ttW = 130, ttH = lines.length * lh + 14
-        const flp = sx > W * 0.6
-        const tx  = Math.max(HERO_PL, flp ? sx - ttW - 8 : Math.min(sx + 8, W - ttW - HERO_PR))
-        const ty  = HERO_PT + 2
+      // Expense bar
+      if (expW > 0.5) {
+        const g = ctx.createLinearGradient(HERO_PL, 0, HERO_PL + Math.max(expW, 1), 0)
+        g.addColorStop(0, 'rgba(201,168,76,0.9)'); g.addColorStop(1, 'rgba(201,168,76,0.4)')
+        ctx.fillStyle = g; drawHeroPill(ctx, HERO_PL, expBarY, expW, HERO_BAR_H); ctx.fill()
+      }
 
-        ctx.fillStyle = '#0E151D'; ctx.strokeStyle = '#243040'; ctx.lineWidth = 0.5
-        ctx.beginPath()
-        ctx.moveTo(tx + 8, ty)
-        ctx.arcTo(tx + ttW, ty,        tx + ttW, ty + 8,        8)
-        ctx.arcTo(tx + ttW, ty + ttH,  tx + ttW - 8, ty + ttH,  8)
-        ctx.arcTo(tx,       ty + ttH,  tx,       ty + ttH - 8,  8)
-        ctx.arcTo(tx,       ty,        tx + 8,   ty,            8)
-        ctx.closePath()
-        ctx.fill(); ctx.stroke()
-
-        ctx.textAlign = 'left'; ctx.textBaseline = 'top'
-        lines.forEach((ln, i) => {
-          ctx.font = `${ln.bold ? 'bold ' : ''}${ln.s}px -apple-system,system-ui,sans-serif`
-          ctx.fillStyle = ln.c
-          ctx.fillText(ln.t, tx + 8, ty + 7 + i * lh)
-        })
+      // Right column: net normally; income + expense when hovered
+      ctx.textBaseline = 'middle'
+      ctx.textAlign    = 'right'
+      if (isHov) {
+        ctx.font      = '9px -apple-system,system-ui,sans-serif'
+        ctx.fillStyle = 'rgba(45,212,191,0.9)'
+        ctx.fillText(`+${heroFmt(b.income)}`, W - 4, incBarY + HERO_BAR_H / 2)
+        ctx.fillStyle = 'rgba(201,168,76,0.9)'
+        ctx.fillText(`−${heroFmt(b.expense)}`, W - 4, expBarY + HERO_BAR_H / 2)
+      } else {
+        ctx.font      = '9px -apple-system,system-ui,sans-serif'
+        ctx.fillStyle = net >= 0 ? 'rgba(74,222,128,0.65)' : 'rgba(248,113,113,0.65)'
+        ctx.fillText(`${net >= 0 ? '+' : '−'}${heroFmt(Math.abs(net))}`, W - 4, rowY + HERO_ROW_H / 2)
       }
     }
-  }, []) // reads module-level constants + stable refs only
+  }, [])
 
-  // Animate to new data on toggle / data change
   useEffect(() => {
-    const data = toggle === 0 ? monthly : toggle === 1 ? annual : allTime
-    barsRef.current = data
-    yMaxRef.current = heroYMax(data)
-    const target = heroHeights(data, yMaxRef.current)
+    const data = toggle === 0 ? monthly : annual
+    barsRef.current  = data
+    const yMax   = heroYMax(data)
+    const target = heroWidths(data, yMax)
     const from   = new Array(target.length).fill(0)
-    animHRef.current = [...from]
+    animWRef.current = [...from]
     if (animRef.current) cancelAnimationFrame(animRef.current)
     const t0 = performance.now()
     function tick(now: number) {
       const t = Math.min((now - t0) / 400, 1), ease = heroEase(t)
-      for (let i = 0; i < target.length; i++) animHRef.current[i] = from[i] + (target[i] - from[i]) * ease
+      for (let i = 0; i < target.length; i++) animWRef.current[i] = from[i] + (target[i] - from[i]) * ease
       redraw()
       if (t < 1) animRef.current = requestAnimationFrame(tick)
       else animRef.current = null
     }
     animRef.current = requestAnimationFrame(tick)
     return () => { if (animRef.current) cancelAnimationFrame(animRef.current) }
-  }, [toggle, monthly, annual, allTime, redraw])
+  }, [toggle, monthly, annual, redraw])
 
-  // Redraw on container resize
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
@@ -441,38 +387,37 @@ function HeroSplitBarChart({ monthly, annual, allTime }: {
     return () => ro.disconnect()
   }, [redraw])
 
-  // Touch + mouse scrub
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
-    const getX = (cx: number) => cx - el.getBoundingClientRect().left
-    const onTS = (e: TouchEvent) => { scrubXRef.current = getX(e.touches[0].clientX); redraw() }
-    const onTM = (e: TouchEvent) => { e.preventDefault(); scrubXRef.current = getX(e.touches[0].clientX); redraw() }
-    const onTE = () => { scrubXRef.current = null; redraw() }
-    const onMD = (e: MouseEvent) => { scrubXRef.current = getX(e.clientX); redraw() }
-    const onMM = (e: MouseEvent) => { if (scrubXRef.current !== null) { scrubXRef.current = getX(e.clientX); redraw() } }
-    const onMU = () => { scrubXRef.current = null; redraw() }
+    const getRow = (clientY: number) => {
+      const relY = clientY - el.getBoundingClientRect().top - HERO_PT
+      const idx  = Math.floor(relY / HERO_ROW_H)
+      const N    = barsRef.current.length
+      return idx >= 0 && idx < N ? idx : null
+    }
+    const onTS = (e: TouchEvent) => { scrubRowRef.current = getRow(e.touches[0].clientY); redraw() }
+    const onTM = (e: TouchEvent) => { e.preventDefault(); scrubRowRef.current = getRow(e.touches[0].clientY); redraw() }
+    const onTE = () => { scrubRowRef.current = null; redraw() }
+    const onMM = (e: MouseEvent) => { scrubRowRef.current = getRow(e.clientY); redraw() }
+    const onML = () => { scrubRowRef.current = null; redraw() }
     el.addEventListener('touchstart',  onTS, { passive: true  })
     el.addEventListener('touchmove',   onTM, { passive: false })
     el.addEventListener('touchend',    onTE, { passive: true  })
     el.addEventListener('touchcancel', onTE, { passive: true  })
-    el.addEventListener('mousedown',  onMD)
     el.addEventListener('mousemove',  onMM)
-    el.addEventListener('mouseup',    onMU)
-    el.addEventListener('mouseleave', onMU)
+    el.addEventListener('mouseleave', onML)
     return () => {
       el.removeEventListener('touchstart',  onTS)
       el.removeEventListener('touchmove',   onTM)
       el.removeEventListener('touchend',    onTE)
       el.removeEventListener('touchcancel', onTE)
-      el.removeEventListener('mousedown',  onMD)
       el.removeEventListener('mousemove',  onMM)
-      el.removeEventListener('mouseup',    onMU)
-      el.removeEventListener('mouseleave', onMU)
+      el.removeEventListener('mouseleave', onML)
     }
   }, [redraw])
 
-  const activeBars = toggle === 0 ? monthly : toggle === 1 ? annual : allTime
+  const activeBars = toggle === 0 ? monthly : annual
   const netTotal   = activeBars.reduce((s, b) => s + b.income - b.expense, 0)
 
   return (
@@ -485,13 +430,13 @@ function HeroSplitBarChart({ monthly, annual, allTime }: {
         {/* Header */}
         <div className="flex items-center justify-between mb-2.5">
           <p style={{ fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#556070', fontWeight: 600 }}>
-            Income vs Expenses
+            Cashflow
           </p>
           <div style={{ display: 'flex', background: '#1C2530', borderRadius: 20, padding: 2, gap: 1 }}>
-            {(['Monthly', 'Annual', 'All Time'] as const).map((lbl, i) => (
-              <button key={lbl} onClick={() => setToggle(i as 0 | 1 | 2)} className="select-none"
+            {(['Monthly', 'Annual'] as const).map((lbl, i) => (
+              <button key={lbl} onClick={() => setToggle(i as 0 | 1)} className="select-none"
                 style={{
-                  fontSize: 10, fontWeight: 600, padding: '4px 8px', borderRadius: 18, border: 'none',
+                  fontSize: 10, fontWeight: 600, padding: '4px 10px', borderRadius: 18, border: 'none',
                   cursor: 'pointer', transition: 'all 200ms ease',
                   background: toggle === i ? 'linear-gradient(135deg,#C9A84C,#A8873C)' : 'transparent',
                   color: toggle === i ? '#1A1510' : '#556070',
@@ -502,12 +447,10 @@ function HeroSplitBarChart({ monthly, annual, allTime }: {
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-3 mb-3" style={{ flexWrap: 'wrap' }}>
+        <div className="flex items-center gap-3 mb-3">
           {[
             { bg: 'rgba(45,212,191,0.88)', label: 'Income'   },
             { bg: 'rgba(201,168,76,0.88)', label: 'Expenses' },
-            { bg: 'rgba(10,120,90,0.98)',  label: 'Net gain' },
-            { bg: 'rgba(135,92,8,0.98)',   label: 'Net loss' },
           ].map(item => (
             <div key={item.label} className="flex items-center gap-1">
               <div style={{ width: 8, height: 8, borderRadius: 2, background: item.bg, flexShrink: 0 }} />
@@ -524,7 +467,7 @@ function HeroSplitBarChart({ monthly, annual, allTime }: {
 
         {/* Canvas */}
         <div ref={containerRef} className="select-none"
-          style={{ width: '100%', cursor: 'crosshair', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' } as React.CSSProperties}>
+          style={{ width: '100%', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' } as React.CSSProperties}>
           <canvas ref={canvasRef} style={{ width: '100%', display: 'block' }} />
         </div>
       </div>
@@ -783,8 +726,8 @@ export default function ProfilePage() {
 
   // Hero chart data
   const heroMonthly = useMemo<BarData[]>(() =>
-    Array.from({ length: 6 }, (_, i) => {
-      const d   = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1)
+    Array.from({ length: 12 }, (_, i) => {
+      const d   = new Date(now.getFullYear(), now.getMonth() - 11 + i, 1)
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
       const inc = income.filter(r => r.date.startsWith(key)).reduce((s, r) => s + r.amount, 0)
       const exp = expenses.filter(r => r.date.startsWith(key)).reduce((s, r) => s + r.cost, 0)
@@ -793,27 +736,16 @@ export default function ProfilePage() {
   , [income, expenses, now])
 
   const heroAnnual = useMemo<BarData[]>(() => {
-    const yr = now.getFullYear()
-    return Array.from({ length: 6 }, (_, i) => {
-      const year = yr - 5 + i
+    const yr        = now.getFullYear()
+    const startYear = 2025
+    return Array.from({ length: Math.max(0, yr - startYear + 1) }, (_, i) => {
+      const year = startYear + i
       const key  = `${year}-`
       const inc  = income.filter(r => r.date.startsWith(key)).reduce((s, r) => s + r.amount, 0)
       const exp  = expenses.filter(r => r.date.startsWith(key)).reduce((s, r) => s + r.cost, 0)
       return { label: String(year), income: inc, expense: exp }
     })
   }, [income, expenses, now])
-
-  const heroAllTime = useMemo<BarData[]>(() => {
-    const years = new Set<number>()
-    income.forEach(r  => { const y = parseInt(r.date.slice(0, 4)); if (!isNaN(y) && y > 2000) years.add(y) })
-    expenses.forEach(r => { const y = parseInt(r.date.slice(0, 4)); if (!isNaN(y) && y > 2000) years.add(y) })
-    return [...years].sort().map(year => {
-      const key = `${year}-`
-      const inc = income.filter(r => r.date.startsWith(key)).reduce((s, r) => s + r.amount, 0)
-      const exp = expenses.filter(r => r.date.startsWith(key)).reduce((s, r) => s + r.cost, 0)
-      return { label: String(year), income: inc, expense: exp }
-    })
-  }, [income, expenses])
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -897,17 +829,8 @@ export default function ProfilePage() {
 
       {/* ── Cashflow ─────────────────────────────────────────────────────────── */}
       {!loading && (
-        <HeroSplitBarChart monthly={heroMonthly} annual={heroAnnual} allTime={heroAllTime} />
+        <HeroSplitBarChart monthly={heroMonthly} annual={heroAnnual} />
       )}
-
-      {/* ── Expenses ─────────────────────────────────────────────────────────── */}
-      <div className="px-5 mb-5">
-        <MonthAnnualCard
-          label="Expenses"
-          renderMonth={active => <SimpleBars bars={moExpBars}  active={active} color="rgba(212,175,55,0.75)" sparse />}
-          renderAnnual={active => <SimpleBars bars={annExpBars} active={active} color="rgba(212,175,55,0.75)" />}
-        />
-      </div>
 
       {/* ── Top Spending Categories ───────────────────────────────────────────── */}
       <div className="px-5 mb-5">
@@ -924,15 +847,6 @@ export default function ProfilePage() {
           label="Subscriptions"
           renderMonth={active  => <CostPills items={subsSortedMo}  active={active} />}
           renderAnnual={active => <CostPills items={subsSortedAnn} active={active} />}
-        />
-      </div>
-
-      {/* ── Income ───────────────────────────────────────────────────────────── */}
-      <div className="px-5 mb-5">
-        <MonthAnnualCard
-          label="Income"
-          renderMonth={active  => <SimpleBars bars={moIncBars}  active={active} color="var(--sem-income)" sparse />}
-          renderAnnual={active => <SimpleBars bars={annIncBars} active={active} color="var(--sem-income)" />}
         />
       </div>
 
