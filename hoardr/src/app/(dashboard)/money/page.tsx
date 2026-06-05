@@ -145,8 +145,9 @@ export default function OutPage() {
   const [tab,           setTab]          = useState<Tab>('Expenses')
   const [expandedSubCat, setExpandedSubCat] = useState<string | null>(null)
   const [subStatCard, setSubStatCard]    = useState<'month' | 'year'>('month')
+  const [expStatCard, setExpStatCard]    = useState<'spent' | 'saved'>('spent')
   usePillSwipe(tab, setTab, PILL_OPTIONS)
-  useEffect(() => { setExpandedSubCat(null); setSubStatCard('month') }, [tab])
+  useEffect(() => { setExpandedSubCat(null); setSubStatCard('month'); setExpStatCard('spent') }, [tab])
   useEffect(() => { setExpandedSubCat(null) }, [subStatCard])
 
   // Expenses
@@ -653,6 +654,18 @@ export default function OutPage() {
     return entries.map(([name, total]) => ({ name, total, pct: Math.round((total / top) * 100) }))
   }, [txList])
 
+  const savedCatBreakdown = useMemo(() => {
+    const mo = localToday().slice(0, 7)
+    const totals: Record<string, number> = {}
+    for (const t of txList) {
+      if (!t.date.startsWith(mo) || !t.savings || t.savings <= 0) continue
+      totals[t.category] = (totals[t.category] ?? 0) + t.savings
+    }
+    const entries = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 5)
+    const top = entries[0]?.[1] ?? 1
+    return entries.map(([name, total]) => ({ name, total, pct: Math.round((total / top) * 100) }))
+  }, [txList])
+
   const subCatBreakdown = useMemo(() => {
     const totals: Record<string, number> = {}
     for (const s of activeSubs) {
@@ -698,24 +711,32 @@ export default function OutPage() {
       {/* ── Stat tiles ───────────────────────────────────────────────────── */}
       {!loading && tab === 'Expenses' && (
         <div className="mx-4 mt-4 flex gap-2">
-          <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
+          <button
+            onClick={() => setExpStatCard('spent')}
+            className={cn('flex-1 bg-bg-surface border rounded-[22px] p-4 text-left transition-colors select-none',
+              expStatCard === 'spent' ? 'border-gold/40' : 'border-white/[0.06]')}
+          >
             <div className="flex items-center justify-between mb-3">
-              <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Spent</p>
+              <p className={cn('text-[10px] font-semibold tracking-[0.1em] uppercase', expStatCard === 'spent' ? 'text-gold' : 'text-ink-muted')}>Spent This Month</p>
               <span className="text-[13px] text-gold">↑</span>
             </div>
             <p className="text-[26px] font-bold tracking-tight text-ink" style={{ fontFamily: 'var(--font-big-shoulders)' }}>
               <SlotNumber value={monthSpent} format={$fc} />
             </p>
-          </div>
-          <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
+          </button>
+          <button
+            onClick={() => setExpStatCard('saved')}
+            className={cn('flex-1 bg-bg-surface border rounded-[22px] p-4 text-left transition-colors select-none',
+              expStatCard === 'saved' ? 'border-gold/40' : 'border-white/[0.06]')}
+          >
             <div className="flex items-center justify-between mb-3">
-              <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Saved</p>
+              <p className={cn('text-[10px] font-semibold tracking-[0.1em] uppercase', expStatCard === 'saved' ? 'text-gold' : 'text-ink-muted')}>Saved This Month</p>
               <span className="text-[13px] text-emerald">✦</span>
             </div>
             <p className="text-[26px] font-bold tracking-tight text-emerald" style={{ fontFamily: 'var(--font-big-shoulders)' }}>
               <SlotNumber value={savedMonth} format={$fc} />
             </p>
-          </div>
+          </button>
         </div>
       )}
       {!loading && tab === 'Subs' && (
@@ -774,16 +795,22 @@ export default function OutPage() {
       )}
 
       {/* ── Category breakdown ────────────────────────────────────────────── */}
-      {!loading && tab === 'Expenses' && catBreakdown.length > 0 && (
-        <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card px-4 py-3">
-          <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">This Month</p>
-          <div className="space-y-2">
-            {catBreakdown.map((cat, i) => (
-              <CategoryPillBar key={cat.name} cat={cat} index={i} isSub={subNames.has(cat.name.toLowerCase())} />
-            ))}
+      {!loading && tab === 'Expenses' && (() => {
+        const breakdown = expStatCard === 'spent' ? catBreakdown : savedCatBreakdown
+        if (breakdown.length === 0) return null
+        return (
+          <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card px-4 py-3">
+            <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">
+              {expStatCard === 'spent' ? 'Spent This Month by Category' : 'Saved This Month by Category'}
+            </p>
+            <div className="space-y-2">
+              {breakdown.map((cat, i) => (
+                <CategoryPillBar key={cat.name} cat={cat} index={i} isSub={subNames.has(cat.name.toLowerCase())} />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
       {!loading && tab === 'Subs' && (() => {
         const breakdown = subStatCard === 'month' ? paidMonthCatBreakdown : paidYearCatBreakdown
         if (breakdown.length === 0) return null
