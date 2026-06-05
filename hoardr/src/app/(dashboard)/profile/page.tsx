@@ -284,12 +284,17 @@ function HeroSplitBarChart({ monthly, annual }: {
   annual:  BarData[]
 }) {
   const [toggle, setToggle] = useState<0 | 1>(0)
-  const canvasRef    = useRef<HTMLCanvasElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const animRef      = useRef<number | null>(null)
-  const animWRef     = useRef<number[]>([])
-  const scrubRowRef  = useRef<number | null>(null)
-  const barsRef      = useRef<BarData[]>(monthly)
+  const canvasRef      = useRef<HTMLCanvasElement>(null)
+  const containerRef   = useRef<HTMLDivElement>(null)
+  const cardRef        = useRef<HTMLDivElement>(null)
+  const animRef        = useRef<number | null>(null)
+  const animWRef       = useRef<number[]>([])
+  const scrubRowRef    = useRef<number | null>(null)
+  const barsRef        = useRef<BarData[]>(monthly)
+  const toggleRef      = useRef<0 | 1>(0)
+  const gestureModeRef = useRef<'undecided' | 'scrolling' | 'swiping' | 'scrubbing'>('undecided')
+  const touchStartRef  = useRef<{ x: number; y: number } | null>(null)
+  const scrubTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const redraw = useCallback(() => {
     const canvas    = canvasRef.current
@@ -418,33 +423,96 @@ function HeroSplitBarChart({ monthly, annual }: {
     return () => ro.disconnect()
   }, [redraw])
 
+  useEffect(() => { toggleRef.current = toggle }, [toggle])
+
   useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
+    const card = cardRef.current
+    const cont = containerRef.current
+    if (!card || !cont) return
+
     const getRow = (clientY: number) => {
-      const relY = clientY - el.getBoundingClientRect().top - HERO_PT
+      const rect = cont.getBoundingClientRect()
+      const relY = clientY - rect.top - HERO_PT
       const idx  = Math.floor(relY / HERO_ROW_H)
       const N    = barsRef.current.length
       return idx >= 0 && idx < N ? idx : null
     }
-    const onTS = (e: TouchEvent) => { scrubRowRef.current = getRow(e.touches[0].clientY); redraw() }
-    const onTM = (e: TouchEvent) => { e.preventDefault(); scrubRowRef.current = getRow(e.touches[0].clientY); redraw() }
-    const onTE = () => { scrubRowRef.current = null; redraw() }
+
+    const onTS = (e: TouchEvent) => {
+      gestureModeRef.current = 'undecided'
+      const t = e.touches[0]
+      touchStartRef.current = { x: t.clientX, y: t.clientY }
+      scrubTimerRef.current = setTimeout(() => {
+        if (gestureModeRef.current === 'undecided') {
+          gestureModeRef.current = 'scrubbing'
+          scrubRowRef.current = getRow(t.clientY)
+          haptic('tap')
+          redraw()
+        }
+      }, 300)
+    }
+
+    const onTM = (e: TouchEvent) => {
+      const start = touchStartRef.current
+      if (!start) return
+      const t   = e.touches[0]
+      const dx  = t.clientX - start.x
+      const dy  = t.clientY - start.y
+      const adx = Math.abs(dx), ady = Math.abs(dy)
+
+      if (gestureModeRef.current === 'undecided') {
+        if (adx > 8 && adx > ady) {
+          gestureModeRef.current = 'swiping'
+          if (scrubTimerRef.current) { clearTimeout(scrubTimerRef.current); scrubTimerRef.current = null }
+        } else if (ady > 8 && ady > adx) {
+          gestureModeRef.current = 'scrolling'
+          if (scrubTimerRef.current) { clearTimeout(scrubTimerRef.current); scrubTimerRef.current = null }
+        }
+      }
+
+      if (gestureModeRef.current === 'scrubbing') {
+        e.preventDefault()
+        scrubRowRef.current = getRow(t.clientY)
+        redraw()
+      } else if (gestureModeRef.current === 'swiping') {
+        e.preventDefault()
+      }
+    }
+
+    const onTE = (e: TouchEvent) => {
+      if (scrubTimerRef.current) { clearTimeout(scrubTimerRef.current); scrubTimerRef.current = null }
+      const mode  = gestureModeRef.current
+      const start = touchStartRef.current
+      if (mode === 'swiping' && start) {
+        const dx = e.changedTouches[0].clientX - start.x
+        if (dx < -40 && toggleRef.current === 0) setToggle(1)
+        else if (dx > 40 && toggleRef.current === 1) setToggle(0)
+      }
+      if (mode === 'scrubbing') {
+        scrubRowRef.current = null
+        redraw()
+      }
+      gestureModeRef.current = 'undecided'
+      touchStartRef.current  = null
+    }
+
     const onMM = (e: MouseEvent) => { scrubRowRef.current = getRow(e.clientY); redraw() }
     const onML = () => { scrubRowRef.current = null; redraw() }
-    el.addEventListener('touchstart',  onTS, { passive: true  })
-    el.addEventListener('touchmove',   onTM, { passive: false })
-    el.addEventListener('touchend',    onTE, { passive: true  })
-    el.addEventListener('touchcancel', onTE, { passive: true  })
-    el.addEventListener('mousemove',  onMM)
-    el.addEventListener('mouseleave', onML)
+
+    card.addEventListener('touchstart',  onTS, { passive: true  })
+    card.addEventListener('touchmove',   onTM, { passive: false })
+    card.addEventListener('touchend',    onTE, { passive: true  })
+    card.addEventListener('touchcancel', onTE, { passive: true  })
+    cont.addEventListener('mousemove',  onMM)
+    cont.addEventListener('mouseleave', onML)
     return () => {
-      el.removeEventListener('touchstart',  onTS)
-      el.removeEventListener('touchmove',   onTM)
-      el.removeEventListener('touchend',    onTE)
-      el.removeEventListener('touchcancel', onTE)
-      el.removeEventListener('mousemove',  onMM)
-      el.removeEventListener('mouseleave', onML)
+      card.removeEventListener('touchstart',  onTS)
+      card.removeEventListener('touchmove',   onTM)
+      card.removeEventListener('touchend',    onTE)
+      card.removeEventListener('touchcancel', onTE)
+      cont.removeEventListener('mousemove',  onMM)
+      cont.removeEventListener('mouseleave', onML)
+      if (scrubTimerRef.current) clearTimeout(scrubTimerRef.current)
     }
   }, [redraw])
 
@@ -453,26 +521,23 @@ function HeroSplitBarChart({ monthly, annual }: {
 
   return (
     <div className="px-5 mb-6">
-      <div style={{
-        background: 'var(--color-bg-surface)', borderRadius: 16,
-        border: '0.5px solid rgba(201,168,76,0.25)',
-        boxShadow: 'inset 0 0 20px rgba(201,168,76,0.05)', padding: 16,
-      }}>
+      <div ref={cardRef} className="select-none"
+        style={{
+          background: 'var(--color-bg-surface)', borderRadius: 16,
+          border: '0.5px solid rgba(201,168,76,0.25)',
+          boxShadow: 'inset 0 0 20px rgba(201,168,76,0.05)', padding: 16,
+          WebkitUserSelect: 'none', WebkitTouchCallout: 'none',
+        } as React.CSSProperties}>
         {/* Header */}
-        <div className="flex items-center justify-between mb-2.5">
-          <p style={{ fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#556070', fontWeight: 600 }}>
-            Cashflow
-          </p>
-          <div style={{ display: 'flex', background: '#1C2530', borderRadius: 20, padding: 2, gap: 1 }}>
+        <div className="flex items-center gap-2 mb-4">
+          <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-gold">Cashflow</p>
+          <div className="flex gap-1.5 ml-auto items-center">
             {(['Monthly', 'Annual'] as const).map((lbl, i) => (
-              <button key={lbl} onClick={() => setToggle(i as 0 | 1)} className="select-none"
-                style={{
-                  fontSize: 10, fontWeight: 600, padding: '4px 10px', borderRadius: 18, border: 'none',
-                  cursor: 'pointer', transition: 'all 200ms ease',
-                  background: toggle === i ? 'linear-gradient(135deg,#C9A84C,#A8873C)' : 'transparent',
-                  color: toggle === i ? '#1A1510' : '#556070',
-                }}
-              >{lbl}</button>
+              <button key={lbl} onClick={() => setToggle(i as 0 | 1)}
+                className={cn('px-3 py-1 rounded-full text-[11px] font-semibold transition-colors select-none',
+                  toggle === i ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
+                {lbl}
+              </button>
             ))}
           </div>
         </div>
@@ -499,9 +564,19 @@ function HeroSplitBarChart({ monthly, annual }: {
         </div>
 
         {/* Canvas */}
-        <div ref={containerRef} className="select-none"
-          style={{ width: '100%', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' } as React.CSSProperties}>
+        <div ref={containerRef} style={{ width: '100%' }}>
           <canvas ref={canvasRef} style={{ width: '100%', display: 'block' }} />
+        </div>
+
+        {/* Dot indicator */}
+        <div className="flex justify-center gap-1.5 mt-3">
+          {([0, 1] as const).map(i => (
+            <div key={i} className="rounded-full transition-all duration-300" style={{
+              width:      toggle === i ? 14 : 5,
+              height:     5,
+              background: toggle === i ? '#D4AF37' : 'rgba(255,255,255,0.2)',
+            }} />
+          ))}
         </div>
       </div>
     </div>
