@@ -827,7 +827,7 @@ export default function OutPage() {
                     />
                     <div style={{
                       overflow: 'hidden',
-                      maxHeight: isOpen ? `${drillItems.length * 48 + 4}px` : 0,
+                      maxHeight: isOpen ? `${drillItems.length * 60 + 4}px` : 0,
                       opacity: isOpen ? 1 : 0,
                       transition: 'max-height 300ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease',
                     }}>
