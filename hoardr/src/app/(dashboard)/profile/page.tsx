@@ -233,15 +233,25 @@ const HERO_ROW_H = 26   // height per period row
 const HERO_BAR_H = 8    // individual bar height
 const HERO_BAR_G = 4    // gap between income and expense bars
 
-function drawHeroPill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
+function drawHeroBar(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, w: number, h: number,
+  roundL: boolean, roundR: boolean,
+) {
   if (h < 1 || w < 1) return
-  const r = Math.min(w / 2, h / 2, 6)
+  const r  = Math.min(h / 2, 4)
+  const rl = roundL ? r : 0
+  const rr = roundR ? r : 0
   ctx.beginPath()
-  ctx.moveTo(x + r, y)
-  ctx.arcTo(x + w, y,     x + w, y + r,     r)
-  ctx.arcTo(x + w, y + h, x + w - r, y + h, r)
-  ctx.arcTo(x,     y + h, x,     y + h - r, r)
-  ctx.arcTo(x,     y,     x + r, y,         r)
+  ctx.moveTo(x + rl, y)
+  ctx.lineTo(x + w - rr, y)
+  if (rr > 0) ctx.arcTo(x + w, y,     x + w,      y + rr,     rr)
+  ctx.lineTo(x + w, y + h - rr)
+  if (rr > 0) ctx.arcTo(x + w, y + h, x + w - rr, y + h,      rr)
+  ctx.lineTo(x + rl, y + h)
+  if (rl > 0) ctx.arcTo(x,     y + h, x,           y + h - rl, rl)
+  ctx.lineTo(x, y + rl)
+  if (rl > 0) ctx.arcTo(x,     y,     x + rl,      y,          rl)
   ctx.closePath()
 }
 
@@ -258,10 +268,13 @@ function heroYMax(data: BarData[]): number {
 }
 
 function heroWidths(data: BarData[], yMax: number): number[] {
-  return data.flatMap(b => [
-    yMax > 0 ? b.income  / yMax : 0,
-    yMax > 0 ? b.expense / yMax : 0,
-  ])
+  return data.flatMap(b => {
+    const incF  = yMax > 0 ? b.income  / yMax : 0
+    const expF  = yMax > 0 ? b.expense / yMax : 0
+    const baseF = Math.min(incF, expF)
+    return [baseF, incF - baseF, baseF, expF - baseF]
+    // [incBase, incCap (net gain), expBase, expCap (net loss)]
+  })
 }
 
 function heroEase(t: number) { return 1 - Math.pow(1 - t, 4) }
@@ -306,14 +319,14 @@ function HeroSplitBarChart({ monthly, annual }: {
     for (let gi = 0; gi < N; gi++) {
       const b       = data[gi]
       const rowY    = HERO_PT + gi * HERO_ROW_H
-      const incFrac = Math.max(0, widths[gi * 2 + 0] ?? 0)
-      const expFrac = Math.max(0, widths[gi * 2 + 1] ?? 0)
-      const incW    = incFrac * chartW
-      const expW    = expFrac * chartW
-      const net     = b.income - b.expense
-      const isHov   = hov === gi
-      const incBarY = rowY + (HERO_ROW_H - HERO_BAR_H * 2 - HERO_BAR_G) / 2
-      const expBarY = incBarY + HERO_BAR_H + HERO_BAR_G
+      const incBaseW = Math.max(0, widths[gi * 4 + 0] ?? 0) * chartW
+      const incCapW  = Math.max(0, widths[gi * 4 + 1] ?? 0) * chartW
+      const expBaseW = Math.max(0, widths[gi * 4 + 2] ?? 0) * chartW
+      const expCapW  = Math.max(0, widths[gi * 4 + 3] ?? 0) * chartW
+      const net      = b.income - b.expense
+      const isHov    = hov === gi
+      const incBarY  = rowY + (HERO_ROW_H - HERO_BAR_H * 2 - HERO_BAR_G) / 2
+      const expBarY  = incBarY + HERO_BAR_H + HERO_BAR_G
 
       // Row highlight
       if (isHov) {
@@ -328,18 +341,36 @@ function HeroSplitBarChart({ monthly, annual }: {
       ctx.textBaseline = 'middle'
       ctx.fillText(b.label, HERO_PL - 4, rowY + HERO_ROW_H / 2)
 
-      // Income bar
-      if (incW > 0.5) {
-        const g = ctx.createLinearGradient(HERO_PL, 0, HERO_PL + Math.max(incW, 1), 0)
-        g.addColorStop(0, 'rgba(45,212,191,0.9)'); g.addColorStop(1, 'rgba(45,212,191,0.4)')
-        ctx.fillStyle = g; drawHeroPill(ctx, HERO_PL, incBarY, incW, HERO_BAR_H); ctx.fill()
+      // Income bar: base (teal) + net-gain cap (green)
+      if (incBaseW > 0.5) {
+        const g = ctx.createLinearGradient(HERO_PL, 0, HERO_PL + incBaseW, 0)
+        g.addColorStop(0, 'rgba(45,212,191,0.9)'); g.addColorStop(1, 'rgba(45,212,191,0.55)')
+        ctx.fillStyle = g
+        drawHeroBar(ctx, HERO_PL, incBarY, incBaseW, HERO_BAR_H, true, incCapW <= 0.5)
+        ctx.fill()
+      }
+      if (incCapW > 0.5) {
+        const g = ctx.createLinearGradient(HERO_PL + incBaseW, 0, HERO_PL + incBaseW + incCapW, 0)
+        g.addColorStop(0, 'rgba(52,211,153,0.95)'); g.addColorStop(1, 'rgba(16,185,129,1.0)')
+        ctx.fillStyle = g
+        drawHeroBar(ctx, HERO_PL + incBaseW, incBarY, incCapW, HERO_BAR_H, incBaseW <= 0.5, true)
+        ctx.fill()
       }
 
-      // Expense bar
-      if (expW > 0.5) {
-        const g = ctx.createLinearGradient(HERO_PL, 0, HERO_PL + Math.max(expW, 1), 0)
-        g.addColorStop(0, 'rgba(201,168,76,0.9)'); g.addColorStop(1, 'rgba(201,168,76,0.4)')
-        ctx.fillStyle = g; drawHeroPill(ctx, HERO_PL, expBarY, expW, HERO_BAR_H); ctx.fill()
+      // Expense bar: base (gold) + net-loss cap (red)
+      if (expBaseW > 0.5) {
+        const g = ctx.createLinearGradient(HERO_PL, 0, HERO_PL + expBaseW, 0)
+        g.addColorStop(0, 'rgba(201,168,76,0.9)'); g.addColorStop(1, 'rgba(201,168,76,0.55)')
+        ctx.fillStyle = g
+        drawHeroBar(ctx, HERO_PL, expBarY, expBaseW, HERO_BAR_H, true, expCapW <= 0.5)
+        ctx.fill()
+      }
+      if (expCapW > 0.5) {
+        const g = ctx.createLinearGradient(HERO_PL + expBaseW, 0, HERO_PL + expBaseW + expCapW, 0)
+        g.addColorStop(0, 'rgba(248,113,113,0.95)'); g.addColorStop(1, 'rgba(239,68,68,1.0)')
+        ctx.fillStyle = g
+        drawHeroBar(ctx, HERO_PL + expBaseW, expBarY, expCapW, HERO_BAR_H, expBaseW <= 0.5, true)
+        ctx.fill()
       }
 
       // Right column: net normally; income + expense when hovered
@@ -447,10 +478,12 @@ function HeroSplitBarChart({ monthly, annual }: {
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-3 mb-3">
+        <div className="flex items-center gap-3 mb-3" style={{ flexWrap: 'wrap' }}>
           {[
             { bg: 'rgba(45,212,191,0.88)', label: 'Income'   },
             { bg: 'rgba(201,168,76,0.88)', label: 'Expenses' },
+            { bg: 'rgba(16,185,129,0.95)', label: 'Net gain' },
+            { bg: 'rgba(239,68,68,0.95)',  label: 'Net loss' },
           ].map(item => (
             <div key={item.label} className="flex items-center gap-1">
               <div style={{ width: 8, height: 8, borderRadius: 2, background: item.bg, flexShrink: 0 }} />
@@ -725,15 +758,16 @@ export default function ProfilePage() {
   const totalSubAnn = useMemo(() => subs.reduce((s, sub) => s + sub.annual_cost,  0), [subs])
 
   // Hero chart data
-  const heroMonthly = useMemo<BarData[]>(() =>
-    Array.from({ length: 12 }, (_, i) => {
-      const d   = new Date(now.getFullYear(), now.getMonth() - 11 + i, 1)
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  const heroMonthly = useMemo<BarData[]>(() => {
+    const yr = now.getFullYear()
+    const mo = now.getMonth() // 0 = Jan; grows through year, resets each Jan
+    return Array.from({ length: mo + 1 }, (_, i) => {
+      const key = `${yr}-${String(i + 1).padStart(2, '0')}`
       const inc = income.filter(r => r.date.startsWith(key)).reduce((s, r) => s + r.amount, 0)
       const exp = expenses.filter(r => r.date.startsWith(key)).reduce((s, r) => s + r.cost, 0)
-      return { label: MONTH_NAMES[d.getMonth()], income: inc, expense: exp }
+      return { label: MONTH_NAMES[i], income: inc, expense: exp }
     })
-  , [income, expenses, now])
+  }, [income, expenses, now])
 
   const heroAnnual = useMemo<BarData[]>(() => {
     const yr        = now.getFullYear()
