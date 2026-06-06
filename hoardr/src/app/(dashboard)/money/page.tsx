@@ -117,6 +117,7 @@ interface Sub {
   next_renewal: string | null
   status:       string
   card_id:      string | null
+  bank_id:      string | null
   category:     string | null
   cal_event_id: string | null
 }
@@ -218,7 +219,7 @@ export default function OutPage() {
           .limit(LIMIT)
           .abortSignal(controller.signal),
         supabase.from('subscriptions')
-          .select('id, name, cost, billing, status, next_renewal, monthly_cost, annual_cost, card_id, category, cal_event_id')
+          .select('id, name, cost, billing, status, next_renewal, monthly_cost, annual_cost, card_id, bank_id, category, cal_event_id')
           .order('next_renewal', { ascending: true })
           .abortSignal(controller.signal),
         supabase.from('wishlist')
@@ -257,6 +258,7 @@ export default function OutPage() {
         next_renewal: s.next_renewal ? String(s.next_renewal) : null,
         status:       String(s.status),
         card_id:      s.card_id ? String(s.card_id) : null,
+        bank_id:      s.bank_id ? String(s.bank_id) : null,
         category:     s.category ? String(s.category) : null,
         cal_event_id: s.cal_event_id ? String(s.cal_event_id) : null,
       }))
@@ -499,12 +501,12 @@ export default function OutPage() {
   async function handleAddSub(sub: NewSub) {
     const { monthly, annual } = calcSubCosts(sub.cost, sub.billing)
     const tempId = `temp-${Date.now()}`
-    setSubs(prev => [...prev, { id: tempId, name: sub.name, billing: sub.billing, cost: sub.cost, monthly_cost: monthly, annual_cost: annual, next_renewal: sub.next_renewal, status: 'Active', card_id: sub.card_id, category: sub.category ?? null, cal_event_id: null }])
+    setSubs(prev => [...prev, { id: tempId, name: sub.name, billing: sub.billing, cost: sub.cost, monthly_cost: monthly, annual_cost: annual, next_renewal: sub.next_renewal, status: 'Active', card_id: sub.card_id, bank_id: sub.bank_id, category: sub.category ?? null, cal_event_id: null }])
     if (sub.card_id) setDefaultCardId(sub.card_id)
     showToast(`${sub.name} added`, { type: 'add' })
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { await loadData(); return }
-    const { data: inserted } = await supabase.from('subscriptions').insert({ user_id: user.id, name: sub.name, cost: sub.cost, billing: sub.billing, next_renewal: sub.next_renewal, status: 'Active', payments: 0, monthly_cost: monthly, annual_cost: annual, card_id: sub.card_id, category: sub.category ?? null }).select('id').single()
+    const { data: inserted } = await supabase.from('subscriptions').insert({ user_id: user.id, name: sub.name, cost: sub.cost, billing: sub.billing, next_renewal: sub.next_renewal, status: 'Active', payments: 0, monthly_cost: monthly, annual_cost: annual, card_id: sub.card_id, bank_id: sub.bank_id, category: sub.category ?? null }).select('id').single()
     if (sub.next_renewal && inserted?.id) {
       const googleEventId = await createCalEvent(allDayEvent(`🔄 ${sub.name}`, sub.next_renewal, `${sub.billing} · $${sub.cost}`))
       if (googleEventId) await supabase.from('subscriptions').update({ cal_event_id: googleEventId }).eq('id', inserted.id)
@@ -515,7 +517,7 @@ export default function OutPage() {
   async function handleEditSub(id: string, edits: SubEdits) {
     setSubs(prev => prev.map(s => s.id === id ? { ...s, ...edits } : s))
     if (edits.card_id) setDefaultCardId(edits.card_id)
-    const { error } = await supabase.from('subscriptions').update({ name: edits.name, cost: edits.cost, billing: edits.billing, next_renewal: edits.next_renewal, monthly_cost: edits.monthly_cost, annual_cost: edits.annual_cost, card_id: edits.card_id, category: edits.category ?? null }).eq('id', id)
+    const { error } = await supabase.from('subscriptions').update({ name: edits.name, cost: edits.cost, billing: edits.billing, next_renewal: edits.next_renewal, monthly_cost: edits.monthly_cost, annual_cost: edits.annual_cost, card_id: edits.card_id, bank_id: edits.bank_id, category: edits.category ?? null }).eq('id', id)
     if (error) { console.error('edit sub error:', JSON.stringify(error)); await loadData(); return }
     if (edits.next_renewal) {
       const existing = subs.find(s => s.id === id)
@@ -1120,6 +1122,7 @@ export default function OutPage() {
       onClose={() => setSubSheet(false)}
       onAdd={handleAddSub}
       cards={cards}
+      banks={banks}
       defaultCardId={defaultCardId}
       defaultBilling={getAppPrefs().defaultBilling as BillingCycle}
     />
@@ -1134,6 +1137,7 @@ export default function OutPage() {
       onClose={() => setEditSub(null)}
       onSave={handleEditSub}
       cards={cards}
+      banks={banks}
     />
     <EditWishlistSheet
       item={editWish}

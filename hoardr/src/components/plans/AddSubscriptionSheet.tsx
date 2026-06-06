@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { localToday, cn } from '@/lib/utils'
 import type { BillingCycle } from '@/types'
-import type { CardOption } from '@/components/money/AddTransactionSheet'
+import type { CardOption, BankOption } from '@/components/money/AddTransactionSheet'
 import { EXPENSE_CATEGORIES } from '@/lib/data/transactions'
 import { getCategoryIcon } from '@/components/ui/CategoryIcon'
 import { ChevronDown } from 'lucide-react'
@@ -22,6 +22,7 @@ export interface NewSub {
   billing:      BillingCycle
   next_renewal: string
   card_id:      string | null
+  bank_id:      string | null
   category:     string | null
 }
 
@@ -30,16 +31,19 @@ interface Props {
   onClose:          () => void
   onAdd:            (sub: NewSub) => void
   cards?:           CardOption[]
+  banks?:           BankOption[]
   defaultCardId?:   string | null
   defaultBilling?:  BillingCycle
 }
 
-export function AddSubscriptionSheet({ open, onClose, onAdd, cards = [], defaultCardId, defaultBilling }: Props) {
+export function AddSubscriptionSheet({ open, onClose, onAdd, cards = [], banks = [], defaultCardId, defaultBilling }: Props) {
   const [name,        setName]        = useState('')
   const [amount,      setAmount]      = useState('')
   const [billing,     setBilling]     = useState<BillingCycle>('Monthly')
   const [nextRenewal, setNextRenewal] = useState(localToday())
   const [cardId,      setCardId]      = useState<string | null>(null)
+  const [bankId,      setBankId]      = useState<string | null>(null)
+  const [direct,      setDirect]      = useState(false)
   const [category,    setCategory]    = useState<string | null>(null)
 
   const backdropRef = useRef<HTMLDivElement>(null)
@@ -105,10 +109,13 @@ export function AddSubscriptionSheet({ open, onClose, onAdd, cards = [], default
     if (open) {
       setCardId(defaultCardId ?? null)
       setBilling(defaultBilling ?? 'Monthly')
+      setDirect(false)
+      setBankId(null)
     } else {
       const t = setTimeout(() => {
         setName(''); setAmount(''); setBilling(defaultBilling ?? 'Monthly')
         setNextRenewal(localToday()); setCardId(defaultCardId ?? null); setCategory(null)
+        setDirect(false); setBankId(null)
       }, 300)
       return () => clearTimeout(t)
     }
@@ -122,7 +129,7 @@ export function AddSubscriptionSheet({ open, onClose, onAdd, cards = [], default
   function handleAdd() {
     const parsed = parseFloat(amount) || 0
     if (!name.trim()) return
-    onAdd({ name: name.trim(), cost: parsed, billing, next_renewal: nextRenewal, card_id: cardId, category })
+    onAdd({ name: name.trim(), cost: parsed, billing, next_renewal: nextRenewal, card_id: direct ? null : cardId, bank_id: direct ? bankId : null, category })
     onClose()
   }
 
@@ -226,30 +233,64 @@ export function AddSubscriptionSheet({ open, onClose, onAdd, cards = [], default
             </div>
           </div>
 
-          {/* Card picker */}
+          {/* Payment method: Direct toggle + Card or Bank picker */}
           <div>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Card</p>
-            {cards.length === 0 ? (
-              <p className="text-[12px] text-ink-faint py-2">No cards yet — add one in Wallet</p>
-            ) : (
-              <div className="relative">
-                <select
-                  value={cardId ?? ''}
-                  onChange={e => setCardId(e.target.value || null)}
-                  className="w-full bg-bg-overlay border border-white/[0.06] rounded-[14px] px-4 py-3 text-[15px] text-ink appearance-none outline-none pr-10"
-                  style={{ colorScheme: 'dark' }}
-                >
-                  <option value="">None</option>
-                  {[...cards]
-                    .sort((a, b) => (a.id === defaultCardId ? -1 : b.id === defaultCardId ? 1 : 0))
-                    .map(c => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}{c.last4 ? ` ••••${c.last4}` : ''}
-                      </option>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint">
+                {direct ? 'Bank' : 'Card'}
+              </p>
+              <button
+                onClick={() => setDirect(v => !v)}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-semibold transition-all select-none',
+                  direct ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted ring-1 ring-white/[0.08]',
+                )}
+              >
+                Direct
+              </button>
+            </div>
+            {direct ? (
+              banks.length === 0 ? (
+                <p className="text-[12px] text-ink-faint py-2">No banks yet — add one in Wallet</p>
+              ) : (
+                <div className="relative">
+                  <select
+                    value={bankId ?? ''}
+                    onChange={e => setBankId(e.target.value || null)}
+                    className="w-full bg-bg-overlay border border-white/[0.06] rounded-[14px] px-4 py-3 text-[15px] text-ink appearance-none outline-none pr-10"
+                    style={{ colorScheme: 'dark' }}
+                  >
+                    <option value="">None</option>
+                    {[...banks].map(b => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
                     ))}
-                </select>
-                <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
-              </div>
+                  </select>
+                  <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
+                </div>
+              )
+            ) : (
+              cards.length === 0 ? (
+                <p className="text-[12px] text-ink-faint py-2">No cards yet — add one in Wallet</p>
+              ) : (
+                <div className="relative">
+                  <select
+                    value={cardId ?? ''}
+                    onChange={e => setCardId(e.target.value || null)}
+                    className="w-full bg-bg-overlay border border-white/[0.06] rounded-[14px] px-4 py-3 text-[15px] text-ink appearance-none outline-none pr-10"
+                    style={{ colorScheme: 'dark' }}
+                  >
+                    <option value="">None</option>
+                    {[...cards]
+                      .sort((a, b) => (a.id === defaultCardId ? -1 : b.id === defaultCardId ? 1 : 0))
+                      .map(c => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}{c.last4 ? ` ••••${c.last4}` : ''}
+                        </option>
+                      ))}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
+                </div>
+              )
             )}
           </div>
 

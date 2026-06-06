@@ -1,0 +1,2 @@
+ALTER TABLE subscriptions
+  ADD COLUMN IF NOT EXISTS bank_id uuid REFERENCES banks(id) ON DELETE SET NULL;
