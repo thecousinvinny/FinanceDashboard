@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { PillGroup } from '@/components/ui/Pill'
 import { AddCardSheet, type NewCard } from '@/components/wallet/AddCardSheet'
 import { AddBankSheet, type NewBank } from '@/components/wallet/AddBankSheet'
+import { AddTransferSheet, type TransferPayload } from '@/components/wallet/AddTransferSheet'
 import { RevenueStreamSheet, type RevenueStreamConfig } from '@/components/wallet/RevenueStreamSheet'
 import { ManualDepositSheet, type IncomeInitial } from '@/components/wallet/ManualDepositSheet'
 import { EditCardSheet, type CardEdits } from '@/components/wallet/EditCardSheet'
@@ -34,6 +35,10 @@ interface CardSub {
 }
 interface IncomeRow {
   id: string; name: string; amount: number; date: string; source: string | null; bank_id: string | null
+}
+interface Transfer {
+  id: string; from_bank_id: string | null; to_bank_id: string | null
+  amount: number; date: string; note: string | null
 }
 
 type Tab = 'History' | 'Streams' | 'Accounts'
@@ -223,7 +228,7 @@ let sessionAutoGenDone = false
 export default function InPage() {
   const [tab,           setTab]          = useState<Tab>('History')
   usePillSwipe(tab, setTab, PILL_OPTIONS)
-  type InCache = { cards: Card[]; banks: Bank[]; streams: RevenueStreamConfig[] }
+  type InCache = { cards: Card[]; banks: Bank[]; streams: RevenueStreamConfig[]; transfers: Transfer[] }
   const cached = pageCache.get<InCache>('in')
   const [cards,         setCards]        = useState<Card[]>(cached?.cards ?? [])
   const [banks,         setBanks]        = useState<Bank[]>(cached?.banks ?? [])
@@ -249,6 +254,8 @@ export default function InPage() {
   const [cardSubs,      setCardSubs]     = useState<CardSub[]>([])
   const [expLoading,    setExpLoading]   = useState(false)
   const [cardStats,     setCardStats]    = useState<Record<string, { expenses: number; subs: number }>>({})
+  const [transfers,          setTransfers]          = useState<Transfer[]>(cached?.transfers ?? [])
+  const [transferSheetOpen, setTransferSheetOpen]  = useState(false)
   const [draggingId,    setDraggingId]   = useState<string | null>(null)
   const [dragCards,     setDragCards]    = useState<Card[]>([])
 
@@ -280,12 +287,13 @@ export default function InPage() {
     abortRef.current = controller
     const gen = ++loadGen.current
     try {
-      const [{ data: cardsData }, { data: banksData }, { data: streamsData }, { data: expCardIds }, { data: subCardIds }] = await Promise.all([
+      const [{ data: cardsData }, { data: banksData }, { data: streamsData }, { data: expCardIds }, { data: subCardIds }, { data: transfersData }] = await Promise.all([
         supabase.from('cards').select('*, bank:banks(id, name, type, last4)').order('sort_order', { ascending: true, nullsFirst: false }).order('is_default', { ascending: false }).order('created_at', { ascending: false }).abortSignal(controller.signal),
         supabase.from('banks').select('*').order('created_at', { ascending: false }).abortSignal(controller.signal),
         supabase.from('revenue_streams').select('*').order('created_at', { ascending: true }).abortSignal(controller.signal),
         supabase.from('expenses').select('card_id').not('card_id', 'is', null).abortSignal(controller.signal),
         supabase.from('subscriptions').select('card_id').not('card_id', 'is', null).abortSignal(controller.signal),
+        supabase.from('transfers').select('id, from_bank_id, to_bank_id, amount, date, note').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(100).abortSignal(controller.signal),
       ])
       const newCards   = (cardsData  ?? []) as Card[]
       const newBanks   = (banksData  ?? []) as Bank[]
@@ -299,12 +307,21 @@ export default function InPage() {
         if (!stats[row.card_id]) stats[row.card_id] = { expenses: 0, subs: 0 }
         stats[row.card_id].subs++
       }
+      const newTransfers: Transfer[] = (transfersData ?? []).map(t => ({
+        id:           String(t.id),
+        from_bank_id: t.from_bank_id ? String(t.from_bank_id) : null,
+        to_bank_id:   t.to_bank_id   ? String(t.to_bank_id)   : null,
+        amount:       Number(t.amount),
+        date:         String(t.date),
+        note:         t.note ? String(t.note) : null,
+      }))
       if (gen !== loadGen.current) return
       setCards(newCards)
       setBanks(newBanks)
       setRevStreams(newStreams)
+      setTransfers(newTransfers)
       setCardStats(stats)
-      pageCache.set('in', { cards: newCards, banks: newBanks, streams: newStreams })
+      pageCache.set('in', { cards: newCards, banks: newBanks, streams: newStreams, transfers: newTransfers })
       setLoading(false)
       if (!sessionAutoGenDone) {
         sessionAutoGenDone = true
@@ -666,6 +683,53 @@ export default function InPage() {
     await loadData()
   }
 
+  async function handleAddTransfer(payload: TransferPayload) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const fromBank = banksRef.current.find(b => b.id === payload.from_bank_id)
+    const toBank   = banksRef.current.find(b => b.id === payload.to_bank_id)
+    // Optimistic state
+    setTransfers(prev => [{ id: `tmp-${Date.now()}`, ...payload }, ...prev])
+    setBanks(prev => prev.map(b => {
+      if (b.id === payload.from_bank_id && b.balance != null) return { ...b, balance: b.balance - payload.amount }
+      if (b.id === payload.to_bank_id   && b.balance != null) return { ...b, balance: b.balance + payload.amount }
+      return b
+    }))
+    showToast('Transfer recorded', { type: 'add' })
+    await Promise.all([
+      supabase.from('transfers').insert({ user_id: user.id, from_bank_id: payload.from_bank_id, to_bank_id: payload.to_bank_id, amount: payload.amount, date: payload.date, note: payload.note }),
+      fromBank?.balance != null ? supabase.from('banks').update({ balance: fromBank.balance - payload.amount }).eq('id', fromBank.id) : null,
+      toBank?.balance   != null ? supabase.from('banks').update({ balance: (toBank.balance ?? 0) + payload.amount }).eq('id', toBank.id) : null,
+    ])
+    await loadData()
+  }
+
+  function handleDeleteTransfer(id: string) {
+    const t = transfers.find(x => x.id === id)
+    if (!t) return
+    const tSnap = transfers.slice()
+    const bSnap = banksRef.current.slice()
+    setTransfers(prev => prev.filter(x => x.id !== id))
+    setBanks(prev => prev.map(b => {
+      if (b.id === t.from_bank_id && b.balance != null) return { ...b, balance: b.balance + t.amount }
+      if (b.id === t.to_bank_id   && b.balance != null) return { ...b, balance: b.balance - t.amount }
+      return b
+    }))
+    showToast('Transfer deleted', {
+      type: 'delete',
+      undo: {
+        onUndo:   () => { setTransfers(tSnap); setBanks(bSnap) },
+        onCommit: async () => {
+          await supabase.from('transfers').delete().eq('id', id)
+          const fb = bSnap.find(b => b.id === t.from_bank_id)
+          const tb = bSnap.find(b => b.id === t.to_bank_id)
+          if (fb?.balance != null) await supabase.from('banks').update({ balance: fb.balance + t.amount }).eq('id', fb.id)
+          if (tb?.balance != null) await supabase.from('banks').update({ balance: tb.balance - t.amount }).eq('id', tb.id)
+        },
+      },
+    })
+  }
+
   useEffect(() => {
     const el = containerRef.current!
     if (!el) return
@@ -1020,6 +1084,36 @@ export default function InPage() {
               </div>
             )}
 
+            {transfers.length > 0 && (
+              <div>
+                <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Recent Transfers</p>
+                <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
+                  {transfers.slice(0, 10).map(t => {
+                    const from = banks.find(b => b.id === t.from_bank_id)
+                    const to   = banks.find(b => b.id === t.to_bank_id)
+                    return (
+                      <SwipeToDelete key={t.id} onDelete={() => handleDeleteTransfer(t.id)}>
+                        <div className="flex items-center gap-3 px-4 py-3.5">
+                          <div className="w-10 h-10 rounded-[10px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+                            <ArrowLeftRight size={15} className="text-ink-muted" strokeWidth={1.75} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[14px] font-medium text-ink truncate">
+                              {from?.name ?? '—'} → {to?.name ?? '—'}
+                            </p>
+                            <p className="text-[11px] text-ink-muted">
+                              {fmtDate(t.date)}{t.note ? ` · ${t.note}` : ''}
+                            </p>
+                          </div>
+                          <p className="text-[15px] font-semibold font-mono text-gold flex-shrink-0">{$fd(t.amount)}</p>
+                        </div>
+                      </SwipeToDelete>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             {cards.length > 0 && (
               <div>
                 <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Cards</p>
@@ -1049,11 +1143,17 @@ export default function InPage() {
 
       {/* ── FAB ──────────────────────────────────────────────────────────── */}
       <GlobalFAB key={tab} actions={[
-        { Icon: ArrowLeftRight, label: 'New Transfer', onTap: () => showToast('Coming soon', { type: 'add' }) },
+        { Icon: ArrowLeftRight, label: 'New Transfer', onTap: () => setTransferSheetOpen(true) },
         { Icon: PlusCircle,     label: 'Add Account',  onTap: () => setBankSheetOpen(true) },
         { Icon: ArrowUpCircle,  label: 'New Income',   onTap: () => setIncomeOpen(true)    },
       ]} />
 
+      <AddTransferSheet
+        open={transferSheetOpen}
+        onClose={() => setTransferSheetOpen(false)}
+        onAdd={handleAddTransfer}
+        banks={banks.map(b => ({ id: b.id, name: b.name, balance: b.balance }))}
+      />
       <AddCardSheet
         open={cardSheetOpen}
         onClose={() => setCardSheetOpen(false)}
