@@ -7,34 +7,53 @@ import { createClient } from '@/lib/supabase/client'
 // Hide on pages that have their own back/settings header
 const HIDDEN_ON = ['/profile', '/settings']
 
+const LS_AVATAR   = 'hoardr-avatar-url'
+const LS_INITIALS = 'hoardr-avatar-initials'
+
+// Module-level cache — survives tab switches and re-mounts with no flash.
+// Seeded from localStorage so even a hard refresh shows the avatar immediately.
+let _cachedAvatar:   string | null = typeof window !== 'undefined' ? (localStorage.getItem(LS_AVATAR) ?? null) : null
+let _cachedInitials: string        = typeof window !== 'undefined' ? (localStorage.getItem(LS_INITIALS) ?? '?') : '?'
+
 export function ProfileDrawer() {
   const pathname = usePathname()
   const router   = useRouter()
   const supabase = useMemo(() => createClient(), [])
 
-  const [avatarSrc, setAvatarSrc] = useState<string | null>(null)
-  const [initials,  setInitials]  = useState('?')
+  const [avatarSrc, setAvatarSrc] = useState<string | null>(_cachedAvatar)
+  const [initials,  setInitials]  = useState(_cachedInitials)
+
+  function applyAvatar(src: string | null) {
+    _cachedAvatar = src
+    if (src) localStorage.setItem(LS_AVATAR, src)
+    setAvatarSrc(src)
+  }
+  function applyInitials(ini: string) {
+    _cachedInitials = ini
+    localStorage.setItem(LS_INITIALS, ini)
+    setInitials(ini)
+  }
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       const u = data.user
       if (!u) return
       const name = u.user_metadata?.full_name ?? u.user_metadata?.name ?? ''
-      setInitials(
+      applyInitials(
         name
           ? name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
           : (u.email?.[0] ?? '?').toUpperCase()
       )
-      if (u.user_metadata?.avatar_url) setAvatarSrc(u.user_metadata.avatar_url as string)
+      if (u.user_metadata?.avatar_url) applyAvatar(u.user_metadata.avatar_url as string)
     })
   }, [supabase])
 
   useEffect(() => {
     supabase.from('profiles').select('avatar_url, display_name').single().then(({ data }) => {
-      if (data?.avatar_url)   setAvatarSrc(data.avatar_url as string)
+      if (data?.avatar_url)   applyAvatar(data.avatar_url as string)
       if (data?.display_name) {
         const dn = data.display_name as string
-        setInitials(dn.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase())
+        applyInitials(dn.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase())
       }
     })
   }, [supabase])
