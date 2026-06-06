@@ -389,7 +389,7 @@ function HeroSplitBarChart({ monthly, annual }: {
         ctx.fillText(`−${heroFmt(b.expense)}`, W - 4, expBarY + HERO_BAR_H / 2)
       } else {
         ctx.font      = '9px -apple-system,system-ui,sans-serif'
-        ctx.fillStyle = net >= 0 ? 'rgba(74,222,128,0.65)' : 'rgba(212,175,55,0.65)'
+        ctx.fillStyle = net >= 0 ? 'rgba(74,222,128,0.65)' : 'rgba(240,240,248,0.65)'
         ctx.fillText(`${net >= 0 ? '+' : '−'}${heroFmt(Math.abs(net))}`, W - 4, rowY + HERO_ROW_H / 2)
       }
     }
@@ -557,7 +557,7 @@ function HeroSplitBarChart({ monthly, annual }: {
           ))}
           <div className="ml-auto flex flex-col items-end" style={{ gap: 1 }}>
             <span style={{ fontSize: 9, color: '#556070', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Net This Period</span>
-            <span style={{ fontSize: 15, fontWeight: 700, fontFamily: 'var(--font-big-shoulders)', color: netTotal >= 0 ? '#4ADE80' : '#F87171' }}>
+            <span style={{ fontSize: 15, fontWeight: 700, fontFamily: 'var(--font-big-shoulders)', color: netTotal >= 0 ? '#4ADE80' : '#f0f0f8' }}>
               {netTotal >= 0 ? '+' : '−'}{heroFmt(Math.abs(netTotal))}
             </span>
           </div>
