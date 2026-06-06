@@ -321,6 +321,11 @@ function HeroSplitBarChart({ monthly, annual }: {
     const chartW  = W - HERO_PL - HERO_PR
     const hov     = scrubRowRef.current
 
+    // Read semantic colors from CSS variables so Settings > Appearance is respected
+    const cs     = getComputedStyle(document.documentElement)
+    const incRgb = cs.getPropertyValue('--sem-income-rgb').trim()  || '74,222,128'
+    const expRgb = cs.getPropertyValue('--sem-expense-rgb').trim() || '212,175,55'
+
     for (let gi = 0; gi < N; gi++) {
       const b       = data[gi]
       const rowY    = HERO_PT + gi * HERO_ROW_H
@@ -335,44 +340,44 @@ function HeroSplitBarChart({ monthly, annual }: {
 
       // Row highlight
       if (isHov) {
-        ctx.fillStyle = 'rgba(201,168,76,0.07)'
+        ctx.fillStyle = `rgba(${expRgb},0.07)`
         ctx.fillRect(0, rowY, W, HERO_ROW_H)
       }
 
       // Period label
       ctx.font         = `${isHov ? '600 ' : ''}10px -apple-system,system-ui,sans-serif`
-      ctx.fillStyle    = isHov ? '#C9A84C' : '#455060'
+      ctx.fillStyle    = isHov ? `rgb(${expRgb})` : '#455060'
       ctx.textAlign    = 'right'
       ctx.textBaseline = 'middle'
       ctx.fillText(b.label, HERO_PL - 4, rowY + HERO_ROW_H / 2)
 
-      // Income bar: base (teal) + net-gain cap (green)
+      // Income bar: base + brighter net-gain cap
       if (incBaseW > 0.5) {
         const g = ctx.createLinearGradient(HERO_PL, 0, HERO_PL + incBaseW, 0)
-        g.addColorStop(0, 'rgba(45,212,191,0.9)'); g.addColorStop(1, 'rgba(45,212,191,0.55)')
+        g.addColorStop(0, `rgba(${incRgb},0.9)`); g.addColorStop(1, `rgba(${incRgb},0.55)`)
         ctx.fillStyle = g
         drawHeroBar(ctx, HERO_PL, incBarY, incBaseW, HERO_BAR_H, true, incCapW <= 0.5)
         ctx.fill()
       }
       if (incCapW > 0.5) {
         const g = ctx.createLinearGradient(HERO_PL + incBaseW, 0, HERO_PL + incBaseW + incCapW, 0)
-        g.addColorStop(0, 'rgba(52,211,153,0.95)'); g.addColorStop(1, 'rgba(16,185,129,1.0)')
+        g.addColorStop(0, `rgba(${incRgb},1.0)`); g.addColorStop(1, `rgba(${incRgb},0.8)`)
         ctx.fillStyle = g
         drawHeroBar(ctx, HERO_PL + incBaseW, incBarY, incCapW, HERO_BAR_H, incBaseW <= 0.5, true)
         ctx.fill()
       }
 
-      // Expense bar: base (gold) + net-loss cap (ink/white)
+      // Expense bar: base + brighter net-loss cap
       if (expBaseW > 0.5) {
         const g = ctx.createLinearGradient(HERO_PL, 0, HERO_PL + expBaseW, 0)
-        g.addColorStop(0, 'rgba(201,168,76,0.9)'); g.addColorStop(1, 'rgba(201,168,76,0.55)')
+        g.addColorStop(0, `rgba(${expRgb},0.9)`); g.addColorStop(1, `rgba(${expRgb},0.55)`)
         ctx.fillStyle = g
         drawHeroBar(ctx, HERO_PL, expBarY, expBaseW, HERO_BAR_H, true, expCapW <= 0.5)
         ctx.fill()
       }
       if (expCapW > 0.5) {
         const g = ctx.createLinearGradient(HERO_PL + expBaseW, 0, HERO_PL + expBaseW + expCapW, 0)
-        g.addColorStop(0, 'rgba(240,240,248,0.85)'); g.addColorStop(1, 'rgba(240,240,248,0.4)')
+        g.addColorStop(0, `rgba(${expRgb},1.0)`); g.addColorStop(1, `rgba(${expRgb},0.8)`)
         ctx.fillStyle = g
         drawHeroBar(ctx, HERO_PL + expBaseW, expBarY, expCapW, HERO_BAR_H, expBaseW <= 0.5, true)
         ctx.fill()
@@ -383,13 +388,13 @@ function HeroSplitBarChart({ monthly, annual }: {
       ctx.textAlign    = 'right'
       if (isHov) {
         ctx.font      = '9px -apple-system,system-ui,sans-serif'
-        ctx.fillStyle = 'rgba(45,212,191,0.9)'
+        ctx.fillStyle = `rgba(${incRgb},0.9)`
         ctx.fillText(`+${heroFmt(b.income)}`, W - 4, incBarY + HERO_BAR_H / 2)
-        ctx.fillStyle = 'rgba(201,168,76,0.9)'
+        ctx.fillStyle = `rgba(${expRgb},0.9)`
         ctx.fillText(`−${heroFmt(b.expense)}`, W - 4, expBarY + HERO_BAR_H / 2)
       } else {
         ctx.font      = '9px -apple-system,system-ui,sans-serif'
-        ctx.fillStyle = net >= 0 ? 'rgba(74,222,128,0.65)' : 'rgba(240,240,248,0.65)'
+        ctx.fillStyle = net >= 0 ? `rgba(${incRgb},0.65)` : 'rgba(240,240,248,0.65)'
         ctx.fillText(`${net >= 0 ? '+' : '−'}${heroFmt(Math.abs(net))}`, W - 4, rowY + HERO_ROW_H / 2)
       }
     }
@@ -424,6 +429,11 @@ function HeroSplitBarChart({ monthly, annual }: {
   }, [redraw])
 
   useEffect(() => { toggleRef.current = toggle }, [toggle])
+
+  useEffect(() => {
+    document.addEventListener('sem-colors-changed', redraw)
+    return () => document.removeEventListener('sem-colors-changed', redraw)
+  }, [redraw])
 
   useEffect(() => {
     const card = cardRef.current
@@ -545,10 +555,10 @@ function HeroSplitBarChart({ monthly, annual }: {
         {/* Legend */}
         <div className="flex items-center gap-3 mb-3" style={{ flexWrap: 'wrap' }}>
           {[
-            { bg: 'rgba(45,212,191,0.88)', label: 'Income'   },
-            { bg: 'rgba(201,168,76,0.88)', label: 'Expenses' },
-            { bg: 'rgba(16,185,129,0.95)',  label: 'Net gain' },
-            { bg: 'rgba(240,240,248,0.75)', label: 'Net loss' },
+            { bg: 'rgba(var(--sem-income-rgb),0.85)',  label: 'Income'   },
+            { bg: 'rgba(var(--sem-expense-rgb),0.85)', label: 'Expenses' },
+            { bg: 'rgba(var(--sem-income-rgb),1.0)',   label: 'Net gain' },
+            { bg: 'rgba(var(--sem-expense-rgb),1.0)',  label: 'Net loss' },
           ].map(item => (
             <div key={item.label} className="flex items-center gap-1">
               <div style={{ width: 8, height: 8, borderRadius: 2, background: item.bg, flexShrink: 0 }} />
@@ -557,7 +567,7 @@ function HeroSplitBarChart({ monthly, annual }: {
           ))}
           <div className="ml-auto flex flex-col items-end" style={{ gap: 1 }}>
             <span style={{ fontSize: 9, color: '#556070', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Net This Period</span>
-            <span style={{ fontSize: 15, fontWeight: 700, fontFamily: 'var(--font-big-shoulders)', color: netTotal >= 0 ? '#4ADE80' : '#f0f0f8' }}>
+            <span style={{ fontSize: 15, fontWeight: 700, fontFamily: 'var(--font-big-shoulders)', color: netTotal >= 0 ? 'var(--sem-income)' : '#f0f0f8' }}>
               {netTotal >= 0 ? '+' : '−'}{heroFmt(Math.abs(netTotal))}
             </span>
           </div>
