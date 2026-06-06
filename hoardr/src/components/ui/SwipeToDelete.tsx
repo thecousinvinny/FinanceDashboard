@@ -52,10 +52,14 @@ export function SwipeToDelete({
     el.style.transform  = 'scale(1)'
   }
 
-  function setPos(x: number, animate: boolean) {
+  function setPos(x: number, animate: boolean, spring = false) {
     const el  = slideRef.current
     if (!el) return
-    const ease = animate ? 'transform 0.25s cubic-bezier(0.25,1,0.5,1)' : 'none'
+    const ease = animate
+      ? spring
+        ? 'transform 0.34s cubic-bezier(0.34,1.56,0.64,1)'
+        : 'transform 0.26s cubic-bezier(0.25,1,0.5,1)'
+      : 'none'
     el.style.transition = ease
     el.style.transform  = `translateX(${x}px)`
     curX.current = x
@@ -63,11 +67,11 @@ export function SwipeToDelete({
     const la = leftActionRef.current
     const ra = rightActionRef.current
     if (la) {
-      la.style.transition = animate ? 'opacity 0.25s' : 'none'
+      la.style.transition = animate ? 'opacity 0.2s' : 'none'
       la.style.opacity    = String(Math.min(1, Math.max(0, x / REVEAL)))
     }
     if (ra) {
-      ra.style.transition = animate ? 'opacity 0.25s' : 'none'
+      ra.style.transition = animate ? 'opacity 0.2s' : 'none'
       ra.style.opacity    = String(Math.min(1, Math.max(0, -x / REVEAL)))
     }
   }
@@ -75,14 +79,14 @@ export function SwipeToDelete({
   function triggerDelete() {
     if (!onDelete) return
     haptic('delete')
-    setPos(-window.innerWidth, true)
+    setPos(-window.innerWidth, true, false)
     setTimeout(onDelete, 240)
   }
 
   function triggerRight() {
     haptic('confirm')
-    setPos(window.innerWidth, true)
-    setTimeout(() => { onRight?.(); setPos(0, true); revealed.current = 'none' }, 240)
+    setPos(window.innerWidth, true, false)
+    setTimeout(() => { onRight?.(); setPos(0, true, false); revealed.current = 'none' }, 240)
   }
 
   // Non-passive touchmove to preventDefault on horizontal swipes
@@ -128,13 +132,13 @@ export function SwipeToDelete({
     const x = curX.current
     dir.current = null
     if (x > REVEAL / 2 && onRight) {
-      setPos(REVEAL, true)
+      setPos(REVEAL, true, true)
       revealed.current = 'right'
     } else if (x < -(REVEAL / 2) && onDelete) {
-      setPos(-REVEAL, true)
+      setPos(-REVEAL, true, true)
       revealed.current = 'left'
     } else {
-      setPos(0, true)
+      setPos(0, true, true)
       revealed.current = 'none'
       const target = e.changedTouches[0]?.target as Element | null
       const isInteractive = !!target?.closest('button, a, input, [role="button"]')
@@ -173,13 +177,13 @@ export function SwipeToDelete({
     const x = curX.current
     dir.current = null
     if (x > REVEAL / 2 && onRight) {
-      setPos(REVEAL, true)
+      setPos(REVEAL, true, true)
       revealed.current = 'right'
     } else if (x < -(REVEAL / 2) && onDelete) {
-      setPos(-REVEAL, true)
+      setPos(-REVEAL, true, true)
       revealed.current = 'left'
     } else {
-      setPos(0, true)
+      setPos(0, true, true)
       revealed.current = 'none'
       if (!didSwipe.current && startWasRevealed.current === 'none') { haptic('tap'); onTap?.() }
     }

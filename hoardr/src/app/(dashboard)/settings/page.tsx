@@ -132,7 +132,7 @@ export default function SettingsPage() {
       <div className="flex items-center gap-3 px-4 pb-4" style={{ paddingTop: 'calc(env(safe-area-inset-top, 44px) + 8px)' }}>
         <button
           onClick={() => router.back()}
-          className="w-9 h-9 flex items-center justify-center rounded-full bg-bg-overlay text-ink-muted active:opacity-70"
+          className="w-9 h-9 flex items-center justify-center rounded-full bg-bg-overlay text-ink-muted"
         >
           <ArrowLeft size={18} strokeWidth={2} />
         </button>
@@ -145,7 +145,7 @@ export default function SettingsPage() {
         <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
           <button
             onClick={() => router.push('/settings/categories')}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity"
+            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]"
           >
             <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
               <Tag size={15} className="text-gold" strokeWidth={1.75} />
@@ -159,7 +159,7 @@ export default function SettingsPage() {
 
           <button
             onClick={() => setDefaultCardOpen(true)}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity"
+            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]"
           >
             <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
               <CreditCard size={15} className="text-gold" strokeWidth={1.75} />
@@ -179,7 +179,7 @@ export default function SettingsPage() {
         <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
           <button
             onClick={() => router.push('/settings/defaults')}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity"
+            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]"
           >
             <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
               <Settings2 size={15} className="text-gold" strokeWidth={1.75} />
@@ -240,7 +240,7 @@ export default function SettingsPage() {
           <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Accent Colors</p>
           <button
             onClick={() => setSemColorsOpen(true)}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left bg-bg-overlay border border-white/[0.06] rounded-card active:opacity-70 transition-opacity"
+            className="w-full flex items-center gap-3 px-4 py-3.5 text-left bg-bg-overlay border border-white/[0.06] rounded-card active:bg-white/[0.03]"
           >
             <div className="w-8 h-8 rounded-[10px] bg-bg-surface ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
               <Palette size={15} className="text-gold" strokeWidth={1.75} />
@@ -292,7 +292,7 @@ export default function SettingsPage() {
         <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
           <button
             onClick={() => setCalOpen(true)}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity"
+            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]"
           >
             <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
               <CalendarDays size={15} className="text-gold" strokeWidth={1.75} />
@@ -347,7 +347,7 @@ export default function SettingsPage() {
           )}
           <button
             onClick={signOut}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity"
+            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]"
           >
             <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
               <LogOut size={15} className="text-ruby" strokeWidth={1.75} />
@@ -402,7 +402,7 @@ export default function SettingsPage() {
                 <button
                   key={card.id}
                   onClick={() => handleSetDefaultCard(card.id)}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity"
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]"
                 >
                   <div className="w-8 h-8 rounded-[10px] bg-bg-surface ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
                     <CreditCard size={14} className="text-gold" strokeWidth={1.75} />

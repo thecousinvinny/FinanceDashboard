@@ -53,7 +53,7 @@ export default function BottomNav() {
           style={{
             width:      BAR_W,
             left:       barL(activeIdx),
-            transition: 'left 280ms cubic-bezier(0.4,0,0.2,1)',
+            transition: 'left 340ms cubic-bezier(0.34,1.56,0.64,1)',
           }}
         />
       )}
@@ -70,7 +70,11 @@ export default function BottomNav() {
               active ? 'text-gold' : 'text-ink-faint',
             )}
           >
-            <span className="transition-colors duration-200">
+            <span style={{
+              display:    'block',
+              transform:  active ? 'scale(1.12)' : 'scale(1)',
+              transition: 'transform 340ms cubic-bezier(0.34,1.56,0.64,1)',
+            }}>
               <Icon size={22} strokeWidth={active ? 2 : 1.5} />
             </span>
             <span className="text-[9px] font-medium tracking-[0.07em] uppercase leading-none">

@@ -34,7 +34,7 @@ Next.js 15 App Router, two route groups:
 
 **Profile button** (`src/components/profile/ProfileDrawer.tsx`) — fixed avatar button top-right on every page; hidden on `/profile` and `/settings`. Tapping navigates to `/profile`. Hidden by checking `usePathname()`.
 
-**`/profile` page** — full analytics page: avatar upload (Supabase Storage `avatars` bucket), editable display name (`profiles.display_name`), stats tiles, mirrored income/spending sparkline with long-press scrub, four `MonthAnnualCard` swipeable analytics sections (Expenses, Top Categories, Subscriptions, Income), all-time summary. Settings gear navigates to `/settings`.
+**`/profile` page** — full analytics page: avatar upload (Supabase Storage `avatars` bucket), editable display name (`profiles.display_name`), stats tiles, `HeroSplitBarChart` canvas hero (Monthly/Annual/All Time toggle), four `MonthAnnualCard` swipeable analytics sections (Expenses, Top Categories, Subscriptions, Income), all-time summary. Settings gear navigates to `/settings`.
 
 **`/in` page** — three PillGroup tabs (`History | Streams | Accounts`). History: income rows filtered `date <= today`. Streams: `revenue_streams` table + bank interest streams; `autoGenerateStreams(userId, streams)` runs once per session (`let sessionAutoGenDone = false` guard). Accounts: bank list + card visuals with long-press drag-to-reorder.
 
@@ -103,10 +103,22 @@ Module-level emitter — call from anywhere. `<ToastContainer />` mounted in `(d
 ## Inline hero components (defined in-file, not extracted)
 
 - `DailyBarChart` (money page) — 30-day net bars, RAF height transition
-- `CategoryPillBar` (money page) — 32px animated pill bar. Track `#1C2A36`, gold gradient fill.
+- `CategoryPillBar` (money page) — 32px animated pill bar. Track `#1C1F22`, gold gradient fill. `variant='emerald'` switches to emerald gradient. `onClick` + `isExpanded` adds a rotating `›` chevron and toggles a max-height drilldown list below.
 - `IncomeBarChart` (in page) — 6-month bars using `rgba(--sem-income-rgb, opacity)`. Listens to `sem-colors-changed`.
 - `StatCard` (in page) — `SlotNumber` stat tile.
-- Analytics cards in `/profile` page: `MirroredSparklines` (income up / spending down, shared center axis, long-press scrub), `MonthAnnualCard` (shared swipeable Month/Annual wrapper), `CategoryPills`, `SimpleBars`, `CostPills`.
+- Analytics cards in `/profile` page: `HeroSplitBarChart` (canvas, Monthly/Annual/All Time toggle — see below), `MonthAnnualCard` (shared swipeable Month/Annual wrapper), `CategoryPills`, `SimpleBars`, `CostPills`.
+
+### OUT tab stat card → graph interaction
+
+Subs section: "This Month" / "This Year" stat cards (rendered as `<button>`) drive `subStatCard` state. The category bar graph switches between `paidMonthCatBreakdown` and `paidYearCatBreakdown`. Clicking a bar expands a drilldown list (`expandedSubCat` state) with individual payment rows; max-height = `items.length * 60 + 4` px.
+
+Expenses section: "Spent This Month" / "Saved This Month" stat cards drive `expStatCard` state. Spent uses gold `CategoryPillBar`; Saved uses `variant='emerald'` and `border-emerald/40` card highlight.
+
+### HeroSplitBarChart canvas pattern
+
+Defined inline in `profile/page.tsx`. Module-level constants (`HERO_H`, `HERO_PL`, etc.) and pure helper functions (`drawHeroPill`, `heroFmt`, `heroYMax`, `heroHeights`, `heroEase`) live outside the component so `redraw = useCallback(() => {...}, [])` with empty deps is valid — it reads only stable refs and module-level constants.
+
+Each toggle switch animates bars from zero via RAF + `heroEase` (easeOutQuart, 400ms). Each group has two bars (income teal / expense gold), each split into a base chunk `min(inc,exp)` and a net cap chunk `|inc−exp|` floating 5px above. Scrub line + tooltip rendered directly on canvas; ResizeObserver triggers redraw on width change. DPR handled with `ctx.setTransform(dpr,0,0,dpr,0,0)` at the top of every `redraw` call.
 
 ## Design system
 
@@ -236,6 +248,12 @@ Import from here, never re-define:
 - `rruleLabel(rule, baseDate)` — human-readable summary
 - **Postgres TIME columns** (`start_time`, `end_time`) come as `'HH:MM:SS'` from PostgREST — always `.slice(0, 5)` before use
 - Cross-midnight events pushed to **both** start date and next day, both carrying `instanceDate = baseDate`
+
+## Picker standardization in sheets
+
+**Card picker** — all add/edit sheets (`AddTransactionSheet`, `EditTransactionSheet`, `AddSubscriptionSheet`, `EditSubscriptionSheet`) use a native `<select>` dropdown with `style={{ colorScheme: 'dark' }}` and a `<ChevronDown>` overlay. Sort the options so the current/default card appears first. Call `setDefaultCardId(cardId)` when user picks a card so it persists as the in-session default.
+
+**Category picker** — grid of `<button>` cells (`grid-cols-4`). Active: `bg-gold/15 text-gold ring-1 ring-gold/40`. Inactive: `bg-bg-overlay text-ink-muted`. Use `text-[10px] font-semibold` **on the button itself** (not a child span) so the icon and label both inherit the active/inactive color. Always import `getCategoryIcon` (not `CategoryIcon`) for these grids.
 
 ## FAB pattern
 

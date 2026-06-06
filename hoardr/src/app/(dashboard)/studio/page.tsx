@@ -256,7 +256,7 @@ export default function StudioPage() {
               'px-4 py-2 rounded-pill text-[11px] font-semibold whitespace-nowrap flex-shrink-0 transition-all select-none',
               filter === f
                 ? 'gradient-gold text-white'
-                : 'bg-bg-surface border border-white/[0.06] text-ink-muted',
+                : 'bg-bg-surface border border-white/[0.06] text-ink-muted active:bg-white/[0.04]',
             )}
           >
             {f}

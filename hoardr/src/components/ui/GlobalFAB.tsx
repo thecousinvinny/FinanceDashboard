@@ -66,7 +66,7 @@ export function GlobalFAB({ actions }: { actions: FABAction[] }) {
               <button
                 key={action.label}
                 onClick={() => handleAction(action.onTap)}
-                className="flex items-center h-[38px] rounded-[20px] select-none whitespace-nowrap active:opacity-80"
+                className="flex items-center h-[38px] rounded-[20px] select-none whitespace-nowrap"
                 style={{
                   background:   FAB_BG,
                   paddingLeft:  4,

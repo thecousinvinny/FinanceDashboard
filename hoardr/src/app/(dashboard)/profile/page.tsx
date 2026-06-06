@@ -86,10 +86,10 @@ function CategoryPills({ cats, active }: { cats: CatItem[]; active: boolean }) {
         return (
           <div key={cat.name} className="flex items-center gap-2">
             <div className="relative flex-1 flex items-center rounded-[8px] overflow-hidden"
-              style={{ height: 32, background: '#1C1F22' }}>
+              style={{ height: 32, background: 'var(--color-bg-overlay)' }}>
               <div className="absolute inset-y-0 left-0 rounded-[8px]" style={{
                 width: `${animPcts[i] ?? 0}%`,
-                background: 'linear-gradient(90deg, rgba(212,175,55,0.35), rgba(212,175,55,0.10))',
+                background: 'linear-gradient(90deg, rgba(var(--sem-expense-rgb),0.35), rgba(var(--sem-expense-rgb),0.08))',
                 transition: `width 600ms cubic-bezier(0.22,1,0.36,1) ${i * 80}ms`,
               }} />
               <div className="relative flex items-center gap-2 px-2.5 z-10">
@@ -131,10 +131,10 @@ function CostPills({ items, active }: { items: PillItem[]; active: boolean }) {
       {items.map((item, i) => (
         <div key={item.name + i} className="flex items-center gap-2">
           <div className="relative flex-1 flex items-center rounded-[8px] overflow-hidden"
-            style={{ height: 30, background: '#1C1F22' }}>
+            style={{ height: 30, background: 'var(--color-bg-overlay)' }}>
             <div className="absolute inset-y-0 left-0 rounded-[8px]" style={{
               width: `${animPcts[i] ?? 0}%`,
-              background: 'linear-gradient(90deg, rgba(212,175,55,0.35), rgba(212,175,55,0.10))',
+              background: 'linear-gradient(90deg, rgba(var(--sem-expense-rgb),0.35), rgba(var(--sem-expense-rgb),0.08))',
               transition: `width 600ms cubic-bezier(0.22,1,0.36,1) ${i * 80}ms`,
             }} />
             <span className="relative px-2.5 text-[12px] font-medium text-ink z-10 truncate">{item.name}</span>
@@ -201,7 +201,7 @@ function MonthAnnualCard({ label, monthStat, annualStat, renderMonth, renderAnnu
           display:    'flex',
           width:      '200%',
           transform:  `translateX(${view === 0 ? 0 : -50}%)`,
-          transition: 'transform 320ms cubic-bezier(0.4,0,0.2,1)',
+          transition: 'transform 300ms cubic-bezier(0.25,1,0.5,1)',
         }}>
           <div style={{ width: '50%' }}>{renderMonth(view === 0)}</div>
           <div style={{ width: '50%' }}>{renderAnnual(view === 1)}</div>
@@ -210,10 +210,11 @@ function MonthAnnualCard({ label, monthStat, annualStat, renderMonth, renderAnnu
 
       <div className="flex justify-center gap-1.5 mt-3">
         {[0, 1].map(i => (
-          <div key={i} className="rounded-full transition-all duration-300" style={{
+          <div key={i} className="rounded-full" style={{
             width:      view === i ? 14 : 5,
             height:     5,
             background: view === i ? '#D4AF37' : 'rgba(255,255,255,0.2)',
+            transition: 'width 320ms cubic-bezier(0.34,1.56,0.64,1), background-color 200ms ease',
           }} />
         ))}
       </div>
@@ -881,11 +882,11 @@ export default function ProfilePage() {
       <div className="flex items-center justify-between px-4 pb-2"
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 44px) + 8px)' }}>
         <button onClick={() => router.back()}
-          className="w-9 h-9 flex items-center justify-center rounded-full bg-bg-overlay text-ink-muted active:opacity-70">
+          className="w-9 h-9 flex items-center justify-center rounded-full bg-bg-overlay text-ink-muted">
           <ArrowLeft size={18} strokeWidth={2} />
         </button>
         <button onClick={() => router.push('/settings')}
-          className="w-9 h-9 flex items-center justify-center rounded-full bg-bg-overlay text-ink-muted active:opacity-70">
+          className="w-9 h-9 flex items-center justify-center rounded-full bg-bg-overlay text-ink-muted">
           <Settings2 size={18} strokeWidth={1.75} />
         </button>
       </div>
@@ -894,8 +895,8 @@ export default function ProfilePage() {
       <div className="flex flex-col items-center px-5 pt-4 pb-6">
         <div className="relative mb-4">
           <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
-            className="w-24 h-24 rounded-full overflow-hidden block active:opacity-80 transition-opacity"
-            style={{ boxShadow: '0 0 0 2.5px rgba(212,175,55,0.5)' }}>
+            className="w-24 h-24 rounded-full overflow-hidden block select-none"
+            style={{ boxShadow: '0 0 0 2.5px rgba(212,175,55,0.5)', transition: 'transform 0.14s cubic-bezier(0.25,1,0.5,1), opacity 0.1s ease-out' }}>
             {avatarSrc
               ? <img src={avatarSrc} alt="avatar" className="w-full h-full object-cover" />
               : <div className="w-full h-full gradient-gold flex items-center justify-center">
@@ -927,7 +928,7 @@ export default function ProfilePage() {
             </button>
           </div>
         ) : (
-          <button onClick={startEditName} className="flex items-center gap-1.5 mb-1 group active:opacity-70">
+          <button onClick={startEditName} className="flex items-center gap-1.5 mb-1 group select-none">
             <span className="text-[22px] font-bold text-ink tracking-[-0.02em]">
               {displayName ?? 'Set your name'}
             </span>

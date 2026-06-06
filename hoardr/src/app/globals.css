@@ -114,17 +114,27 @@ html.light {
 
 /* ── Press feedback ──────────────────────────────────────────────────────── */
 button:not(:disabled) {
-  transition: transform 0.08s ease-out, opacity 0.08s ease-out;
+  transition: transform 0.14s cubic-bezier(0.25,1,0.5,1), opacity 0.1s ease-out, background-color 0.15s ease, color 0.15s ease;
 }
 button:not(:disabled):active {
-  transform: scale(0.96);
-  opacity: 0.85;
+  transform: scale(0.97);
+  opacity: 0.9;
 }
 a {
-  transition: opacity 0.08s ease-out;
+  transition: transform 0.14s cubic-bezier(0.25,1,0.5,1), opacity 0.1s ease-out;
 }
 a:active {
-  opacity: 0.72;
+  opacity: 0.75;
+  transform: scale(0.99);
+}
+
+/* Row-press: tappable list items that aren't <button> */
+.row-press {
+  transition: background-color 0.08s ease-out;
+  cursor: pointer;
+}
+.row-press:active {
+  background-color: rgba(255,255,255,0.025);
 }
 
 html, body {
@@ -147,7 +157,7 @@ html, body {
 }
 
 @keyframes tabIn {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(5px); }
   to   { opacity: 1; transform: none;            }
 }
 
@@ -215,7 +225,7 @@ html, body {
 /* ── Utility classes ─────────────────────────────────────────────────────── */
 @layer utilities {
   .tab-enter {
-    animation: tabIn 0.2s ease both;
+    animation: tabIn 0.3s cubic-bezier(0.22,1,0.36,1) both;
   }
 
   .skeleton {

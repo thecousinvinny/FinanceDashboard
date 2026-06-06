@@ -113,7 +113,7 @@ export default function DefaultsPage() {
       <div className="px-5 pt-14 pb-6 flex items-center gap-3">
         <button
           onClick={() => router.back()}
-          className="w-9 h-9 rounded-full bg-bg-overlay flex items-center justify-center flex-shrink-0 active:opacity-70 transition-opacity"
+          className="w-9 h-9 rounded-full bg-bg-overlay flex items-center justify-center flex-shrink-0 active:bg-white/[0.03]"
         >
           <ArrowLeft size={17} className="text-ink" strokeWidth={1.75} />
         </button>
@@ -133,7 +133,7 @@ export default function DefaultsPage() {
         <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
           <button
             onClick={() => setCardOpen(true)}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity"
+            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]"
           >
             <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
               <CreditCard size={15} className="text-gold" strokeWidth={1.75} />
@@ -147,7 +147,7 @@ export default function DefaultsPage() {
 
           <button
             onClick={() => setCatOpen(true)}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity"
+            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]"
           >
             <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
               {defaultExpCat
@@ -169,7 +169,7 @@ export default function DefaultsPage() {
         <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
           <button
             onClick={() => setBillingOpen(true)}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity"
+            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]"
           >
             <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
               <CalendarDays size={15} className="text-gold" strokeWidth={1.75} />
@@ -189,7 +189,7 @@ export default function DefaultsPage() {
         <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
           <button
             onClick={() => setBankOpen(true)}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity"
+            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]"
           >
             <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
               <Landmark size={15} className="text-gold" strokeWidth={1.75} />
@@ -229,7 +229,7 @@ export default function DefaultsPage() {
             <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] overflow-hidden divide-y divide-white/[0.04]">
               {settingsCards.map(card => (
                 <button key={card.id} onClick={() => handleSetDefaultCard(card.id)}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity">
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]">
                   <div className="w-8 h-8 rounded-[10px] bg-bg-surface ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
                     <CreditCard size={14} className="text-gold" strokeWidth={1.75} />
                   </div>
@@ -263,7 +263,7 @@ export default function DefaultsPage() {
         <div className="px-5 overflow-y-auto" style={{ maxHeight: '65vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 32px)' }}>
           <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] overflow-hidden divide-y divide-white/[0.04]">
             <button onClick={() => handleSetDefaultCat('')}
-              className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity">
+              className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]">
               <div className="w-8 h-8 rounded-[10px] bg-bg-surface ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
                 <LayoutGrid size={14} className="text-ink-faint" strokeWidth={1.75} />
               </div>
@@ -272,7 +272,7 @@ export default function DefaultsPage() {
             </button>
             {EXPENSE_CATEGORIES.map(cat => (
               <button key={cat.name} onClick={() => handleSetDefaultCat(cat.name)}
-                className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity">
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]">
                 <div className="w-8 h-8 rounded-[10px] bg-bg-surface ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
                   <CategoryIcon category={cat.name} type="Expense" size={14} className="text-gold" />
                 </div>
@@ -303,7 +303,7 @@ export default function DefaultsPage() {
           <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] overflow-hidden divide-y divide-white/[0.04]">
             {BILLING_OPTIONS.map(opt => (
               <button key={opt} onClick={() => handleSetDefaultBilling(opt)}
-                className="w-full flex items-center justify-between px-4 py-3.5 text-left active:opacity-70 transition-opacity">
+                className="w-full flex items-center justify-between px-4 py-3.5 text-left active:bg-white/[0.03]">
                 <p className="text-[14px] font-medium text-ink">{BILLING_LABELS[opt]}</p>
                 {opt === defaultBilling && <div className="w-5 h-5 rounded-full gradient-gold flex items-center justify-center"><Check size={9} className="text-white" strokeWidth={2.5} /></div>}
               </button>
@@ -336,14 +336,14 @@ export default function DefaultsPage() {
             <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] overflow-hidden divide-y divide-white/[0.04]">
               <button
                 onClick={() => { setDefaultBankId(null); setDefaultBankName(null); setBankOpen(false); setAppPrefs({ defaultBankId: null, defaultBankName: null }) }}
-                className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity"
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]"
               >
                 <div className="flex-1"><p className="text-[14px] font-medium text-ink-muted">None</p></div>
                 {defaultBankId === null && <div className="w-5 h-5 rounded-full gradient-gold flex items-center justify-center"><Check size={9} className="text-white" strokeWidth={2.5} /></div>}
               </button>
               {settingsBanks.map(bank => (
                 <button key={bank.id} onClick={() => handleSetDefaultBank(bank.id)}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity">
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]">
                   <div className="w-8 h-8 rounded-[10px] bg-bg-surface ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0 text-base">🏦</div>
                   <div className="flex-1 min-w-0"><p className="text-[14px] font-medium text-ink truncate">{bank.name}</p></div>
                   {bank.id === defaultBankId && <div className="w-5 h-5 rounded-full gradient-gold flex items-center justify-center"><Check size={9} className="text-white" strokeWidth={2.5} /></div>}

@@ -159,7 +159,7 @@ function SettingsSheet({ open, onClose }: { open: boolean; onClose: () => void }
           <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Account</p>
           <button
             onClick={signOut}
-            className="w-full flex items-center gap-3 px-4 py-3.5 rounded-[14px] bg-bg-overlay text-left active:opacity-70 transition-opacity"
+            className="w-full flex items-center gap-3 px-4 py-3.5 rounded-[14px] bg-bg-overlay text-left active:bg-white/[0.04]"
           >
             <LogOut size={15} className="text-ruby" strokeWidth={1.75} />
             <span className="text-[14px] font-medium text-ink">Sign Out</span>

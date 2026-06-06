@@ -402,7 +402,7 @@ export function SemanticColorSheet({ open, onClose }: Props) {
                 <button
                   key={key}
                   onClick={() => openEditor(key)}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity"
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]"
                 >
                   <div
                     className="w-7 h-7 rounded-full flex-shrink-0 ring-1 ring-white/[0.12]"
