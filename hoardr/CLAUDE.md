@@ -36,13 +36,13 @@ Next.js 15 App Router, two route groups:
 
 **`/profile` page** — full analytics page: avatar upload (Supabase Storage `avatars` bucket), editable display name (`profiles.display_name`), stats tiles, `HeroSplitBarChart` canvas hero (Monthly/Annual/All Time toggle), four `MonthAnnualCard` swipeable analytics sections (Expenses, Top Categories, Subscriptions, Income), all-time summary. Settings gear navigates to `/settings`.
 
-**`/in` page** — three PillGroup tabs (`History | Streams | Accounts`). History: income rows filtered `date <= today`. Streams: `revenue_streams` table + bank interest streams; `autoGenerateStreams(userId, streams)` runs once per session (`let sessionAutoGenDone = false` guard). Accounts: bank list + card visuals with long-press drag-to-reorder.
+**`/in` page** — three PillGroup tabs (`History | Streams | Accounts`). History: income rows filtered `date <= today`. Streams: `revenue_streams` table + bank interest streams; `autoGenerateStreams(userId, streams)` runs once per session (`let sessionAutoGenDone = false` guard). Accounts: bank list, recent transfers section, card visuals with long-press drag-to-reorder. FAB has three actions: New Transfer, Add Account, New Income.
 
 **`/settings`** — Appearance (theme, icon mode, week start), Calendar filters, Defaults (default card/bank/category/billing), Sign out. Categories and Defaults are sub-pages.
 
 ## Data model
 
-Tables (schema in `supabase/migrations/`): `categories`, `banks`, `cards`, `expenses`, `wishlist`, `subscriptions`, `income`, `commissions`, `revenue_streams`, `cal_events`. `profiles` stores per-user data. `ledger` view unions expenses + income + subscription payments.
+Tables (schema in `supabase/migrations/`): `categories`, `banks`, `cards`, `expenses`, `wishlist`, `subscriptions`, `income`, `commissions`, `revenue_streams`, `cal_events`, `transfers`. `profiles` stores per-user data. `ledger` view unions expenses + income + subscription payments.
 
 Key invariants:
 - `expenses.savings` is a **generated column**: `coalesce(original_cost, cost) - cost`
@@ -50,10 +50,16 @@ Key invariants:
 - `subscriptions.monthly_cost` / `annual_cost` are **stored** — recompute with `calcSubCosts()` on every subscription save
 - Income is a **first-class table**, not mixed into ledger
 - `commissions.cal_event_id` set on Approve; cleared and recreated on deadline changes
+- `subscriptions.bank_id uuid` — set when subscription charges a bank directly (Direct toggle); mutually exclusive with `card_id` (one must be null)
+- `transfers` — `{ id, user_id, from_bank_id, to_bank_id, amount, date, note }`. Adding a transfer updates both bank balances immediately; deleting reverses them via deferred-delete undo.
 - `wishlist_status` enum includes `'Ordered'`; `wishlist.ordered_at text` stores purchase date. **No `expense_id` column** — don't spread it into wishlist updates.
 - `cal_events` recurrence columns: `recurrence_rule text` (RRULE without prefix), `recurrence_exceptions text[] default '{}'`, `recurrence_parent_id uuid` (reserved)
 - `profiles` has: `google_refresh_token`, `calendar_prefs` (jsonb), `avatar_url text`, `display_name text`
 - Supabase Storage bucket `avatars` (public) — user files stored at `{userId}/avatar.jpg`
+
+## RLS coverage
+
+All tables have RLS enabled with `owner_all` policies (USING `auth.uid() = user_id`). The `cal_events` policy lives in `20260607_cal_events_rls.sql` — if calendar reads/writes return 403 for a valid user, this migration may not have been applied yet in Supabase.
 
 ## Supabase clients
 
@@ -91,6 +97,7 @@ Module-level emitter — call from anywhere. `<ToastContainer />` mounted in `(d
 - `ui/SwipeToDelete.tsx` — swipe-left-to-delete; `onTap` fires on clean tap only; `actionBg` default `bg-ruby`. `onRight`/`rightLabel`/`rightBg` for right-swipe confirm. Press-scale + haptic built in.
 - `money/AddTransactionSheet.tsx` — canonical bottom sheet; exports `CardOption`, `BankOption`
 - `wallet/RevenueStreamSheet.tsx` — `RevenueStreamConfig: { id, name, amount, freq, bankId, nextPayDate }`. **No DB ops** — calls `onDone(config)` synchronously.
+- `wallet/AddTransferSheet.tsx` — `TransferPayload: { from_bank_id, to_bank_id, amount, date, note }`. Swap button swaps from/to. Calls `onAdd(payload)` then closes; caller handles DB + balance updates.
 - `wallet/CardVisual.tsx` — renders card from `Card` prop using `CARD_STYLE_DEFS`. `getTexturePattern` inline (JSX). Accepts `expenseCount?`, `subCount?`.
 - `ui/SemanticColorSheet.tsx` — accent color customization (Income/Expense/Subs). `react-colorful`. Dispatches `sem-colors-changed` on save.
 - `calendar/RecurrencePicker.tsx` — `z-[70]`. Preset list + custom builder.
