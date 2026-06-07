@@ -67,31 +67,39 @@ export function GreetingOverlay() {
         if (google) setAvatar(google)
       }
 
-      // ── Date range: 1st of month → today ────────────────────────────────
+      // ── Date ranges ──────────────────────────────────────────────────────
       const monthStart = `${today.slice(0, 7)}-01`
-      const todayDay   = Number(today.split('-')[2])
-      const monthDays  = Array.from({ length: todayDay }, (_, i) => {
-        const d = String(i + 1).padStart(2, '0')
-        return `${today.slice(0, 7)}-${d}`
+
+      const chartStart = (() => {
+        const d = new Date(today + 'T12:00:00'); d.setDate(d.getDate() - 13)
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+      })()
+      const chart14Days = Array.from({ length: 14 }, (_, i) => {
+        const d = new Date(today + 'T12:00:00'); d.setDate(d.getDate() - 13 + i)
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
       })
 
       const [
         { data: incData },
         { data: expData },
+        { data: chartExpData },
+        { data: chartIncData },
         { data: activeSubs },
       ] = await Promise.all([
-        supabase.from('income').select('amount, date').gte('date', monthStart).lte('date', today),
-        supabase.from('expenses').select('cost, savings, date, name').gte('date', monthStart).lte('date', today),
+        supabase.from('income').select('amount').gte('date', monthStart).lte('date', today),
+        supabase.from('expenses').select('cost, savings, name').gte('date', monthStart).lte('date', today),
+        supabase.from('expenses').select('cost, date, name').gte('date', chartStart).lte('date', today),
+        supabase.from('income').select('amount, date').gte('date', chartStart).lte('date', today),
         supabase.from('subscriptions').select('name').eq('status', 'Active'),
       ])
 
       const subNameSet = new Set((activeSubs ?? []).map(s => String(s.name).toLowerCase()))
 
-      // ── Daily buckets ────────────────────────────────────────────────────
+      // ── Sparkline: 14-day daily buckets, 3 series ────────────────────────
       const dailyExp: Record<string, number> = {}
       const dailyInc: Record<string, number> = {}
       const dailySub: Record<string, number> = {}
-      for (const e of expData ?? []) {
+      for (const e of chartExpData ?? []) {
         const k = String(e.date)
         if (subNameSet.has(String(e.name ?? '').toLowerCase())) {
           dailySub[k] = (dailySub[k] ?? 0) + Number(e.cost)
@@ -99,12 +107,11 @@ export function GreetingOverlay() {
           dailyExp[k] = (dailyExp[k] ?? 0) + Number(e.cost)
         }
       }
-      for (const i of incData ?? []) {
+      for (const i of chartIncData ?? []) {
         const k = String(i.date)
         dailyInc[k] = (dailyInc[k] ?? 0) + Number(i.amount)
       }
-
-      setSparkPoints(monthDays.map(d => ({
+      setSparkPoints(chart14Days.map(d => ({
         day:   String(Number(d.split('-')[2])),
         label: new Date(d + 'T12:00:00').toLocaleString('en-US', { month: 'short', day: 'numeric' }),
         exp:   dailyExp[d] ?? 0,
@@ -112,15 +119,14 @@ export function GreetingOverlay() {
         sub:   dailySub[d] ?? 0,
       })))
 
+      // ── Stats: month totals ───────────────────────────────────────────────
       const income = (incData ?? []).reduce((s, r) => s + Number(r.amount), 0)
-      const spent  = (expData ?? []).reduce((s, r) => {
-        const n = String((r as { name?: unknown }).name ?? '').toLowerCase()
-        return subNameSet.has(n) ? s : s + Number(r.cost)
-      }, 0)
-      const subs  = (expData ?? []).reduce((s, r) => {
-        const n = String((r as { name?: unknown }).name ?? '').toLowerCase()
-        return subNameSet.has(n) ? s + Number(r.cost) : s
-      }, 0)
+      const subs   = (expData ?? []).reduce((s, r) =>
+        subNameSet.has(String((r as { name?: unknown }).name ?? '').toLowerCase())
+          ? s + Number(r.cost) : s, 0)
+      const spent  = (expData ?? []).reduce((s, r) =>
+        subNameSet.has(String((r as { name?: unknown }).name ?? '').toLowerCase())
+          ? s : s + Number(r.cost), 0)
       const saved  = (expData ?? []).reduce((s, r) => s + Number(r.savings ?? 0), 0)
       setStats({ income, spent, subs, saved })
     })()
@@ -137,8 +143,9 @@ export function GreetingOverlay() {
   if (!show) return null
 
   const net      = (stats?.income ?? 0) - (stats?.spent ?? 0) - (stats?.subs ?? 0)
-  const totalInc = sparkPoints.reduce((s, p) => s + p.inc, 0)
-  const totalExp = sparkPoints.reduce((s, p) => s + p.exp + p.sub, 0)
+  const legendInc = sparkPoints.reduce((s, p) => s + p.inc, 0)
+  const legendExp = sparkPoints.reduce((s, p) => s + p.exp, 0)
+  const legendSub = sparkPoints.reduce((s, p) => s + p.sub, 0)
 
   const STATS: { label: string; value: number; color: string; prefix: string }[] = [
     { label: 'Income', value: stats?.income ?? 0, color: 'var(--sem-income)',  prefix: '+' },
@@ -152,20 +159,20 @@ export function GreetingOverlay() {
     <div
       onClick={dismiss}
       style={{
-        position:         'fixed',
-        inset:            0,
-        zIndex:           80,
-        display:          'flex',
-        flexDirection:    'column',
-        alignItems:       'center',
-        justifyContent:   'center',
-        background:       'rgba(12,12,22,0.72)',
-        backdropFilter:   'blur(6px)',
+        position:             'fixed',
+        inset:                0,
+        zIndex:               80,
+        display:              'flex',
+        flexDirection:        'column',
+        alignItems:           'center',
+        justifyContent:       'center',
+        background:           'rgba(12,12,22,0.72)',
+        backdropFilter:       'blur(6px)',
         WebkitBackdropFilter: 'blur(6px)',
-        opacity:          mounted && !exiting ? 1 : 0,
-        transition:       mounted ? 'opacity 360ms ease' : 'none',
-        userSelect:       'none',
-        WebkitUserSelect: 'none',
+        opacity:              mounted && !exiting ? 1 : 0,
+        transition:           mounted ? 'opacity 360ms ease' : 'none',
+        userSelect:           'none',
+        WebkitUserSelect:     'none',
       }}
     >
       {/* ── Portrait card ───────────────────────────────────────────────── */}
@@ -179,26 +186,26 @@ export function GreetingOverlay() {
         boxShadow:     '0 48px 120px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(255,255,255,0.10)',
         display:       'flex',
         flexDirection: 'column',
-        transform:     mounted && !exiting ? 'scale(1) translateY(0)' : exiting ? 'scale(0.94) translateY(10px)' : 'scale(0.92) translateY(28px)',
+        transform:     mounted && !exiting
+          ? 'scale(1) translateY(0)'
+          : exiting
+            ? 'scale(0.94) translateY(10px)'
+            : 'scale(0.92) translateY(28px)',
         transition:    mounted
           ? exiting
-            ? 'transform 320ms cubic-bezier(0.4,0,1,1), opacity 320ms ease'
-            : 'transform 520ms cubic-bezier(0.34,1.56,0.64,1), opacity 420ms ease'
+            ? 'transform 320ms cubic-bezier(0.4,0,1,1)'
+            : 'transform 520ms cubic-bezier(0.34,1.56,0.64,1)'
           : 'none',
       }}>
 
-        {/* ── Photo (top 22%) ──────────────────────────────────────────── */}
+        {/* ── Photo ────────────────────────────────────────────────────── */}
         <div style={{ position: 'relative', height: '22%', flexShrink: 0 }}>
           {avatar ? (
             <img
               src={avatar}
               alt=""
               draggable={false}
-              style={{
-                width: '100%', height: '100%',
-                objectFit: 'cover', objectPosition: 'center 18%',
-                display: 'block',
-              }}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 18%', display: 'block' }}
             />
           ) : (
             <div style={{
@@ -219,10 +226,7 @@ export function GreetingOverlay() {
         </div>
 
         {/* ── Content ──────────────────────────────────────────────────── */}
-        <div style={{
-          flex: 1, display: 'flex', flexDirection: 'column',
-          padding: '4px 0 12px', overflow: 'hidden',
-        }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '4px 0 12px', overflow: 'hidden' }}>
 
           {/* Greeting */}
           <div style={{ padding: '0 18px', marginBottom: 8 }}>
@@ -243,7 +247,7 @@ export function GreetingOverlay() {
             </h1>
           </div>
 
-          {/* ── Sparkline — whole month, matches HomeHero ─────────────── */}
+          {/* ── Sparkline: 240px, 3 series, identical to HomeHero ─────── */}
           <div style={{ position: 'relative', height: 240, flexShrink: 0 }}>
             {sparkPoints.length > 0 && <SparkChart points={sparkPoints} />}
 
@@ -254,42 +258,23 @@ export function GreetingOverlay() {
               zIndex: 1,
             }} />
 
-            {/* Legend overlay */}
+            {/* Legend — no eyebrow label, three dots */}
             <div style={{
-              position: 'absolute', top: 0, left: 0, right: 0,
+              position: 'absolute', top: 0, left: 0,
               padding: '12px 16px', zIndex: 2, pointerEvents: 'none',
             }}>
-              <p style={{
-                fontSize: 9, fontWeight: 700, letterSpacing: '0.12em',
-                textTransform: 'uppercase', color: 'rgba(240,240,248,0.45)',
-                marginBottom: 6, fontFamily: 'var(--font-montserrat)',
-              }}>
-                This Month
-              </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{
-                  display: 'flex', alignItems: 'center', gap: 4,
-                  fontSize: 10, fontWeight: 500,
-                  color: 'var(--sem-income, #4ADE80)',
-                  fontFamily: 'var(--font-big-shoulders)',
-                }}>
-                  <span style={{
-                    width: 8, height: 8, borderRadius: 2, flexShrink: 0,
-                    background: 'var(--sem-income, #4ADE80)', display: 'inline-block',
-                  }} />
-                  {$fk(totalInc)}
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 500, color: 'var(--sem-income, #4ADE80)', fontFamily: 'var(--font-big-shoulders)' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 2, flexShrink: 0, background: 'var(--sem-income, #4ADE80)', display: 'inline-block' }} />
+                  {$fk(legendInc)}
                 </span>
-                <span style={{
-                  display: 'flex', alignItems: 'center', gap: 4,
-                  fontSize: 10, fontWeight: 500,
-                  color: 'var(--sem-expense, #D4AF37)',
-                  fontFamily: 'var(--font-big-shoulders)',
-                }}>
-                  <span style={{
-                    width: 8, height: 8, borderRadius: 2, flexShrink: 0,
-                    background: 'var(--sem-expense, #D4AF37)', display: 'inline-block',
-                  }} />
-                  {$fk(totalExp)}
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 500, color: 'var(--sem-expense, #D4AF37)', fontFamily: 'var(--font-big-shoulders)' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 2, flexShrink: 0, background: 'var(--sem-expense, #D4AF37)', display: 'inline-block' }} />
+                  {$fk(legendExp)}
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.55)', fontFamily: 'var(--font-big-shoulders)' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 2, flexShrink: 0, background: 'rgba(255,255,255,0.40)', display: 'inline-block' }} />
+                  {$fk(legendSub)}
                 </span>
               </div>
             </div>
@@ -318,23 +303,13 @@ export function GreetingOverlay() {
                 border: '0.5px solid rgba(255,255,255,0.08)',
                 borderRadius: 12,
               }}>
-                <p style={{
-                  fontSize: 11, fontWeight: 500,
-                  color: 'rgba(255,255,255,0.45)',
-                  fontFamily: 'var(--font-montserrat)',
-                  letterSpacing: '0.01em',
-                }}>
+                <p style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.01em' }}>
                   {label}
                 </p>
                 {stats === null ? (
                   <div style={{ height: 15, width: 56, borderRadius: 4, background: 'rgba(255,255,255,0.07)' }} />
                 ) : (
-                  <p style={{
-                    fontSize: 15, fontWeight: 700,
-                    fontFamily: 'var(--font-big-shoulders)',
-                    letterSpacing: '-0.01em',
-                    color, lineHeight: 1,
-                  }}>
+                  <p style={{ fontSize: 15, fontWeight: 700, fontFamily: 'var(--font-big-shoulders)', letterSpacing: '-0.01em', color, lineHeight: 1 }}>
                     {prefix}{$fd(Math.abs(value))}
                   </p>
                 )}
@@ -344,13 +319,7 @@ export function GreetingOverlay() {
         </div>
       </div>
 
-      {/* Hint below card */}
-      <p style={{
-        marginTop: 14, fontSize: 11,
-        color: 'rgba(255,255,255,0.25)',
-        fontFamily: 'var(--font-montserrat)',
-        letterSpacing: '0.04em',
-      }}>
+      <p style={{ marginTop: 14, fontSize: 11, color: 'rgba(255,255,255,0.25)', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.04em' }}>
         Tap anywhere to continue
       </p>
     </div>
