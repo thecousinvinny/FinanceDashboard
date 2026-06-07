@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { $fd, localToday } from '@/lib/utils'
+import { $fd, $fk, localToday } from '@/lib/utils'
 import { SparkChart, type DayPoint } from './SparkChart'
 
 const LS_SHOWN  = 'hoardr-greeting-shown'
@@ -67,20 +67,17 @@ export function GreetingOverlay() {
         if (google) setAvatar(google)
       }
 
-      // ── Build 14-day date array ──────────────────────────────────────────
+      // ── Date ranges ──────────────────────────────────────────────────────
       const chartStart = (() => {
-        const d = new Date(today + 'T12:00:00')
-        d.setDate(d.getDate() - 13)
+        const d = new Date(today + 'T12:00:00'); d.setDate(d.getDate() - 13)
         return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
       })()
       const chart14Days = Array.from({ length: 14 }, (_, i) => {
-        const d = new Date(today + 'T12:00:00')
-        d.setDate(d.getDate() - 13 + i)
+        const d = new Date(today + 'T12:00:00'); d.setDate(d.getDate() - 13 + i)
         return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
       })
       const monthStart = `${today.slice(0, 7)}-01`
 
-      // Fetch all data in parallel
       const [
         { data: incData },
         { data: expData },
@@ -93,13 +90,11 @@ export function GreetingOverlay() {
         supabase.from('income').select('amount, date').gte('date', chartStart).lte('date', today),
       ])
 
-      // Month stats
-      const income = (incData  ?? []).reduce((s, r) => s + Number(r.amount), 0)
-      const spent  = (expData  ?? []).reduce((s, r) => s + Number(r.cost), 0)
-      const saved  = (expData  ?? []).reduce((s, r) => s + Number(r.savings ?? 0), 0)
+      const income = (incData ?? []).reduce((s, r) => s + Number(r.amount), 0)
+      const spent  = (expData ?? []).reduce((s, r) => s + Number(r.cost), 0)
+      const saved  = (expData ?? []).reduce((s, r) => s + Number(r.savings ?? 0), 0)
       setStats({ income, spent, saved })
 
-      // Spark points
       const dailyExp: Record<string, number> = {}
       const dailyInc: Record<string, number> = {}
       for (const e of sparkExpData ?? []) dailyExp[String(e.date)] = (dailyExp[String(e.date)] ?? 0) + Number(e.cost)
@@ -124,13 +119,15 @@ export function GreetingOverlay() {
 
   if (!show) return null
 
-  const net = (stats?.income ?? 0) - (stats?.spent ?? 0)
+  const net       = (stats?.income ?? 0) - (stats?.spent ?? 0)
+  const totalInc  = sparkPoints.reduce((s, p) => s + p.inc, 0)
+  const totalExp  = sparkPoints.reduce((s, p) => s + p.exp, 0)
 
   const STATS: { label: string; value: number; color: string; prefix: string }[] = [
-    { label: 'Income', value: stats?.income ?? 0, color: 'var(--sem-income)',  prefix: '+'                                          },
-    { label: 'Spent',  value: stats?.spent  ?? 0, color: 'var(--sem-expense)', prefix: ''                                           },
-    { label: 'Net',    value: net,                color: net >= 0 ? 'var(--sem-income)' : '#ef4444', prefix: net >= 0 ? '+' : '−'   },
-    { label: 'Saved',  value: stats?.saved  ?? 0, color: 'rgb(var(--rgb-ink))', prefix: ''                                          },
+    { label: 'Income', value: stats?.income ?? 0, color: 'var(--sem-income)',  prefix: '+'                                        },
+    { label: 'Spent',  value: stats?.spent  ?? 0, color: 'var(--sem-expense)', prefix: ''                                         },
+    { label: 'Net',    value: net,                color: net >= 0 ? 'var(--sem-income)' : '#ef4444', prefix: net >= 0 ? '+' : '−' },
+    { label: 'Saved',  value: stats?.saved  ?? 0, color: 'rgb(var(--rgb-ink))', prefix: ''                                        },
   ]
 
   return (
@@ -153,36 +150,34 @@ export function GreetingOverlay() {
     >
       {/* ── Portrait card ───────────────────────────────────────────────── */}
       <div style={{
-        position:     'relative',
-        width:        'min(88vw, 360px)',
-        height:       'min(82vh, 700px)',
-        borderRadius: 28,
-        overflow:     'hidden',
-        background:   '#080810',
-        boxShadow:    '0 48px 120px rgba(0,0,0,0.9), 0 0 0 0.5px rgba(255,255,255,0.10)',
-        display:      'flex',
-        flexDirection:'column',
-        transform:    mounted && !exiting ? 'scale(1) translateY(0)' : exiting ? 'scale(0.94) translateY(10px)' : 'scale(0.92) translateY(28px)',
-        transition:   mounted
+        position:      'relative',
+        width:         'min(88vw, 360px)',
+        height:        'min(88vh, 740px)',
+        borderRadius:  28,
+        overflow:      'hidden',
+        background:    '#080810',
+        boxShadow:     '0 48px 120px rgba(0,0,0,0.9), 0 0 0 0.5px rgba(255,255,255,0.10)',
+        display:       'flex',
+        flexDirection: 'column',
+        transform:     mounted && !exiting ? 'scale(1) translateY(0)' : exiting ? 'scale(0.94) translateY(10px)' : 'scale(0.92) translateY(28px)',
+        transition:    mounted
           ? exiting
             ? 'transform 320ms cubic-bezier(0.4,0,1,1), opacity 320ms ease'
             : 'transform 520ms cubic-bezier(0.34,1.56,0.64,1), opacity 420ms ease'
           : 'none',
       }}>
 
-        {/* ── Photo (top 38% of card) ──────────────────────────────────── */}
-        <div style={{ position: 'relative', height: '38%', flexShrink: 0 }}>
+        {/* ── Photo (top 26%) ──────────────────────────────────────────── */}
+        <div style={{ position: 'relative', height: '26%', flexShrink: 0 }}>
           {avatar ? (
             <img
               src={avatar}
               alt=""
               draggable={false}
               style={{
-                width:          '100%',
-                height:         '100%',
-                objectFit:      'cover',
-                objectPosition: 'center 18%',
-                display:        'block',
+                width: '100%', height: '100%',
+                objectFit: 'cover', objectPosition: 'center 18%',
+                display: 'block',
               }}
             />
           ) : (
@@ -191,102 +186,136 @@ export function GreetingOverlay() {
               background: 'var(--color-bg-overlay)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <span style={{ fontSize: 80, fontWeight: 700, color: 'rgb(var(--rgb-ink-muted))', fontFamily: 'var(--font-montserrat)' }}>
+              <span style={{ fontSize: 64, fontWeight: 700, color: 'rgb(var(--rgb-ink-muted))', fontFamily: 'var(--font-montserrat)' }}>
                 {name ? name[0].toUpperCase() : '?'}
               </span>
             </div>
           )}
-          {/* Fade image bottom into card bg */}
           <div style={{
-            position:   'absolute',
-            bottom:     0, left: 0, right: 0,
-            height:     '55%',
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%',
             background: 'linear-gradient(to bottom, transparent, #080810)',
             pointerEvents: 'none',
           }} />
         </div>
 
-        {/* ── Content area ─────────────────────────────────────────────── */}
+        {/* ── Content ──────────────────────────────────────────────────── */}
         <div style={{
-          flex:           1,
-          display:        'flex',
-          flexDirection:  'column',
-          padding:        '4px 18px 16px',
-          overflow:       'hidden',
+          flex: 1, display: 'flex', flexDirection: 'column',
+          padding: '4px 0 14px', overflow: 'hidden',
         }}>
 
           {/* Greeting */}
-          <div style={{ marginBottom: 12 }}>
+          <div style={{ padding: '0 18px', marginBottom: 10 }}>
             <p style={{
               fontSize: 9, fontWeight: 600, letterSpacing: '0.18em',
               textTransform: 'uppercase', color: '#D4AF37',
-              marginBottom: 3, fontFamily: 'var(--font-montserrat)',
+              marginBottom: 2, fontFamily: 'var(--font-montserrat)',
             }}>
               {timeGreeting()}
             </p>
             <h1 style={{
-              fontSize:      name.length > 10 ? 28 : 34,
-              fontWeight:    800,
-              letterSpacing: '-0.03em',
-              color:         'rgb(var(--rgb-ink))',
-              lineHeight:    1,
-              fontFamily:    'var(--font-montserrat)',
+              fontSize: name.length > 10 ? 26 : 30,
+              fontWeight: 800, letterSpacing: '-0.03em',
+              color: 'rgb(var(--rgb-ink))', lineHeight: 1,
+              fontFamily: 'var(--font-montserrat)',
             }}>
               {name || '—'}
             </h1>
           </div>
 
-          {/* Sparkline */}
-          <div style={{
-            flex:       '0 0 88px',
-            position:   'relative',
-            marginBottom: 10,
-            borderRadius: 10,
-            overflow:   'hidden',
-          }}>
-            {sparkPoints.length > 0
-              ? <SparkChart points={sparkPoints} />
-              : <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.03)', borderRadius: 10 }} />
-            }
+          {/* ── Sparkline — identical to HomeHero monthly ─────────────── */}
+          <div style={{ position: 'relative', height: 240, flexShrink: 0 }}>
+            {sparkPoints.length > 0 && <SparkChart points={sparkPoints} />}
+
+            {/* Left gradient (text legibility) — matches HomeHero */}
+            <div
+              style={{
+                position: 'absolute', inset: 0, pointerEvents: 'none',
+                background: 'linear-gradient(90deg, rgba(8,8,16,0.85) 0%, rgba(8,8,16,0.50) 42%, transparent 68%)',
+                zIndex: 1,
+              }}
+            />
+
+            {/* Legend overlay */}
+            <div style={{
+              position: 'absolute', top: 0, left: 0, right: 0,
+              padding: '12px 16px', zIndex: 2, pointerEvents: 'none',
+            }}>
+              <p style={{
+                fontSize: 9, fontWeight: 700, letterSpacing: '0.12em',
+                textTransform: 'uppercase', color: 'rgba(240,240,248,0.45)',
+                marginBottom: 6, fontFamily: 'var(--font-montserrat)',
+              }}>
+                Last 14 Days
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  fontSize: 10, fontWeight: 500,
+                  color: 'var(--sem-income, #4ADE80)',
+                  fontFamily: 'var(--font-big-shoulders)',
+                }}>
+                  <span style={{
+                    width: 8, height: 8, borderRadius: 2, flexShrink: 0,
+                    background: 'var(--sem-income, #4ADE80)', display: 'inline-block',
+                  }} />
+                  {$fk(totalInc)}
+                </span>
+                <span style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  fontSize: 10, fontWeight: 500,
+                  color: 'var(--sem-expense, #D4AF37)',
+                  fontFamily: 'var(--font-big-shoulders)',
+                }}>
+                  <span style={{
+                    width: 8, height: 8, borderRadius: 2, flexShrink: 0,
+                    background: 'var(--sem-expense, #D4AF37)', display: 'inline-block',
+                  }} />
+                  {$fk(totalExp)}
+                </span>
+              </div>
+            </div>
           </div>
 
           {/* Divider */}
-          <div style={{ height: 0.5, background: 'rgba(255,255,255,0.10)', marginBottom: 10, flexShrink: 0 }} />
+          <div style={{ height: 0.5, background: 'rgba(255,255,255,0.08)', margin: '10px 18px' }} />
 
           {/* Stats label */}
           <p style={{
             fontSize: 8, fontWeight: 500, letterSpacing: '0.16em',
-            textTransform: 'uppercase', color: 'rgba(255,255,255,0.30)',
-            marginBottom: 8, flexShrink: 0, fontFamily: 'var(--font-montserrat)',
+            textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)',
+            padding: '0 18px', marginBottom: 7,
+            fontFamily: 'var(--font-montserrat)',
           }}>
             Your Month So Far
           </p>
 
-          {/* 2×2 stat grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7, flex: 1, alignContent: 'start' }}>
+          {/* Stat rows — one per line */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: '0 12px' }}>
             {STATS.map(({ label, value, color, prefix }) => (
               <div key={label} style={{
-                background:           'rgba(255,255,255,0.06)',
-                border:               '0.5px solid rgba(255,255,255,0.09)',
-                borderRadius:         13,
-                padding:              '9px 12px',
-                backdropFilter:       'blur(12px)',
-                WebkitBackdropFilter: 'blur(12px)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '9px 14px',
+                background: 'rgba(255,255,255,0.05)',
+                border: '0.5px solid rgba(255,255,255,0.08)',
+                borderRadius: 13,
               }}>
                 <p style={{
-                  fontSize: 8, fontWeight: 500, letterSpacing: '0.12em',
-                  textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)',
-                  marginBottom: 5, fontFamily: 'var(--font-montserrat)',
+                  fontSize: 11, fontWeight: 500,
+                  color: 'rgba(255,255,255,0.45)',
+                  fontFamily: 'var(--font-montserrat)',
+                  letterSpacing: '0.01em',
                 }}>
                   {label}
                 </p>
                 {stats === null ? (
-                  <div style={{ height: 20, width: 56, borderRadius: 4, background: 'rgba(255,255,255,0.07)' }} />
+                  <div style={{ height: 16, width: 60, borderRadius: 4, background: 'rgba(255,255,255,0.07)' }} />
                 ) : (
                   <p style={{
-                    fontSize: 17, fontWeight: 700,
+                    fontSize: 16, fontWeight: 700,
                     fontFamily: 'var(--font-big-shoulders)',
-                    letterSpacing: '-0.01em', color, lineHeight: 1,
+                    letterSpacing: '-0.01em',
+                    color, lineHeight: 1,
                   }}>
                     {prefix}{$fd(Math.abs(value))}
                   </p>
@@ -299,8 +328,8 @@ export function GreetingOverlay() {
 
       {/* Hint below card */}
       <p style={{
-        marginTop: 16, fontSize: 11,
-        color: 'rgba(255,255,255,0.22)',
+        marginTop: 14, fontSize: 11,
+        color: 'rgba(255,255,255,0.20)',
         fontFamily: 'var(--font-montserrat)',
         letterSpacing: '0.04em',
       }}>
