@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { $fd, $fk, localToday } from '@/lib/utils'
+import { $fk, localToday } from '@/lib/utils'
 import { SparkChart, type DayPoint } from './SparkChart'
 
 const LS_SHOWN  = 'hoardr-greeting-shown'
@@ -16,6 +16,9 @@ function timeGreeting(): string {
   if (h >= 17 && h < 21) return 'Good evening'
   return 'Good night'
 }
+
+function fmtInt(n: number)   { return Math.floor(n).toLocaleString('en-US') }
+function fmtCents(n: number) { return String(Math.round((Math.abs(n) % 1) * 100)).padStart(2, '0') }
 
 interface Stats { income: number; spent: number; subs: number; saved: number }
 
@@ -95,7 +98,7 @@ export function GreetingOverlay() {
 
       const subNameSet = new Set((activeSubs ?? []).map(s => String(s.name).toLowerCase()))
 
-      // ── Sparkline: 14-day daily buckets, 3 series ────────────────────────
+      // ── 14-day sparkline buckets ─────────────────────────────────────────
       const dailyExp: Record<string, number> = {}
       const dailyInc: Record<string, number> = {}
       const dailySub: Record<string, number> = {}
@@ -119,7 +122,7 @@ export function GreetingOverlay() {
         sub:   dailySub[d] ?? 0,
       })))
 
-      // ── Stats: month totals ───────────────────────────────────────────────
+      // ── Month stat totals ─────────────────────────────────────────────────
       const income = (incData ?? []).reduce((s, r) => s + Number(r.amount), 0)
       const subs   = (expData ?? []).reduce((s, r) =>
         subNameSet.has(String((r as { name?: unknown }).name ?? '').toLowerCase())
@@ -142,15 +145,18 @@ export function GreetingOverlay() {
 
   if (!show) return null
 
-  const net      = (stats?.income ?? 0) - (stats?.spent ?? 0) - (stats?.subs ?? 0)
+  const net       = (stats?.income ?? 0) - (stats?.spent ?? 0) - (stats?.subs ?? 0)
+  // Hero: total spent this month (exp + subs), matching HomeHero's heroVal
+  const heroVal   = (stats?.spent ?? 0) + (stats?.subs ?? 0)
   const legendInc = sparkPoints.reduce((s, p) => s + p.inc, 0)
   const legendExp = sparkPoints.reduce((s, p) => s + p.exp, 0)
   const legendSub = sparkPoints.reduce((s, p) => s + p.sub, 0)
+  const hasSub    = legendSub > 0
 
   const STATS: { label: string; value: number; color: string; prefix: string }[] = [
     { label: 'Income', value: stats?.income ?? 0, color: 'var(--sem-income)',  prefix: '+' },
     { label: 'Spent',  value: stats?.spent  ?? 0, color: 'var(--sem-expense)', prefix: ''  },
-    { label: 'Subs',   value: stats?.subs   ?? 0, color: 'rgba(255,255,255,0.55)', prefix: '' },
+    { label: 'Subs',   value: stats?.subs   ?? 0, color: 'rgba(180,185,200,0.8)', prefix: '' },
     { label: 'Net',    value: net,                color: net >= 0 ? 'var(--sem-income)' : '#ef4444', prefix: net >= 0 ? '+' : '−' },
     { label: 'Saved',  value: stats?.saved  ?? 0, color: 'rgb(var(--rgb-ink))', prefix: '' },
   ]
@@ -166,6 +172,10 @@ export function GreetingOverlay() {
         flexDirection:        'column',
         alignItems:           'center',
         justifyContent:       'center',
+        // Safe area padding so card never overlaps Dynamic Island or home indicator
+        paddingTop:           'env(safe-area-inset-top, 44px)',
+        paddingBottom:        'env(safe-area-inset-bottom, 34px)',
+        boxSizing:            'border-box',
         background:           'rgba(12,12,22,0.72)',
         backdropFilter:       'blur(6px)',
         WebkitBackdropFilter: 'blur(6px)',
@@ -179,7 +189,7 @@ export function GreetingOverlay() {
       <div style={{
         position:      'relative',
         width:         'min(88vw, 360px)',
-        height:        'min(90vh, 760px)',
+        height:        'min(87vh, 740px)',
         borderRadius:  28,
         overflow:      'hidden',
         background:    '#080810',
@@ -247,23 +257,24 @@ export function GreetingOverlay() {
             </h1>
           </div>
 
-          {/* ── Sparkline: 240px, 3 series, identical to HomeHero ─────── */}
+          {/* ── Sparkline: 240px, identical to HomeHero ───────────────── */}
           <div style={{ position: 'relative', height: 240, flexShrink: 0 }}>
             {sparkPoints.length > 0 && <SparkChart points={sparkPoints} />}
 
-            {/* Left gradient for text legibility */}
+            {/* Left gradient — same as HomeHero */}
             <div style={{
               position: 'absolute', inset: 0, pointerEvents: 'none',
-              background: 'linear-gradient(90deg, rgba(8,8,16,0.85) 0%, rgba(8,8,16,0.50) 42%, transparent 68%)',
+              background: 'linear-gradient(90deg, rgba(22,30,39,0.85) 0%, rgba(22,30,39,0.50) 45%, rgba(22,30,39,0.0) 70%)',
               zIndex: 1,
             }} />
 
-            {/* Legend — no eyebrow label, three dots */}
+            {/* Text overlay — legend + hero number, identical to HomeHero */}
             <div style={{
-              position: 'absolute', top: 0, left: 0,
-              padding: '12px 16px', zIndex: 2, pointerEvents: 'none',
+              position: 'absolute', top: 0, left: 0, right: 0,
+              padding: '14px 16px', zIndex: 2, pointerEvents: 'none',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {/* Legend row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 500, color: 'var(--sem-income, #4ADE80)', fontFamily: 'var(--font-big-shoulders)' }}>
                   <span style={{ width: 8, height: 8, borderRadius: 2, flexShrink: 0, background: 'var(--sem-income, #4ADE80)', display: 'inline-block' }} />
                   {$fk(legendInc)}
@@ -272,9 +283,22 @@ export function GreetingOverlay() {
                   <span style={{ width: 8, height: 8, borderRadius: 2, flexShrink: 0, background: 'var(--sem-expense, #D4AF37)', display: 'inline-block' }} />
                   {$fk(legendExp)}
                 </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.55)', fontFamily: 'var(--font-big-shoulders)' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: 2, flexShrink: 0, background: 'rgba(255,255,255,0.40)', display: 'inline-block' }} />
-                  {$fk(legendSub)}
+                {hasSub && (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 500, color: 'rgba(180,185,200,0.8)', fontFamily: 'var(--font-big-shoulders)' }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 2, flexShrink: 0, background: 'rgba(180,185,200,0.7)', display: 'inline-block' }} />
+                    {$fk(legendSub)}
+                  </span>
+                )}
+              </div>
+
+              {/* Hero number — exact HomeHero style */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', fontFamily: 'var(--font-big-shoulders)' }}>
+                <span style={{ fontSize: 22, fontWeight: 300, color: 'rgb(var(--rgb-ink-muted))', marginTop: 7, marginRight: 1 }}>$</span>
+                <span style={{ fontSize: 52, fontWeight: 700, lineHeight: 1, letterSpacing: '-0.04em', color: 'rgb(var(--rgb-ink))' }}>
+                  {fmtInt(heroVal)}
+                  <span style={{ fontSize: 32, fontWeight: 300, color: 'rgb(var(--rgb-ink-muted))' }}>
+                    .{fmtCents(heroVal)}
+                  </span>
                 </span>
               </div>
             </div>
@@ -310,7 +334,7 @@ export function GreetingOverlay() {
                   <div style={{ height: 15, width: 56, borderRadius: 4, background: 'rgba(255,255,255,0.07)' }} />
                 ) : (
                   <p style={{ fontSize: 15, fontWeight: 700, fontFamily: 'var(--font-big-shoulders)', letterSpacing: '-0.01em', color, lineHeight: 1 }}>
-                    {prefix}{$fd(Math.abs(value))}
+                    {prefix}${fmtInt(Math.abs(value))}.{fmtCents(value)}
                   </p>
                 )}
               </div>
@@ -319,7 +343,7 @@ export function GreetingOverlay() {
         </div>
       </div>
 
-      <p style={{ marginTop: 14, fontSize: 11, color: 'rgba(255,255,255,0.25)', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.04em' }}>
+      <p style={{ marginTop: 10, fontSize: 11, color: 'rgba(255,255,255,0.25)', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.04em' }}>
         Tap anywhere to continue
       </p>
     </div>
