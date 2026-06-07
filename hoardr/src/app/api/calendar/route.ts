@@ -1,9 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-const TOKEN_URL  = 'https://oauth2.googleapis.com/token'
-const CAL_BASE   = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
-const GCAL_API   = 'https://www.googleapis.com/calendar/v3'
+const TOKEN_URL = 'https://oauth2.googleapis.com/token'
+const GCAL_API  = 'https://www.googleapis.com/calendar/v3'
+
+// ── Input validation helpers ─────────────────────────────────────────────────
+
+const VALID_ACTIONS_GET  = new Set(['calendars', 'events'])
+const VALID_ACTIONS_POST = new Set(['create', 'update', 'delete'])
+
+// Google Calendar event/calendar IDs are alphanumeric + a small set of chars
+const SAFE_ID_RE     = /^[a-zA-Z0-9_@.\-]{1,256}$/
+// ISO 8601 datetime (Google uses RFC 3339 subset)
+const ISO_DATE_RE    = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})?)?$/
+
+function isSafeId(v: unknown): v is string {
+  return typeof v === 'string' && SAFE_ID_RE.test(v)
+}
+function isIsoDate(v: unknown): v is string {
+  return typeof v === 'string' && ISO_DATE_RE.test(v)
+}
+
+// ── Token management ─────────────────────────────────────────────────────────
 
 async function refreshAccessToken(refreshToken: string): Promise<string> {
   const res  = await fetch(TOKEN_URL, {
@@ -17,11 +35,25 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
     }),
   })
   const json = await res.json() as { access_token?: string; error?: string }
-  if (!json.access_token) throw new Error(`Token refresh failed: ${json.error ?? 'unknown'}`)
+  if (!json.access_token) {
+    console.error('[calendar] token refresh failed:', json.error)
+    throw new Error('token_refresh_failed')
+  }
   return json.access_token
 }
 
+// Fetch and validate the caller's refresh token from their profile.
+async function getCallerToken(supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<string | null> {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('google_refresh_token')
+    .eq('id', userId)
+    .single()
+  return (profile?.google_refresh_token as string | null) ?? null
+}
+
 // ── GET: list calendars or fetch events ─────────────────────────────────────
+
 export async function GET(req: NextRequest) {
   try {
     const supabase = await createClient()
@@ -31,95 +63,136 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const action = searchParams.get('action')
 
-    const { data: profile } = await supabase
-      .from('profiles').select('google_refresh_token').eq('id', user.id).single()
-
-    if (!profile?.google_refresh_token) {
-      return NextResponse.json({ error: 'No token' }, { status: 403 })
+    if (!action || !VALID_ACTIONS_GET.has(action)) {
+      return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     }
 
-    const token   = await refreshAccessToken(profile.google_refresh_token as string)
+    const refreshToken = await getCallerToken(supabase, user.id)
+    if (!refreshToken) {
+      return NextResponse.json({ error: 'No Google Calendar access. Sign out and back in to grant calendar permissions.' }, { status: 403 })
+    }
+
+    const token   = await refreshAccessToken(refreshToken)
     const headers = { Authorization: `Bearer ${token}` }
 
     if (action === 'calendars') {
       const res  = await fetch(`${GCAL_API}/users/me/calendarList?minAccessRole=reader`, { headers })
       const json = await res.json() as { items?: unknown[]; error?: unknown }
-      if (!res.ok) return NextResponse.json({ error: json.error ?? 'Calendar API error' }, { status: res.status })
+      if (!res.ok) {
+        console.error('[calendar GET calendars] upstream error:', json.error)
+        return NextResponse.json({ error: 'Failed to fetch calendar list' }, { status: 502 })
+      }
       return NextResponse.json({ items: json.items ?? [] })
     }
 
-    if (action === 'events') {
-      const calendarId = searchParams.get('calendarId') ?? 'primary'
-      const timeMin    = searchParams.get('timeMin')
-      const timeMax    = searchParams.get('timeMax')
-      const url        = `${GCAL_API}/calendars/${encodeURIComponent(calendarId)}/events`
-                       + `?timeMin=${encodeURIComponent(timeMin ?? '')}`
-                       + `&timeMax=${encodeURIComponent(timeMax ?? '')}`
-                       + `&singleEvents=true&orderBy=startTime&maxResults=250`
-      const res  = await fetch(url, { headers })
-      const json = await res.json()
-      return NextResponse.json(json)
+    // action === 'events'
+    const calendarId = searchParams.get('calendarId') ?? 'primary'
+    const timeMin    = searchParams.get('timeMin')
+    const timeMax    = searchParams.get('timeMax')
+
+    if (calendarId !== 'primary' && !isSafeId(calendarId)) {
+      return NextResponse.json({ error: 'Invalid calendarId' }, { status: 400 })
+    }
+    if (timeMin && !isIsoDate(timeMin)) {
+      return NextResponse.json({ error: 'Invalid timeMin' }, { status: 400 })
+    }
+    if (timeMax && !isIsoDate(timeMax)) {
+      return NextResponse.json({ error: 'Invalid timeMax' }, { status: 400 })
     }
 
-    return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+    const url = `${GCAL_API}/calendars/${encodeURIComponent(calendarId)}/events`
+              + `?timeMin=${encodeURIComponent(timeMin ?? '')}`
+              + `&timeMax=${encodeURIComponent(timeMax ?? '')}`
+              + `&singleEvents=true&orderBy=startTime&maxResults=250`
+    const res  = await fetch(url, { headers })
+    const json = await res.json()
+    if (!res.ok) {
+      console.error('[calendar GET events] upstream error:', json.error)
+      return NextResponse.json({ error: 'Failed to fetch events' }, { status: 502 })
+    }
+    return NextResponse.json(json)
 
   } catch (err) {
     console.error('[calendar GET]', err)
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+    return NextResponse.json({ error: 'Something went wrong' }, { status: 500 })
   }
 }
 
 // ── POST: create / update / delete ──────────────────────────────────────────
+
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { action, event, eventId, calendarId } = await req.json() as {
-      action:      'create' | 'update' | 'delete'
-      event?:      Record<string, unknown>
-      eventId?:    string
-      calendarId?: string
+    let body: { action?: unknown; event?: unknown; eventId?: unknown; calendarId?: unknown }
+    try {
+      body = await req.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('google_refresh_token')
-      .eq('id', user.id)
-      .single()
+    const { action, event, eventId, calendarId } = body
 
-    if (!profile?.google_refresh_token) {
+    if (typeof action !== 'string' || !VALID_ACTIONS_POST.has(action)) {
+      return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+    }
+
+    // eventId required for update/delete
+    if ((action === 'update' || action === 'delete') && !isSafeId(eventId)) {
+      return NextResponse.json({ error: 'Invalid or missing eventId' }, { status: 400 })
+    }
+
+    // calendarId must be safe if provided
+    const calId = typeof calendarId === 'string' && calendarId ? calendarId : 'primary'
+    if (calId !== 'primary' && !isSafeId(calId)) {
+      return NextResponse.json({ error: 'Invalid calendarId' }, { status: 400 })
+    }
+
+    const refreshToken = await getCallerToken(supabase, user.id)
+    if (!refreshToken) {
       return NextResponse.json(
         { error: 'No Google Calendar access. Sign out and back in to grant calendar permissions.' },
         { status: 403 },
       )
     }
 
-    const token   = await refreshAccessToken(profile.google_refresh_token as string)
+    const token   = await refreshAccessToken(refreshToken)
     const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+    const calBase = `${GCAL_API}/calendars/${encodeURIComponent(calId)}/events`
 
     if (action === 'create') {
-      const calBase = `${GCAL_API}/calendars/${encodeURIComponent(calendarId ?? 'primary')}/events`
+      if (!event || typeof event !== 'object') {
+        return NextResponse.json({ error: 'Missing event body' }, { status: 400 })
+      }
       const res  = await fetch(calBase, { method: 'POST', headers, body: JSON.stringify(event) })
       const json = await res.json() as { id?: string; error?: unknown }
-      if (!res.ok) return NextResponse.json({ error: json.error }, { status: res.status })
+      if (!res.ok) {
+        console.error('[calendar POST create] upstream error:', json.error)
+        return NextResponse.json({ error: 'Failed to create event' }, { status: 502 })
+      }
       return NextResponse.json({ googleEventId: json.id })
     }
 
-    if (action === 'update' && eventId) {
-      const calBase = `${GCAL_API}/calendars/${encodeURIComponent(calendarId ?? 'primary')}/events`
-      const res  = await fetch(`${calBase}/${eventId}`, { method: 'PUT', headers, body: JSON.stringify(event) })
+    if (action === 'update') {
+      if (!event || typeof event !== 'object') {
+        return NextResponse.json({ error: 'Missing event body' }, { status: 400 })
+      }
+      const res  = await fetch(`${calBase}/${eventId as string}`, { method: 'PUT', headers, body: JSON.stringify(event) })
       const json = await res.json() as { id?: string; error?: unknown }
-      if (!res.ok) return NextResponse.json({ error: json.error }, { status: res.status })
+      if (!res.ok) {
+        console.error('[calendar POST update] upstream error:', json.error)
+        return NextResponse.json({ error: 'Failed to update event' }, { status: 502 })
+      }
       return NextResponse.json({ googleEventId: json.id })
     }
 
-    if (action === 'delete' && eventId) {
-      const calBase = `${GCAL_API}/calendars/${encodeURIComponent(calendarId ?? 'primary')}/events`
-      const res = await fetch(`${calBase}/${eventId}`, { method: 'DELETE', headers })
+    if (action === 'delete') {
+      const res = await fetch(`${calBase}/${eventId as string}`, { method: 'DELETE', headers })
       if (!res.ok && res.status !== 404 && res.status !== 410) {
-        return NextResponse.json({ error: 'Delete failed' }, { status: res.status })
+        console.error('[calendar POST delete] upstream status:', res.status)
+        return NextResponse.json({ error: 'Failed to delete event' }, { status: 502 })
       }
       return NextResponse.json({ success: true })
     }
@@ -127,7 +200,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
 
   } catch (err) {
-    console.error('[calendar route]', err)
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+    console.error('[calendar POST]', err)
+    return NextResponse.json({ error: 'Something went wrong' }, { status: 500 })
   }
 }
