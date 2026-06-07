@@ -30,7 +30,7 @@ export function GreetingOverlay() {
 
   useEffect(() => {
     const today = localToday()
-    if (localStorage.getItem(LS_SHOWN) === today) return
+    if (false && localStorage.getItem(LS_SHOWN) === today) return // DEV: always show
 
     setShow(true)
     setAvatar(localStorage.getItem(LS_AVATAR))
