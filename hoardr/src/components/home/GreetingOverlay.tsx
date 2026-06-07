@@ -17,7 +17,7 @@ function timeGreeting(): string {
   return 'Good night'
 }
 
-interface Stats { income: number; spent: number; saved: number }
+interface Stats { income: number; spent: number; subs: number; saved: number }
 
 export function GreetingOverlay() {
   const [show,        setShow]        = useState(false)
@@ -67,45 +67,62 @@ export function GreetingOverlay() {
         if (google) setAvatar(google)
       }
 
-      // ── Date ranges ──────────────────────────────────────────────────────
-      const chartStart = (() => {
-        const d = new Date(today + 'T12:00:00'); d.setDate(d.getDate() - 13)
-        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
-      })()
-      const chart14Days = Array.from({ length: 14 }, (_, i) => {
-        const d = new Date(today + 'T12:00:00'); d.setDate(d.getDate() - 13 + i)
-        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
-      })
+      // ── Date range: 1st of month → today ────────────────────────────────
       const monthStart = `${today.slice(0, 7)}-01`
+      const todayDay   = Number(today.split('-')[2])
+      const monthDays  = Array.from({ length: todayDay }, (_, i) => {
+        const d = String(i + 1).padStart(2, '0')
+        return `${today.slice(0, 7)}-${d}`
+      })
 
       const [
         { data: incData },
         { data: expData },
-        { data: sparkExpData },
-        { data: sparkIncData },
+        { data: activeSubs },
       ] = await Promise.all([
-        supabase.from('income').select('amount').gte('date', monthStart).lte('date', today),
-        supabase.from('expenses').select('cost, savings').gte('date', monthStart).lte('date', today),
-        supabase.from('expenses').select('cost, date').gte('date', chartStart).lte('date', today),
-        supabase.from('income').select('amount, date').gte('date', chartStart).lte('date', today),
+        supabase.from('income').select('amount, date').gte('date', monthStart).lte('date', today),
+        supabase.from('expenses').select('cost, savings, date, name').gte('date', monthStart).lte('date', today),
+        supabase.from('subscriptions').select('name').eq('status', 'Active'),
       ])
 
-      const income = (incData ?? []).reduce((s, r) => s + Number(r.amount), 0)
-      const spent  = (expData ?? []).reduce((s, r) => s + Number(r.cost), 0)
-      const saved  = (expData ?? []).reduce((s, r) => s + Number(r.savings ?? 0), 0)
-      setStats({ income, spent, saved })
+      const subNameSet = new Set((activeSubs ?? []).map(s => String(s.name).toLowerCase()))
 
+      // ── Daily buckets ────────────────────────────────────────────────────
       const dailyExp: Record<string, number> = {}
       const dailyInc: Record<string, number> = {}
-      for (const e of sparkExpData ?? []) dailyExp[String(e.date)] = (dailyExp[String(e.date)] ?? 0) + Number(e.cost)
-      for (const i of sparkIncData ?? []) dailyInc[String(i.date)] = (dailyInc[String(i.date)] ?? 0) + Number(i.amount)
-      setSparkPoints(chart14Days.map(d => ({
+      const dailySub: Record<string, number> = {}
+      for (const e of expData ?? []) {
+        const k = String(e.date)
+        if (subNameSet.has(String(e.name ?? '').toLowerCase())) {
+          dailySub[k] = (dailySub[k] ?? 0) + Number(e.cost)
+        } else {
+          dailyExp[k] = (dailyExp[k] ?? 0) + Number(e.cost)
+        }
+      }
+      for (const i of incData ?? []) {
+        const k = String(i.date)
+        dailyInc[k] = (dailyInc[k] ?? 0) + Number(i.amount)
+      }
+
+      setSparkPoints(monthDays.map(d => ({
         day:   String(Number(d.split('-')[2])),
         label: new Date(d + 'T12:00:00').toLocaleString('en-US', { month: 'short', day: 'numeric' }),
         exp:   dailyExp[d] ?? 0,
         inc:   dailyInc[d] ?? 0,
-        sub:   0,
+        sub:   dailySub[d] ?? 0,
       })))
+
+      const income = (incData ?? []).reduce((s, r) => s + Number(r.amount), 0)
+      const spent  = (expData ?? []).reduce((s, r) => {
+        const n = String((r as { name?: unknown }).name ?? '').toLowerCase()
+        return subNameSet.has(n) ? s : s + Number(r.cost)
+      }, 0)
+      const subs  = (expData ?? []).reduce((s, r) => {
+        const n = String((r as { name?: unknown }).name ?? '').toLowerCase()
+        return subNameSet.has(n) ? s + Number(r.cost) : s
+      }, 0)
+      const saved  = (expData ?? []).reduce((s, r) => s + Number(r.savings ?? 0), 0)
+      setStats({ income, spent, subs, saved })
     })()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -119,15 +136,16 @@ export function GreetingOverlay() {
 
   if (!show) return null
 
-  const net       = (stats?.income ?? 0) - (stats?.spent ?? 0)
-  const totalInc  = sparkPoints.reduce((s, p) => s + p.inc, 0)
-  const totalExp  = sparkPoints.reduce((s, p) => s + p.exp, 0)
+  const net      = (stats?.income ?? 0) - (stats?.spent ?? 0) - (stats?.subs ?? 0)
+  const totalInc = sparkPoints.reduce((s, p) => s + p.inc, 0)
+  const totalExp = sparkPoints.reduce((s, p) => s + p.exp + p.sub, 0)
 
   const STATS: { label: string; value: number; color: string; prefix: string }[] = [
-    { label: 'Income', value: stats?.income ?? 0, color: 'var(--sem-income)',  prefix: '+'                                        },
-    { label: 'Spent',  value: stats?.spent  ?? 0, color: 'var(--sem-expense)', prefix: ''                                         },
+    { label: 'Income', value: stats?.income ?? 0, color: 'var(--sem-income)',  prefix: '+' },
+    { label: 'Spent',  value: stats?.spent  ?? 0, color: 'var(--sem-expense)', prefix: ''  },
+    { label: 'Subs',   value: stats?.subs   ?? 0, color: 'rgba(255,255,255,0.55)', prefix: '' },
     { label: 'Net',    value: net,                color: net >= 0 ? 'var(--sem-income)' : '#ef4444', prefix: net >= 0 ? '+' : '−' },
-    { label: 'Saved',  value: stats?.saved  ?? 0, color: 'rgb(var(--rgb-ink))', prefix: ''                                        },
+    { label: 'Saved',  value: stats?.saved  ?? 0, color: 'rgb(var(--rgb-ink))', prefix: '' },
   ]
 
   return (
@@ -141,7 +159,9 @@ export function GreetingOverlay() {
         flexDirection:    'column',
         alignItems:       'center',
         justifyContent:   'center',
-        background:       'rgba(0,0,0,0.82)',
+        background:       'rgba(12,12,22,0.72)',
+        backdropFilter:   'blur(6px)',
+        WebkitBackdropFilter: 'blur(6px)',
         opacity:          mounted && !exiting ? 1 : 0,
         transition:       mounted ? 'opacity 360ms ease' : 'none',
         userSelect:       'none',
@@ -152,11 +172,11 @@ export function GreetingOverlay() {
       <div style={{
         position:      'relative',
         width:         'min(88vw, 360px)',
-        height:        'min(88vh, 740px)',
+        height:        'min(90vh, 760px)',
         borderRadius:  28,
         overflow:      'hidden',
         background:    '#080810',
-        boxShadow:     '0 48px 120px rgba(0,0,0,0.9), 0 0 0 0.5px rgba(255,255,255,0.10)',
+        boxShadow:     '0 48px 120px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(255,255,255,0.10)',
         display:       'flex',
         flexDirection: 'column',
         transform:     mounted && !exiting ? 'scale(1) translateY(0)' : exiting ? 'scale(0.94) translateY(10px)' : 'scale(0.92) translateY(28px)',
@@ -167,8 +187,8 @@ export function GreetingOverlay() {
           : 'none',
       }}>
 
-        {/* ── Photo (top 26%) ──────────────────────────────────────────── */}
-        <div style={{ position: 'relative', height: '26%', flexShrink: 0 }}>
+        {/* ── Photo (top 22%) ──────────────────────────────────────────── */}
+        <div style={{ position: 'relative', height: '22%', flexShrink: 0 }}>
           {avatar ? (
             <img
               src={avatar}
@@ -201,11 +221,11 @@ export function GreetingOverlay() {
         {/* ── Content ──────────────────────────────────────────────────── */}
         <div style={{
           flex: 1, display: 'flex', flexDirection: 'column',
-          padding: '4px 0 14px', overflow: 'hidden',
+          padding: '4px 0 12px', overflow: 'hidden',
         }}>
 
           {/* Greeting */}
-          <div style={{ padding: '0 18px', marginBottom: 10 }}>
+          <div style={{ padding: '0 18px', marginBottom: 8 }}>
             <p style={{
               fontSize: 9, fontWeight: 600, letterSpacing: '0.18em',
               textTransform: 'uppercase', color: '#D4AF37',
@@ -223,18 +243,16 @@ export function GreetingOverlay() {
             </h1>
           </div>
 
-          {/* ── Sparkline — identical to HomeHero monthly ─────────────── */}
+          {/* ── Sparkline — whole month, matches HomeHero ─────────────── */}
           <div style={{ position: 'relative', height: 240, flexShrink: 0 }}>
             {sparkPoints.length > 0 && <SparkChart points={sparkPoints} />}
 
-            {/* Left gradient (text legibility) — matches HomeHero */}
-            <div
-              style={{
-                position: 'absolute', inset: 0, pointerEvents: 'none',
-                background: 'linear-gradient(90deg, rgba(8,8,16,0.85) 0%, rgba(8,8,16,0.50) 42%, transparent 68%)',
-                zIndex: 1,
-              }}
-            />
+            {/* Left gradient for text legibility */}
+            <div style={{
+              position: 'absolute', inset: 0, pointerEvents: 'none',
+              background: 'linear-gradient(90deg, rgba(8,8,16,0.85) 0%, rgba(8,8,16,0.50) 42%, transparent 68%)',
+              zIndex: 1,
+            }} />
 
             {/* Legend overlay */}
             <div style={{
@@ -246,7 +264,7 @@ export function GreetingOverlay() {
                 textTransform: 'uppercase', color: 'rgba(240,240,248,0.45)',
                 marginBottom: 6, fontFamily: 'var(--font-montserrat)',
               }}>
-                Last 14 Days
+                This Month
               </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{
@@ -278,27 +296,27 @@ export function GreetingOverlay() {
           </div>
 
           {/* Divider */}
-          <div style={{ height: 0.5, background: 'rgba(255,255,255,0.08)', margin: '10px 18px' }} />
+          <div style={{ height: 0.5, background: 'rgba(255,255,255,0.08)', margin: '8px 18px' }} />
 
           {/* Stats label */}
           <p style={{
             fontSize: 8, fontWeight: 500, letterSpacing: '0.16em',
             textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)',
-            padding: '0 18px', marginBottom: 7,
+            padding: '0 18px', marginBottom: 6,
             fontFamily: 'var(--font-montserrat)',
           }}>
             Your Month So Far
           </p>
 
-          {/* Stat rows — one per line */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: '0 12px' }}>
+          {/* Stat rows */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '0 12px' }}>
             {STATS.map(({ label, value, color, prefix }) => (
               <div key={label} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '9px 14px',
+                padding: '8px 14px',
                 background: 'rgba(255,255,255,0.05)',
                 border: '0.5px solid rgba(255,255,255,0.08)',
-                borderRadius: 13,
+                borderRadius: 12,
               }}>
                 <p style={{
                   fontSize: 11, fontWeight: 500,
@@ -309,10 +327,10 @@ export function GreetingOverlay() {
                   {label}
                 </p>
                 {stats === null ? (
-                  <div style={{ height: 16, width: 60, borderRadius: 4, background: 'rgba(255,255,255,0.07)' }} />
+                  <div style={{ height: 15, width: 56, borderRadius: 4, background: 'rgba(255,255,255,0.07)' }} />
                 ) : (
                   <p style={{
-                    fontSize: 16, fontWeight: 700,
+                    fontSize: 15, fontWeight: 700,
                     fontFamily: 'var(--font-big-shoulders)',
                     letterSpacing: '-0.01em',
                     color, lineHeight: 1,
@@ -329,7 +347,7 @@ export function GreetingOverlay() {
       {/* Hint below card */}
       <p style={{
         marginTop: 14, fontSize: 11,
-        color: 'rgba(255,255,255,0.20)',
+        color: 'rgba(255,255,255,0.25)',
         fontFamily: 'var(--font-montserrat)',
         letterSpacing: '0.04em',
       }}>
