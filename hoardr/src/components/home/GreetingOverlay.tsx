@@ -45,8 +45,10 @@ export function GreetingOverlay() {
     requestAnimationFrame(() => requestAnimationFrame(() => setMounted(true)))
 
     ;(async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      const user = session?.user
+      // getUser() validates with the server, ensuring the auth token is
+      // fully active before the RLS-reliant data queries below run.
+      // getSession() reads locally and can return null on first mount.
+      const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
       const { data: profile } = await supabase
