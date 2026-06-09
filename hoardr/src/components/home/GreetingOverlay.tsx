@@ -43,18 +43,20 @@ export function GreetingOverlay() {
     setShow(true)
     requestAnimationFrame(() => requestAnimationFrame(() => setMounted(true)))
 
-    // Fetch greeting data from the API route — runs server-side with
-    // reliable cookie-based auth, no client Supabase auth needed.
-    fetch('/api/greeting')
-      .then(r => (r.ok ? r.json() : null))
+    fetch('/api/greeting', { credentials: 'include' })
+      .then(r => {
+        console.log('[greeting] status:', r.status, r.ok)
+        return r.ok ? r.json() : r.text().then(t => { console.log('[greeting] error body:', t); return null })
+      })
       .then((data: { name: string; avatarUrl: string | null; stats: Stats; sparkPoints: DayPoint[] } | null) => {
+        console.log('[greeting] data:', data)
         if (!data) return
         if (data.name) { setName(data.name); localStorage.setItem(LS_NAME, data.name) }
         if (data.avatarUrl) { setAvatar(data.avatarUrl); localStorage.setItem(LS_AVATAR, data.avatarUrl) }
         setStats(data.stats)
         setSparkPoints(data.sparkPoints)
       })
-      .catch(() => { /* stay with zeros rather than crashing */ })
+      .catch(err => console.error('[greeting] fetch failed:', err))
   }, [])
 
   function dismiss() {
