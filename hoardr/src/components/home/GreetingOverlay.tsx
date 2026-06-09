@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { $fk, localToday } from '@/lib/utils'
 import { SparkChart, type DayPoint } from './SparkChart'
@@ -45,10 +46,21 @@ export function GreetingOverlay() {
     requestAnimationFrame(() => requestAnimationFrame(() => setMounted(true)))
 
     ;(async () => {
-      // getUser() validates with the server, ensuring the auth token is
-      // fully active before the RLS-reliant data queries below run.
-      // getSession() reads locally and can return null on first mount.
-      const { data: { user } } = await supabase.auth.getUser()
+      // createBrowserClient reads the session from cookies asynchronously.
+      // INITIAL_SESSION fires once the client has finished that read.
+      // Calling getSession/getUser before this fires returns null.
+      const user = await new Promise<User | null>(resolve => {
+        let subscription: { unsubscribe(): void } | undefined
+        const timer = setTimeout(() => { subscription?.unsubscribe(); resolve(null) }, 5000)
+        const finish = (u: User | null) => {
+          clearTimeout(timer); subscription?.unsubscribe(); resolve(u)
+        }
+        const result = supabase.auth.onAuthStateChange((event, session) => {
+          if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') finish(session?.user ?? null)
+          else if (event === 'SIGNED_OUT') finish(null)
+        })
+        subscription = result.data.subscription
+      })
       if (!user) return
 
       const { data: profile } = await supabase
