@@ -58,17 +58,15 @@ export function ProfileDrawer() {
           ? name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
           : (u.email?.[0] ?? '?').toUpperCase()
       )
-      if (u.user_metadata?.avatar_url) applyAvatar(u.user_metadata.avatar_url as string)
+      const googleAvatar = (u.user_metadata?.avatar_url ?? u.user_metadata?.picture) as string | null
+      if (googleAvatar) applyAvatar(googleAvatar)
     })
   }, [supabase])
 
   useEffect(() => {
     supabase.from('profiles').select('avatar_url, display_name').single().then(({ data }) => {
-      if (data?.avatar_url) {
-        // avatar_url is a storage path ("userid/avatar.jpg") — resolve to public URL before use
-        const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(data.avatar_url as string)
-        applyAvatar(publicUrl)
-      }
+      // avatar_url is stored as a full public URL by the profile page — use directly
+      if (data?.avatar_url) applyAvatar(data.avatar_url as string)
       if (data?.display_name) {
         const dn = data.display_name as string
         applyInitials(dn.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase())

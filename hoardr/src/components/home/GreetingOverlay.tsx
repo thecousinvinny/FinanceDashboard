@@ -156,12 +156,15 @@ export function GreetingOverlay() {
         ?? ''
       const firstName = fullName.split(' ')[0]
 
+      // avatar_url is stored as a full public URL by the profile page — use directly.
+      // Google OAuth avatar falls back to user_metadata.picture when avatar_url is absent.
       let avatarUrl: string | null = null
       if (profile?.avatar_url) {
-        const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(profile.avatar_url as string)
-        avatarUrl = `${publicUrl}?t=${Date.now()}`
+        avatarUrl = profile.avatar_url as string
       } else {
-        avatarUrl = (session.user.user_metadata?.avatar_url as string | null) ?? null
+        avatarUrl = (session.user.user_metadata?.avatar_url as string | null)
+          ?? (session.user.user_metadata?.picture as string | null)
+          ?? null
       }
 
       if (firstName) { setName(firstName); localStorage.setItem(LS_NAME, firstName) }
