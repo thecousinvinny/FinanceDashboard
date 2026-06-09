@@ -19,45 +19,43 @@ function timeGreeting(): string {
 function fmtInt(n: number)   { return Math.floor(n).toLocaleString('en-US') }
 function fmtCents(n: number) { return String(Math.round((Math.abs(n) % 1) * 100)).padStart(2, '0') }
 
-export interface GreetingInitialData {
-  name: string
-  avatarUrl: string | null
-  stats: { income: number; spent: number; subs: number; saved: number }
-  sparkPoints: DayPoint[]
-}
+interface Stats { income: number; spent: number; subs: number; saved: number }
 
-export function GreetingOverlay({ initialData }: { initialData: GreetingInitialData | null }) {
-  const [show,    setShow]    = useState(false)
-  const [mounted, setMounted] = useState(false)
-  const [exiting, setExiting] = useState(false)
-  const [name,    setName]    = useState('')
-  const [avatar,  setAvatar]  = useState<string | null>(null)
+export function GreetingOverlay() {
+  const [show,        setShow]        = useState(false)
+  const [mounted,     setMounted]     = useState(false)
+  const [exiting,     setExiting]     = useState(false)
+  const [name,        setName]        = useState('')
+  const [avatar,      setAvatar]      = useState<string | null>(null)
+  const [stats,       setStats]       = useState<Stats | null>(null)
+  const [sparkPoints, setSparkPoints] = useState<DayPoint[]>([])
 
   useEffect(() => {
-    if (!initialData) return
-
     const today = localToday()
     if (false && localStorage.getItem(LS_SHOWN) === today) return // DEV: always show
 
-    // Sync to localStorage cache for next visit
-    if (initialData.name) {
-      setName(initialData.name)
-      localStorage.setItem(LS_NAME, initialData.name)
-    } else {
-      const cached = localStorage.getItem(LS_NAME)
-      if (cached) setName(cached)
-    }
-    if (initialData.avatarUrl) {
-      setAvatar(initialData.avatarUrl)
-      localStorage.setItem(LS_AVATAR, initialData.avatarUrl)
-    } else {
-      const cached = localStorage.getItem(LS_AVATAR)
-      if (cached) setAvatar(cached)
-    }
+    // Show overlay immediately with cached name/avatar while data loads
+    const cachedName = localStorage.getItem(LS_NAME)
+    if (cachedName) setName(cachedName)
+    const cachedAvatar = localStorage.getItem(LS_AVATAR)
+    if (cachedAvatar) setAvatar(cachedAvatar)
 
     setShow(true)
     requestAnimationFrame(() => requestAnimationFrame(() => setMounted(true)))
-  }, [initialData])
+
+    // Fetch greeting data from the API route — runs server-side with
+    // reliable cookie-based auth, no client Supabase auth needed.
+    fetch('/api/greeting')
+      .then(r => (r.ok ? r.json() : null))
+      .then((data: { name: string; avatarUrl: string | null; stats: Stats; sparkPoints: DayPoint[] } | null) => {
+        if (!data) return
+        if (data.name) { setName(data.name); localStorage.setItem(LS_NAME, data.name) }
+        if (data.avatarUrl) { setAvatar(data.avatarUrl); localStorage.setItem(LS_AVATAR, data.avatarUrl) }
+        setStats(data.stats)
+        setSparkPoints(data.sparkPoints)
+      })
+      .catch(() => { /* stay with zeros rather than crashing */ })
+  }, [])
 
   function dismiss() {
     setExiting(true)
@@ -66,22 +64,21 @@ export function GreetingOverlay({ initialData }: { initialData: GreetingInitialD
     setTimeout(() => setShow(false), 360)
   }
 
-  if (!show || !initialData) return null
+  if (!show) return null
 
-  const { stats, sparkPoints } = initialData
-  const net       = stats.income - stats.spent - stats.subs
-  const heroVal   = stats.spent + stats.subs
+  const net       = (stats?.income ?? 0) - (stats?.spent ?? 0) - (stats?.subs ?? 0)
+  const heroVal   = (stats?.spent ?? 0) + (stats?.subs ?? 0)
   const legendInc = sparkPoints.reduce((s, p) => s + p.inc, 0)
   const legendExp = sparkPoints.reduce((s, p) => s + p.exp, 0)
   const legendSub = sparkPoints.reduce((s, p) => s + p.sub, 0)
   const hasSub    = legendSub > 0
 
   const STATS: { label: string; value: number; color: string; prefix: string }[] = [
-    { label: 'Income', value: stats.income, color: 'var(--sem-income)',  prefix: '+' },
-    { label: 'Spent',  value: stats.spent,  color: 'var(--sem-expense)', prefix: ''  },
-    { label: 'Subs',   value: stats.subs,   color: 'rgba(180,185,200,0.8)', prefix: '' },
-    { label: 'Net',    value: net,           color: net >= 0 ? 'var(--sem-income)' : '#ef4444', prefix: net >= 0 ? '+' : '−' },
-    { label: 'Saved',  value: stats.saved,  color: 'rgb(var(--rgb-ink))', prefix: '' },
+    { label: 'Income', value: stats?.income ?? 0, color: 'var(--sem-income)',  prefix: '+' },
+    { label: 'Spent',  value: stats?.spent  ?? 0, color: 'var(--sem-expense)', prefix: ''  },
+    { label: 'Subs',   value: stats?.subs   ?? 0, color: 'rgba(180,185,200,0.8)', prefix: '' },
+    { label: 'Net',    value: net,                color: net >= 0 ? 'var(--sem-income)' : '#ef4444', prefix: net >= 0 ? '+' : '−' },
+    { label: 'Saved',  value: stats?.saved  ?? 0, color: 'rgb(var(--rgb-ink))', prefix: '' },
   ]
 
   return (
@@ -247,9 +244,13 @@ export function GreetingOverlay({ initialData }: { initialData: GreetingInitialD
                 <p style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.01em' }}>
                   {label}
                 </p>
-                <p style={{ fontSize: 15, fontWeight: 700, fontFamily: 'var(--font-big-shoulders)', letterSpacing: '-0.01em', color, lineHeight: 1 }}>
-                  {prefix}${fmtInt(Math.abs(value))}.{fmtCents(value)}
-                </p>
+                {stats === null ? (
+                  <div style={{ height: 15, width: 56, borderRadius: 4, background: 'rgba(255,255,255,0.07)' }} />
+                ) : (
+                  <p style={{ fontSize: 15, fontWeight: 700, fontFamily: 'var(--font-big-shoulders)', letterSpacing: '-0.01em', color, lineHeight: 1 }}>
+                    {prefix}${fmtInt(Math.abs(value))}.{fmtCents(value)}
+                  </p>
+                )}
               </div>
             ))}
           </div>
