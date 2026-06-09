@@ -46,20 +46,27 @@ export function GreetingOverlay() {
     requestAnimationFrame(() => requestAnimationFrame(() => setMounted(true)))
 
     ;(async () => {
-      // createBrowserClient reads the session from cookies asynchronously.
-      // INITIAL_SESSION fires once the client has finished that read.
-      // Calling getSession/getUser before this fires returns null.
+      // createBrowserClient is a singleton. INITIAL_SESSION fires once during
+      // initialization — if another component initialized the client first,
+      // our listener misses it. So we race: listen for the event AND poll
+      // getSession() immediately so whichever resolves first wins.
       const user = await new Promise<User | null>(resolve => {
-        let subscription: { unsubscribe(): void } | undefined
-        const timer = setTimeout(() => { subscription?.unsubscribe(); resolve(null) }, 5000)
+        let done = false
+        let sub: { unsubscribe(): void } | undefined
         const finish = (u: User | null) => {
-          clearTimeout(timer); subscription?.unsubscribe(); resolve(u)
+          if (done) return; done = true
+          sub?.unsubscribe(); resolve(u)
         }
-        const result = supabase.auth.onAuthStateChange((event, session) => {
+        setTimeout(() => finish(null), 5000)
+        const { data } = supabase.auth.onAuthStateChange((event, session) => {
           if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') finish(session?.user ?? null)
           else if (event === 'SIGNED_OUT') finish(null)
         })
-        subscription = result.data.subscription
+        sub = data.subscription
+        // Immediate check — catches the case where INITIAL_SESSION already fired
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session?.user) finish(session.user)
+        })
       })
       if (!user) return
 
