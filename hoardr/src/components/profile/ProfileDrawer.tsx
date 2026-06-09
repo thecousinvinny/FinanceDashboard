@@ -11,9 +11,11 @@ const LS_AVATAR   = 'hoardr-avatar-url'
 const LS_INITIALS = 'hoardr-avatar-initials'
 
 // Module-level cache — survives tab switches and re-mounts with no flash.
-// Seeded from localStorage so even a hard refresh shows the avatar immediately.
-let _cachedAvatar:   string | null = typeof window !== 'undefined' ? (localStorage.getItem(LS_AVATAR) ?? null) : null
-let _cachedInitials: string        = typeof window !== 'undefined' ? (localStorage.getItem(LS_INITIALS) ?? '?') : '?'
+// NOT seeded at module level: reading localStorage here runs on the server too
+// (window === undefined), giving different initial state than the client → hydration #418.
+// Instead, seed from localStorage in the first useEffect (client-only, no mismatch).
+let _cachedAvatar:   string | null = null
+let _cachedInitials: string        = '?'
 
 export function ProfileDrawer() {
   const pathname = usePathname()
@@ -33,6 +35,18 @@ export function ProfileDrawer() {
     localStorage.setItem(LS_INITIALS, ini)
     setInitials(ini)
   }
+
+  // Seed module cache from localStorage on first client render (avoids hydration mismatch)
+  useEffect(() => {
+    if (!_cachedAvatar) {
+      const stored = localStorage.getItem(LS_AVATAR)
+      if (stored) { _cachedAvatar = stored; setAvatarSrc(stored) }
+    }
+    if (_cachedInitials === '?') {
+      const stored = localStorage.getItem(LS_INITIALS)
+      if (stored) { _cachedInitials = stored; setInitials(stored) }
+    }
+  }, [])
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {

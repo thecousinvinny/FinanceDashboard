@@ -1,8 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { $fk, localToday } from '@/lib/utils'
 import { SparkChart, type DayPoint } from './SparkChart'
+import { createClient } from '@/lib/supabase/client'
+import type { Session } from '@supabase/supabase-js'
 
 const LS_SHOWN  = 'hoardr-greeting-shown'
 const LS_AVATAR = 'hoardr-avatar-url'
@@ -30,14 +32,15 @@ export function GreetingOverlay() {
   const [stats,       setStats]       = useState<Stats | null>(null)
   const [sparkPoints, setSparkPoints] = useState<DayPoint[]>([])
   const [greeting,    setGreeting]    = useState('')
+  const genRef = useRef(0)
+  const authSubRef = useRef<{ unsubscribe: () => void } | null>(null)
 
   useEffect(() => {
     const today = localToday()
-    if (false && localStorage.getItem(LS_SHOWN) === today) return // DEV: always show
+    if (localStorage.getItem(LS_SHOWN) === today) return
 
     setGreeting(timeGreeting())
 
-    // Show overlay immediately with cached name/avatar while data loads
     const cachedName = localStorage.getItem(LS_NAME)
     if (cachedName) setName(cachedName)
     const cachedAvatar = localStorage.getItem(LS_AVATAR)
@@ -46,20 +49,134 @@ export function GreetingOverlay() {
     setShow(true)
     requestAnimationFrame(() => requestAnimationFrame(() => setMounted(true)))
 
-    fetch('/api/greeting', { credentials: 'include' })
-      .then(r => {
-        console.log('[greeting] status:', r.status, r.ok)
-        return r.ok ? r.json() : r.text().then(t => { console.log('[greeting] error body:', t); return null })
+    const gen = ++genRef.current
+
+    async function loadData() {
+      const supabase = createClient()
+
+      // Wait for session — check immediately, then listen for state change
+      let resolved = false
+      const session = await new Promise<Session | null>((resolve) => {
+        const done = (sess: Session | null) => {
+          if (resolved) return
+          resolved = true
+          resolve(sess)
+        }
+
+        supabase.auth.getSession().then(({ data }) => {
+          if (data.session) done(data.session)
+        })
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
+          if (sess) {
+            authSubRef.current = null
+            subscription.unsubscribe()
+            done(sess)
+          }
+        })
+        authSubRef.current = subscription
+
+        setTimeout(() => {
+          authSubRef.current = null
+          subscription.unsubscribe()
+          done(null)
+        }, 5000)
       })
-      .then((data: { name: string; avatarUrl: string | null; stats: Stats; sparkPoints: DayPoint[] } | null) => {
-        console.log('[greeting] data:', data)
-        if (!data) return
-        if (data.name) { setName(data.name); localStorage.setItem(LS_NAME, data.name) }
-        if (data.avatarUrl) { setAvatar(data.avatarUrl); localStorage.setItem(LS_AVATAR, data.avatarUrl) }
-        setStats(data.stats)
-        setSparkPoints(data.sparkPoints)
+
+      if (gen !== genRef.current || !session) return
+
+      const userId = session.user.id
+      const monthStart = `${today.slice(0, 7)}-01`
+      const chartStart = (() => {
+        const d = new Date(today + 'T12:00:00')
+        d.setDate(d.getDate() - 13)
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+      })()
+      const chart14Days = Array.from({ length: 14 }, (_, i) => {
+        const d = new Date(today + 'T12:00:00')
+        d.setDate(d.getDate() - 13 + i)
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
       })
-      .catch(err => console.error('[greeting] fetch failed:', err))
+
+      const [
+        { data: incData },
+        { data: expData },
+        { data: chartExpData },
+        { data: chartIncData },
+        { data: activeSubsData },
+        { data: profile },
+      ] = await Promise.all([
+        supabase.from('income').select('amount').gte('date', monthStart).lte('date', today),
+        supabase.from('expenses').select('cost, savings, name').gte('date', monthStart).lte('date', today),
+        supabase.from('expenses').select('cost, date, name').gte('date', chartStart).lte('date', today),
+        supabase.from('income').select('amount, date').gte('date', chartStart).lte('date', today),
+        supabase.from('subscriptions').select('name').eq('status', 'Active'),
+        supabase.from('profiles').select('display_name, avatar_url').eq('id', userId).single(),
+      ])
+
+      if (gen !== genRef.current) return
+
+      const subNameSet = new Set((activeSubsData ?? []).map(s => String(s.name).toLowerCase()))
+
+      type ExpRow = { cost: unknown; savings: unknown; name: unknown }
+      const expArr = (expData ?? []) as ExpRow[]
+      const income = (incData ?? []).reduce((s, r) => s + Number(r.amount), 0)
+      const subs   = expArr.reduce((s, r) => subNameSet.has(String(r.name ?? '').toLowerCase()) ? s + Number(r.cost) : s, 0)
+      const spent  = expArr.reduce((s, r) => subNameSet.has(String(r.name ?? '').toLowerCase()) ? s : s + Number(r.cost), 0)
+      const saved  = expArr.reduce((s, r) => s + Number(r.savings ?? 0), 0)
+
+      type ChartExpRow = { cost: unknown; date: unknown; name: unknown }
+      const chartExpArr = (chartExpData ?? []) as ChartExpRow[]
+      const dailyExp: Record<string, number> = {}
+      const dailyInc: Record<string, number> = {}
+      const dailySub: Record<string, number> = {}
+      for (const e of chartExpArr) {
+        const k = String(e.date)
+        if (subNameSet.has(String(e.name ?? '').toLowerCase())) {
+          dailySub[k] = (dailySub[k] ?? 0) + Number(e.cost)
+        } else {
+          dailyExp[k] = (dailyExp[k] ?? 0) + Number(e.cost)
+        }
+      }
+      for (const i of (chartIncData ?? [])) {
+        const k = String(i.date)
+        dailyInc[k] = (dailyInc[k] ?? 0) + Number(i.amount)
+      }
+
+      const points = chart14Days.map(d => ({
+        day:   String(Number(d.split('-')[2])),
+        label: new Date(d + 'T12:00:00').toLocaleString('en-US', { month: 'short', day: 'numeric' }),
+        exp:   dailyExp[d] ?? 0,
+        inc:   dailyInc[d] ?? 0,
+        sub:   dailySub[d] ?? 0,
+      }))
+
+      const fullName = (profile?.display_name as string | null)
+        ?? (session.user.user_metadata?.full_name as string | null)
+        ?? ''
+      const firstName = fullName.split(' ')[0]
+
+      let avatarUrl: string | null = null
+      if (profile?.avatar_url) {
+        const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(profile.avatar_url as string)
+        avatarUrl = `${publicUrl}?t=${Date.now()}`
+      } else {
+        avatarUrl = (session.user.user_metadata?.avatar_url as string | null) ?? null
+      }
+
+      if (firstName) { setName(firstName); localStorage.setItem(LS_NAME, firstName) }
+      if (avatarUrl) { setAvatar(avatarUrl); localStorage.setItem(LS_AVATAR, avatarUrl) }
+      setStats({ income, spent, subs, saved })
+      setSparkPoints(points)
+    }
+
+    loadData().catch(console.error)
+
+    return () => {
+      genRef.current++
+      authSubRef.current?.unsubscribe()
+      authSubRef.current = null
+    }
   }, [])
 
   function dismiss() {
