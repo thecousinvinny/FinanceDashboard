@@ -1,5 +1,4 @@
 import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -12,7 +11,10 @@ export async function GET(request: NextRequest) {
   const origin = `${proto}://${host}`
 
   if (code) {
-    const cookieStore = await cookies()
+    // Collect cookies so we can apply them directly to the redirect response.
+    // Using cookies().set() from next/headers does NOT carry over to a
+    // NextResponse.redirect() — the two are separate response objects.
+    const pendingCookies: { name: string; value: string; options?: Record<string, unknown> }[] = []
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,12 +22,10 @@ export async function GET(request: NextRequest) {
       {
         cookies: {
           getAll() {
-            return cookieStore.getAll()
+            return request.cookies.getAll()
           },
           setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options as Parameters<typeof cookieStore.set>[2])
-            )
+            pendingCookies.push(...cookiesToSet)
           },
         },
       },
@@ -41,7 +41,13 @@ export async function GET(request: NextRequest) {
           { onConflict: 'id' },
         )
       }
-      return NextResponse.redirect(`${origin}/home`)
+
+      // Apply auth cookies directly to the redirect response.
+      const response = NextResponse.redirect(`${origin}/home`)
+      pendingCookies.forEach(({ name, value, options }) => {
+        response.cookies.set(name, value, options as Parameters<typeof response.cookies.set>[2])
+      })
+      return response
     }
   }
 
