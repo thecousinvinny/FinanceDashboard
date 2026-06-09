@@ -2,10 +2,20 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { localToday } from '@/lib/utils'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    // getSession() reads the JWT from the cookie without a server round-trip.
+    // Safe here because Supabase RLS re-validates auth.uid() on every query.
+    const cookieStore = await (await import('next/headers')).cookies()
+    const cookieNames = cookieStore.getAll().map(c => c.name)
+    console.log('[greeting] cookies received:', cookieNames)
+
+    const { data: { session } } = await supabase.auth.getSession()
+    const user = session?.user
+    console.log('[greeting] session user:', user?.id ?? null)
     if (!user) return NextResponse.json(null, { status: 401 })
 
     const today = localToday()

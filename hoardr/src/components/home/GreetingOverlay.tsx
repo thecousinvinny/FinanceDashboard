@@ -29,10 +29,13 @@ export function GreetingOverlay() {
   const [avatar,      setAvatar]      = useState<string | null>(null)
   const [stats,       setStats]       = useState<Stats | null>(null)
   const [sparkPoints, setSparkPoints] = useState<DayPoint[]>([])
+  const [greeting,    setGreeting]    = useState('')
 
   useEffect(() => {
     const today = localToday()
     if (false && localStorage.getItem(LS_SHOWN) === today) return // DEV: always show
+
+    setGreeting(timeGreeting())
 
     // Show overlay immediately with cached name/avatar while data loads
     const cachedName = localStorage.getItem(LS_NAME)
@@ -166,7 +169,7 @@ export function GreetingOverlay() {
               textTransform: 'uppercase', color: '#D4AF37',
               marginBottom: 2, fontFamily: 'var(--font-montserrat)',
             }}>
-              {timeGreeting()}
+              {greeting}
             </p>
             <h1 style={{
               fontSize: name.length > 10 ? 26 : 30,
