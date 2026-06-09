@@ -64,7 +64,11 @@ export function ProfileDrawer() {
 
   useEffect(() => {
     supabase.from('profiles').select('avatar_url, display_name').single().then(({ data }) => {
-      if (data?.avatar_url)   applyAvatar(data.avatar_url as string)
+      if (data?.avatar_url) {
+        // avatar_url is a storage path ("userid/avatar.jpg") — resolve to public URL before use
+        const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(data.avatar_url as string)
+        applyAvatar(publicUrl)
+      }
       if (data?.display_name) {
         const dn = data.display_name as string
         applyInitials(dn.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase())

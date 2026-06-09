@@ -64,12 +64,10 @@ export function GreetingOverlay() {
         }
 
         supabase.auth.getSession().then(({ data }) => {
-          console.log('[greeting] getSession:', data.session?.user?.id ?? null)
           if (data.session) done(data.session)
         })
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sess) => {
-          console.log('[greeting] authStateChange:', event, sess?.user?.id ?? null)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
           if (sess) {
             authSubRef.current = null
             subscription.unsubscribe()
@@ -79,14 +77,12 @@ export function GreetingOverlay() {
         authSubRef.current = subscription
 
         setTimeout(() => {
-          console.log('[greeting] timeout — no session after 5s')
           authSubRef.current = null
           subscription.unsubscribe()
           done(null)
         }, 5000)
       })
 
-      console.log('[greeting] session resolved:', session?.user?.id ?? null, 'gen ok:', gen === genRef.current)
       if (gen !== genRef.current || !session) return
 
       const userId = session.user.id
@@ -118,7 +114,6 @@ export function GreetingOverlay() {
         supabase.from('profiles').select('display_name, avatar_url').eq('id', userId).single(),
       ])
 
-      console.log('[greeting] queries done — inc:', incData?.length, 'exp:', expData?.length, 'subs:', activeSubsData?.length)
       if (gen !== genRef.current) return
 
       const subNameSet = new Set((activeSubsData ?? []).map(s => String(s.name).toLowerCase()))
@@ -222,7 +217,7 @@ export function GreetingOverlay() {
         paddingTop:           'env(safe-area-inset-top, 44px)',
         paddingBottom:        'env(safe-area-inset-bottom, 34px)',
         boxSizing:            'border-box',
-        background:           'rgba(12,12,22,0.72)',
+        background:           'rgba(8,8,16,0.50)',
         backdropFilter:       'blur(6px)',
         WebkitBackdropFilter: 'blur(6px)',
         opacity:              mounted && !exiting ? 1 : 0,
