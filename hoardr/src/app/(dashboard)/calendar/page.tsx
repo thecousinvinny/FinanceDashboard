@@ -12,7 +12,7 @@ import { GlobalFAB } from '@/components/ui/GlobalFAB'
 import { EditEventSheet, type EditableEvent, type EventEdits, type RecurrenceScope } from '@/components/calendar/EditEventSheet'
 import { CalendarSettingsSheet, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
 import { CalendarPopover, defaultTimes, type PopoverFormData } from '@/components/calendar/CalendarPopover'
-import { createCalEvent, updateCalEvent, deleteCalEvent, type GCalEvent } from '@/lib/calendar'
+import { createCalEvent, updateCalEvent, deleteCalEvent, moveCalEvent, type GCalEvent } from '@/lib/calendar'
 
 type EventType = 'income' | 'sub' | 'google'
 
@@ -817,7 +817,10 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     const body: GCalEvent = edits.allDay
       ? { summary: edits.title, description: edits.notes || undefined, location: edits.location || undefined, start: { date: edits.date }, end: { date: gcalEndDate } }
       : { summary: edits.title, description: edits.notes || undefined, location: edits.location || undefined, start: { dateTime: `${edits.date}T${edits.startTime}:00`, timeZone: 'America/Los_Angeles' }, end: { dateTime: `${edits.endDate || edits.date}T${edits.endTime}:00`, timeZone: 'America/Los_Angeles' } }
-    await updateCalEvent(ev.id, body, ev.calendarId ?? 'primary')
+    const fromCal = ev.calendarId ?? 'primary'
+    const toCal   = edits.calendarId ?? 'primary'
+    if (toCal !== fromCal) await moveCalEvent(ev.id, fromCal, toCal)
+    await updateCalEvent(ev.id, body, toCal)
     showToast('Event updated', { type: 'payment' })
     setEditEvent(null)
     setGRefreshKey(k => k + 1)

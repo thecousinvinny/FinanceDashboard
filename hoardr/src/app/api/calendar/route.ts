@@ -7,7 +7,7 @@ const GCAL_API  = 'https://www.googleapis.com/calendar/v3'
 // ── Input validation helpers ─────────────────────────────────────────────────
 
 const VALID_ACTIONS_GET  = new Set(['calendars', 'events'])
-const VALID_ACTIONS_POST = new Set(['create', 'update', 'delete'])
+const VALID_ACTIONS_POST = new Set(['create', 'update', 'delete', 'move'])
 
 // Google Calendar event/calendar IDs are alphanumeric + a small set of chars
 const SAFE_ID_RE     = /^[a-zA-Z0-9_@.\-]{1,256}$/
@@ -126,21 +126,21 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    let body: { action?: unknown; event?: unknown; eventId?: unknown; calendarId?: unknown }
+    let body: { action?: unknown; event?: unknown; eventId?: unknown; calendarId?: unknown; destination?: unknown }
     try {
       body = await req.json()
     } catch {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
     }
 
-    const { action, event, eventId, calendarId } = body
+    const { action, event, eventId, calendarId, destination } = body
 
     if (typeof action !== 'string' || !VALID_ACTIONS_POST.has(action)) {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     }
 
-    // eventId required for update/delete
-    if ((action === 'update' || action === 'delete') && !isSafeId(eventId)) {
+    // eventId required for update/delete/move
+    if ((action === 'update' || action === 'delete' || action === 'move') && !isSafeId(eventId)) {
       return NextResponse.json({ error: 'Invalid or missing eventId' }, { status: 400 })
     }
 
@@ -195,6 +195,20 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Failed to delete event' }, { status: 502 })
       }
       return NextResponse.json({ success: true })
+    }
+
+    if (action === 'move') {
+      const destId = typeof destination === 'string' && destination ? destination : 'primary'
+      if (destId !== 'primary' && !isSafeId(destId)) {
+        return NextResponse.json({ error: 'Invalid destination' }, { status: 400 })
+      }
+      const res  = await fetch(`${calBase}/${eventId as string}/move?destination=${encodeURIComponent(destId)}`, { method: 'POST', headers })
+      const json = await res.json() as { id?: string; error?: unknown }
+      if (!res.ok) {
+        console.error('[calendar POST move] upstream error:', json.error)
+        return NextResponse.json({ error: 'Failed to move event' }, { status: 502 })
+      }
+      return NextResponse.json({ googleEventId: json.id })
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })

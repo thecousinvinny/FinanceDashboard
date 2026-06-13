@@ -32,6 +32,16 @@ export async function updateCalEvent(eventId: string, event: GCalEvent, calendar
   } catch { /* best-effort */ }
 }
 
+export async function moveCalEvent(eventId: string, fromCalendarId: string, toCalendarId: string): Promise<void> {
+  try {
+    await fetch('/api/calendar', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ action: 'move', eventId, calendarId: fromCalendarId, destination: toCalendarId }),
+    })
+  } catch { /* best-effort */ }
+}
+
 export async function deleteCalEvent(eventId: string, calendarId?: string): Promise<void> {
   try {
     await fetch('/api/calendar', {

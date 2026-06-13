@@ -190,12 +190,13 @@ export default function OutPage() {
   const [defaultCardId, setDefaultCardId] = useState<string | null>(null)
 
   const supabase      = useMemo(() => createClient(), [])
-  const loadGen       = useRef(0)
-  const abortRef      = useRef<AbortController | null>(null)
-  const txListRef     = useRef<SeedTx[]>(cachedTx ?? [])
-  const hasMoreRef    = useRef(false)
-  const isLoadingMore = useRef(false)
-  const sentinelRef   = useRef<HTMLDivElement>(null)
+  const loadGen              = useRef(0)
+  const abortRef             = useRef<AbortController | null>(null)
+  const txListRef            = useRef<SeedTx[]>(cachedTx ?? [])
+  const hasMoreRef           = useRef(false)
+  const isLoadingMore        = useRef(false)
+  const sentinelRef          = useRef<HTMLDivElement>(null)
+  const pendingWishDeleteIds = useRef(new Set<string>())
 
   const loadData = useCallback(async () => {
     abortRef.current?.abort()
@@ -290,7 +291,7 @@ export default function OutPage() {
       setTxList(rows)
       setHasMore((expenses?.length ?? 0) >= LIMIT)
       setSubs(newSubs)
-      setWishlist(newWish)
+      setWishlist(newWish.filter(w => !pendingWishDeleteIds.current.has(w.id)))
       setSubExps(newSubExps)
       setSavedMonth(monthSaved)
       setSavedYear(yearSaved)
@@ -552,13 +553,23 @@ export default function OutPage() {
   }
 
   function handleDeleteWish(id: string) {
-    const item     = wishlist.find(w => w.id === id)
+    const item = wishlist.find(w => w.id === id)
     if (!item) return
-    const snapshot = wishlist.slice()
+    pendingWishDeleteIds.current.add(id)
     setWishlist(prev => prev.filter(w => w.id !== id))
+    supabase.from('wishlist').delete().eq('id', id)
     showToast(`${item.name} deleted`, {
       type: 'delete',
-      undo: { onUndo: () => setWishlist(snapshot), onCommit: () => { supabase.from('wishlist').delete().eq('id', id) } },
+      undo: {
+        onUndo: async () => {
+          pendingWishDeleteIds.current.delete(id)
+          const { data: { user } } = await supabase.auth.getUser()
+          if (!user) return
+          await supabase.from('wishlist').insert({ id, user_id: user.id, name: item.name, original_cost: item.original_cost, category: item.category, url: item.url, description: item.description, bought_cost: item.bought_cost, ordered_at: item.ordered_at, status: item.status })
+          setWishlist(prev => [item, ...prev.filter(w => w.id !== id)])
+        },
+        onCommit: () => { pendingWishDeleteIds.current.delete(id) },
+      },
     })
   }
 
