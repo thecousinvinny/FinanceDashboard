@@ -518,7 +518,7 @@ export default function InPage() {
       type: 'delete',
       undo: {
         onUndo:   () => setRevStreams(snapshot),
-        onCommit: () => { supabase.from('revenue_streams').delete().eq('id', id) },
+        onCommit: () => { supabase.from('revenue_streams').delete().eq('id', id).then() },
       },
     })
   }
@@ -591,7 +591,7 @@ export default function InPage() {
     setCards(prev => prev.filter(c => c.id !== id))
     showToast(`${card.name} deleted`, {
       type: 'delete',
-      undo: { onUndo: () => setCards(snapshot), onCommit: () => { supabase.from('cards').delete().eq('id', id) } },
+      undo: { onUndo: () => setCards(snapshot), onCommit: () => { supabase.from('cards').delete().eq('id', id).then() } },
     })
   }
 
@@ -602,7 +602,7 @@ export default function InPage() {
     setBanks(prev => prev.filter(b => b.id !== id))
     showToast(`${bank.name} deleted`, {
       type: 'delete',
-      undo: { onUndo: () => setBanks(snapshot), onCommit: () => { supabase.from('banks').delete().eq('id', id) } },
+      undo: { onUndo: () => setBanks(snapshot), onCommit: () => { supabase.from('banks').delete().eq('id', id).then() } },
     })
   }
 
@@ -1022,7 +1022,7 @@ export default function InPage() {
                           type: 'delete',
                           undo: {
                             onUndo:   () => setBanks(snapshot),
-                            onCommit: () => { supabase.from('banks').update({ apy: null, next_interest_date: null, interest_freq: null }).eq('id', bank.id) },
+                            onCommit: () => { supabase.from('banks').update({ apy: null, next_interest_date: null, interest_freq: null }).eq('id', bank.id).then() },
                           },
                         })
                       }} onTap={() => setInterestBank(bank)}>

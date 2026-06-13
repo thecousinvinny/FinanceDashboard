@@ -393,7 +393,7 @@ export default function OutPage() {
       type: 'delete',
       undo: {
         onUndo:   () => setTxList(snapshot),
-        onCommit: () => { supabase.from('expenses').delete().eq('id', tx.id) },
+        onCommit: () => { supabase.from('expenses').delete().eq('id', tx.id).then() },
       },
     })
   }
@@ -470,7 +470,7 @@ export default function OutPage() {
     showToast(`${sub.name} cancelled`, {
       type: 'delete',
       undo: {
-        onUndo:   () => { setSubs(prev => prev.map(s => s.id === id ? { ...s, status: 'Active' } : s)); supabase.from('subscriptions').update({ status: 'Active' }).eq('id', id) },
+        onUndo:   () => { setSubs(prev => prev.map(s => s.id === id ? { ...s, status: 'Active' } : s)); supabase.from('subscriptions').update({ status: 'Active' }).eq('id', id).then() },
         onCommit: () => {},
       },
     })
@@ -493,7 +493,7 @@ export default function OutPage() {
         onUndo:   () => setSubs(snapshot),
         onCommit: () => {
           if (sub.cal_event_id) deleteCalEvent(sub.cal_event_id)
-          supabase.from('subscriptions').delete().eq('id', id)
+          supabase.from('subscriptions').delete().eq('id', id).then()
         },
       },
     })

@@ -94,7 +94,7 @@ export default function StudioPage() {
       type: 'delete',
       undo: {
         onUndo:   () => setCommissions(snapshot),
-        onCommit: () => { supabase.from('commissions').delete().eq('id', id) },
+        onCommit: () => { supabase.from('commissions').delete().eq('id', id).then() },
       },
     })
   }
