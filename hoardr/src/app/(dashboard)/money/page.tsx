@@ -237,8 +237,6 @@ export default function OutPage() {
           .abortSignal(controller.signal),
       ])
 
-      if (subsError) console.error('[loadData] subscriptions error:', JSON.stringify(subsError))
-
       const rows: SeedTx[] = (expenses ?? []).map(e => ({
         id:          String(e.id),
         type:        'Expense' as const,
