@@ -529,7 +529,7 @@ export default function InPage() {
     const snapshot = incomeList.slice()
     pendingDeleteIds.current.add(id)
     setIncomeList(prev => prev.filter(i => i.id !== id))
-    supabase.from('income').delete().eq('id', id)
+    supabase.from('income').delete().eq('id', id).then()
     showToast(`${row.name} deleted`, {
       type: 'delete',
       undo: {

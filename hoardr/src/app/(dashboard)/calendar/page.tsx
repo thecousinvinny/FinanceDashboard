@@ -782,7 +782,10 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
         await createCalEvent(body, data.calendarId)
         showToast('Event created', { type: 'add' })
       } else if (data.eventId) {
-        await updateCalEvent(data.eventId, body, data.calendarId)
+        const fromCal = popover?.data.calendarId ?? 'primary'
+        const toCal   = data.calendarId ?? 'primary'
+        if (toCal !== fromCal) await moveCalEvent(data.eventId, fromCal, toCal)
+        await updateCalEvent(data.eventId, body, toCal)
         showToast('Event updated', { type: 'payment' })
       }
       setPopover(null)

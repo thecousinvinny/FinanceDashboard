@@ -557,7 +557,7 @@ export default function OutPage() {
     if (!item) return
     pendingWishDeleteIds.current.add(id)
     setWishlist(prev => prev.filter(w => w.id !== id))
-    supabase.from('wishlist').delete().eq('id', id)
+    supabase.from('wishlist').delete().eq('id', id).then()
     showToast(`${item.name} deleted`, {
       type: 'delete',
       undo: {
