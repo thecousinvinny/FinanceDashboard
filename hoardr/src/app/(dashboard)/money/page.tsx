@@ -208,7 +208,7 @@ export default function OutPage() {
       const monthStart = localToday().slice(0, 7) + '-01'
       const [
         { data: expenses },
-        { data: subsData },
+        { data: subsData, error: subsError },
         { data: wishData },
         { data: yearExps },
         { data: monthSav },
@@ -221,7 +221,7 @@ export default function OutPage() {
           .abortSignal(controller.signal),
         supabase.from('subscriptions')
           .select('id, name, cost, billing, status, next_renewal, monthly_cost, annual_cost, card_id, bank_id, category, cal_event_id')
-          .order('next_renewal', { ascending: true })
+          .order('next_renewal', { ascending: true, nullsFirst: false })
           .abortSignal(controller.signal),
         supabase.from('wishlist')
           .select('id, name, original_cost, category, url, description, bought_cost, ordered_at, status')
@@ -236,6 +236,8 @@ export default function OutPage() {
           .gte('date', monthStart)
           .abortSignal(controller.signal),
       ])
+
+      if (subsError) console.error('[loadData] subscriptions error:', JSON.stringify(subsError))
 
       const rows: SeedTx[] = (expenses ?? []).map(e => ({
         id:          String(e.id),
