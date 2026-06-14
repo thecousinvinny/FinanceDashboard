@@ -393,7 +393,20 @@ export default function OutPage() {
       type: 'delete',
       undo: {
         onUndo:   () => setTxList(snapshot),
-        onCommit: () => { supabase.from('expenses').delete().eq('id', tx.id).then() },
+        onCommit: () => {
+          supabase
+            .from('expenses')
+            .delete()
+            .eq('id', tx.id)
+            .then(
+              () => console.log(`Expense ${tx.id} deleted successfully`),
+              (error: unknown) => {
+                console.error(`Failed to delete expense ${tx.id}:`, error)
+                // Restore UI from server state on error
+                loadData()
+              }
+            )
+        },
       },
     })
   }
@@ -470,7 +483,20 @@ export default function OutPage() {
     showToast(`${sub.name} cancelled`, {
       type: 'delete',
       undo: {
-        onUndo:   () => { setSubs(prev => prev.map(s => s.id === id ? { ...s, status: 'Active' } : s)); supabase.from('subscriptions').update({ status: 'Active' }).eq('id', id).then() },
+        onUndo:   () => {
+          setSubs(prev => prev.map(s => s.id === id ? { ...s, status: 'Active' } : s))
+          supabase
+            .from('subscriptions')
+            .update({ status: 'Active' })
+            .eq('id', id)
+            .then(
+              () => console.log(`Subscription ${id} restored to Active status`),
+              (error: unknown) => {
+                console.error(`Failed to restore subscription ${id}:`, error)
+                loadData()
+              }
+            )
+        },
         onCommit: () => {},
       },
     })
@@ -493,7 +519,17 @@ export default function OutPage() {
         onUndo:   () => setSubs(snapshot),
         onCommit: () => {
           if (sub.cal_event_id) deleteCalEvent(sub.cal_event_id)
-          supabase.from('subscriptions').delete().eq('id', id).then()
+          supabase
+            .from('subscriptions')
+            .delete()
+            .eq('id', id)
+            .then(
+              () => console.log(`Subscription ${id} deleted successfully`),
+              (error: unknown) => {
+                console.error(`Failed to delete subscription ${id}:`, error)
+                loadData()
+              }
+            )
         },
       },
     })
@@ -557,7 +593,18 @@ export default function OutPage() {
     if (!item) return
     pendingWishDeleteIds.current.add(id)
     setWishlist(prev => prev.filter(w => w.id !== id))
-    supabase.from('wishlist').delete().eq('id', id).then()
+    supabase
+      .from('wishlist')
+      .delete()
+      .eq('id', id)
+      .then(
+        () => console.log(`Wish item ${id} deleted successfully`),
+        (error: unknown) => {
+          console.error(`Failed to delete wish item ${id}:`, error)
+          pendingWishDeleteIds.current.delete(id)
+          loadData()
+        }
+      )
     showToast(`${item.name} deleted`, {
       type: 'delete',
       undo: {
