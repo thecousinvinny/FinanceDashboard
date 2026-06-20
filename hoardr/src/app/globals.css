@@ -23,6 +23,13 @@
   --color-ink:         rgb(247, 247, 245);
   --color-grid-border: rgb(42, 42, 42);
 
+  /* ── Notion-style calendar grid colors ──────────────────────────────────── */
+  --color-cal-bg:         #191919;
+  --color-cal-cell:       #1f1f1f;
+  --color-cal-cell-hover: #252525;
+  --color-cal-sidebar:    #1c1c1c;
+  --color-cal-grid-line:  #2a2a2a;
+
   /* ── Semantic color defaults ─────────────────────────────────────────────── */
   --sem-income:        #4ADE80;
   --sem-income-rgb:    74,222,128;
@@ -58,6 +65,12 @@ html.charcoal-slate {
   --color-bg-elevated: rgb(42, 45, 53);
   --color-ink:         rgb(232, 236, 240);
   --color-grid-border: rgb(46, 50, 64);
+
+  --color-cal-bg:         #1a1d22;
+  --color-cal-cell:       #1e2129;
+  --color-cal-cell-hover: #242932;
+  --color-cal-sidebar:    #1c1f26;
+  --color-cal-grid-line:  #2e3240;
 }
 
 html.slate-mist {
@@ -81,6 +94,12 @@ html.slate-mist {
   --color-bg-elevated: rgb(235, 238, 243);
   --color-ink:         rgb(26, 29, 34);
   --color-grid-border: rgb(192, 198, 206);
+
+  --color-cal-bg:         #d8dce2;
+  --color-cal-cell:       #e0e4ea;
+  --color-cal-cell-hover: #e8eaee;
+  --color-cal-sidebar:    #d0d5dc;
+  --color-cal-grid-line:  #c0c6ce;
 }
 
 html.light {
@@ -101,6 +120,12 @@ html.light {
   --color-bg-elevated: rgb(248, 248, 245);
   --color-ink:         rgb(28, 28, 30);
   --color-grid-border: rgb(200, 200, 198);
+
+  --color-cal-bg:         #f4f4f0;
+  --color-cal-cell:       #fafaf7;
+  --color-cal-cell-hover: #f5f5f2;
+  --color-cal-sidebar:    #ebebea;
+  --color-cal-grid-line:  #c8c8c6;
 }
 
 /* ── Reset ───────────────────────────────────────────────────────────────── */
@@ -428,6 +453,12 @@ html.midnight-teal {
   --color-bg-elevated: rgb(36, 39, 41);
   --color-ink:         rgb(226, 234, 240);
   --color-grid-border: rgb(42, 45, 48);    /* #2A2D30 */
+
+  --color-cal-bg:         #191919;
+  --color-cal-cell:       #1c1f22;
+  --color-cal-cell-hover: #242729;
+  --color-cal-sidebar:    #1a1d20;
+  --color-cal-grid-line:  #2a2d30;
 
   /* ── Teal accent (for use in inline styles / new components) ─────────── */
   --color-teal:        #2DD4BF;

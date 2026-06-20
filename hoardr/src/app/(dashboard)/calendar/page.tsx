@@ -253,6 +253,7 @@ export default function CalendarPage() {
   const [notionGridLbl, setNotionGridLbl] = useState(() =>
     new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
   )
+  const [narrowGrid, setNarrowGrid] = useState(false)
   const [hoveredSidebarRow, setHoveredSidebarRow] = useState<string | null>(null)
   const [hoveredSidebarDay, setHoveredSidebarDay] = useState<string | null>(null)
   const [sidebarCtxMenu, setSidebarCtxMenu] = useState<{ id: string; kind: 'type' | 'google'; x: number; y: number } | null>(null)
@@ -985,6 +986,18 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     return () => sc.removeEventListener('scroll', handleScroll)
   }, [isLargeScreen, calView])
 
+  // ── Narrow-grid detection — switches to dot-only view when cells < 80px wide ─
+  useEffect(() => {
+    if (!isLargeScreen || calView !== 'month') { setNarrowGrid(false); return }
+    const el = monthGridRef.current
+    if (!el) return
+    const ro = new ResizeObserver(entries => {
+      setNarrowGrid(entries[0].contentRect.width / 7 < 80)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [isLargeScreen, calView])
+
   // Applies per-type and per-calendar color overrides (Notion grid only).
   // Google events: check live prefs.googleCalendarColors first so sidebar color changes
   // take effect instantly without re-fetching the event map.
@@ -1130,7 +1143,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
         {isLargeScreen ? (
           /* ── iPad / Large screen: existing Notion grid layout ── */
           <div
-            style={{ width: '100vw', height: '100%', flex: 'none', display: 'flex', flexDirection: 'column', background: 'var(--color-bg-base)', userSelect: 'none', cursor: 'default' }}>
+            style={{ width: '100vw', height: '100%', flex: 'none', display: 'flex', flexDirection: 'column', background: 'var(--color-cal-bg)', userSelect: 'none', cursor: 'default' }}>
 
 
             {/* Notion-Style Month Grid */}
@@ -1138,7 +1151,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
               <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
 
                 {/* Sidebar — extends full height to top of screen */}
-                <div style={{ width: 215, background: '#1D2026', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--color-grid-border)', flexShrink: 0, overflowY: 'auto' }}>
+                <div style={{ width: 215, background: 'var(--color-cal-sidebar)', display: 'flex', flexDirection: 'column', borderRight: '0.5px solid var(--color-cal-grid-line)', flexShrink: 0, overflowY: 'auto' }}>
                   {/* Top section: safe-area pad + List/Month toggle + settings gear */}
                   <div style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)', paddingLeft: 10, paddingRight: 10, paddingBottom: 8, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
                     <div style={{ display: 'flex', background: 'rgb(var(--rgb-ink) / 0.08)', borderRadius: 20, padding: 2, gap: 2, flex: 1 }}>
@@ -1253,7 +1266,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                   </div>
 
                   {/* Divider */}
-                  <div style={{ height: 1, background: 'var(--color-grid-border)', flexShrink: 0 }} />
+                  <div style={{ height: 1, background: 'var(--color-cal-grid-line)', flexShrink: 0 }} />
 
                   {/* Calendar legend toggles */}
                   <div style={{ padding: '12px 10px 8px', flexShrink: 0 }}>
@@ -1372,19 +1385,19 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                 </div>
 
                 {/* Main Notion grid */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, background: 'var(--color-bg-base)' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, background: 'var(--color-cal-bg)' }}>
                   {/* Safe-area top + month label */}
                   <div style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 10px)', paddingLeft: 10, paddingBottom: 5, flexShrink: 0 }}>
                     <span style={{ fontSize: 11, fontWeight: 700, color: '#C9A84C', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.75 }}>{notionGridLbl}</span>
                   </div>
                   {/* Sticky DOW header */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', background: 'var(--color-bg-base)', borderBottom: '1px solid var(--color-grid-border)', flexShrink: 0 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0,1fr))', background: 'var(--color-cal-bg)', borderBottom: '0.5px solid var(--color-cal-grid-line)', flexShrink: 0 }}>
                     {(wsMon ? ['MON','TUE','WED','THU','FRI','SAT','SUN'] : ['SUN','MON','TUE','WED','THU','FRI','SAT']).map(d => (
                       <div key={d} style={{ textAlign: 'center', padding: '4px 0 3px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#C9A84C', fontFamily: 'var(--font-montserrat)' }}>{d}</div>
                     ))}
                   </div>
                   {/* Scrollable weeks */}
-                  <div ref={monthGridRef} style={{ flex: 1, overflowY: 'auto', background: 'var(--color-bg-base)', position: 'relative' }}>
+                  <div ref={monthGridRef} style={{ flex: 1, overflowY: 'auto', background: 'var(--color-cal-bg)', position: 'relative' }}>
                     <div ref={monthGridTopSentRef} style={{ height: 1 }} />
                     {notionWeeks.map(weekStart => {
                       const days      = weekDays(weekStart)
@@ -1394,7 +1407,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                       const maxLanes  = spanLanes.length
                       const singleSlots = Math.max(0, MAX_VIS_EVENTS - maxLanes)
                       return (
-                        <div key={weekStart} style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', borderBottom: '1px solid var(--color-grid-border)' }}>
+                        <div key={weekStart} style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0,1fr))', borderBottom: '0.5px solid var(--color-cal-grid-line)' }}>
                           {days.map((ds, ci) => {
                             const parts        = ds.split('-').map(Number)
                             const [cy, cm, cd] = parts
@@ -1430,7 +1443,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                                 onMouseEnter={() => setPasteDate(ds)}
                                 onMouseLeave={() => setPasteDate(p => p === ds ? null : p)}
                                 className="group"
-                                style={{ minHeight: CELL_MIN_H, borderRight: ci < 6 ? '1px solid var(--color-grid-border)' : 'none', padding: '5px 0 4px', cursor: 'pointer', display: 'flex', flexDirection: 'column', background: isToday ? 'rgba(201,168,76,0.05)' : 'var(--color-bg-base)', position: 'relative' }}
+                                style={{ minHeight: CELL_MIN_H, borderRight: ci < 6 ? '0.5px solid var(--color-cal-grid-line)' : 'none', padding: '5px 0 4px', cursor: 'pointer', display: 'flex', flexDirection: 'column', background: isToday ? 'rgba(201,168,76,0.05)' : 'var(--color-cal-cell)', position: 'relative' }}
                               >
                                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none" style={{ background: 'rgb(var(--rgb-ink) / 0.03)' }} />
                                 {dragOverDate === ds && dragState && (
@@ -1450,6 +1463,17 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                                       </span>
                                     </div>
                                   </div>
+                                  {narrowGrid ? (
+                                    /* Narrow mode: dot-only summary, one dot per event */
+                                    allEvs.length > 0 && (
+                                      <div style={{ display: 'flex', gap: 2, flexWrap: 'wrap', padding: '2px 4px' }}>
+                                        {allEvs.slice(0, 5).map((ev, i) => (
+                                          <span key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: notionColor(ev), flexShrink: 0, opacity: isPast ? 0.45 : 1 }} />
+                                        ))}
+                                        {allEvs.length > 5 && <span style={{ fontSize: 7, lineHeight: '5px', color: 'rgb(var(--rgb-ink) / 0.4)', fontFamily: 'var(--font-montserrat)' }}>+{allEvs.length - 5}</span>}
+                                      </div>
+                                    )
+                                  ) : (<>
                                   {/* Multi-day span lanes */}
                                   {maxLanes > 0 && (
                                     <div style={{ flexShrink: 0, marginBottom: 3 }}>
@@ -1475,7 +1499,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                                     </div>
                                   )}
                                   {/* Single-day events */}
-                                  <div style={{ paddingLeft: 4, paddingRight: 4, display: 'flex', flexDirection: 'column' }}>
+                                  <div style={{ paddingLeft: 4, paddingRight: 4, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
                                     {allDayEvs.slice(0, shownAllDay).map((ev, ei) => {
                                       const evColor  = notionColor(ev)
                                       const pillSel  = selectedEvId   === ev.id
@@ -1491,7 +1515,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                                           onMouseEnter={() => ev.id && setHoveredPillKey(ev.id)}
                                           onMouseLeave={() => setHoveredPillKey(null)}
                                           onClick={ev.type === 'google' && ev.id ? (e) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), ev, ds) } : undefined}
-                                          style={{ background: isPast ? evColor + '8C' : evColor, borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, cursor: isDraggable ? 'grab' : 'default', position: 'relative', boxShadow: pillSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none', opacity: isBeingDragged ? 0.4 : 1, transition: 'opacity 0.1s' }}
+                                          style={{ background: isPast ? evColor + '8C' : evColor, borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, minWidth: 0, width: '100%', boxSizing: 'border-box', cursor: isDraggable ? 'grab' : 'default', position: 'relative', boxShadow: pillSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none', opacity: isBeingDragged ? 0.4 : 1, transition: 'opacity 0.1s' }}
                                         >
                                           {(pillHov || pillSel) && ev.id && <div style={{ position: 'absolute', inset: 0, background: pillSel ? 'rgba(255,255,255,0.145)' : 'rgba(255,255,255,0.071)', pointerEvents: 'none', borderRadius: 4 }} />}
                                           <span style={{ fontSize: 10, color: isPast ? lightTextColor(evColor, true) : 'rgba(255,255,255,0.92)', fontFamily: 'var(--font-montserrat)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
@@ -1517,7 +1541,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                                           onMouseEnter={() => ev.id && setHoveredPillKey(ev.id)}
                                           onMouseLeave={() => setHoveredPillKey(null)}
                                           onClick={ev.type === 'google' && ev.id ? (e) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), ev, ds) } : undefined}
-                                          style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 2, height: 18, overflow: 'hidden', flexShrink: 0, background: 'transparent', borderRadius: 3, cursor: isDraggable ? 'grab' : 'default', position: 'relative', boxShadow: timedSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none', opacity: isBeingDragged ? 0.4 : 1, transition: 'opacity 0.1s' }}
+                                          style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 2, height: 18, overflow: 'hidden', flexShrink: 0, minWidth: 0, width: '100%', boxSizing: 'border-box', background: 'transparent', borderRadius: 3, cursor: isDraggable ? 'grab' : 'default', position: 'relative', boxShadow: timedSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none', opacity: isBeingDragged ? 0.4 : 1, transition: 'opacity 0.1s' }}
                                         >
                                           {(timedHov || timedSel) && ev.id && <div style={{ position: 'absolute', inset: 0, background: timedSel ? 'rgba(255,255,255,0.145)' : 'rgba(255,255,255,0.071)', pointerEvents: 'none', borderRadius: 3 }} />}
                                           <div style={{ width: 3, height: '100%', borderRadius: '3px 0 0 3px', background: isPast ? bar + '8C' : bar, flexShrink: 0 }} />
@@ -1536,6 +1560,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                                       </div>
                                     )}
                                   </div>
+                                  </>)}
                                 </div>
                               </div>
                             )
