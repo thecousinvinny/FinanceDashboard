@@ -42,8 +42,11 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
   const categories = type === 'Expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES
 
   useEffect(() => {
-    setCategory(null)
+    // On tab switch (and mount): restore the default category for expenses, clear for income.
+    // Setting the default here instead of null avoids clobbering it on mount.
+    setCategory(type === 'Expense' ? (defaultCategory ?? null) : null)
     if (type === 'Income') { setHasDiscount(false); setOriginalPrice('') }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type])
 
   const backdropRef = useRef<HTMLDivElement>(null)
@@ -138,7 +141,7 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
   useEffect(() => {
     if (open) {
       setCardId(defaultCardId ?? null)
-      setCategory(defaultCategory ?? null)
+      setCategory(type === 'Expense' ? (defaultCategory ?? null) : null)
     } else {
       const t = setTimeout(() => {
         setType('Expense')
@@ -229,6 +232,17 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
           <PillGroup options={['Expense', 'Income'] as TxType[]} value={type} onChange={setType} />
 
           <div>
+            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
+              {type === 'Expense' ? 'Merchant' : 'Source'}
+            </p>
+            <input
+              type="text" placeholder={type === 'Expense' ? 'e.g. Blue Bottle' : 'e.g. Studio Co'}
+              value={name} onChange={e => setName(e.target.value)}
+              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none"
+            />
+          </div>
+
+          <div>
             <div className="flex items-center justify-between mb-2">
               <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint">Amount</p>
               {type === 'Expense' && (
@@ -282,17 +296,6 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
                 />
               </div>
             )}
-          </div>
-
-          <div>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
-              {type === 'Expense' ? 'Merchant' : 'Source'}
-            </p>
-            <input
-              type="text" placeholder={type === 'Expense' ? 'e.g. Blue Bottle' : 'e.g. Studio Co'}
-              value={name} onChange={e => setName(e.target.value)}
-              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none"
-            />
           </div>
 
           <div>

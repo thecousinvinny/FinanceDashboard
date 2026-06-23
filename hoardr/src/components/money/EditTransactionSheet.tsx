@@ -217,6 +217,16 @@ export function EditTransactionSheet({ tx, open, onClose, onSave, cards = [], ba
         <div ref={scrollAreaRef} className="px-5 space-y-4 overflow-y-auto" style={{ flex: 1, paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
 
           <div>
+            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
+              {tx?.type === 'Expense' ? 'Merchant' : 'Source'}
+            </p>
+            <input
+              type="text" value={name} onChange={e => setName(e.target.value)}
+              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none"
+            />
+          </div>
+
+          <div>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Amount</p>
             <div className="flex items-center gap-1.5 bg-bg-overlay rounded-[14px] px-4 py-2.5">
               <span className="text-[20px] font-light text-ink-muted font-mono">$</span>
@@ -226,16 +236,6 @@ export function EditTransactionSheet({ tx, open, onClose, onSave, cards = [], ba
                 className="flex-1 bg-transparent text-[22px] font-bold font-mono text-ink outline-none placeholder:text-ink-faint"
               />
             </div>
-          </div>
-
-          <div>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
-              {tx?.type === 'Expense' ? 'Merchant' : 'Source'}
-            </p>
-            <input
-              type="text" value={name} onChange={e => setName(e.target.value)}
-              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none"
-            />
           </div>
 
           <div>

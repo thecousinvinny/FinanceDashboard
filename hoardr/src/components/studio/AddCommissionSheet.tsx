@@ -148,19 +148,6 @@ export function AddCommissionSheet({ open, onClose, onAdd }: Props) {
 
         <div ref={scrollAreaRef} className="px-5 space-y-4 overflow-y-auto" style={{ maxHeight: '70vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
 
-          {/* Value */}
-          <div>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Commission Value</p>
-            <div className="flex items-center gap-1.5 bg-bg-overlay rounded-[14px] px-4 py-2.5">
-              <span className="text-[20px] font-light text-ink-muted font-mono">$</span>
-              <input
-                type="text" inputMode="decimal" placeholder="0.00" value={value}
-                onChange={e => handleAmount(e.target.value, setValue)}
-                className="flex-1 bg-transparent text-[22px] font-bold font-mono text-ink outline-none placeholder:text-ink-faint"
-              />
-            </div>
-          </div>
-
           {/* Client */}
           <div>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Client Name</p>
@@ -173,6 +160,19 @@ export function AddCommissionSheet({ open, onClose, onAdd }: Props) {
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Project Name</p>
             <input type="text" placeholder="e.g. Brand Identity Pack" value={project} onChange={e => setProject(e.target.value)}
               className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none" />
+          </div>
+
+          {/* Value */}
+          <div>
+            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Commission Value</p>
+            <div className="flex items-center gap-1.5 bg-bg-overlay rounded-[14px] px-4 py-2.5">
+              <span className="text-[20px] font-light text-ink-muted font-mono">$</span>
+              <input
+                type="text" inputMode="decimal" placeholder="0.00" value={value}
+                onChange={e => handleAmount(e.target.value, setValue)}
+                className="flex-1 bg-transparent text-[22px] font-bold font-mono text-ink outline-none placeholder:text-ink-faint"
+              />
+            </div>
           </div>
 
           {/* Project type */}

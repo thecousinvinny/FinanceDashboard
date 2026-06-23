@@ -12,6 +12,7 @@ import { GlobalFAB } from '@/components/ui/GlobalFAB'
 import { EditEventSheet, type EditableEvent, type EventEdits, type RecurrenceScope } from '@/components/calendar/EditEventSheet'
 import { CalendarSettingsSheet, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
 import { CalendarPopover, defaultTimes, type PopoverFormData } from '@/components/calendar/CalendarPopover'
+import { MonthYearPicker } from '@/components/calendar/MonthYearPicker'
 import { createCalEvent, updateCalEvent, deleteCalEvent, moveCalEvent, type GCalEvent } from '@/lib/calendar'
 
 type EventType = 'income' | 'sub' | 'google'
@@ -195,6 +196,7 @@ export default function CalendarPage() {
   const [selectedDay,       setSelectedDay]       = useState<string | null>(null)
   const [gridH,             setGridH]             = useState(GRID_EXPANDED)
   const [isDraggingHandle,  setIsDraggingHandle]  = useState(false)
+  const [monthPickerOpen,   setMonthPickerOpen]   = useState(false)
 
   // Grid state
   const [gridYear,  setGridYear]  = useState(today.getFullYear())
@@ -308,7 +310,6 @@ export default function CalendarPage() {
 const suppressPrepend   = useRef(true)   // true initially — cleared after scroll-to-today so prepend IO doesn't clobber initial position
   const scrolledToToday   = useRef(false)
   const googleRescrollDone = useRef(false) // prevents re-scroll after the first Google events load
-  const monthLblTapRef  = useRef<number>(0)
   const gridSwipe       = useRef<{ x: number; y: number } | null>(null)
   const handleDragRef   = useRef<{ startY: number; startH: number } | null>(null)
   const dragOverRef     = useRef<string | null>(null)
@@ -1086,6 +1087,33 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     }
   }
 
+  // ── Jump the infinite-scroll list to an arbitrary month/year ──────────────
+  // Rebuilds `months` centered on the target (so the day rows exist), then
+  // scrolls to the first day of that month (or today, if it's the current month).
+  function jumpToMonth(year: number, month: number) {
+    setGridYear(year)
+    setGridMonth(month)
+    setGridSel(null)
+    setSideLbl(monthLabel(year, month))
+    setMonths(Array.from({ length: 6 }, (_, i) => addMonths(year, month, i - 1)))
+    // Block the prepend observer while we reposition; re-enable once settled.
+    suppressPrepend.current = true
+    const isCurrentMonth = year === today.getFullYear() && month === today.getMonth()
+    const target = isCurrentMonth ? todayStr : toDateStr(year, month, 1)
+    const tryScroll = (attempt = 0) => {
+      const sc = scrollRef.current, el = dayRefs.current.get(target)
+      if (sc && el && el.offsetTop > 0) {
+        sc.scrollTop = el.offsetTop - 20
+        requestAnimationFrame(() => { suppressPrepend.current = false })
+      } else if (attempt < 12) {
+        setTimeout(() => tryScroll(attempt + 1), 50)
+      } else {
+        suppressPrepend.current = false
+      }
+    }
+    setTimeout(() => tryScroll(), 60)
+  }
+
   // ── Swipe gesture handlers ─────────────────────────────────────────────────
   // List row → Day detail: swipe left on a day row
   const rowStart = useCallback((e: React.TouchEvent, ds: string) => {
@@ -1596,11 +1624,14 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                         }}>{v === 'list' ? 'List' : 'Month'}</button>
                       ))}
                     </div>
-                    {/* Month label — centered */}
-                    <span
-                      style={{ flex: 1, textAlign: 'center', fontSize: 15, fontWeight: 700, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', userSelect: 'none', cursor: 'pointer', letterSpacing: '-0.01em' }}
-                      onDoubleClick={scrollListToToday}
-                    >{gridMonthLbl}</span>
+                    {/* Month label — centered; tap to open month/year picker */}
+                    <button
+                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, background: 'none', border: 'none', textAlign: 'center', fontSize: 15, fontWeight: 700, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', userSelect: 'none', cursor: 'pointer', letterSpacing: '-0.01em' }}
+                      onClick={() => setMonthPickerOpen(true)}
+                    >
+                      {gridMonthLbl}
+                      <span style={{ fontSize: 9, color: '#C9A84C', opacity: 0.8 }}>▾</span>
+                    </button>
                     {/* Right controls */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                       <button onClick={goToPrev} style={{ width: 24, height: 24, borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer', color: '#C9A84C', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
@@ -1757,18 +1788,13 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                     onClick={() => { goToToday(); scrollListToToday() }}
                     style={{ fontSize: 11, fontWeight: 600, color: '#D4AF37', background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px 0 0', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.02em', flexShrink: 0 }}
                   >Today</button>
-                  <span
-                    style={{ flex: 1, textAlign: 'center', fontSize: 16, fontWeight: 700, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', userSelect: 'none', cursor: 'pointer', letterSpacing: '-0.01em' }}
-                    onDoubleClick={scrollListToToday}
-                    onTouchEnd={(e) => {
-                      e.preventDefault()
-                      const now = Date.now()
-                      if (now - monthLblTapRef.current < 350) { monthLblTapRef.current = 0; scrollListToToday() }
-                      else { monthLblTapRef.current = now }
-                    }}
+                  <button
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, background: 'none', border: 'none', textAlign: 'center', fontSize: 16, fontWeight: 700, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', userSelect: 'none', cursor: 'pointer', letterSpacing: '-0.01em' }}
+                    onClick={() => setMonthPickerOpen(true)}
                   >
                     {gridMonthLbl}
-                  </span>
+                    <span style={{ fontSize: 10, color: '#C9A84C', opacity: 0.8 }}>▾</span>
+                  </button>
                 </div>
                 {/* DOW labels */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', paddingLeft: 8, paddingRight: 8, paddingBottom: 4, flexShrink: 0 }}>
@@ -1836,20 +1862,14 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
 
             {/* Infinite scroll list — same design as before */}
             <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-              {/* Gold month label — visible only in full-list mode (gridH === 0) */}
+              {/* Gold month label — visible only in full-list mode (gridH === 0); tap to open picker */}
               <div
                 style={{ position: 'absolute', left: 4, top: 0, bottom: 0, width: 20, zIndex: 5,
                          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
                          opacity: gridH === 0 ? 1 : 0,
                          pointerEvents: gridH === 0 ? 'auto' : 'none',
                          transition: isDraggingHandle ? 'none' : 'opacity 0.3s cubic-bezier(0.4,0,0.2,1)' }}
-                onDoubleClick={scrollListToToday}
-                onTouchEnd={(e) => {
-                  e.preventDefault()
-                  const now = Date.now()
-                  if (now - monthLblTapRef.current < 350) { monthLblTapRef.current = 0; scrollListToToday() }
-                  else { monthLblTapRef.current = now }
-                }}
+                onClick={() => setMonthPickerOpen(true)}
               >
                 <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 8, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 800, color: 'rgba(212,175,55,0.65)', userSelect: 'none', whiteSpace: 'nowrap' }}>
                   {sideLbl}
@@ -2015,6 +2035,14 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     <EditEventSheet open={!!editEvent} event={editEvent} googleCals={googleCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => setEditEvent(null)} onSave={handleEditEvent} onDelete={_scope => { if (editEvent) { const ev: CalEvent = { id: editEvent.id ?? '', title: editEvent.title, type: 'google', amount: '', calendarId: editEvent.calendarId }; handleDeleteCalEvent(ev) } setEditEvent(null) }} />
     <EditEventSheet open={!!createEvent} event={createEvent} googleCals={googleCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => setCreateEvent(null)} onSave={handleCreateEvent} onDelete={() => setCreateEvent(null)} />
     <CalendarSettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} prefs={prefs} googleCals={googleCals} calsLoading={calsLoading} calsError={calsError} onSave={savePrefs} />
+
+    <MonthYearPicker
+      open={monthPickerOpen}
+      year={gridYear}
+      month={gridMonth}
+      onClose={() => setMonthPickerOpen(false)}
+      onSelect={jumpToMonth}
+    />
 
     {/* Color swatch picker */}
     {swatchOpen && (() => {

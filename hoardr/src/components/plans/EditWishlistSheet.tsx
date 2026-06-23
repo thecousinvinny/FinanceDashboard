@@ -174,17 +174,6 @@ export function EditWishlistSheet({ item, open, onClose, onSave }: Props) {
 
           <div>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
-              Description <span className="normal-case text-ink-faint/60">(optional)</span>
-            </p>
-            <input
-              type="text" placeholder="e.g. iPhone 17 Pro Max 256GB" value={description}
-              onChange={e => setDescription(e.target.value)}
-              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none"
-            />
-          </div>
-
-          <div>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
               List Price <span className="normal-case text-ink-faint/60">(optional)</span>
             </p>
             <div className="flex items-center gap-1.5 bg-bg-overlay rounded-[14px] px-4 py-2.5">
@@ -195,6 +184,17 @@ export function EditWishlistSheet({ item, open, onClose, onSave }: Props) {
                 className="flex-1 bg-transparent text-[22px] font-bold font-mono text-ink outline-none placeholder:text-ink-faint"
               />
             </div>
+          </div>
+
+          <div>
+            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
+              Description <span className="normal-case text-ink-faint/60">(optional)</span>
+            </p>
+            <input
+              type="text" placeholder="e.g. iPhone 17 Pro Max 256GB" value={description}
+              onChange={e => setDescription(e.target.value)}
+              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none"
+            />
           </div>
 
           <div>
