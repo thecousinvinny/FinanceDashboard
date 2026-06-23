@@ -313,6 +313,8 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
   const gridSwipe       = useRef<{ x: number; y: number } | null>(null)
   const handleDragRef   = useRef<{ startY: number; startH: number } | null>(null)
   const dragOverRef     = useRef<string | null>(null)
+  const monthLblTapRef   = useRef<number>(0)                              // timestamp of last month-label tap (double-tap detect)
+  const monthLblTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)  // pending single-tap (open picker) timer
 
   useEffect(() => { monthsRef.current = months }, [months])
   useEffect(() => { notionWeeksRef.current = notionWeeks }, [notionWeeks])
@@ -1104,6 +1106,27 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     setTimeout(() => tryScroll(), 60)
   }
 
+  // ── Month label tap: single tap → open picker, double tap → jump to today ──
+  function handleMonthLabelTap() {
+    const now = Date.now()
+    if (now - monthLblTapRef.current < 300) {
+      // Double tap — cancel the pending picker-open and jump to today instead
+      monthLblTapRef.current = 0
+      if (monthLblTimerRef.current) { clearTimeout(monthLblTimerRef.current); monthLblTimerRef.current = null }
+      jumpToMonth(today.getFullYear(), today.getMonth())
+    } else {
+      monthLblTapRef.current = now
+      if (monthLblTimerRef.current) clearTimeout(monthLblTimerRef.current)
+      monthLblTimerRef.current = setTimeout(() => {
+        monthLblTimerRef.current = null
+        setMonthPickerOpen(true)
+      }, 300)
+    }
+  }
+
+  // Clear any pending single-tap timer on unmount
+  useEffect(() => () => { if (monthLblTimerRef.current) clearTimeout(monthLblTimerRef.current) }, [])
+
   // ── Swipe gesture handlers ─────────────────────────────────────────────────
   // List row → Day detail: swipe left on a day row
   const rowStart = useCallback((e: React.TouchEvent, ds: string) => {
@@ -1616,7 +1639,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                     </div>
                     {/* Month label — centered; tap to open month/year picker */}
                     <button
-                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, background: 'none', border: 'none', textAlign: 'center', fontSize: 15, fontWeight: 700, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', userSelect: 'none', cursor: 'pointer', letterSpacing: '-0.01em' }}
+                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, background: 'none', border: 'none', textAlign: 'center', fontSize: 15, fontWeight: 700, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', userSelect: 'none', cursor: 'pointer', letterSpacing: '-0.01em', touchAction: 'manipulation' }}
                       onClick={() => setMonthPickerOpen(true)}
                     >
                       {gridMonthLbl}
@@ -1633,7 +1656,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                     </div>
                   </div>
                   {/* DOW labels */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', paddingLeft: 8, paddingRight: 8, paddingBottom: 4, flexShrink: 0 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', paddingLeft: 8, paddingRight: 8, paddingTop: 10, paddingBottom: 4, flexShrink: 0 }}>
                     {(wsMon ? ['M','T','W','T','F','S','S'] : ['S','M','T','W','T','F','S']).map((d, i) => (
                       <div key={i} style={{ textAlign: 'center', fontSize: 9, fontWeight: 700, color: 'rgba(212,175,55,0.55)', letterSpacing: '0.05em', fontFamily: 'var(--font-montserrat)' }}>{d}</div>
                     ))}
@@ -1779,7 +1802,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                     style={{ fontSize: 11, fontWeight: 600, color: '#D4AF37', background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px 0 0', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.02em', flexShrink: 0 }}
                   >Today</button>
                   <button
-                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, background: 'none', border: 'none', textAlign: 'center', fontSize: 16, fontWeight: 700, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', userSelect: 'none', cursor: 'pointer', letterSpacing: '-0.01em' }}
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, background: 'none', border: 'none', textAlign: 'center', fontSize: 16, fontWeight: 700, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', userSelect: 'none', cursor: 'pointer', letterSpacing: '-0.01em', touchAction: 'manipulation' }}
                     onClick={() => setMonthPickerOpen(true)}
                   >
                     {gridMonthLbl}
@@ -1787,7 +1810,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                   </button>
                 </div>
                 {/* DOW labels */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', paddingLeft: 8, paddingRight: 8, paddingBottom: 4, flexShrink: 0 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', paddingLeft: 8, paddingRight: 8, paddingTop: 10, paddingBottom: 4, flexShrink: 0 }}>
                   {(wsMon ? ['M','T','W','T','F','S','S'] : ['S','M','T','W','T','F','S']).map((d, i) => (
                     <div key={i} style={{ textAlign: 'center', fontSize: 9, fontWeight: 700, color: 'rgba(212,175,55,0.55)', letterSpacing: '0.05em', fontFamily: 'var(--font-montserrat)' }}>{d}</div>
                   ))}
@@ -1852,14 +1875,14 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
 
             {/* Infinite scroll list — same design as before */}
             <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-              {/* Gold month label — visible only in full-list mode (gridH === 0); tap to open picker */}
+              {/* Gold month label — visible only in full-list mode (gridH === 0); tap = picker, double-tap = today */}
               <div
                 style={{ position: 'absolute', left: 4, top: 0, bottom: 0, width: 20, zIndex: 5,
                          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
                          opacity: gridH === 0 ? 1 : 0,
-                         pointerEvents: gridH === 0 ? 'auto' : 'none',
+                         pointerEvents: gridH === 0 ? 'auto' : 'none', touchAction: 'manipulation',
                          transition: isDraggingHandle ? 'none' : 'opacity 0.3s cubic-bezier(0.4,0,0.2,1)' }}
-                onClick={() => setMonthPickerOpen(true)}
+                onClick={handleMonthLabelTap}
               >
                 <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 8, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 800, color: 'rgba(212,175,55,0.65)', userSelect: 'none', whiteSpace: 'nowrap' }}>
                   {sideLbl}
