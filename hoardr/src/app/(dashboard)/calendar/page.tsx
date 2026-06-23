@@ -1067,7 +1067,6 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       })
     }
   }
-  function goToToday() { setGridYear(today.getFullYear()); setGridMonth(today.getMonth()); setGridSel(todayStr) }
   const gridSelEvents = gridSel ? (visibleMap[gridSel] ?? []) : []
   const gridSelLabel  = gridSel ? new Date(gridSel + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : null
 
@@ -1078,27 +1077,18 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
   const dayMonthYr   = dayDate?.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase() ?? ''
   const dayEvents    = selectedDay ? (visibleMap[selectedDay] ?? []) : []
 
-  // ── Scroll list to today ──────────────────────────────────────────────────
-  function scrollListToToday() {
-    const sc = scrollRef.current, el = dayRefs.current.get(todayStr)
-    if (sc && el) {
-      const cR = sc.getBoundingClientRect(), eR = el.getBoundingClientRect()
-      sc.scrollTop = sc.scrollTop + eR.top - cR.top - sc.clientHeight / 2 + eR.height / 2
-    }
-  }
-
   // ── Jump the infinite-scroll list to an arbitrary month/year ──────────────
   // Rebuilds `months` centered on the target (so the day rows exist), then
   // scrolls to the first day of that month (or today, if it's the current month).
   function jumpToMonth(year: number, month: number) {
+    const isCurrentMonth = year === today.getFullYear() && month === today.getMonth()
     setGridYear(year)
     setGridMonth(month)
-    setGridSel(null)
+    setGridSel(isCurrentMonth ? todayStr : null)
     setSideLbl(monthLabel(year, month))
     setMonths(Array.from({ length: 6 }, (_, i) => addMonths(year, month, i - 1)))
     // Block the prepend observer while we reposition; re-enable once settled.
     suppressPrepend.current = true
-    const isCurrentMonth = year === today.getFullYear() && month === today.getMonth()
     const target = isCurrentMonth ? todayStr : toDateStr(year, month, 1)
     const tryScroll = (attempt = 0) => {
       const sc = scrollRef.current, el = dayRefs.current.get(target)
@@ -1639,7 +1629,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                       <button onClick={() => setSettingsOpen(true)} style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgb(var(--rgb-ink) / 0.06)', border: '1px solid rgb(var(--rgb-ink) / 0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <SlidersHorizontal size={13} color="rgb(var(--rgb-ink) / 0.45)" />
                       </button>
-                      <button onClick={() => { goToToday(); scrollListToToday() }} style={{ fontSize: 11, fontWeight: 600, color: '#D4AF37', background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.02em' }}>Today</button>
+                      <button onClick={() => jumpToMonth(today.getFullYear(), today.getMonth())} style={{ fontSize: 11, fontWeight: 600, color: '#D4AF37', background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.02em' }}>Today</button>
                     </div>
                   </div>
                   {/* DOW labels */}
@@ -1785,7 +1775,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                 {/* Month header */}
                 <div style={{ display: 'flex', alignItems: 'center', paddingLeft: 16, paddingRight: 56, paddingTop: 12, paddingBottom: 6, flexShrink: 0 }}>
                   <button
-                    onClick={() => { goToToday(); scrollListToToday() }}
+                    onClick={() => jumpToMonth(today.getFullYear(), today.getMonth())}
                     style={{ fontSize: 11, fontWeight: 600, color: '#D4AF37', background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px 0 0', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.02em', flexShrink: 0 }}
                   >Today</button>
                   <button
