@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, MapPin, AlignLeft, RefreshCw, Clock, ChevronDown, Calendar } from 'lucide-react'
 import type { GCalendar } from './CalendarSettingsSheet'
+import { DateRangePicker } from './DateRangePicker'
 
 export interface PopoverFormData {
   eventId?:       string
@@ -158,6 +159,8 @@ export function CalendarPopover({
   const [calDropOpen, setCalDropOpen] = useState(false)
   const [calDropRect, setCalDropRect] = useState<DropRect | null>(null)
   const [visible, setVisible]         = useState(false)
+  const [dateRangeOpen, setDateRangeOpen] = useState(false)
+  const [dateAnchor, setDateAnchor]       = useState<DOMRect | null>(null)
   const [locValue,       setLocValue]       = useState(initial.location)
   const [locSuggestions, setLocSuggestions] = useState<LocSuggestion[]>([])
   const [locOpen,        setLocOpen]        = useState(false)
@@ -166,6 +169,7 @@ export function CalendarPopover({
 
   const titleRef     = useRef<HTMLInputElement>(null)
   const popRef       = useRef<HTMLDivElement>(null)
+  const dateRowRef   = useRef<HTMLDivElement>(null)
   const startBtnRef  = useRef<HTMLButtonElement>(null)
   const endBtnRef    = useRef<HTMLButtonElement>(null)
   const startDropRef = useRef<HTMLDivElement>(null)
@@ -234,7 +238,8 @@ export function CalendarPopover({
         !calDropRef.current?.contains(e.target as Node) &&
         !startDropRef.current?.contains(e.target as Node) &&
         !endDropRef.current?.contains(e.target as Node) &&
-        !locDropRef.current?.contains(e.target as Node)
+        !locDropRef.current?.contains(e.target as Node) &&
+        !(e.target as Element)?.closest?.('[data-daterange-picker]')
       ) onClose()
     }
     const t = setTimeout(() => document.addEventListener('mousedown', onDown), 60)
@@ -275,6 +280,7 @@ export function CalendarPopover({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        if (dateRangeOpen) { setDateRangeOpen(false); return }
         if (locOpen)    { setLocOpen(false);    return }
         if (startOpen)  { setStartOpen(false);  return }
         if (endOpen)    { setEndOpen(false);    return }
@@ -284,7 +290,7 @@ export function CalendarPopover({
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose, startOpen, endOpen, calDropOpen, locOpen])
+  }, [onClose, startOpen, endOpen, calDropOpen, locOpen, dateRangeOpen])
 
   function setField<K extends keyof PopoverFormData>(key: K, val: PopoverFormData[K]) {
     setForm(f => {
@@ -649,6 +655,20 @@ export function CalendarPopover({
         </div>
       )}
 
+      {/* Custom date-range picker (PC / iPad) */}
+      {dateRangeOpen && dateAnchor && (
+        <DateRangePicker
+          anchorRect={dateAnchor}
+          startDate={form.date}
+          endDate={form.endDate}
+          onClose={() => setDateRangeOpen(false)}
+          onApply={(start, end) => {
+            setForm(f => ({ ...f, date: start, endDate: end }))
+            setDateRangeOpen(false)
+          }}
+        />
+      )}
+
       {/* Popover card */}
       <div ref={popRef} style={popoverStyle}>
 
@@ -669,17 +689,31 @@ export function CalendarPopover({
           {/* Date row — always FROM → TO */}
           <div style={rowStyle}>
             <Calendar size={16} color={MUTED} style={{ flexShrink: 0 }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
-              <div style={dateLabelWrap}>
-                <span style={{ fontSize: 13, color: 'var(--color-ink)', cursor: 'pointer', userSelect: 'none' }}>{fmtDateLabel(form.date)}</span>
-                <input type="date" value={form.date} onChange={e => setField('date', e.target.value)} style={hiddenDate} />
+            {isModal ? (
+              /* iPhone — native wheel picker (unchanged) */
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+                <div style={dateLabelWrap}>
+                  <span style={{ fontSize: 13, color: 'var(--color-ink)', cursor: 'pointer', userSelect: 'none' }}>{fmtDateLabel(form.date)}</span>
+                  <input type="date" value={form.date} onChange={e => setField('date', e.target.value)} style={hiddenDate} />
+                </div>
+                <span style={{ color: MUTED, fontSize: 13 }}>→</span>
+                <div style={dateLabelWrap}>
+                  <span style={{ fontSize: 13, color: form.endDate !== form.date ? GOLD : 'var(--color-ink)', cursor: 'pointer', userSelect: 'none' }}>{fmtDateLabel(form.endDate)}</span>
+                  <input type="date" value={form.endDate} min={form.date} onChange={e => setField('endDate', e.target.value)} style={hiddenDate} />
+                </div>
               </div>
-              <span style={{ color: MUTED, fontSize: 13 }}>→</span>
-              <div style={dateLabelWrap}>
-                <span style={{ fontSize: 13, color: form.endDate !== form.date ? GOLD : 'var(--color-ink)', cursor: 'pointer', userSelect: 'none' }}>{fmtDateLabel(form.endDate)}</span>
-                <input type="date" value={form.endDate} min={form.date} onChange={e => setField('endDate', e.target.value)} style={hiddenDate} />
+            ) : (
+              /* PC / iPad — custom themed range picker */
+              <div
+                ref={dateRowRef}
+                onClick={() => { setDateAnchor(dateRowRef.current?.getBoundingClientRect() ?? null); setDateRangeOpen(true) }}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, cursor: 'pointer', userSelect: 'none' }}
+              >
+                <span style={{ fontSize: 13, color: 'var(--color-ink)' }}>{fmtDateLabel(form.date)}</span>
+                <span style={{ color: MUTED, fontSize: 13 }}>→</span>
+                <span style={{ fontSize: 13, color: form.endDate !== form.date ? GOLD : 'var(--color-ink)' }}>{fmtDateLabel(form.endDate)}</span>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Time row — hidden when all-day */}
