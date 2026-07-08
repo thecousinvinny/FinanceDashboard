@@ -25,26 +25,32 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
+  // Carry any refreshed auth cookies (getUser may have rotated the token)
+  // onto a redirect response — otherwise the browser keeps the old, now
+  // revoked refresh token and the next refresh fails with
+  // "Invalid Refresh Token: Refresh Token Not Found", signing the user out.
+  const redirectTo = (pathname: string) => {
+    const url = request.nextUrl.clone()
+    url.pathname = pathname
+    const res = NextResponse.redirect(url)
+    supabaseResponse.cookies.getAll().forEach(cookie => res.cookies.set(cookie))
+    return res
+  }
+
   const pathname = request.nextUrl.pathname
   const isAuthRoute = pathname.startsWith('/login')
   const isRoot      = pathname === '/'
 
   if (isRoot) {
-    const url = request.nextUrl.clone()
-    url.pathname = user ? '/home' : '/login'
-    return NextResponse.redirect(url)
+    return redirectTo(user ? '/home' : '/login')
   }
 
   if (!user && !isAuthRoute) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
+    return redirectTo('/login')
   }
 
   if (user && isAuthRoute) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/home'
-    return NextResponse.redirect(url)
+    return redirectTo('/home')
   }
 
   return supabaseResponse
@@ -52,6 +58,9 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Exclude API + auth-callback routes (they handle their own auth) and
+    // static assets, so middleware only guards actual pages. Fewer getUser()
+    // calls = less refresh-token rotation churn.
+    '/((?!api|auth|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
