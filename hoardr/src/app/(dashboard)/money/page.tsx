@@ -13,6 +13,7 @@ import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import { type SeedTx } from '@/lib/data/transactions'
 import { groupByMonth, fmtDate, localToday, $fk, $fc, $fd, cn, calcSubCosts, nextRenewalDate, daysUntilLabel } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
+import { reportDbError, requireUser } from '@/lib/db-error'
 import { SlotNumber } from '@/components/ui/SlotNumber'
 import { pageCache } from '@/lib/page-cache'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
@@ -414,8 +415,8 @@ export default function OutPage() {
   async function handleAdd(tx: SeedTx) {
     if (tx.type === 'Expense') setTxList(prev => [tx, ...prev])
     showToast(`${tx.name} added`, { type: 'add' })
-    const { data: { user }, error: userErr } = await supabase.auth.getUser()
-    if (userErr || !user) return
+    const user = await requireUser(supabase, 'add transaction')
+    if (!user) { await loadData(); return }
 
     if (tx.type === 'Expense') {
       const { data: existing } = await supabase.from('categories').select('id').eq('user_id', user.id).eq('name', tx.category).maybeSingle()
@@ -425,10 +426,10 @@ export default function OutPage() {
         categoryId = created?.id ?? null
       }
       const { error } = await supabase.from('expenses').insert({ user_id: user.id, name: tx.name, cost: tx.amount, original_cost: tx.original_cost ?? null, date: tx.date, description: tx.description ?? null, category_id: categoryId, status: 'Procured', card_id: tx.card_id ?? null })
-      if (error) console.error('expense insert error:', JSON.stringify(error))
+      reportDbError(error, 'add expense')
     } else {
       const { error } = await supabase.from('income').insert({ user_id: user.id, name: tx.name, amount: tx.amount, date: tx.date, description: tx.description ?? null, source: tx.category, bank_id: tx.bank_id ?? null })
-      if (error) console.error('income insert error:', JSON.stringify(error))
+      reportDbError(error, 'add income')
     }
     await loadData()
   }
@@ -446,7 +447,7 @@ export default function OutPage() {
       categoryId = created?.id ?? null
     }
     const { error } = await supabase.from('expenses').update({ name: updates.name, cost: updates.amount, date: updates.date, description: updates.description, category_id: categoryId, card_id: updates.card_id }).eq('id', id)
-    if (error) { console.error('edit expense error:', JSON.stringify(error)); await loadData() }
+    if (reportDbError(error, 'save expense')) await loadData()
   }
 
   // ── Subscription handlers ──────────────────────────────────────────────────
@@ -574,7 +575,7 @@ export default function OutPage() {
     if (!item) return
     setWishlist(prev => prev.map(w => w.id === id ? { ...w, status: 'Ordered', bought_cost: paidCost, ordered_at: date } : w))
     showToast(`${item.name} ordered`, { type: 'payment' })
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await requireUser(supabase, 'record purchase')
     if (!user) { await loadData(); return }
     const categoryName = item.category ?? 'Shopping'
     const { data: existing } = await supabase.from('categories').select('id').eq('user_id', user.id).eq('name', categoryName).maybeSingle()
@@ -583,8 +584,11 @@ export default function OutPage() {
       const { data: created } = await supabase.from('categories').insert({ user_id: user.id, name: categoryName }).select('id').single()
       categoryId = created?.id ?? null
     }
-    await supabase.from('expenses').insert({ user_id: user.id, name: item.name, cost: paidCost, date, category_id: categoryId, status: 'Procured', card_id: cardId, description: item.url ?? null, original_cost: item.original_cost ?? null })
-    await supabase.from('wishlist').update({ status: 'Ordered', bought_cost: paidCost, ordered_at: date }).eq('id', id)
+    const { error: expErr } = await supabase.from('expenses').insert({ user_id: user.id, name: item.name, cost: paidCost, date, category_id: categoryId, status: 'Procured', card_id: cardId, description: item.url ?? null, original_cost: item.original_cost ?? null })
+    if (!reportDbError(expErr, 'record purchase')) {
+      const { error: wishErr } = await supabase.from('wishlist').update({ status: 'Ordered', bought_cost: paidCost, ordered_at: date }).eq('id', id)
+      reportDbError(wishErr, 'record purchase')
+    }
     loadData()
   }
 
@@ -624,16 +628,17 @@ export default function OutPage() {
     const tempId = `temp-${Date.now()}`
     setWishlist(prev => [{ id: tempId, name: item.name, original_cost: item.original_cost, category: item.category, url: item.url, description: item.description, bought_cost: null, ordered_at: null, status: 'Interested' }, ...prev])
     showToast(`${item.name} added`, { type: 'add' })
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await requireUser(supabase, 'add wishlist item')
     if (!user) { await loadData(); return }
-    await supabase.from('wishlist').insert({ user_id: user.id, name: item.name, original_cost: item.original_cost, category: item.category, url: item.url, description: item.description, status: 'Interested' })
+    const { error } = await supabase.from('wishlist').insert({ user_id: user.id, name: item.name, original_cost: item.original_cost, category: item.category, url: item.url, description: item.description, status: 'Interested' })
+    reportDbError(error, 'add wishlist item')
     await loadData()
   }
 
   async function handleEditWish(id: string, edits: WishEdits) {
     setWishlist(prev => prev.map(w => w.id === id ? { ...w, ...edits } : w))
     const { error } = await supabase.from('wishlist').update({ name: edits.name, original_cost: edits.original_cost, category: edits.category, url: edits.url, description: edits.description }).eq('id', id)
-    if (error) { console.error('edit wish error:', JSON.stringify(error)); await loadData() }
+    if (reportDbError(error, 'save wishlist item')) await loadData()
   }
 
   // ── Computed ───────────────────────────────────────────────────────────────

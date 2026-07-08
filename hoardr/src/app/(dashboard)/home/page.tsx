@@ -12,6 +12,7 @@ import { AddWishlistSheet, type NewWishItem } from '@/components/plans/AddWishli
 import { pageCache } from '@/lib/page-cache'
 import { getAppPrefs } from '@/lib/app-prefs'
 import { showToast } from '@/lib/toast'
+import { reportDbError, requireUser } from '@/lib/db-error'
 import { PullIndicator } from '@/components/ui/PullIndicator'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
@@ -301,7 +302,7 @@ export default function HomePage() {
   async function handleAdd(tx: SeedTx) {
     showToast(`${tx.name} added`, { type: 'add' })
 
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await requireUser(supabase, 'add transaction')
     if (!user) return
 
     if (tx.type === 'Expense') {
@@ -313,7 +314,7 @@ export default function HomePage() {
           .from('categories').insert({ user_id: user.id, name: tx.category }).select('id').single()
         categoryId = created?.id ?? null
       }
-      await supabase.from('expenses').insert({
+      const { error } = await supabase.from('expenses').insert({
         user_id:     user.id,
         name:        tx.name,
         cost:        tx.amount,
@@ -323,8 +324,9 @@ export default function HomePage() {
         status:      'Procured',
         card_id:     tx.card_id ?? null,
       })
+      reportDbError(error, 'add expense')
     } else {
-      await supabase.from('income').insert({
+      const { error } = await supabase.from('income').insert({
         user_id:     user.id,
         name:        tx.name,
         amount:      tx.amount,
@@ -333,6 +335,7 @@ export default function HomePage() {
         source:      tx.category,
         bank_id:     tx.bank_id ?? null,
       })
+      reportDbError(error, 'add income')
     }
 
     await loadData()
@@ -340,9 +343,9 @@ export default function HomePage() {
 
   async function handleAddWish(item: NewWishItem) {
     showToast(`${item.name} added to wishlist`, { type: 'add' })
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await requireUser(supabase, 'add wishlist item')
     if (!user) return
-    await supabase.from('wishlist').insert({
+    const { error } = await supabase.from('wishlist').insert({
       user_id:       user.id,
       name:          item.name,
       original_cost: item.original_cost,
@@ -351,6 +354,7 @@ export default function HomePage() {
       url:           item.url,
       status:        'Interested',
     })
+    reportDbError(error, 'add wishlist item')
   }
 
   function handleSubPaid(sub: UpcomingSub) {
