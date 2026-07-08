@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { X, Banknote } from 'lucide-react'
 import { cn, localToday, $fd } from '@/lib/utils'
+import { CustomDateInput } from '@/components/ui/CustomDateInput'
 
 export interface BankOption { id: string; name: string }
 
@@ -237,9 +238,8 @@ export function RevenueStreamSheet({ open, onClose, banks, onDone, initial }: Pr
           <div>
             <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Next payment date</p>
             <div className="overflow-hidden rounded-[14px]">
-              <input type="date" value={nextPayDate} onChange={e => setNextPayDate(e.target.value)}
-                className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 text-[15px] text-ink outline-none focus:border-gold/40"
-                style={{ colorScheme: 'dark' }}/>
+              <CustomDateInput value={nextPayDate} onChange={setNextPayDate}
+                className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 text-[15px] text-ink outline-none focus:border-gold/40" />
             </div>
           </div>
 

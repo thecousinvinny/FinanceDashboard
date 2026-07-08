@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { localToday, cn } from '@/lib/utils'
+import { CustomDateInput } from '@/components/ui/CustomDateInput'
 import type { BillingCycle } from '@/types'
 import type { CardOption, BankOption } from '@/components/money/AddTransactionSheet'
 import { EXPENSE_CATEGORIES } from '@/lib/data/transactions'
@@ -297,9 +298,8 @@ export function AddSubscriptionSheet({ open, onClose, onAdd, cards = [], banks =
           <div>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Next Renewal</p>
             <div className="overflow-hidden rounded-[14px] bg-bg-overlay">
-              <input
-                type="date" value={nextRenewal} onChange={e => setNextRenewal(e.target.value)}
-                style={{ colorScheme: 'dark' }}
+              <CustomDateInput
+                value={nextRenewal} onChange={setNextRenewal}
                 className="w-full bg-transparent px-4 py-3 text-[15px] text-ink outline-none"
               />
             </div>

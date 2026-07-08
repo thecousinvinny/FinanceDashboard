@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { localToday, cn } from '@/lib/utils'
+import { CustomDateInput } from '@/components/ui/CustomDateInput'
 
 export interface NewCommission {
   client_name:  string
@@ -202,8 +203,8 @@ export function AddCommissionSheet({ open, onClose, onAdd }: Props) {
                 Deadline <span className="normal-case text-ink-faint/60">(opt.)</span>
               </p>
               <div className="overflow-hidden rounded-[14px] bg-bg-overlay">
-                <input type="date" value={deadline} onChange={e => setDeadline(e.target.value)}
-                  min={localToday()} style={{ colorScheme: 'dark' }}
+                <CustomDateInput value={deadline} onChange={setDeadline}
+                  min={localToday()} placeholder="No deadline"
                   className="w-full bg-transparent px-4 py-3 text-[15px] text-ink outline-none" />
               </div>
             </div>

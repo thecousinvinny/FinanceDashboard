@@ -17,9 +17,10 @@ import { readTheme } from '@/lib/theme'
 interface Props {
   anchorRect: DOMRect     // field the picker is anchored under
   startDate:  string      // YYYY-MM-DD
-  endDate:    string      // YYYY-MM-DD
+  endDate:    string      // YYYY-MM-DD (single mode: pass same as startDate)
+  mode?:      'range' | 'single'
   onClose:    () => void
-  onApply:    (start: string, end: string) => void
+  onApply:    (start: string, end: string) => void   // single mode: end === start
 }
 
 // ── Palette (spec) ──────────────────────────────────────────────────────────
@@ -79,11 +80,12 @@ function shiftDays(s: string, delta: number): string {
   return iso(dt.getFullYear(), dt.getMonth() + 1, dt.getDate())
 }
 
-export function DateRangePicker({ anchorRect, startDate, endDate, onClose, onApply }: Props) {
-  const teal = readTheme() === 'midnight-teal'
+export function DateRangePicker({ anchorRect, startDate, endDate, mode = 'range', onClose, onApply }: Props) {
+  const teal   = readTheme() === 'midnight-teal'
+  const single = mode === 'single'
 
   const [from,  setFrom]    = useState<string>(startDate)
-  const [to,    setTo]      = useState<string | null>(endDate && endDate !== startDate ? endDate : null)
+  const [to,    setTo]      = useState<string | null>(!single && endDate && endDate !== startDate ? endDate : null)
   const [phase, setPhase]   = useState<'start' | 'end'>('start')
   const [hover, setHover]   = useState<string | null>(null)
   const [focus, setFocus]   = useState<string>(startDate)
@@ -152,6 +154,10 @@ export function DateRangePicker({ anchorRect, startDate, endDate, onClose, onApp
   }
 
   function pick(dayIso: string) {
+    if (single) {
+      setFrom(dayIso); setFocus(dayIso)
+      return
+    }
     if (phase === 'start' || (from && to)) {
       setFrom(dayIso); setTo(null); setPhase('end')
     } else {
@@ -231,16 +237,24 @@ export function DateRangePicker({ anchorRect, startDate, endDate, onClose, onApp
         transition: 'opacity 0.2s ease, transform 0.2s cubic-bezier(0.2,0,0,1)',
       }}
     >
-      {/* From → To range chips */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-        <button style={chipStyle(phase === 'start')} onClick={() => setPhase('start')}>
-          {from ? fmtMDY(from) : <span style={{ color: MUTED }}>M/D/YY</span>}
-        </button>
-        <span style={{ color: MUTED, fontSize: 13 }}>→</span>
-        <button style={chipStyle(phase === 'end')} onClick={() => setPhase('end')}>
-          {to ? fmtMDY(to) : <span style={{ color: MUTED }}>M/D/YY</span>}
-        </button>
-      </div>
+      {/* Selected date chip(s) */}
+      {single ? (
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 14 }}>
+          <div style={chipStyle(true)}>
+            {from ? fmtMDY(from) : <span style={{ color: MUTED }}>M/D/YY</span>}
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+          <button style={chipStyle(phase === 'start')} onClick={() => setPhase('start')}>
+            {from ? fmtMDY(from) : <span style={{ color: MUTED }}>M/D/YY</span>}
+          </button>
+          <span style={{ color: MUTED, fontSize: 13 }}>→</span>
+          <button style={chipStyle(phase === 'end')} onClick={() => setPhase('end')}>
+            {to ? fmtMDY(to) : <span style={{ color: MUTED }}>M/D/YY</span>}
+          </button>
+        </div>
+      )}
 
       {/* Month navigation */}
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>

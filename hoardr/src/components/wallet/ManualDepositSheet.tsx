@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useMemo } from 'react'
 import { X, Banknote, ChevronDown } from 'lucide-react'
 import { cn, localToday, $fd } from '@/lib/utils'
+import { CustomDateInput } from '@/components/ui/CustomDateInput'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import { showToast } from '@/lib/toast'
 import { createClient } from '@/lib/supabase/client'
@@ -267,9 +268,8 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
           <div>
             <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Date</p>
             <div className="overflow-hidden rounded-[14px]">
-              <input type="date" value={date} onChange={e => setDate(e.target.value)}
-                className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink outline-none focus:border-gold/40"
-                style={{ colorScheme: 'dark' }}/>
+              <CustomDateInput value={date} onChange={setDate}
+                className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink outline-none focus:border-gold/40" />
             </div>
           </div>
 

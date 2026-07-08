@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useMemo } from 'react'
 import { X, Banknote } from 'lucide-react'
 import { cn, localToday } from '@/lib/utils'
+import { CustomDateInput } from '@/components/ui/CustomDateInput'
 import { showToast } from '@/lib/toast'
 import { createClient } from '@/lib/supabase/client'
 
@@ -233,13 +234,11 @@ export function PaycheckSheet({ open, onClose, banks, onDone }: Props) {
           <div>
             <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">First paycheck date</p>
             <div className="overflow-hidden rounded-[14px]">
-              <input
-                type="date"
+              <CustomDateInput
                 value={startDate}
                 max={localToday()}
-                onChange={e => setStartDate(e.target.value)}
+                onChange={setStartDate}
                 className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 text-[15px] text-ink outline-none focus:border-gold/40"
-                style={{ colorScheme: 'dark' }}
               />
             </div>
           </div>

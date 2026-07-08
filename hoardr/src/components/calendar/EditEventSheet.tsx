@@ -6,6 +6,8 @@ import { localToday } from '@/lib/utils'
 import { rruleLabel } from '@/lib/rrule'
 import { RecurrencePicker } from './RecurrencePicker'
 import { LocationPickerSheet } from './LocationPickerSheet'
+import { DateRangePicker } from './DateRangePicker'
+import { useIsLargeScreen } from '@/lib/use-large-screen'
 import type { GCalendar } from './CalendarSettingsSheet'
 
 export interface EditableEvent {
@@ -99,6 +101,10 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [recurrencePickerOpen, setRecurrencePickerOpen] = useState(false)
   const [locPickerOpen,        setLocPickerOpen]        = useState(false)
+  const [dateRangeOpen,        setDateRangeOpen]        = useState(false)
+  const [dateAnchor,           setDateAnchor]           = useState<DOMRect | null>(null)
+  const isLargeScreen = useIsLargeScreen()
+  const dateRowRef = useRef<HTMLDivElement>(null)
 
   // Location autocomplete state
   const [locValue,       setLocValue]       = useState('')
@@ -580,13 +586,19 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
               {/* 3 — From / To dates */}
               <div style={rowStyle}>
                 <Calendar size={16} color={MUTED} style={{ flexShrink: 0 }} />
-                <div style={{ display: 'flex', gap: 10, flex: 1 }}>
+                <div
+                  ref={dateRowRef}
+                  onClick={isLargeScreen ? () => { setDateAnchor(dateRowRef.current?.getBoundingClientRect() ?? null); setDateRangeOpen(true) } : undefined}
+                  style={{ display: 'flex', gap: 10, flex: 1, cursor: isLargeScreen ? 'pointer' : undefined }}
+                >
                   <div>
                     <p style={labelStyle}>FROM</p>
                     <div style={pillStyle()}>
                       <span>{fmtDatePill(form.date)}</span>
-                      <input type="date" value={form.date} style={hiddenInput}
-                        onChange={e => set('date', e.target.value)} />
+                      {!isLargeScreen && (
+                        <input type="date" value={form.date} style={hiddenInput}
+                          onChange={e => set('date', e.target.value)} />
+                      )}
                     </div>
                   </div>
                   <div>
@@ -595,8 +607,10 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
                       <span style={{ color: form.endDate !== form.date ? GOLD : 'var(--color-ink)' }}>
                         {fmtDatePill(form.endDate || form.date)}
                       </span>
-                      <input type="date" value={form.endDate || form.date} min={form.date} style={hiddenInput}
-                        onChange={e => set('endDate', e.target.value)} />
+                      {!isLargeScreen && (
+                        <input type="date" value={form.endDate || form.date} min={form.date} style={hiddenInput}
+                          onChange={e => set('endDate', e.target.value)} />
+                      )}
                     </div>
                   </div>
                 </div>
@@ -795,6 +809,20 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
         onClose={() => setLocPickerOpen(false)}
         onSelect={loc => { setLocValue(loc); setForm(f => f ? { ...f, location: loc } : f) }}
       />
+
+      {/* Custom date-range picker (PC / iPad) */}
+      {dateRangeOpen && dateAnchor && form && (
+        <DateRangePicker
+          anchorRect={dateAnchor}
+          startDate={form.date}
+          endDate={form.endDate || form.date}
+          onClose={() => setDateRangeOpen(false)}
+          onApply={(start, end) => {
+            setForm(f => f ? { ...f, date: start, endDate: end } : f)
+            setDateRangeOpen(false)
+          }}
+        />
+      )}
     </>
   )
 }

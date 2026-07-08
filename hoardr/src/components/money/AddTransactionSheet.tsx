@@ -10,6 +10,7 @@ import {
 } from '@/lib/data/transactions'
 import { localToday, cn, $fd } from '@/lib/utils'
 import { ChevronDown } from 'lucide-react'
+import { CustomDateInput } from '@/components/ui/CustomDateInput'
 
 type TxType = 'Expense' | 'Income'
 
@@ -390,9 +391,8 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
           <div>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Date</p>
             <div className="overflow-hidden rounded-[14px] bg-bg-overlay">
-              <input
-                type="date" value={date} onChange={e => setDate(e.target.value)}
-                style={{ colorScheme: 'dark' }}
+              <CustomDateInput
+                value={date} onChange={setDate}
                 className="w-full bg-transparent px-4 py-3 text-[15px] text-ink outline-none"
               />
             </div>
