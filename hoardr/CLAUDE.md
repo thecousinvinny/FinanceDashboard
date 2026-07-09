@@ -67,6 +67,18 @@ Two clients — never swap:
 - `src/lib/supabase/client.ts` — browser (`'use client'` components)
 - `src/lib/supabase/server.ts` — server components and API routes (cookie-aware, async)
 
+## Auth & session lifecycle
+
+Google OAuth via Supabase. Login (`(auth)/login`) calls `signInWithOAuth` with `access_type: 'offline'`. The callback route (`src/app/auth/callback/route.ts`) exchanges the code, persists `provider_refresh_token` into `profiles.google_refresh_token` (for Calendar CRUD), and copies the new auth cookies onto its redirect response.
+
+**`middleware.ts` invariant — carry refreshed cookies onto redirects.** `getUser()` may rotate the refresh token and set new cookies on `supabaseResponse`. Every `NextResponse.redirect(...)` the middleware returns **must** copy those over (`supabaseResponse.cookies.getAll().forEach(c => res.cookies.set(c))`), or the browser keeps the old, now-revoked token → the next refresh fails with `refresh_token_not_found` → silent sign-out, after which RLS writes fail with no error. The matcher excludes `api` and `auth` so `getUser()` doesn't run there (less rotation churn).
+
+**`AuthWatcher`** (`src/components/auth/AuthWatcher.tsx`, mounted in `(dashboard)/layout.tsx`) — global session guard. On `onAuthStateChange` `SIGNED_OUT` it toasts and routes to `/login`. On focus/visibility it revalidates via `getSession()`, silently refreshing an expired-but-recoverable session (no forced re-login); only a genuinely dead session routes to login. Prefer `getSession()` over `getUser()` for this — `getUser()` 401s on a merely-expired access token even when the refresh token is still valid.
+
+**Write safety (`src/lib/db-error.ts`)** — user-initiated RLS writes must surface failure, never `console.error`-and-continue:
+- `requireUser(supabase, action)` — resolves the user via `getSession()`; toasts "Session expired" and returns `null` when the session is truly gone.
+- `reportDbError(error, action)` — toasts on a rejected write (session-expired copy for auth-like codes `PGRST301` / `42501` / JWT messages); returns `true` so the caller can bail.
+
 ## Async safety pattern (required on every `'use client'` page)
 
 Rapid tab switching causes in-flight queries to resolve after unmount → Safari WKWebView crashes. Every client page must guard with a generation counter + AbortController. Canonical example: `home/page.tsx`. Pattern: `loadGen = useRef(0)`, `abortRef = useRef<AbortController|null>(null)`, increment gen and abort on each call, discard result if `gen !== loadGen.current`. Cleanup: `return () => { loadGen.current++; abortRef.current?.abort() }`. Second data fetch needs a separate `detailGen` + `detailAbortRef`.
@@ -103,6 +115,8 @@ Module-level emitter — call from anywhere. `<ToastContainer />` mounted in `(d
 - `calendar/RecurrencePicker.tsx` — `z-[70]`. Preset list + custom builder.
 - `calendar/EditEventSheet.tsx` — iPhone sheet for create/edit. `EditableEvent.id` optional (no id = create mode). Cross-midnight: auto-bumps `endDate` +1 when `endTime < startTime`.
 - `calendar/CalendarPopover.tsx` — Notion-style popover for large screens; falls back to centered modal on iPhone. Google Places: use `defaultValue` (not `value`) — Places mutates DOM directly.
+- `calendar/DateRangePicker.tsx` — app-themed calendar picker popover (`z-[210]`), `mode: 'range' | 'single'`. Shown on large screens only (`useIsLargeScreen`, `src/lib/use-large-screen.ts`, ≥768px) in place of native `<input type="date">`; iPhone keeps native. Range = From→To (event `date`/`endDate`); single = one date. Wired into `CalendarPopover` + `EditEventSheet` (range).
+- `ui/CustomDateInput.tsx` — drop-in for one native date input: renders native `<input type="date">` on phone, a `DateRangePicker` (single) trigger on large screens. Pass the same `className`/`style` as the native input. Used by the transaction / subscription / transfer / deposit / paycheck / commission / revenue-stream sheets.
 - `profile/ProfileDrawer.tsx` — fixed avatar button top-right on every dashboard page. Hidden on `/profile` and `/settings`. Reads `profiles.avatar_url` and `profiles.display_name`; falls back to Google OAuth avatar and name from `user_metadata`.
 - `home/HomeHero.tsx` — sparkline card. `gestureMode` ref coordinates flick-to-switch vs long-press-to-scrub with child `SparkChart`.
 - `home/SparkChart.tsx` — three series (inc/exp/sub). Gradients use `gradientUnits="userSpaceOnUse"`. Fill colors read via `getComputedStyle` (not inline `var()` — WebKit SVG). Touch via native `addEventListener` `{ passive: false }`; 300ms long-press → scrub.
