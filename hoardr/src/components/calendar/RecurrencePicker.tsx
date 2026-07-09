@@ -33,14 +33,17 @@ function makePresets(dateStr: string): Preset[] {
 }
 
 type Freq = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY'
-interface Custom { freq: Freq; interval: number; byDays: string[]; endType: 'never' | 'date' | 'count'; endDate: string; endCount: number }
+interface Custom { freq: Freq; interval: number; byDays: string[]; byMonths: number[]; endType: 'never' | 'date' | 'count'; endDate: string; endCount: number }
 
-const DEFAULT_CUSTOM: Custom = { freq: 'WEEKLY', interval: 1, byDays: [], endType: 'never', endDate: '', endCount: 5 }
+const DEFAULT_CUSTOM: Custom = { freq: 'WEEKLY', interval: 1, byDays: [], byMonths: [], endType: 'never', endDate: '', endCount: 5 }
 
 function customToRule(c: Custom): string {
   let rule = `FREQ=${c.freq}`
   if (c.interval > 1) rule += `;INTERVAL=${c.interval}`
-  if (c.freq === 'WEEKLY' && c.byDays.length > 0) rule += `;BYDAY=${c.byDays.join(',')}`
+  if (c.freq === 'WEEKLY' && c.byDays.length > 0)
+    rule += `;BYDAY=${[...c.byDays].sort((a, b) => DOW_RRULE.indexOf(a) - DOW_RRULE.indexOf(b)).join(',')}`
+  if (c.freq === 'YEARLY' && c.byMonths.length > 0)
+    rule += `;BYMONTH=${[...c.byMonths].sort((a, b) => a - b).join(',')}`
   if (c.endType === 'date' && c.endDate) rule += `;UNTIL=${c.endDate.replace(/-/g, '')}`
   if (c.endType === 'count' && c.endCount > 0) rule += `;COUNT=${c.endCount}`
   return rule
@@ -50,14 +53,15 @@ const M = 'var(--font-montserrat)'
 const GOLD = '#C9A84C'
 
 interface Props {
-  open:     boolean
-  date:     string
-  value:    string
-  onClose:  () => void
-  onChange: (rule: string) => void
+  open:      boolean
+  date:      string
+  value:     string
+  elevated?: boolean   // render above z-200 popovers (desktop CalendarPopover)
+  onClose:   () => void
+  onChange:  (rule: string) => void
 }
 
-export function RecurrencePicker({ open, date, value, onClose, onChange }: Props) {
+export function RecurrencePicker({ open, date, value, elevated, onClose, onChange }: Props) {
   const [view, setView]     = useState<'presets' | 'custom'>('presets')
   const [custom, setCustom] = useState<Custom>(DEFAULT_CUSTOM)
   const presets = makePresets(date)
@@ -73,8 +77,8 @@ export function RecurrencePicker({ open, date, value, onClose, onChange }: Props
 
   return (
     <>
-      <div className="fixed inset-0 z-[60]" style={{ background: 'rgba(0,0,0,0.55)' }} onClick={onClose} />
-      <div className="fixed inset-x-0 bottom-0 z-[70] rounded-t-[24px]" style={{ background: '#1a1a1a', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      <div data-recur-picker className={`fixed inset-0 ${elevated ? 'z-[205]' : 'z-[60]'}`} style={{ background: 'rgba(0,0,0,0.55)' }} onClick={onClose} />
+      <div data-recur-picker className={`fixed inset-x-0 bottom-0 ${elevated ? 'z-[210]' : 'z-[70]'} rounded-t-[24px]`} style={{ background: '#1a1a1a', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         {/* Handle */}
         <div className="flex justify-center pt-3 pb-2">
           <div className="w-9 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.2)' }} />
@@ -167,6 +171,29 @@ export function RecurrencePicker({ open, date, value, onClose, onChange }: Props
                       )
                     })}
                   </div>
+                </>
+              )}
+
+              {/* Month picker — YEARLY only */}
+              {custom.freq === 'YEARLY' && (
+                <>
+                  <p style={{ fontFamily: M, fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 8 }}>In</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6, marginBottom: 20 }}>
+                    {MON_SHORT.map((lbl, i) => {
+                      const mo     = i + 1
+                      const active = custom.byMonths.includes(mo)
+                      return (
+                        <button key={mo} onClick={() => setCustom(c => ({ ...c, byMonths: active ? c.byMonths.filter(x => x !== mo) : [...c.byMonths, mo] }))} style={{
+                          height: 34, borderRadius: 8, fontFamily: M, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+                          background: active ? 'linear-gradient(135deg,#F6DF9E,#D4AF37,#A47F23)' : 'rgba(255,255,255,0.07)',
+                          color: active ? '#1a1a1a' : 'rgba(255,255,255,0.45)',
+                        }}>{lbl}</button>
+                      )
+                    })}
+                  </div>
+                  <p style={{ fontFamily: M, fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: -12, marginBottom: 20 }}>
+                    Repeats on day {date && date.length >= 10 ? Number(date.split('-')[2]) : ''} of each selected month.
+                  </p>
                 </>
               )}
 

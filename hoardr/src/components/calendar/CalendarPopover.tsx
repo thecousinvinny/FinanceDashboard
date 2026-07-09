@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react'
 import { X, MapPin, AlignLeft, RefreshCw, Clock, ChevronDown, Calendar } from 'lucide-react'
 import type { GCalendar } from './CalendarSettingsSheet'
 import { DateRangePicker } from './DateRangePicker'
+import { RecurrencePicker } from './RecurrencePicker'
+import { rruleLabel } from '@/lib/rrule'
 
 export interface PopoverFormData {
   eventId?:       string
@@ -28,6 +30,7 @@ interface Props {
   onClose:   () => void
   onSave:    (data: PopoverFormData) => void
   onDelete?: () => void
+  onDuplicate?: (data: PopoverFormData) => void
   saving?:   boolean
 }
 
@@ -148,7 +151,7 @@ type DropRect = { top: number; left: number; width: number }
 
 export function CalendarPopover({
   anchorRect, mode, initial, googleCals, googleCalendarColors,
-  onClose, onSave, onDelete, saving,
+  onClose, onSave, onDelete, onDuplicate, saving,
 }: Props) {
   const [form, setForm]               = useState<PopoverFormData>(initial)
   const [repeatOpen, setRepeatOpen]   = useState(false)
@@ -161,6 +164,7 @@ export function CalendarPopover({
   const [visible, setVisible]         = useState(false)
   const [dateRangeOpen, setDateRangeOpen] = useState(false)
   const [dateAnchor, setDateAnchor]       = useState<DOMRect | null>(null)
+  const [recurOpen, setRecurOpen]         = useState(false)
   const [locValue,       setLocValue]       = useState(initial.location)
   const [locSuggestions, setLocSuggestions] = useState<LocSuggestion[]>([])
   const [locOpen,        setLocOpen]        = useState(false)
@@ -239,7 +243,8 @@ export function CalendarPopover({
         !startDropRef.current?.contains(e.target as Node) &&
         !endDropRef.current?.contains(e.target as Node) &&
         !locDropRef.current?.contains(e.target as Node) &&
-        !(e.target as Element)?.closest?.('[data-daterange-picker]')
+        !(e.target as Element)?.closest?.('[data-daterange-picker]') &&
+        !(e.target as Element)?.closest?.('[data-recur-picker]')
       ) onClose()
     }
     const t = setTimeout(() => document.addEventListener('mousedown', onDown), 60)
@@ -280,6 +285,7 @@ export function CalendarPopover({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        if (recurOpen)     { setRecurOpen(false);     return }
         if (dateRangeOpen) { setDateRangeOpen(false); return }
         if (locOpen)    { setLocOpen(false);    return }
         if (startOpen)  { setStartOpen(false);  return }
@@ -290,7 +296,7 @@ export function CalendarPopover({
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose, startOpen, endOpen, calDropOpen, locOpen, dateRangeOpen])
+  }, [onClose, startOpen, endOpen, calDropOpen, locOpen, dateRangeOpen, recurOpen])
 
   function setField<K extends keyof PopoverFormData>(key: K, val: PopoverFormData[K]) {
     setForm(f => {
@@ -459,6 +465,7 @@ export function CalendarPopover({
   const activeCal = calList.find(c => c.id === form.calendarId) ?? calList[0]
   const calColor  = googleCalendarColors?.[form.calendarId] ?? activeCal?.backgroundColor ?? '#4285F4'
   const canSave   = !!form.title.trim()
+  const isCustomRepeat = !!form.recurrenceRule && !REPEAT_OPTIONS.some(o => o.value === form.recurrenceRule)
 
   const inputStyle: React.CSSProperties = {
     background: 'none', border: 'none', outline: 'none',
@@ -669,6 +676,16 @@ export function CalendarPopover({
         />
       )}
 
+      {/* Custom recurrence builder (elevated above the popover) */}
+      <RecurrencePicker
+        open={recurOpen}
+        date={form.date}
+        value={form.recurrenceRule}
+        elevated
+        onClose={() => setRecurOpen(false)}
+        onChange={rule => setField('recurrenceRule', rule)}
+      />
+
       {/* Popover card */}
       <div ref={popRef} style={popoverStyle}>
 
@@ -770,7 +787,7 @@ export function CalendarPopover({
               style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', width: '100%', background: 'none', border: 'none', cursor: 'pointer' }}>
               <RefreshCw size={16} color={MUTED} style={{ flexShrink: 0 }} />
               <span style={{ flex: 1, fontSize: 13, color: form.recurrenceRule ? 'var(--color-ink)' : MUTED, fontFamily: 'var(--font-montserrat)', textAlign: 'left' }}>
-                {repeatLabel(form.recurrenceRule)}
+                {form.recurrenceRule ? rruleLabel(form.recurrenceRule, form.date) : 'Repeat'}
               </span>
             </button>
             {repeatOpen && (
@@ -781,6 +798,11 @@ export function CalendarPopover({
                     {opt.label}
                   </button>
                 ))}
+                <button onClick={() => { setRepeatOpen(false); setRecurOpen(true) }}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, width: '100%', padding: '8px 14px 8px 40px', background: isCustomRepeat ? 'rgba(201,168,76,0.08)' : 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 13, color: isCustomRepeat ? GOLD : 'var(--color-ink)', fontFamily: 'var(--font-montserrat)' }}>
+                  <span>Custom…</span>
+                  {isCustomRepeat && <span style={{ fontSize: 11, color: MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rruleLabel(form.recurrenceRule, form.date)}</span>}
+                </button>
               </div>
             )}
           </div>
@@ -824,6 +846,11 @@ export function CalendarPopover({
           {mode === 'edit' && onDelete && (
             <button onClick={onDelete} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#ef4444', fontFamily: 'var(--font-montserrat)', padding: '6px 10px', borderRadius: 8, marginRight: 'auto' }}>
               Delete
+            </button>
+          )}
+          {mode === 'edit' && onDuplicate && (
+            <button onClick={() => onDuplicate(form)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--color-ink)', fontWeight: 500, fontFamily: 'var(--font-montserrat)', padding: '6px 12px', borderRadius: 8 }}>
+              Duplicate
             </button>
           )}
           <button onClick={() => canSave && !saving && onSave(form)} disabled={!canSave || saving}

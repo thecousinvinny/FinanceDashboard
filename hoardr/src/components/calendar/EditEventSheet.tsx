@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { MapPin, Clock, AlignLeft, X, ChevronDown, RefreshCw, Calendar } from 'lucide-react'
+import { MapPin, Clock, AlignLeft, X, ChevronDown, RefreshCw, Calendar, Copy } from 'lucide-react'
 import { localToday } from '@/lib/utils'
 import { rruleLabel } from '@/lib/rrule'
 import { RecurrencePicker } from './RecurrencePicker'
@@ -56,6 +56,7 @@ interface Props {
   onClose:     () => void
   onSave:      (edits: EventEdits, scope: RecurrenceScope) => Promise<void>
   onDelete:    (scope: RecurrenceScope) => void
+  onDuplicate?: (edits: EventEdits) => void
 }
 
 const M    = 'var(--font-montserrat)'
@@ -93,7 +94,7 @@ function calcDuration(date: string, startTime: string, endDate: string, endTime:
   return `${h}h ${m}m`
 }
 
-export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, onDelete }: Props) {
+export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, onDelete, onDuplicate }: Props) {
   const [step, setStep]                   = useState<'scope' | 'form'>('form')
   const [scope, setScope]                 = useState<RecurrenceScope>('this')
   const [form, setForm]                   = useState<EventEdits | null>(null)
@@ -153,7 +154,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
 
   useEffect(() => {
     if (open && event) {
-      setStep(event.recurrenceRule ? 'scope' : 'form')
+      setStep(event.recurrenceRule && event.id ? 'scope' : 'form')
       setScope('this')
       setSaving(false)
       setConfirmDelete(false)
@@ -713,6 +714,19 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
                       </option>
                     ))}
                   </select>
+                </div>
+              )}
+
+              {/* Duplicate — only when editing an existing event */}
+              {event?.id && onDuplicate && (
+                <div style={{ padding: '12px 16px 0' }}>
+                  <button
+                    type="button"
+                    onClick={() => { if (form) onDuplicate(form) }}
+                    style={{ width: '100%', height: 44, background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 12, cursor: 'pointer', fontSize: 14, fontWeight: 500, fontFamily: M, color: 'var(--color-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                  >
+                    <Copy size={15} /> Duplicate
+                  </button>
                 </div>
               )}
 

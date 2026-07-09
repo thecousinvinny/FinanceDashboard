@@ -30,7 +30,7 @@ export function expandRRule(
   const interval   = Math.max(1, parseInt(p.INTERVAL ?? '1'))
   const byDayStrs  = p.BYDAY ? p.BYDAY.split(',') : []
   const byMonthDay = p.BYMONTHDAY ? parseInt(p.BYMONTHDAY) : null
-  const byMonth    = p.BYMONTH    ? parseInt(p.BYMONTH)    : null
+  const byMonths   = p.BYMONTH ? p.BYMONTH.split(',').map(n => parseInt(n)).filter(n => n >= 1 && n <= 12) : []
   const bySetPos   = p.BYSETPOS   ? parseInt(p.BYSETPOS)   : null
   const maxCount   = p.COUNT ? parseInt(p.COUNT) : Infinity
   // Normalise UNTIL from YYYYMMDD or YYYYMMDDTHHMMSSZ
@@ -107,12 +107,14 @@ export function expandRRule(
     }
 
   } else if (freq === 'YEARLY') {
+    // Supports multiple BYMONTH values (e.g. Jan, Mar, Jun). BYMONTHDAY, or the
+    // base date's day-of-month, sets which day within each month.
+    const months = byMonths.length ? [...byMonths].sort((a, b) => a - b) : [base.getMonth() + 1]
+    const day    = byMonthDay ?? base.getDate()
     for (let yr = base.getFullYear(); n < maxCount; yr += interval) {
-      const occ = byMonth != null && byMonthDay != null
-        ? new Date(yr, byMonth - 1, byMonthDay)
-        : new Date(yr, base.getMonth(), base.getDate())
-      if (occ > endD) break
-      push(occ)
+      const occs = months.map(mo => new Date(yr, mo - 1, day)).sort((a, b) => a.getTime() - b.getTime())
+      for (const occ of occs) push(occ)
+      if (occs[0] && occs[0] > endD) break
     }
   }
 
@@ -141,10 +143,14 @@ export function rruleLabel(rule: string, baseDate: string): string {
   if (freq === 'WEEKLY') {
     const byday = p.BYDAY ?? ''
     if (byday === 'MO,TU,WE,TH,FR') return 'Every weekday (Mon–Fri)'
-    const dayName = DAY_NAMES[base.getDay()]
-    if (interval === 1) return `Every week (on ${dayName})`
-    if (interval === 2) return `Every 2 weeks (on ${dayName})`
-    return `Every ${interval} weeks (on ${dayName})`
+    const prefix = interval === 1 ? 'Every week' : `Every ${interval} weeks`
+    if (byday) {
+      const order  = ['SU','MO','TU','WE','TH','FR','SA']
+      const dowMap: Record<string, string> = { SU:'Sun',MO:'Mon',TU:'Tue',WE:'Wed',TH:'Thu',FR:'Fri',SA:'Sat' }
+      const days = byday.split(',').sort((a, b) => order.indexOf(a) - order.indexOf(b)).map(c => dowMap[c] ?? c).join(', ')
+      return `${prefix} (${days})`
+    }
+    return `${prefix} (on ${DAY_NAMES[base.getDay()]})`
   }
 
   if (freq === 'MONTHLY') {
@@ -167,6 +173,13 @@ export function rruleLabel(rule: string, baseDate: string): string {
     return 'Every month'
   }
 
-  if (freq === 'YEARLY') return `Every year (on ${MON_SHORT[m - 1]} ${d})`
+  if (freq === 'YEARLY') {
+    if (p.BYMONTH && p.BYMONTH.includes(',')) {
+      const months = p.BYMONTH.split(',').map(n => MON_SHORT[parseInt(n) - 1] ?? n).join(', ')
+      return `Every year (${months})`
+    }
+    const mo = p.BYMONTH ? parseInt(p.BYMONTH) : m
+    return `Every year (on ${MON_SHORT[mo - 1]} ${d})`
+  }
   return rule
 }
