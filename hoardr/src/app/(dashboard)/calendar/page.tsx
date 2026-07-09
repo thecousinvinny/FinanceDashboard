@@ -252,8 +252,6 @@ export default function CalendarPage() {
   const evCtxRef = useRef<HTMLDivElement>(null)
   const [createDrag, setCreateDrag] = useState<{ anchor: string; start: string; end: string } | null>(null)
   const createDragRef = useRef<{ anchor: string; start: string; end: string } | null>(null)
-  const [resizeDrag, setResizeDrag] = useState<{ ev: CalEvent; edge: 'start' | 'end'; startDate: string; endDate: string } | null>(null)
-  const resizeDragRef = useRef<{ ev: CalEvent; edge: 'start' | 'end'; startDate: string; endDate: string } | null>(null)
   const [hiddenTypes,       setHiddenTypes]       = useState<Set<EventType>>(new Set())
   const [hiddenGoogleCals,  setHiddenGoogleCals]  = useState<Set<string>>(() => {
     try { const s = localStorage.getItem('cal-hidden-google-cals'); return s ? new Set(JSON.parse(s)) : new Set() } catch { return new Set() }
@@ -764,13 +762,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     } })
   }
 
-  // ── Drag-to-create (multi-day) + resize commit ────────────────────────────
-  const isoPlusDays = (d: string, n: number) => {
-    const [y, m, dd] = d.split('-').map(Number)
-    const nd = new Date(y, m - 1, dd + n)
-    return `${nd.getFullYear()}-${String(nd.getMonth() + 1).padStart(2, '0')}-${String(nd.getDate()).padStart(2, '0')}`
-  }
-
+  // ── Drag-to-create (multi-day) ────────────────────────────────────────────
   function openCreatePopoverRange(start: string, end: string) {
     const calId = prefs.defaultCalendarId
       ?? googleCals.find(c => prefs.googleCalendarIds.includes(c.id))?.id
@@ -789,36 +781,6 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       createDragRef.current = null
       setCreateDrag(null)
       if (cd && cd.start !== cd.end) openCreatePopoverRange(cd.start, cd.end)
-    }
-    document.addEventListener('mouseup', onUp)
-  }
-
-  async function handleResizeCommit(rd: { ev: CalEvent; edge: 'start' | 'end'; startDate: string; endDate: string }) {
-    const ev = rd.ev
-    if (!ev.id) return
-    // No-op if the edge wasn't actually moved (e.g. a click on the handle).
-    if (rd.startDate === (ev.instanceDate ?? rd.startDate) && rd.endDate === (ev.endDate ?? rd.endDate)) return
-    // Google all-day end date is exclusive → add one day.
-    const body: GCalEvent = { summary: ev.title, location: ev.location, description: ev.notes, start: { date: rd.startDate }, end: { date: isoPlusDays(rd.endDate, 1) } }
-    try {
-      await updateCalEvent(ev.id, body, ev.calendarId ?? 'primary')
-      showToast('Event resized', { type: 'payment' })
-    } catch {
-      showToast('Failed to resize', { type: 'delete' })
-    }
-    setGRefreshKey(k => k + 1)
-  }
-
-  function startResize(ev: CalEvent, edge: 'start' | 'end', startDate: string, endDate: string) {
-    const init = { ev, edge, startDate, endDate }
-    resizeDragRef.current = init
-    setResizeDrag(init)
-    const onUp = () => {
-      document.removeEventListener('mouseup', onUp)
-      const rd = resizeDragRef.current
-      resizeDragRef.current = null
-      setResizeDrag(null)
-      if (rd) handleResizeCommit(rd)
     }
     document.addEventListener('mouseup', onUp)
   }
@@ -1589,7 +1551,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                                   handleEventDrop(ev, ds, originDate)
                                 }}
                                 onMouseDown={e => {
-                                  if (e.button !== 0 || dragState || resizeDragRef.current) return
+                                  if (e.button !== 0 || dragState) return
                                   if ((e.target as HTMLElement).closest('[data-cal-event]')) return
                                   startCreateDrag(ds)
                                 }}
@@ -1600,23 +1562,16 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                                     const next = cd.anchor <= ds ? { ...cd, start: cd.anchor, end: ds } : { ...cd, start: ds, end: cd.anchor }
                                     createDragRef.current = next; setCreateDrag(next)
                                   }
-                                  if (resizeDragRef.current) {
-                                    const rd = resizeDragRef.current
-                                    let next = rd
-                                    if (rd.edge === 'end') { if (ds >= rd.startDate) next = { ...rd, endDate: ds } }
-                                    else { if (ds <= rd.endDate) next = { ...rd, startDate: ds } }
-                                    resizeDragRef.current = next; setResizeDrag(next)
-                                  }
                                 }}
                                 onMouseLeave={() => setPasteDate(p => p === ds ? null : p)}
                                 className="group"
-                                style={{ minHeight: CELL_MIN_H, borderRight: ci < 6 ? '0.5px solid var(--color-cal-grid-line)' : 'none', padding: '5px 0 4px', cursor: 'pointer', display: 'flex', flexDirection: 'column', background: isToday ? 'rgba(201,168,76,0.05)' : 'var(--color-cal-cell)', position: 'relative', userSelect: (createDrag || resizeDrag) ? 'none' : undefined }}
+                                style={{ minHeight: CELL_MIN_H, borderRight: ci < 6 ? '0.5px solid var(--color-cal-grid-line)' : 'none', padding: '5px 0 4px', cursor: 'pointer', display: 'flex', flexDirection: 'column', background: isToday ? 'rgba(201,168,76,0.05)' : 'var(--color-cal-cell)', position: 'relative', userSelect: createDrag ? 'none' : undefined }}
                               >
                                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none" style={{ background: 'rgb(var(--rgb-ink) / 0.03)' }} />
                                 {dragOverDate === ds && dragState && (
                                   <div style={{ position: 'absolute', inset: 0, background: 'rgba(212,175,55,0.07)', border: '1.5px solid rgba(212,175,55,0.3)', pointerEvents: 'none', zIndex: 5 }} />
                                 )}
-                                {((createDrag && ds >= createDrag.start && ds <= createDrag.end) || (resizeDrag && ds >= resizeDrag.startDate && ds <= resizeDrag.endDate)) && (
+                                {createDrag && ds >= createDrag.start && ds <= createDrag.end && (
                                   <div style={{ position: 'absolute', inset: 0, background: 'rgba(212,175,55,0.10)', border: '1px solid rgba(212,175,55,0.35)', pointerEvents: 'none', zIndex: 5 }} />
                                 )}
                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -1676,14 +1631,6 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                                             onClick={bar.ev.type === 'google' && bar.ev.id ? (e) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), bar.ev, days[bar.startCol] ?? ds) } : undefined}
                                             style={{ height: SPAN_H, marginBottom: SPAN_GAP, marginLeft: isStart ? 2 : 0, marginRight: isEnd ? 2 : 0, borderRadius: isStart ? '4px 0 0 4px' : isEnd ? '0 4px 4px 0' : 0, background: isPast ? bg + '8C' : bg, display: 'flex', alignItems: 'center', paddingLeft: isStart ? 4 : 2, overflow: 'hidden', cursor: (bar.ev.type === 'google') && bar.ev.id ? 'pointer' : 'default', position: 'relative', boxShadow: barSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none' }}>
                                             {(barHovered || barSel) && bar.ev.id && <div style={{ position: 'absolute', inset: 0, background: barSel ? 'rgba(255,255,255,0.145)' : 'rgba(255,255,255,0.071)', pointerEvents: 'none' }} />}
-                                            {isStart && bar.ev.type === 'google' && bar.ev.id && !bar.ev.amount?.trim() && (
-                                              <div onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); startResize(bar.ev, 'start', bar.ev.instanceDate ?? (days[bar.startCol] ?? ds), bar.ev.endDate ?? ds) }}
-                                                style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 7, cursor: 'ew-resize', zIndex: 6 }} />
-                                            )}
-                                            {isEnd && bar.ev.type === 'google' && bar.ev.id && !bar.ev.amount?.trim() && (
-                                              <div onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); startResize(bar.ev, 'end', bar.ev.instanceDate ?? (days[bar.startCol] ?? ds), bar.ev.endDate ?? ds) }}
-                                                style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 7, cursor: 'ew-resize', zIndex: 6 }} />
-                                            )}
                                             {isStart && <span className={isPast ? 'cal-pill-title-past' : 'cal-pill-title'} style={{ fontSize: 9, color: isPast ? lightTextColor(bg, true) : 'rgba(255,255,255,0.92)', fontFamily: 'var(--font-montserrat)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bar.ev.title}</span>}
                                           </div>
                                         )
