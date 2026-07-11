@@ -20,7 +20,7 @@ import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { PullIndicator } from '@/components/ui/PullIndicator'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { createCalEvent, updateCalEvent, deleteCalEvent, allDayEvent } from '@/lib/calendar'
-import { RefreshCw, CreditCard, XCircle, MinusCircle, Repeat2, ShoppingCart } from 'lucide-react'
+import { RefreshCw, CreditCard, XCircle, MinusCircle, Repeat2, ShoppingCart, Search, X } from 'lucide-react'
 import type { BillingCycle } from '@/types'
 import { usePillSwipe } from '@/hooks/usePillSwipe'
 import { getAppPrefs } from '@/lib/app-prefs'
@@ -154,8 +154,13 @@ export default function OutPage() {
   const [expandedSubCat, setExpandedSubCat] = useState<string | null>(null)
   const [subStatCard, setSubStatCard]    = useState<'month' | 'year'>('month')
   const [expStatCard, setExpStatCard]    = useState<'spent' | 'saved'>('spent')
+  const [searchOpen,  setSearchOpen]     = useState(false)
+  const [query,       setQuery]          = useState('')
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const q = searchOpen ? query.trim().toLowerCase() : ''
   usePillSwipe(tab, setTab, PILL_OPTIONS)
   useEffect(() => { setExpandedSubCat(null); setSubStatCard('month'); setExpStatCard('spent') }, [tab])
+  useEffect(() => { if (searchOpen) searchInputRef.current?.focus() }, [searchOpen])
   useEffect(() => { setExpandedSubCat(null) }, [subStatCard])
 
   // Expenses
@@ -647,6 +652,10 @@ export default function OutPage() {
   const cancelledSubs = useMemo(() => subs.filter(s => s.status === 'Cancelled'), [subs])
   const interestedWish = useMemo(() => wishlist.filter(w => w.status === 'Interested'), [wishlist])
 
+  const filteredActiveSubs    = useMemo(() => !q ? activeSubs    : activeSubs.filter(s    => s.name.toLowerCase().includes(q) || (s.category ?? '').toLowerCase().includes(q)),    [activeSubs, q])
+  const filteredCancelledSubs = useMemo(() => !q ? cancelledSubs : cancelledSubs.filter(s => s.name.toLowerCase().includes(q) || (s.category ?? '').toLowerCase().includes(q)), [cancelledSubs, q])
+  const filteredWish          = useMemo(() => !q ? interestedWish : interestedWish.filter(w => w.name.toLowerCase().includes(q) || (w.category ?? '').toLowerCase().includes(q) || (w.description ?? '').toLowerCase().includes(q)), [interestedWish, q])
+
   const subNames = useMemo(() =>
     new Set(activeSubs.map(s => s.name.toLowerCase())),
   [activeSubs])
@@ -760,12 +769,16 @@ export default function OutPage() {
   }, [interestedWish])
 
   const sorted = useMemo(() => [...txList].sort((a, b) => b.date.localeCompare(a.date)), [txList])
+  const filteredSorted = useMemo(
+    () => !q ? sorted : sorted.filter(t => t.name.toLowerCase().includes(q) || (t.category ?? '').toLowerCase().includes(q) || (t.description ?? '').toLowerCase().includes(q)),
+    [sorted, q],
+  )
   const groups = useMemo(() =>
-    groupByMonth(sorted).map(g => ({
+    groupByMonth(filteredSorted).map(g => ({
       ...g,
       spent: g.rows.reduce((s, r) => s + (r as SeedTx).amount, 0),
     })),
-  [sorted])
+  [filteredSorted])
 
   return (
   <>
@@ -774,13 +787,46 @@ export default function OutPage() {
       <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
       <div style={{ height: 'calc(env(safe-area-inset-top, 44px) + 8px)' }} />
 
-      {/* ── Pills ────────────────────────────────────────────────────────── */}
-      <div className="mx-4 mt-4">
-        <PillGroup options={['Expenses', 'Subs', 'Wishlist'] as Tab[]} value={tab} onChange={setTab} />
+      {/* ── Pills + search ───────────────────────────────────────────────── */}
+      <div className="mx-4 mt-4 flex items-center gap-2">
+        <div className="flex-1 min-w-0">
+          <PillGroup options={['Expenses', 'Subs', 'Wishlist'] as Tab[]} value={tab} onChange={setTab} />
+        </div>
+        <button
+          onClick={() => { if (searchOpen) { setSearchOpen(false); setQuery('') } else setSearchOpen(true) }}
+          aria-label="Search"
+          className={cn('w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 border transition-colors select-none',
+            searchOpen ? 'bg-gold/15 border-gold/40 text-gold' : 'bg-bg-surface border-white/[0.06] text-ink-muted')}
+        >
+          <Search size={15} strokeWidth={2} />
+        </button>
       </div>
 
+      {/* ── Search bar ───────────────────────────────────────────────────── */}
+      {searchOpen && (
+        <div className="mx-4 mt-3">
+          <div className="flex items-center gap-2 h-10 px-3 rounded-[14px] bg-bg-surface border border-white/[0.06] focus-within:border-gold/40 transition-colors">
+            <Search size={14} className="text-ink-faint flex-shrink-0" strokeWidth={2} />
+            <input
+              ref={searchInputRef}
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder={`Search ${tab.toLowerCase()}…`}
+              autoComplete="off"
+              className="flex-1 min-w-0 bg-transparent text-[14px] text-ink placeholder:text-ink-faint outline-none"
+              style={{ caretColor: '#C9A84C' }}
+            />
+            {query && (
+              <button onClick={() => { setQuery(''); searchInputRef.current?.focus() }} aria-label="Clear" className="flex-shrink-0 text-ink-faint select-none">
+                <X size={15} strokeWidth={2} />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── Stat tiles ───────────────────────────────────────────────────── */}
-      {!loading && tab === 'Expenses' && (
+      {!loading && !q && tab === 'Expenses' && (
         <div className="mx-4 mt-4 flex gap-2">
           <button
             onClick={() => setExpStatCard('spent')}
@@ -810,7 +856,7 @@ export default function OutPage() {
           </button>
         </div>
       )}
-      {!loading && tab === 'Subs' && (
+      {!loading && !q && tab === 'Subs' && (
         <div className="mx-4 mt-4 flex gap-2">
           <button
             onClick={() => setSubStatCard('month')}
@@ -842,7 +888,7 @@ export default function OutPage() {
           </button>
         </div>
       )}
-      {!loading && tab === 'Wishlist' && (
+      {!loading && !q && tab === 'Wishlist' && (
         <div className="mx-4 mt-4 flex gap-2">
           <div className="flex-1 bg-bg-surface border border-white/[0.06] rounded-[22px] p-4">
             <div className="flex items-center justify-between mb-3">
@@ -866,7 +912,7 @@ export default function OutPage() {
       )}
 
       {/* ── Category breakdown ────────────────────────────────────────────── */}
-      {!loading && tab === 'Expenses' && (() => {
+      {!loading && !q && tab === 'Expenses' && (() => {
         const breakdown = expStatCard === 'spent' ? catBreakdown : savedCatBreakdown
         if (breakdown.length === 0) return null
         return (
@@ -882,7 +928,7 @@ export default function OutPage() {
           </div>
         )
       })()}
-      {!loading && tab === 'Subs' && (() => {
+      {!loading && !q && tab === 'Subs' && (() => {
         const breakdown = subStatCard === 'month' ? paidMonthCatBreakdown : paidYearCatBreakdown
         if (breakdown.length === 0) return null
         const now = new Date()
@@ -948,7 +994,7 @@ export default function OutPage() {
           </div>
         )
       })()}
-      {!loading && tab === 'Wishlist' && wishCatBreakdown.length > 0 && (
+      {!loading && !q && tab === 'Wishlist' && wishCatBreakdown.length > 0 && (
         <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card px-4 py-3">
           <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Wish List by Category</p>
           <div className="space-y-2">
@@ -972,7 +1018,7 @@ export default function OutPage() {
       {!loading && tab === 'Expenses' && (
         <div className="mx-4 mt-5 space-y-5">
           {groups.length === 0 && (
-            <div className="py-12 text-center text-ink-faint text-[13px]">No expenses yet — add your first one above.</div>
+            <div className="py-12 text-center text-ink-faint text-[13px]">{q ? `No expenses match “${query.trim()}”.` : 'No expenses yet — add your first one above.'}</div>
           )}
           {groups.map(group => (
             <div key={group.key}>
@@ -1009,14 +1055,14 @@ export default function OutPage() {
       {/* ── Subscriptions ────────────────────────────────────────────────── */}
       {!loading && tab === 'Subs' && (
         <>
-          {activeSubs.length === 0 ? (
+          {filteredActiveSubs.length === 0 ? (
             <div className="mx-4 mt-4 bg-bg-surface border border-white/[0.06] rounded-card py-12 text-center text-ink-faint text-[13px]">
-              No active subscriptions — tap + to add one.
+              {q ? `No subscriptions match “${query.trim()}”.` : 'No active subscriptions — tap + to add one.'}
             </div>
           ) : (
             <div className="mx-4 mt-4">
               <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
-                {activeSubs.map(sub => {
+                {filteredActiveSubs.map(sub => {
                   const renewal   = sub.next_renewal ? daysUntilLabel(sub.next_renewal) : '—'
                   const isOverdue = typeof renewal === 'string' && renewal.includes('ago')
                   const card      = sub.card_id ? cards.find(c => c.id === sub.card_id) ?? null : null
@@ -1054,18 +1100,18 @@ export default function OutPage() {
               </div>
             </div>
           )}
-          {cancelledSubs.length > 0 && (
+          {filteredCancelledSubs.length > 0 && (
             <div className="mx-4 mt-4">
               <button
                 onClick={() => setShowCancelled(v => !v)}
                 className="flex items-center gap-2 text-[10px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-3 select-none"
               >
                 <span className={cn('transition-transform', showCancelled ? 'rotate-90' : '')} style={{ display: 'inline-block' }}>›</span>
-                Cancelled ({cancelledSubs.length})
+                Cancelled ({filteredCancelledSubs.length})
               </button>
               {showCancelled && (
                 <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04] opacity-60">
-                  {cancelledSubs.map(sub => (
+                  {filteredCancelledSubs.map(sub => (
                     <SwipeToDelete key={sub.id} onDelete={() => handleDeleteSub(sub.id)}>
                       <div className="flex items-center gap-3 px-4 py-3.5">
                         <div className="w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
@@ -1094,13 +1140,13 @@ export default function OutPage() {
       {/* ── Wishlist ─────────────────────────────────────────────────────── */}
       {!loading && tab === 'Wishlist' && (
         <div className="mx-4 mt-4">
-          {interestedWish.length === 0 ? (
+          {filteredWish.length === 0 ? (
             <div className="bg-bg-surface border border-white/[0.06] rounded-card py-12 text-center text-ink-faint text-[13px]">
-              Nothing on your wishlist — tap + to add an item.
+              {q ? `No items match “${query.trim()}”.` : 'Nothing on your wishlist — tap + to add an item.'}
             </div>
           ) : (
             <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
-              {interestedWish.map(item => (
+              {filteredWish.map(item => (
                 <SwipeToDelete
                   key={item.id}
                   onDelete={() => handleDeleteWish(item.id)}
