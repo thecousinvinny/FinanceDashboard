@@ -589,7 +589,7 @@ export default function OutPage() {
       const { data: created } = await supabase.from('categories').insert({ user_id: user.id, name: categoryName }).select('id').single()
       categoryId = created?.id ?? null
     }
-    const { error: expErr } = await supabase.from('expenses').insert({ user_id: user.id, name: item.name, cost: paidCost, date, category_id: categoryId, status: 'Procured', card_id: cardId, description: item.url ?? null, original_cost: item.original_cost ?? null })
+    const { error: expErr } = await supabase.from('expenses').insert({ user_id: user.id, name: item.name, cost: paidCost, date, category_id: categoryId, status: 'Procured', card_id: cardId, description: item.description ?? item.url ?? null, original_cost: item.original_cost ?? null })
     if (!reportDbError(expErr, 'record purchase')) {
       const { error: wishErr } = await supabase.from('wishlist').update({ status: 'Ordered', bought_cost: paidCost, ordered_at: date }).eq('id', id)
       reportDbError(wishErr, 'record purchase')
