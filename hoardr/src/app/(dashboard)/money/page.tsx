@@ -788,7 +788,8 @@ export default function OutPage() {
       <div style={{ height: 'calc(env(safe-area-inset-top, 44px) + 8px)' }} />
 
       {/* ── Pills + search ───────────────────────────────────────────────── */}
-      <div className="mx-4 mt-4 flex items-center gap-2">
+      {/* paddingRight reserves the top-right corner for the fixed ProfileDrawer button */}
+      <div className="mx-4 mt-4 flex items-center gap-2" style={{ paddingRight: 44 }}>
         <div className="flex-1 min-w-0">
           <PillGroup options={['Expenses', 'Subs', 'Wishlist'] as Tab[]} value={tab} onChange={setTab} />
         </div>

@@ -1727,7 +1727,8 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
               <div style={{ height: gridH, overflow: 'hidden', flexShrink: 0, transition: isDraggingHandle ? 'none' : 'height 0.3s cubic-bezier(0.4,0,0.2,1)', background: 'var(--color-bg-surface)' }}>
                 <div style={{ height: GRID_EXPANDED, display: 'flex', flexDirection: 'column' }}>
                   {/* Single header row: [List/Month toggle] — [month label] — [‹ › settings Today] */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 12, paddingRight: 12, paddingTop: 10, paddingBottom: 6, flexShrink: 0 }}>
+                  {/* paddingRight clears the fixed ProfileDrawer button in the top-right corner */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 12, paddingRight: 56, paddingTop: 10, paddingBottom: 6, flexShrink: 0 }}>
                     {/* List / Month toggle */}
                     <div style={{ display: 'flex', background: 'rgb(var(--rgb-ink) / 0.06)', borderRadius: 20, padding: 2, gap: 2, flexShrink: 0 }}>
                       {(['list', 'month'] as const).map(v => (
