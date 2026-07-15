@@ -14,6 +14,10 @@ const bigShoulders = Big_Shoulders({
   weight:   ['700', '800'],
   variable: '--font-big-shoulders',
   display:  'swap',
+  // next/font has no fallback-metric data for the unified "Big Shoulders"
+  // family, which throws "Failed to find font override values" and crashes
+  // the build worker. Disable the auto fallback adjustment to avoid it.
+  adjustFontFallback: false,
 })
 
 export const metadata: Metadata = {

@@ -15,8 +15,7 @@
     "next": "^15.3.9",
     "react": "^19.0.0",
     "react-colorful": "^5.7.0",
-    "react-dom": "^19.0.0",
-    "recharts": "^2.14.1"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@types/node": "^20",
