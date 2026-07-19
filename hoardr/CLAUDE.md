@@ -294,7 +294,15 @@ Single client component (`calendar/page.tsx`), two panels on a horizontal rail: 
 
 **Finance events** — `CalEvent` type: `type: 'income'|'sub'|'google'`. Custom events carry `recurrenceRule?` and `instanceDate?`.
 
-**Recurring scopes** (`'this'|'following'|'all'`): `'this'` adds to `recurrence_exceptions`; `'following'` sets UNTIL; `'all'` deletes parent row. All use deferred-delete toast.
+**Recurring scopes** — `RecurScope = 'this' | 'following'`, defined once in `src/lib/calendar.ts` and re-exported by `CalendarPopover`/`EditEventSheet`. There is deliberately no `'all'`: choosing `'following'` on the first occurrence already means "all events", and the save/delete paths special-case that (they patch or delete the master directly instead of splitting).
+
+For Supabase `cal_events`: `'this'` adds to `recurrence_exceptions`; `'following'` sets UNTIL. Both use the deferred-delete toast.
+
+For Google events:
+- Expanded instances (`singleEvents=true`) carry `recurringEventId` but **not** `recurrence` — only the master holds the RRULE. Opening an edit fires `getCalEvent(recurringEventId)` and folds the rule in asynchronously, so both the popover and the sheet must tolerate `recurrenceRule` arriving *after* mount (see the `baseRule` sync effect in `CalendarPopover` and the `lastEditId` guard in `EditEventSheet`).
+- **Never put a `recurrence` array on an instance write** — Google rejects it. The shared `body` is built recurrence-free; only series-level writes attach the rule.
+- `'following'` splits the series: `rruleUntilBefore()` caps the old master, then a new series is created from the split date. Modified/excepted instances after the split point are lost — same tradeoff Google's own UI makes.
+- Changing the repeat rule forces scope to `'following'` (an instance has no rule of its own), and the UI disables "This event" with an inline explanation.
 
 ## Studio commission flow
 

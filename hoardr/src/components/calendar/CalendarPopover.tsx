@@ -4,8 +4,10 @@ import { useState, useEffect, useRef } from 'react'
 import { X, MapPin, AlignLeft, RefreshCw, Clock, ChevronDown, Calendar } from 'lucide-react'
 import type { GCalendar } from './CalendarSettingsSheet'
 import { DateRangePicker } from './DateRangePicker'
-import { RecurrencePicker } from './RecurrencePicker'
 import { rruleLabel } from '@/lib/rrule'
+import type { RecurScope } from '@/lib/calendar'
+
+export type { RecurScope }
 
 export interface PopoverFormData {
   eventId?:       string
@@ -19,6 +21,8 @@ export interface PopoverFormData {
   notes:          string
   recurrenceRule: string
   calendarId:     string
+  recurringEventId?: string   // Google master id — set when editing a recurring instance
+  recurScope?:       RecurScope // which occurrences a save applies to (recurring only)
 }
 
 interface Props {
@@ -29,7 +33,7 @@ interface Props {
   googleCalendarColors?: Record<string, string>
   onClose:   () => void
   onSave:    (data: PopoverFormData) => void
-  onDelete?: () => void
+  onDelete?: (scope: RecurScope) => void
   onDuplicate?: (data: PopoverFormData) => void
   saving?:   boolean
 }
@@ -84,6 +88,28 @@ const REPEAT_OPTIONS = [
 function repeatLabel(rule: string): string {
   if (!rule) return 'Repeat'
   return REPEAT_OPTIONS.find(o => o.value === rule)?.label ?? rule
+}
+
+// ── Inline custom recurrence builder (PC popover — replaces the mobile sheet) ──
+const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+const DOW_RRULE  = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA']
+const MON_SHORT  = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+type RecFreq = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY'
+interface CustomRec {
+  freq: RecFreq; interval: number; byDays: string[]; byMonths: number[]
+  endType: 'never' | 'date' | 'count'; endDate: string; endCount: number
+}
+const DEFAULT_REC: CustomRec = { freq: 'WEEKLY', interval: 1, byDays: [], byMonths: [], endType: 'never', endDate: '', endCount: 5 }
+
+function recToRule(c: CustomRec): string {
+  let rule = `FREQ=${c.freq}`
+  if (c.interval > 1) rule += `;INTERVAL=${c.interval}`
+  if (c.freq === 'WEEKLY' && c.byDays.length)  rule += `;BYDAY=${[...c.byDays].sort((a, b) => DOW_RRULE.indexOf(a) - DOW_RRULE.indexOf(b)).join(',')}`
+  if (c.freq === 'YEARLY' && c.byMonths.length) rule += `;BYMONTH=${[...c.byMonths].sort((a, b) => a - b).join(',')}`
+  if (c.endType === 'date'  && c.endDate)      rule += `;UNTIL=${c.endDate.replace(/-/g, '')}`
+  if (c.endType === 'count' && c.endCount > 0) rule += `;COUNT=${c.endCount}`
+  return rule
 }
 
 interface LocSuggestion {
@@ -154,6 +180,32 @@ export function CalendarPopover({
   onClose, onSave, onDelete, onDuplicate, saving,
 }: Props) {
   const [form, setForm]               = useState<PopoverFormData>(initial)
+  const [recurScope, setRecurScope]   = useState<RecurScope>('this')
+  const isRecurring = mode === 'edit' && !!initial.recurringEventId
+
+  // The master's RRULE is fetched asynchronously after the popover opens
+  // (instances don't carry it), so `initial.recurrenceRule` can arrive late.
+  // Fold it in as the baseline unless the user has already picked a rule.
+  const ruleTouched = useRef(false)
+  const [baseRule, setBaseRule] = useState(initial.recurrenceRule)
+  useEffect(() => {
+    if (ruleTouched.current || initial.recurrenceRule === baseRule) return
+    setBaseRule(initial.recurrenceRule)
+    setForm(f => ({ ...f, recurrenceRule: initial.recurrenceRule }))
+  }, [initial.recurrenceRule, baseRule])
+
+  // A single instance has no rule of its own — the rule lives on the master.
+  // So changing the repeat rule can only mean "this and following".
+  const scopeLocked = isRecurring && form.recurrenceRule !== baseRule
+  const effScope: RecurScope = scopeLocked ? 'following' : recurScope
+
+  // Picking a rule forces the scope, so the form can't sit in a state that
+  // says "this event only" while also asking to rewrite the series.
+  function chooseRule(rule: string) {
+    ruleTouched.current = true
+    setField('recurrenceRule', rule)
+    if (rule !== baseRule) setRecurScope('following')
+  }
   const [repeatOpen, setRepeatOpen]   = useState(false)
   const [startOpen, setStartOpen]     = useState(false)
   const [endOpen, setEndOpen]         = useState(false)
@@ -164,7 +216,8 @@ export function CalendarPopover({
   const [visible, setVisible]         = useState(false)
   const [dateRangeOpen, setDateRangeOpen] = useState(false)
   const [dateAnchor, setDateAnchor]       = useState<DOMRect | null>(null)
-  const [recurOpen, setRecurOpen]         = useState(false)
+  const [customOpen, setCustomOpen]       = useState(false)
+  const [rec, setRec]                     = useState<CustomRec>(DEFAULT_REC)
   const [locValue,       setLocValue]       = useState(initial.location)
   const [locSuggestions, setLocSuggestions] = useState<LocSuggestion[]>([])
   const [locOpen,        setLocOpen]        = useState(false)
@@ -285,7 +338,7 @@ export function CalendarPopover({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (recurOpen)     { setRecurOpen(false);     return }
+        if (customOpen)    { setCustomOpen(false);    return }
         if (dateRangeOpen) { setDateRangeOpen(false); return }
         if (locOpen)    { setLocOpen(false);    return }
         if (startOpen)  { setStartOpen(false);  return }
@@ -296,7 +349,7 @@ export function CalendarPopover({
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose, startOpen, endOpen, calDropOpen, locOpen, dateRangeOpen, recurOpen])
+  }, [onClose, startOpen, endOpen, calDropOpen, locOpen, dateRangeOpen, customOpen])
 
   function setField<K extends keyof PopoverFormData>(key: K, val: PopoverFormData[K]) {
     setForm(f => {
@@ -676,15 +729,6 @@ export function CalendarPopover({
         />
       )}
 
-      {/* Custom recurrence builder (elevated above the popover) */}
-      <RecurrencePicker
-        open={recurOpen}
-        date={form.date}
-        value={form.recurrenceRule}
-        elevated
-        onClose={() => setRecurOpen(false)}
-        onChange={rule => setField('recurrenceRule', rule)}
-      />
 
       {/* Popover card */}
       <div ref={popRef} style={popoverStyle}>
@@ -693,7 +737,7 @@ export function CalendarPopover({
         <div style={{ padding: '13px 14px 11px', borderBottom: `0.5px solid ${DIV}`, display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <input ref={titleRef} type="text" placeholder="Title" value={form.title}
             onChange={e => setField('title', e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && canSave && !saving) onSave(form) }}
+            onKeyDown={e => { if (e.key === 'Enter' && canSave && !saving) onSave({ ...form, recurScope: effScope }) }}
             style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 18, fontWeight: 500, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', caretColor: GOLD }} />
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: MUTED, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
             <X size={15} />
@@ -702,6 +746,32 @@ export function CalendarPopover({
 
         {/* Scrollable body */}
         <div style={{ flex: 1, overflowY: 'auto', overscrollBehavior: 'contain' }}>
+
+          {/* Recurring scope — which occurrences an edit/delete applies to */}
+          {isRecurring && (
+            <div style={{ padding: '10px 14px', borderBottom: `0.5px solid ${DIV}` }}>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {([['this', 'This event'], ['following', 'This & following']] as const).map(([val, label]) => {
+                  const on = effScope === val
+                  const off = scopeLocked && val === 'this'
+                  return (
+                    <button key={val} onClick={() => !scopeLocked && setRecurScope(val)} disabled={off}
+                      style={{ flex: 1, padding: '6px 8px', borderRadius: 8, border: 'none', cursor: off ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'var(--font-montserrat)',
+                        background: on ? 'rgba(201,168,76,0.15)' : 'rgba(255,255,255,0.05)',
+                        color: on ? GOLD : 'var(--color-ink)', opacity: off ? 0.4 : 1,
+                        boxShadow: on ? `inset 0 0 0 1px ${GOLD}66` : 'none', transition: 'background 0.12s, color 0.12s' }}>
+                      {label}
+                    </button>
+                  )
+                })}
+              </div>
+              {scopeLocked && (
+                <div style={{ marginTop: 6, fontSize: 10.5, lineHeight: 1.35, color: MUTED, fontFamily: 'var(--font-montserrat)' }}>
+                  Changing the repeat rule applies from this event forward.
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Date row — always FROM → TO */}
           <div style={rowStyle}>
@@ -783,7 +853,7 @@ export function CalendarPopover({
 
           {/* Repeat */}
           <div style={{ borderBottom: `0.5px solid ${DIV}` }}>
-            <button onClick={() => setRepeatOpen(o => !o)}
+            <button onClick={() => { setRepeatOpen(o => !o); setCustomOpen(false) }}
               style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', width: '100%', background: 'none', border: 'none', cursor: 'pointer' }}>
               <RefreshCw size={16} color={MUTED} style={{ flexShrink: 0 }} />
               <span style={{ flex: 1, fontSize: 13, color: form.recurrenceRule ? 'var(--color-ink)' : MUTED, fontFamily: 'var(--font-montserrat)', textAlign: 'left' }}>
@@ -792,17 +862,91 @@ export function CalendarPopover({
             </button>
             {repeatOpen && (
               <div style={{ borderTop: `0.5px solid ${DIV}` }}>
-                {REPEAT_OPTIONS.map(opt => (
-                  <button key={opt.value} onClick={() => { setField('recurrenceRule', opt.value); setRepeatOpen(false) }}
+                {!customOpen && REPEAT_OPTIONS.map(opt => (
+                  <button key={opt.value} onClick={() => { chooseRule(opt.value); setRepeatOpen(false) }}
                     style={{ display: 'block', width: '100%', padding: '8px 14px 8px 40px', background: form.recurrenceRule === opt.value ? 'rgba(201,168,76,0.08)' : 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 13, color: form.recurrenceRule === opt.value ? GOLD : 'var(--color-ink)', fontFamily: 'var(--font-montserrat)' }}>
                     {opt.label}
                   </button>
                 ))}
-                <button onClick={() => { setRepeatOpen(false); setRecurOpen(true) }}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, width: '100%', padding: '8px 14px 8px 40px', background: isCustomRepeat ? 'rgba(201,168,76,0.08)' : 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 13, color: isCustomRepeat ? GOLD : 'var(--color-ink)', fontFamily: 'var(--font-montserrat)' }}>
-                  <span>Custom…</span>
-                  {isCustomRepeat && <span style={{ fontSize: 11, color: MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rruleLabel(form.recurrenceRule, form.date)}</span>}
-                </button>
+                {!customOpen && (
+                  <button onClick={() => setCustomOpen(true)}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, width: '100%', padding: '8px 14px 8px 40px', background: isCustomRepeat ? 'rgba(201,168,76,0.08)' : 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 13, color: isCustomRepeat ? GOLD : 'var(--color-ink)', fontFamily: 'var(--font-montserrat)' }}>
+                    <span>Custom…</span>
+                    {isCustomRepeat && <span style={{ fontSize: 11, color: MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rruleLabel(form.recurrenceRule, form.date)}</span>}
+                  </button>
+                )}
+
+                {customOpen && (() => {
+                  const seg = (active: boolean): React.CSSProperties => ({ flex: 1, padding: '6px 4px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'var(--font-montserrat)', background: active ? GOLD : 'rgba(255,255,255,0.06)', color: active ? '#1a1200' : 'var(--color-ink)' })
+                  const chip = (active: boolean): React.CSSProperties => ({ borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, fontFamily: 'var(--font-montserrat)', background: active ? GOLD : 'rgba(255,255,255,0.06)', color: active ? '#1a1200' : 'var(--color-ink)' })
+                  const step: React.CSSProperties = { width: 26, height: 26, borderRadius: 7, background: 'rgba(255,255,255,0.08)', border: 'none', color: 'var(--color-ink)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }
+                  const unit = rec.freq === 'DAILY' ? 'day' : rec.freq === 'WEEKLY' ? 'week' : rec.freq === 'MONTHLY' ? 'month' : 'year'
+                  const L = (t: string) => <p style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTED, margin: '0 0 6px' }}>{t}</p>
+                  return (
+                    <div style={{ padding: '10px 14px 12px' }}>
+                      {L('Frequency')}
+                      <div style={{ display: 'flex', gap: 5, marginBottom: 12 }}>
+                        {(['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'] as RecFreq[]).map(f => (
+                          <button key={f} onClick={() => setRec(c => ({ ...c, freq: f }))} style={seg(rec.freq === f)}>
+                            {f === 'DAILY' ? 'Day' : f === 'WEEKLY' ? 'Week' : f === 'MONTHLY' ? 'Month' : 'Year'}
+                          </button>
+                        ))}
+                      </div>
+
+                      {L('Every')}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                        <button onClick={() => setRec(c => ({ ...c, interval: Math.max(1, c.interval - 1) }))} style={step}>−</button>
+                        <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-ink)', minWidth: 18, textAlign: 'center', fontFamily: 'var(--font-montserrat)' }}>{rec.interval}</span>
+                        <button onClick={() => setRec(c => ({ ...c, interval: Math.min(99, c.interval + 1) }))} style={step}>+</button>
+                        <span style={{ fontSize: 12, color: MUTED }}>{rec.interval === 1 ? unit : `${unit}s`}</span>
+                      </div>
+
+                      {rec.freq === 'WEEKLY' && (<>
+                        {L('On')}
+                        <div style={{ display: 'flex', gap: 5, marginBottom: 12 }}>
+                          {DOW_LABELS.map((d, i) => {
+                            const code = DOW_RRULE[i], active = rec.byDays.includes(code)
+                            return <button key={i} onClick={() => setRec(c => ({ ...c, byDays: active ? c.byDays.filter(x => x !== code) : [...c.byDays, code] }))} style={{ ...chip(active), flex: 1, height: 30 }}>{d}</button>
+                          })}
+                        </div>
+                      </>)}
+
+                      {rec.freq === 'YEARLY' && (<>
+                        {L('In')}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 5, marginBottom: 12 }}>
+                          {MON_SHORT.map((m, i) => {
+                            const mo = i + 1, active = rec.byMonths.includes(mo)
+                            return <button key={mo} onClick={() => setRec(c => ({ ...c, byMonths: active ? c.byMonths.filter(x => x !== mo) : [...c.byMonths, mo] }))} style={{ ...chip(active), height: 28 }}>{m}</button>
+                          })}
+                        </div>
+                      </>)}
+
+                      {L('Ends')}
+                      <div style={{ display: 'flex', gap: 5, marginBottom: 10 }}>
+                        {([['never', 'Never'], ['date', 'On date'], ['count', 'After']] as const).map(([val, label]) => (
+                          <button key={val} onClick={() => setRec(c => ({ ...c, endType: val }))} style={seg(rec.endType === val)}>{label}</button>
+                        ))}
+                      </div>
+                      {rec.endType === 'date' && (
+                        <input type="date" value={rec.endDate} min={form.date} onChange={e => setRec(c => ({ ...c, endDate: e.target.value }))}
+                          style={{ width: '100%', background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 8, padding: '7px 10px', fontSize: 13, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', colorScheme: 'dark', outline: 'none', marginBottom: 10, boxSizing: 'border-box' }} />
+                      )}
+                      {rec.endType === 'count' && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                          <button onClick={() => setRec(c => ({ ...c, endCount: Math.max(1, c.endCount - 1) }))} style={step}>−</button>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-ink)', minWidth: 18, textAlign: 'center' }}>{rec.endCount}</span>
+                          <button onClick={() => setRec(c => ({ ...c, endCount: Math.min(999, c.endCount + 1) }))} style={step}>+</button>
+                          <span style={{ fontSize: 12, color: MUTED }}>times</span>
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                        <button onClick={() => setCustomOpen(false)} style={{ flex: 1, padding: '8px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: 'none', color: 'var(--color-ink)', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-montserrat)' }}>Back</button>
+                        <button onClick={() => { chooseRule(recToRule(rec)); setCustomOpen(false); setRepeatOpen(false) }} style={{ flex: 1, padding: '8px', borderRadius: 8, background: GOLD, border: 'none', color: '#1a1200', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-montserrat)' }}>Set repeat</button>
+                      </div>
+                    </div>
+                  )
+                })()}
               </div>
             )}
           </div>
@@ -844,7 +988,7 @@ export function CalendarPopover({
         {/* Footer */}
         <div style={{ borderTop: `0.5px solid ${DIV}`, padding: '8px 14px', display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center', flexShrink: 0 }}>
           {mode === 'edit' && onDelete && (
-            <button onClick={onDelete} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#ef4444', fontFamily: 'var(--font-montserrat)', padding: '6px 10px', borderRadius: 8, marginRight: 'auto' }}>
+            <button onClick={() => onDelete?.(recurScope)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#ef4444', fontFamily: 'var(--font-montserrat)', padding: '6px 10px', borderRadius: 8, marginRight: 'auto' }}>
               Delete
             </button>
           )}
@@ -853,7 +997,7 @@ export function CalendarPopover({
               Duplicate
             </button>
           )}
-          <button onClick={() => canSave && !saving && onSave(form)} disabled={!canSave || saving}
+          <button onClick={() => canSave && !saving && onSave({ ...form, recurScope: effScope })} disabled={!canSave || saving}
             style={{ background: canSave ? GOLD : 'rgba(255,255,255,0.08)', border: 'none', cursor: canSave ? 'pointer' : 'default', color: canSave ? '#fff' : MUTED, fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-montserrat)', padding: '6px 18px', borderRadius: 8, transition: 'all 0.12s' }}>
             {saving ? 'Saving…' : mode === 'create' ? 'Create' : 'Save'}
           </button>

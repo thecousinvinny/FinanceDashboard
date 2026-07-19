@@ -9,6 +9,7 @@ import { LocationPickerSheet } from './LocationPickerSheet'
 import { DateRangePicker } from './DateRangePicker'
 import { useIsLargeScreen } from '@/lib/use-large-screen'
 import type { GCalendar } from './CalendarSettingsSheet'
+import type { RecurScope } from '@/lib/calendar'
 
 export interface EditableEvent {
   id?:            string
@@ -24,6 +25,7 @@ export interface EditableEvent {
   calendarId:     string
   googleEventId?: string
   instanceDate?:  string
+  recurringEventId?: string   // Google master id — set when editing a recurring instance
 }
 
 export interface EventEdits {
@@ -39,7 +41,7 @@ export interface EventEdits {
   calendarId:     string
 }
 
-export type RecurrenceScope = 'this' | 'following' | 'all'
+export type RecurrenceScope = RecurScope
 
 interface LocSuggestion {
   placeId:           string
@@ -152,9 +154,23 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // `event` identity changes again shortly after open when the master's RRULE
+  // arrives from Google. Only a genuinely different event resets the form —
+  // a late-arriving rule just patches that one field, so edits made in the
+  // meantime survive.
+  const lastEditId = useRef<string | undefined>(undefined)
   useEffect(() => {
     if (open && event) {
-      setStep(event.recurrenceRule && event.id ? 'scope' : 'form')
+      const fresh = event.id !== lastEditId.current
+      lastEditId.current = event.id
+      if (!fresh) {
+        setForm(f => f ? { ...f, recurrenceRule: event.recurrenceRule } : f)
+        if (event.recurrenceRule) setStep(s => (s === 'form' ? s : 'scope'))
+        return
+      }
+      // Decide the step from recurringEventId, known synchronously — waiting on
+      // the rule fetch would flash the form before flipping to the scope step.
+      setStep((event.recurrenceRule || event.recurringEventId) && event.id ? 'scope' : 'form')
       setScope('this')
       setSaving(false)
       setConfirmDelete(false)
@@ -174,6 +190,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
         calendarId:     event.calendarId || 'primary',
       })
     } else {
+      lastEditId.current = undefined
       setTimeout(() => { setForm(null); setSaving(false); setConfirmDelete(false); setLocValue(''); setLocOpen(false); setLocSuggestions([]) }, 300)
     }
   }, [open, event])
@@ -508,11 +525,10 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
               {([
                 { scope: 'this'      as RecurrenceScope, label: 'This event' },
                 { scope: 'following' as RecurrenceScope, label: 'This and following events' },
-                { scope: 'all'       as RecurrenceScope, label: 'All events' },
               ]).map(({ scope: s, label }, i) => (
                 <button key={s} onClick={() => { setScope(s); setStep('form') }}
                   className="w-full flex items-center justify-between px-4 py-4 text-left"
-                  style={{ borderBottom: i < 2 ? '1px solid rgba(255,255,255,0.06)' : 'none', background: 'none', cursor: 'pointer' }}>
+                  style={{ borderBottom: i < 1 ? '1px solid rgba(255,255,255,0.06)' : 'none', background: 'none', cursor: 'pointer' }}>
                   <span className="text-[15px] text-ink">{label}</span>
                   <span className="text-ink-faint text-[18px]">›</span>
                 </button>
@@ -789,12 +805,11 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
             <div style={{ borderTop: `0.5px solid ${SEP}` }}>
               {([
                 { s: 'this'      as RecurrenceScope, label: 'This event',                danger: false },
-                { s: 'following' as RecurrenceScope, label: 'This and following events', danger: false },
-                { s: 'all'       as RecurrenceScope, label: 'All events',                danger: true  },
+                { s: 'following' as RecurrenceScope, label: 'This and following events', danger: true  },
               ]).map(({ s, label, danger }, i) => (
                 <button key={s} onClick={() => confirmDeleteWithScope(s)}
                   className="w-full px-4 py-4 text-left"
-                  style={{ borderBottom: i < 2 ? `0.5px solid ${SEP}` : 'none', background: 'none', cursor: 'pointer' }}>
+                  style={{ borderBottom: i < 1 ? `0.5px solid ${SEP}` : 'none', background: 'none', cursor: 'pointer' }}>
                   <span style={{ fontFamily: M, fontSize: 15, fontWeight: 500, color: danger ? '#ef4444' : 'var(--color-ink)' }}>{label}</span>
                 </button>
               ))}
@@ -814,7 +829,12 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
         date={form?.date || localToday()}
         value={form?.recurrenceRule ?? ''}
         onClose={() => setRecurrencePickerOpen(false)}
-        onChange={rule => set('recurrenceRule', rule)}
+        onChange={rule => {
+          set('recurrenceRule', rule)
+          // An instance carries no rule of its own — rewriting the rule can
+          // only mean "this and following", so widen the scope automatically.
+          if (event?.recurrenceRule && rule !== event.recurrenceRule) setScope('following')
+        }}
       />
 
       <LocationPickerSheet

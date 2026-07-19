@@ -6,7 +6,7 @@ const GCAL_API  = 'https://www.googleapis.com/calendar/v3'
 
 // ── Input validation helpers ─────────────────────────────────────────────────
 
-const VALID_ACTIONS_GET  = new Set(['calendars', 'events'])
+const VALID_ACTIONS_GET  = new Set(['calendars', 'events', 'event'])
 const VALID_ACTIONS_POST = new Set(['create', 'update', 'delete', 'move'])
 
 // Google Calendar event/calendar IDs are alphanumeric + a small set of chars
@@ -85,6 +85,29 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ items: json.items ?? [] })
     }
 
+    // action === 'event' — fetch one event by id (used to read a recurring
+    // master's RRULE + DTSTART, which expanded instances don't carry)
+    if (action === 'event') {
+      const calendarId = searchParams.get('calendarId') ?? 'primary'
+      const eventId    = searchParams.get('eventId')
+      if (calendarId !== 'primary' && !isSafeId(calendarId)) {
+        return NextResponse.json({ error: 'Invalid calendarId' }, { status: 400 })
+      }
+      if (!isSafeId(eventId)) {
+        return NextResponse.json({ error: 'Invalid or missing eventId' }, { status: 400 })
+      }
+      const res  = await fetch(
+        `${GCAL_API}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
+        { headers },
+      )
+      const json = await res.json() as { error?: unknown }
+      if (!res.ok) {
+        console.error('[calendar GET event] upstream error:', json.error)
+        return NextResponse.json({ error: 'Failed to fetch event' }, { status: 502 })
+      }
+      return NextResponse.json(json)
+    }
+
     // action === 'events'
     const calendarId = searchParams.get('calendarId') ?? 'primary'
     const timeMin    = searchParams.get('timeMin')
@@ -126,14 +149,14 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    let body: { action?: unknown; event?: unknown; eventId?: unknown; calendarId?: unknown; destination?: unknown }
+    let body: { action?: unknown; event?: unknown; eventId?: unknown; calendarId?: unknown; destination?: unknown; patch?: unknown }
     try {
       body = await req.json()
     } catch {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
     }
 
-    const { action, event, eventId, calendarId, destination } = body
+    const { action, event, eventId, calendarId, destination, patch } = body
 
     if (typeof action !== 'string' || !VALID_ACTIONS_POST.has(action)) {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
@@ -179,7 +202,9 @@ export async function POST(req: NextRequest) {
       if (!event || typeof event !== 'object') {
         return NextResponse.json({ error: 'Missing event body' }, { status: 400 })
       }
-      const res  = await fetch(`${calBase}/${eventId as string}`, { method: 'PUT', headers, body: JSON.stringify(event) })
+      // PATCH merges (preserves a series' recurrence when editing all instances); PUT is a full replace.
+      const method = patch === true ? 'PATCH' : 'PUT'
+      const res  = await fetch(`${calBase}/${eventId as string}`, { method, headers, body: JSON.stringify(event) })
       const json = await res.json() as { id?: string; error?: unknown }
       if (!res.ok) {
         console.error('[calendar POST update] upstream error:', json.error)
