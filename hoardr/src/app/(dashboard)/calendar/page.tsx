@@ -786,7 +786,10 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       startTime: !allDay && parts[0] ? parts[0] : '09:00',
       endTime:   !allDay && parts[1] ? parts[1] : '10:00',
       location: ev.location ?? '', notes: ev.notes ?? '', recurrenceRule: '',
-      calendarId: ev.calendarId ?? 'primary',
+      // Don't inherit the source calendar blindly — duplicating an event that
+      // lives on a read-only calendar (a shared one, or an @import ICS feed)
+      // would target a calendar we can never write to.
+      calendarId: writableCals.some(c => c.id === ev.calendarId) ? ev.calendarId! : pickCreateCalId(),
     } })
   }
 
@@ -809,6 +812,19 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       ?? writableCals.find(c => c.primary)?.id
       ?? writableCals[0]?.id
       ?? 'primary'
+  }
+
+  // Explain *why* a calendar can't be written to, before we bother Google.
+  // Returns null when the target is fine (or when the list hasn't loaded yet,
+  // in which case we let the API have the final say).
+  function blockedCalendarMsg(calId: string): string | null {
+    if (!googleCals.length) return null
+    const cal = googleCals.find(c => c.id === calId)
+    if (!cal || canWriteToCalendar(cal)) return null
+    const why = calId.includes('@import.calendar.google.com')
+      ? 'is a subscribed feed — Google keeps those permanently read-only'
+      : 'is shared with you as read-only'
+    return `Can't add to "${cal.summary}" — it ${why}.`
   }
 
   // ── Drag-to-create (multi-day) ────────────────────────────────────────────
@@ -881,6 +897,8 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       ? { summary: edits.title, description: edits.notes || undefined, location: edits.location || undefined, start: { date: edits.date }, end: { date: gcalEndDate } }
       : { summary: edits.title, description: edits.notes || undefined, location: edits.location || undefined, start: { dateTime: `${edits.date}T${edits.startTime}:00`, timeZone: 'America/Los_Angeles' }, end: { dateTime: `${edits.endDate || edits.date}T${edits.endTime}:00`, timeZone: 'America/Los_Angeles' } }
     if (edits.recurrenceRule) body.recurrence = [`RRULE:${edits.recurrenceRule}`]
+    const blocked = blockedCalendarMsg(edits.calendarId ?? 'primary')
+    if (blocked) { showToast(blocked, { type: 'delete' }); return }
     const id = await createCalEvent(body, edits.calendarId)
     if (!id) return   // createCalEvent toasted the reason; keep the sheet open so the edit isn't lost
     showToast('Event created', { type: 'add' })
@@ -953,6 +971,9 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
         : { summary: data.title, description: data.notes || undefined, location: data.location || undefined, start: { dateTime: `${data.date}T${data.startTime}:00`, timeZone: 'America/Los_Angeles' }, end: { dateTime: `${data.endDate || data.date}T${data.endTime}:00`, timeZone: 'America/Los_Angeles' } }
       // `body` stays recurrence-free: Google rejects a recurrence array on a
       // single expanded instance. Series-level writes attach the rule themselves.
+      const blocked = blockedCalendarMsg(data.calendarId ?? 'primary')
+      if (blocked) { showToast(blocked, { type: 'delete' }); setPopoverSaving(false); return }
+
       if (popover?.mode === 'create') {
         const id = await createCalEvent(
           data.recurrenceRule ? { ...body, recurrence: [`RRULE:${data.recurrenceRule}`] } : body,
