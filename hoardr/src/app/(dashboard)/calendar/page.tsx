@@ -1289,11 +1289,12 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
 
   // Derives a light, hue-tinted text color from a hex background color.
   // Future/present: L=97%, S≤55% — essentially white with a faint hue wash.
-  // Past:           L=86%, S≤40% — still clearly legible, just a step down so
-  //                 elapsed events read as past without looking greyed out.
+  // Past:           L=70%, S≤38% — deliberately dim. The gap to future (27
+  //                 points of luminance) is what makes elapsed events read as
+  //                 past at a glance, so keep them far apart.
   function lightTextColor(hex: string, isPast = false): string {
     const h = hex.replace('#', '')
-    if (h.length !== 6 && h.length !== 3) return isPast ? '#DCDCDC' : '#F7F7F7'
+    if (h.length !== 6 && h.length !== 3) return isPast ? '#A8A8A8' : '#F7F7F7'
     const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h
     const r = parseInt(full.slice(0, 2), 16) / 255
     const g = parseInt(full.slice(2, 4), 16) / 255
@@ -1308,8 +1309,8 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       else                hDeg = ((r - g) / d + 4) * 60
       if (hDeg < 0) hDeg += 360
     }
-    const targetL = isPast ? 86 : 97
-    const maxS    = isPast ? 0.40 : 0.55
+    const targetL = isPast ? 70 : 97
+    const maxS    = isPast ? 0.38 : 0.55
     const minS    = isPast ? 0    : 0.20   // prevent near-gray text on desaturated backgrounds
     return `hsl(${Math.round(hDeg)}, ${Math.round(Math.max(Math.min(s, maxS), minS) * 100)}%, ${targetL}%)`
   }
