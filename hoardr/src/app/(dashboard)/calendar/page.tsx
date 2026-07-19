@@ -302,6 +302,7 @@ export default function CalendarPage() {
   const abortRef      = useRef<AbortController | null>(null)
   const gEvGen        = useRef(0)
   const editRuleGen   = useRef(0)   // guards the async master-RRULE fetch on edit-open
+  const [deleteScopeAsk, setDeleteScopeAsk] = useState<{ ev: CalEvent; date: string } | null>(null)
   const dayRefs       = useRef(new Map<string, HTMLElement>())
   const lastHapticDay = useRef<string | null>(null)
   const scrollRef     = useRef<HTMLDivElement>(null)
@@ -630,7 +631,10 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       if (e.key === 'Delete' || e.key === 'Backspace') {
         for (const evs of Object.values(googleEvMap)) {
           const found = evs.find(ev => ev.id === selectedEvId)
-          if (found) { setDeleteConfirm(found); break }
+          // Recurring events go straight to the scope prompt — picking a scope
+          // is itself the confirmation, so a plain "are you sure" first would
+          // be two dialogs for one action.
+          if (found) { found.recurringEventId ? handleDeleteCalEvent(found) : setDeleteConfirm(found); break }
         }
       } else if (e.key === 'Escape') {
         setSelectedEvId(null)
@@ -695,38 +699,19 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLargeScreen, selectedEvId, copiedEvent, pasteDate, googleEvMap, todayStr, popover])
 
-  function handleDeleteCalEvent(ev: CalEvent) {
-    if (!ev.id) return
-    setGoogleEvMap(prev => {
-      const m = { ...prev }
-      for (const key of Object.keys(m)) {
-        m[key] = m[key].filter(e => e.id !== ev.id)
-        if (!m[key].length) delete m[key]
-      }
-      return m
-    })
-    showToast('Event deleted', {
-      type: 'delete',
-      undo: {
-        onUndo:   () => setGRefreshKey(k => k + 1),
-        onCommit: () => deleteCalEvent(ev.id!, ev.calendarId ?? 'primary'),
-      },
-    })
-  }
-
-  // Delete from the phone edit sheet, honouring the chosen recurrence scope.
-  function handleSheetDelete(ev: EditableEvent, scope: RecurrenceScope) {
-    if (!ev.id) return
-    const masterId  = ev.recurringEventId
-    const calId     = ev.calendarId ?? 'primary'
-    const fromDate  = ev.instanceDate ?? ev.date
+  // Single delete implementation behind every entry point (day card, context
+  // menu, keyboard, edit sheet, popover). Optimistically clears local state,
+  // toasts with undo, and only hits Google on commit.
+  function runCalDelete(opts: { eventId: string; masterId?: string; calId: string; fromDate: string; scope: RecurScope }) {
+    const { eventId, masterId, calId, fromDate, scope } = opts
     const cutSeries = !!masterId && scope === 'following'
     setGoogleEvMap(prev => {
       const m = { ...prev }
       for (const key of Object.keys(m)) {
+        // 'following' clears this occurrence and every later one in the series
         m[key] = m[key].filter(e => cutSeries
           ? !(e.recurringEventId === masterId && key >= fromDate)
-          : e.id !== ev.id)
+          : e.id !== eventId)
         if (!m[key].length) delete m[key]
       }
       return m
@@ -735,8 +720,30 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       type: 'delete',
       undo: {
         onUndo:   () => setGRefreshKey(k => k + 1),
-        onCommit: () => { void commitCalDelete(ev.id!, masterId, fromDate, calId, cutSeries) },
+        onCommit: () => { void commitCalDelete(eventId, masterId, fromDate, calId, cutSeries) },
       },
+    })
+  }
+
+  // Entry point for the day card / context menu / keyboard. Recurring events
+  // route through the scope prompt first so every surface asks, not just the
+  // edit sheet and popover.
+  function handleDeleteCalEvent(ev: CalEvent, date?: string) {
+    if (!ev.id) return
+    const fromDate = date ?? ev.instanceDate ?? todayStr
+    if (ev.recurringEventId) { setDeleteScopeAsk({ ev, date: fromDate }); return }
+    runCalDelete({ eventId: ev.id, calId: ev.calendarId ?? 'primary', fromDate, scope: 'this' })
+  }
+
+  // Delete from the phone edit sheet, honouring the chosen recurrence scope.
+  function handleSheetDelete(ev: EditableEvent, scope: RecurrenceScope) {
+    if (!ev.id) return
+    runCalDelete({
+      eventId:  ev.id,
+      masterId: ev.recurringEventId,
+      calId:    ev.calendarId ?? 'primary',
+      fromDate: ev.instanceDate ?? ev.date,
+      scope,
     })
   }
 
@@ -1029,30 +1036,15 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
 
   function handlePopoverDelete(scope?: RecurScope) {
     if (!popover?.data.eventId) return
-    const eid        = popover.data.eventId
-    const masterId   = popover.data.recurringEventId
-    const calId      = popover.data.calendarId
-    const fromDate   = popover.data.date
-    const cutSeries  = !!masterId && scope === 'following'
+    const { eventId, recurringEventId, calendarId, date } = popover.data
     setPopover(null)
     setSelectedEvId(null)
-    setGoogleEvMap(prev => {
-      const m = { ...prev }
-      for (const key of Object.keys(m)) {
-        // 'following' clears this occurrence and every later one in the series
-        m[key] = m[key].filter(e => cutSeries
-          ? !(e.recurringEventId === masterId && key >= fromDate)
-          : e.id !== eid)
-        if (!m[key].length) delete m[key]
-      }
-      return m
-    })
-    showToast(cutSeries ? 'This and following deleted' : 'Event deleted', {
-      type: 'delete',
-      undo: {
-        onUndo:   () => setGRefreshKey(k => k + 1),
-        onCommit: () => { void commitCalDelete(eid, masterId, fromDate, calId, cutSeries) },
-      },
+    runCalDelete({
+      eventId:  eventId!,
+      masterId: recurringEventId,
+      calId:    calendarId,
+      fromDate: date,
+      scope:    scope ?? 'this',
     })
   }
 
@@ -2434,7 +2426,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
         { label: 'Edit',      action: () => openEditPopover(new DOMRect(x, y, 0, 0), ev, date) },
         { label: 'Duplicate', action: () => duplicateFromEvent(ev, date, new DOMRect(x, y, 0, 0)) },
         { label: 'Copy',      action: () => { setCopiedEvent(ev); showToast('Event copied — hover a day then ⌘V', { type: 'add' }) } },
-        { label: 'Delete',    action: () => handleDeleteCalEvent(ev), danger: true },
+        { label: 'Delete',    action: () => handleDeleteCalEvent(ev, date), danger: true },
       ]
       const menuW = 168, menuH = items.length * 34 + 8
       return (
@@ -2529,6 +2521,46 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
         onDuplicate={data => setPopover(p => p ? { ...p, mode: 'create', data: { ...data, eventId: undefined, title: `${data.title} (copy)` } } : p)}
         saving={popoverSaving}
       />
+    )}
+
+    {/* Recurring delete scope prompt — shared by the day card, context menu and
+        keyboard delete, so every surface asks rather than silently assuming. */}
+    {deleteScopeAsk && (
+      <div
+        style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+        onClick={() => setDeleteScopeAsk(null)}
+      >
+        <div onClick={e => e.stopPropagation()} style={{ background: '#21242A', borderRadius: 16, padding: '22px 22px 18px', maxWidth: 340, width: '100%', boxShadow: '0 8px 40px rgba(0,0,0,0.7)', border: '0.5px solid rgba(255,255,255,0.1)', fontFamily: 'var(--font-montserrat)' }}>
+          <p style={{ fontSize: 17, fontWeight: 600, color: 'var(--color-ink)', margin: '0 0 6px' }}>Delete Recurring Event</p>
+          <p style={{ fontSize: 13.5, color: 'rgb(var(--rgb-ink) / 0.5)', margin: '0 0 16px', lineHeight: 1.45 }}>
+            &ldquo;{deleteScopeAsk.ev.title}&rdquo; repeats. What should be deleted?
+          </p>
+          {([
+            ['this',      'This event',         'Only this occurrence',                  false],
+            ['following', 'This and following', 'This occurrence and every one after it', true ],
+          ] as const).map(([val, label, hint, danger]) => (
+            <button
+              key={val}
+              onClick={() => {
+                const { ev, date } = deleteScopeAsk
+                setDeleteScopeAsk(null)
+                setSelectedEvId(null)
+                runCalDelete({ eventId: ev.id!, masterId: ev.recurringEventId, calId: ev.calendarId ?? 'primary', fromDate: date, scope: val })
+              }}
+              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 12px', marginBottom: 7, borderRadius: 10, border: '0.5px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', cursor: 'pointer', fontFamily: 'var(--font-montserrat)' }}
+            >
+              <div style={{ fontSize: 14, fontWeight: 600, color: danger ? '#ef4444' : 'var(--color-ink)' }}>{label}</div>
+              <div style={{ fontSize: 11.5, color: 'rgb(var(--rgb-ink) / 0.45)', marginTop: 2 }}>{hint}</div>
+            </button>
+          ))}
+          <button
+            onClick={() => setDeleteScopeAsk(null)}
+            style={{ width: '100%', padding: '9px', marginTop: 2, borderRadius: 10, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13.5, color: 'rgb(var(--rgb-ink) / 0.5)', fontFamily: 'var(--font-montserrat)' }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
     )}
 
     {/* Delete confirm dialog */}
