@@ -555,8 +555,20 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       const deduped = evs.filter(e => !e.id || !customGoogleIds.has(e.id))
       if (deduped.length) { if (!m[date]) m[date] = []; m[date].push(...deduped) }
     }
+    // Re-apply colors from live prefs. `color` is baked into the event map at
+    // fetch time, and the fetch doesn't re-run when a colour is changed — so
+    // without this, recolouring a calendar only updated the Notion grid (which
+    // derives its own colour) and left the day list and detail views stale.
+    for (const date of Object.keys(m)) {
+      m[date] = m[date].map(e => {
+        const live = e.type === 'google' && e.calendarId
+          ? prefs.googleCalendarColors?.[e.calendarId]
+          : prefs.typeColors?.[e.type]
+        return live && live !== e.color ? { ...e, color: live } : e
+      })
+    }
     return m
-  }, [eventMap, googleEvMap, prefs.visibleTypes])
+  }, [eventMap, googleEvMap, prefs.visibleTypes, prefs.googleCalendarColors, prefs.typeColors])
 
   const monthVisibleMap = useMemo(() => {
     if (hiddenTypes.size === 0 && hiddenGoogleCals.size === 0) return visibleMap
@@ -1276,11 +1288,12 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
   }
 
   // Derives a light, hue-tinted text color from a hex background color.
-  // Future/present: L=95%, S≤85% — near-white with strong color tint (matches Notion).
-  // Past:           L=75%, S≤50% — noticeably dimmer to signal elapsed events.
+  // Future/present: L=97%, S≤55% — essentially white with a faint hue wash.
+  // Past:           L=86%, S≤40% — still clearly legible, just a step down so
+  //                 elapsed events read as past without looking greyed out.
   function lightTextColor(hex: string, isPast = false): string {
     const h = hex.replace('#', '')
-    if (h.length !== 6 && h.length !== 3) return isPast ? '#AAA' : '#EEE'
+    if (h.length !== 6 && h.length !== 3) return isPast ? '#DCDCDC' : '#F7F7F7'
     const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h
     const r = parseInt(full.slice(0, 2), 16) / 255
     const g = parseInt(full.slice(2, 4), 16) / 255
@@ -1295,9 +1308,9 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       else                hDeg = ((r - g) / d + 4) * 60
       if (hDeg < 0) hDeg += 360
     }
-    const targetL = isPast ? 75 : 95
-    const maxS    = isPast ? 0.50 : 0.85
-    const minS    = isPast ? 0    : 0.35   // prevent near-gray text on desaturated backgrounds
+    const targetL = isPast ? 86 : 97
+    const maxS    = isPast ? 0.40 : 0.55
+    const minS    = isPast ? 0    : 0.20   // prevent near-gray text on desaturated backgrounds
     return `hsl(${Math.round(hDeg)}, ${Math.round(Math.max(Math.min(s, maxS), minS) * 100)}%, ${targetL}%)`
   }
 
@@ -1827,7 +1840,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                                             onClick={bar.ev.type === 'google' && bar.ev.id ? (e) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), bar.ev, days[bar.startCol] ?? ds) } : undefined}
                                             style={{ height: SPAN_H, marginBottom: SPAN_GAP, marginLeft: isStart ? 2 : 0, marginRight: isEnd ? 2 : 0, borderRadius: isStart ? '4px 0 0 4px' : isEnd ? '0 4px 4px 0' : 0, background: isPast ? bg + '8C' : bg, display: 'flex', alignItems: 'center', paddingLeft: isStart ? 4 : 2, overflow: 'hidden', cursor: (bar.ev.type === 'google') && bar.ev.id ? 'pointer' : 'default', position: 'relative', boxShadow: barSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none' }}>
                                             {(barHovered || barSel) && bar.ev.id && <div style={{ position: 'absolute', inset: 0, background: barSel ? 'rgba(255,255,255,0.145)' : 'rgba(255,255,255,0.071)', pointerEvents: 'none' }} />}
-                                            {isStart && <span className={isPast ? 'cal-pill-title-past' : 'cal-pill-title'} style={{ fontSize: 9, color: isPast ? lightTextColor(bg, true) : 'rgba(255,255,255,0.92)', fontFamily: 'var(--font-montserrat)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bar.ev.title}</span>}
+                                            {isStart && <span className={isPast ? 'cal-pill-title-past' : 'cal-pill-title'} style={{ fontSize: 9, color: isPast ? lightTextColor(bg, true) : '#fff', fontFamily: 'var(--font-montserrat)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bar.ev.title}</span>}
                                           </div>
                                         )
                                       })}
@@ -1856,7 +1869,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                                           style={{ background: isPast ? evColor + '8C' : evColor, borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, minWidth: 0, width: '100%', boxSizing: 'border-box', cursor: isDraggable ? 'grab' : 'default', position: 'relative', boxShadow: pillSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none', opacity: isBeingDragged ? 0.4 : 1, transition: 'opacity 0.1s' }}
                                         >
                                           {(pillHov || pillSel) && ev.id && <div style={{ position: 'absolute', inset: 0, background: pillSel ? 'rgba(255,255,255,0.145)' : 'rgba(255,255,255,0.071)', pointerEvents: 'none', borderRadius: 4 }} />}
-                                          <span style={{ fontSize: 10, color: isPast ? lightTextColor(evColor, true) : 'rgba(255,255,255,0.92)', fontFamily: 'var(--font-montserrat)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
+                                          <span style={{ fontSize: 10, color: isPast ? lightTextColor(evColor, true) : '#fff', fontFamily: 'var(--font-montserrat)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
                                         </div>
                                       )
                                     })}

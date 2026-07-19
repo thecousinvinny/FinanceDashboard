@@ -418,7 +418,7 @@ html.light .ring-white\/\[0\.06\]    { --tw-ring-color: var(--card-border) !impo
 html.light .divide-white\/\[0\.04\] > * + * { border-color: var(--card-divider) !important; }
 
 /* ── Notion calendar event pill text — force white on future events ──────── */
-.cal-pill-title          { color: rgba(255,255,255,0.92) !important; }
+.cal-pill-title          { color: #ffffff !important; }
 .cal-pill-title-past     { color: inherit; }
 
 /* ── Light-mode nav ──────────────────────────────────────────────────────── */
