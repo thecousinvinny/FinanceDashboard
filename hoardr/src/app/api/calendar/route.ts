@@ -223,9 +223,11 @@ export async function POST(req: NextRequest) {
 
     if (action === 'delete') {
       const res = await fetch(`${calBase}/${eventId as string}`, { method: 'DELETE', headers })
+      // 404/410 mean it's already gone — that's the desired end state, not a failure.
       if (!res.ok && res.status !== 404 && res.status !== 410) {
-        console.error('[calendar POST delete] upstream status:', res.status)
-        return NextResponse.json({ error: 'Failed to delete event' }, { status: 502 })
+        const json = await res.json().catch(() => ({})) as { error?: { message?: string } }
+        console.error('[calendar POST delete] upstream status:', res.status, json.error)
+        return NextResponse.json({ error: gcalMessage(json.error, 'Failed to delete event') }, { status: 502 })
       }
       return NextResponse.json({ success: true })
     }
@@ -236,10 +238,10 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Invalid destination' }, { status: 400 })
       }
       const res  = await fetch(`${calBase}/${eventId as string}/move?destination=${encodeURIComponent(destId)}`, { method: 'POST', headers })
-      const json = await res.json() as { id?: string; error?: unknown }
+      const json = await res.json() as { id?: string; error?: { message?: string } }
       if (!res.ok) {
         console.error('[calendar POST move] upstream error:', json.error)
-        return NextResponse.json({ error: 'Failed to move event' }, { status: 502 })
+        return NextResponse.json({ error: gcalMessage(json.error, 'Failed to move event') }, { status: 502 })
       }
       return NextResponse.json({ googleEventId: json.id })
     }

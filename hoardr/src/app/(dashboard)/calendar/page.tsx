@@ -900,7 +900,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     setCreateEvent({ title: '', date, endDate: date, allDay: false, startTime, endTime, location: '', notes: '', recurrenceRule: '', calendarId: calId })
   }
 
-  async function handleCreateEvent(edits: EventEdits, _scope: RecurrenceScope) {
+  async function handleCreateEvent(edits: EventEdits, _scope: RecurrenceScope): Promise<boolean> {
     const gcalEndDate = (() => {
       const d = new Date((edits.endDate || edits.date) + 'T00:00:00'); d.setDate(d.getDate() + 1)
       return d.toISOString().slice(0, 10)
@@ -910,12 +910,13 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       : { summary: edits.title, description: edits.notes || undefined, location: edits.location || undefined, start: { dateTime: `${edits.date}T${edits.startTime}:00`, timeZone: 'America/Los_Angeles' }, end: { dateTime: `${edits.endDate || edits.date}T${edits.endTime}:00`, timeZone: 'America/Los_Angeles' } }
     if (edits.recurrenceRule) body.recurrence = [`RRULE:${edits.recurrenceRule}`]
     const blocked = blockedCalendarMsg(edits.calendarId ?? 'primary')
-    if (blocked) { showToast(blocked, { type: 'delete' }); return }
+    if (blocked) { showToast(blocked, { type: 'delete' }); return false }
     const id = await createCalEvent(body, edits.calendarId)
-    if (!id) return   // createCalEvent toasted the reason; keep the sheet open so the edit isn't lost
+    if (!id) return false   // createCalEvent toasted the reason; keep the sheet open so the edit isn't lost
     showToast('Event created', { type: 'add' })
     setCreateEvent(null)
     setGRefreshKey(k => k + 1)
+    return true
   }
 
   function openEditPopover(anchorRect: DOMRect | null, ev: CalEvent, date: string) {
@@ -1075,9 +1076,13 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     )
   }
 
-  async function handleEditEvent(edits: EventEdits, scope: RecurrenceScope) {
+  async function handleEditEvent(edits: EventEdits, scope: RecurrenceScope): Promise<boolean> {
     const ev = editEvent
-    if (!ev?.id) return
+    if (!ev?.id) return false
+    // The edit sheet lists every visible calendar (an event may live on a
+    // read-only one), so a move to an unwritable target has to be caught here.
+    const blockedEdit = blockedCalendarMsg(edits.calendarId ?? 'primary')
+    if (blockedEdit) { showToast(blockedEdit, { type: 'delete' }); return false }
     // Google all-day end dates are exclusive — add 1 day to the inclusive endDate
     const gcalEndDate = (() => {
       const d = new Date((edits.endDate || edits.date) + 'T00:00:00')
@@ -1101,13 +1106,14 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       // Google rejects a recurrence array on an expanded instance.
       if (toCal !== fromCal) {
         // A recurring instance can't be moved on its own; the move applies to the series.
-        await moveCalEvent(ev.recurringEventId ?? ev.id, fromCal, toCal)
+        if (!await moveCalEvent(ev.recurringEventId ?? ev.id, fromCal, toCal)) return false
       }
-      await updateCalEvent(ev.id, body, toCal)
+      if (!await updateCalEvent(ev.id, body, toCal)) return false
       showToast('Event updated', { type: 'payment' })
     }
     setEditEvent(null)
     setGRefreshKey(k => k + 1)
+    return true
   }
 
   // ── Scroll to today after first data load ────────────────────────────────
@@ -2359,7 +2365,10 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       ]} />
     )}
 
-    <EditEventSheet open={!!editEvent} event={editEvent} googleCals={writableCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => setEditEvent(null)} onSave={handleEditEvent} onDelete={scope => { if (editEvent) handleSheetDelete(editEvent, scope); setEditEvent(null) }} onDuplicate={edits => { setEditEvent(null); setTimeout(() => setCreateEvent({ title: `${edits.title} (copy)`, date: edits.date, endDate: edits.endDate, allDay: edits.allDay, startTime: edits.startTime, endTime: edits.endTime, location: edits.location, notes: edits.notes, recurrenceRule: edits.recurrenceRule, calendarId: edits.calendarId }), 80) }} />
+    {/* Edit uses the FULL calendar list, not just writable ones: an event may
+        live on a read-only calendar, and filtering it out made the sheet fall
+        back to googleCals[0] and display the wrong calendar name and colour. */}
+    <EditEventSheet open={!!editEvent} event={editEvent} googleCals={googleCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => setEditEvent(null)} onSave={handleEditEvent} onDelete={scope => { if (editEvent) handleSheetDelete(editEvent, scope); setEditEvent(null) }} onDuplicate={edits => { setEditEvent(null); setTimeout(() => setCreateEvent({ title: `${edits.title} (copy)`, date: edits.date, endDate: edits.endDate, allDay: edits.allDay, startTime: edits.startTime, endTime: edits.endTime, location: edits.location, notes: edits.notes, recurrenceRule: edits.recurrenceRule, calendarId: edits.calendarId }), 80) }} />
     <EditEventSheet open={!!createEvent} event={createEvent} googleCals={writableCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => setCreateEvent(null)} onSave={handleCreateEvent} onDelete={() => setCreateEvent(null)} />
     <CalendarSettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} prefs={prefs} googleCals={googleCals} calsLoading={calsLoading} calsError={calsError} onSave={savePrefs} />
 
@@ -2509,7 +2518,10 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
         anchorRect={popover.anchorRect}
         mode={popover.mode}
         initial={popover.data}
-        googleCals={writableCals.filter(c => prefs.googleCalendarIds.includes(c.id))}
+        // Create offers only writable calendars; edit shows the full list so an
+        // event on a read-only calendar still displays its real one. A move to
+        // an unwritable target is caught by blockedCalendarMsg on save.
+        googleCals={(popover.mode === 'create' ? writableCals : googleCals).filter(c => prefs.googleCalendarIds.includes(c.id))}
         googleCalendarColors={prefs.googleCalendarColors}
         onClose={() => { setPopover(null); setSelectedEvId(null) }}
         onSave={handlePopoverSave}

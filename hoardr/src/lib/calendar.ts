@@ -102,24 +102,33 @@ export async function updateCalEvent(
   } catch { showToast('Failed to update event', { type: 'delete' }); return false }
 }
 
-export async function moveCalEvent(eventId: string, fromCalendarId: string, toCalendarId: string): Promise<void> {
+export async function moveCalEvent(eventId: string, fromCalendarId: string, toCalendarId: string): Promise<boolean> {
   try {
-    await fetch('/api/calendar', {
+    const res  = await fetch('/api/calendar', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ action: 'move', eventId, calendarId: fromCalendarId, destination: toCalendarId }),
     })
-  } catch { /* best-effort */ }
+    const json = await res.json() as { error?: string }
+    if (!res.ok || json.error) { showToast(json.error ?? 'Failed to move event', { type: 'delete' }); return false }
+    return true
+  } catch { showToast('Failed to move event', { type: 'delete' }); return false }
 }
 
-export async function deleteCalEvent(eventId: string, calendarId?: string): Promise<void> {
+export async function deleteCalEvent(eventId: string, calendarId?: string): Promise<boolean> {
   try {
-    await fetch('/api/calendar', {
+    const res  = await fetch('/api/calendar', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ action: 'delete', eventId, calendarId }),
     })
-  } catch { /* best-effort */ }
+    const json = await res.json() as { error?: string }
+    // A failed delete is worse than a failed save: the row is already gone from
+    // local state optimistically, so without this the event silently comes back
+    // on the next refresh with no indication anything went wrong.
+    if (!res.ok || json.error) { showToast(json.error ?? 'Failed to delete event', { type: 'delete' }); return false }
+    return true
+  } catch { showToast('Failed to delete event', { type: 'delete' }); return false }
 }
 
 // Build an all-day GCalEvent from a date string and metadata.
