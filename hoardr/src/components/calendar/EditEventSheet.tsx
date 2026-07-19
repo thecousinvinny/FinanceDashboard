@@ -97,8 +97,7 @@ function calcDuration(date: string, startTime: string, endDate: string, endTime:
 }
 
 export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, onDelete, onDuplicate }: Props) {
-  const [step, setStep]                   = useState<'scope' | 'form'>('form')
-  const [scope, setScope]                 = useState<RecurrenceScope>('this')
+  const [confirmScope, setConfirmScope]   = useState(false)
   const [form, setForm]                   = useState<EventEdits | null>(null)
   const [saving, setSaving]               = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -172,15 +171,11 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
         && prev.recurrenceRule !== event.recurrenceRule
       if (onlyRuleArrived) {
         setForm(f => f ? { ...f, recurrenceRule: event.recurrenceRule } : f)
-        if (event.recurrenceRule) setStep(s => (s === 'form' ? s : 'scope'))
         return
       }
-      // Decide the step from recurringEventId, known synchronously — waiting on
-      // the rule fetch would flash the form before flipping to the scope step.
-      setStep((event.recurrenceRule || event.recurringEventId) && event.id ? 'scope' : 'form')
-      setScope('this')
       setSaving(false)
       setConfirmDelete(false)
+      setConfirmScope(false)
       setLocValue(event.location)
       setLocOpen(false)
       setLocSuggestions([])
@@ -429,10 +424,22 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
     })
   }
 
+  // Ask about scope at the moment of saving rather than up front, so a simple
+  // edit doesn't open with a question before you've even seen the event.
   async function handleSave() {
     if (!form) return
+    const isRecurring = !!event?.recurrenceRule && !!event.id
+    if (!isRecurring) { await commitSave('this'); return }
+    // Rewriting the rule can't apply to a single instance — no point asking.
+    if (form.recurrenceRule !== event.recurrenceRule) { await commitSave('following'); return }
+    setConfirmScope(true)
+  }
+
+  async function commitSave(s: RecurrenceScope) {
+    if (!form) return
+    setConfirmScope(false)
     setSaving(true)
-    await onSave(form, scope)
+    await onSave(form, s)
     onClose()
   }
 
@@ -509,46 +516,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
           transition:    'transform 0.3s cubic-bezier(0.4,0,0.2,1)',
         }}
       >
-        {/* ── Step 1: Scope picker ── */}
-        {step === 'scope' && (
-          <>
-            {/* Drag zone covers handle + header row */}
-            <div
-              onTouchStart={onDragStart} onTouchMove={onDragMove} onTouchEnd={onDragEnd}
-              className="flex-shrink-0" style={{ touchAction: 'none' }}
-            >
-              <div className="flex justify-center pt-3 pb-1">
-                <div className="w-9 h-1 rounded-full bg-white/20" />
-              </div>
-              <div className="flex items-center justify-between px-4 py-3">
-                <h2 style={{ fontFamily: M, fontSize: 17, fontWeight: 700, color: 'var(--color-ink)' }}>Edit Recurring Event</h2>
-                <button onTouchStart={e => e.stopPropagation()} onClick={onClose} className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center">
-                  <X size={14} className="text-ink-muted" />
-                </button>
-              </div>
-            </div>
-            <p className="px-4 pb-4 text-[13px] text-ink-muted">Which events do you want to edit?</p>
-            <div className="mx-4 bg-bg-overlay border border-white/[0.08] rounded-[14px] overflow-hidden mb-4">
-              {([
-                { scope: 'this'      as RecurrenceScope, label: 'This event' },
-                { scope: 'following' as RecurrenceScope, label: 'This and following events' },
-              ]).map(({ scope: s, label }, i) => (
-                <button key={s} onClick={() => { setScope(s); setStep('form') }}
-                  className="w-full flex items-center justify-between px-4 py-4 text-left"
-                  style={{ borderBottom: i < 1 ? '1px solid rgba(255,255,255,0.06)' : 'none', background: 'none', cursor: 'pointer' }}>
-                  <span className="text-[15px] text-ink">{label}</span>
-                  <span className="text-ink-faint text-[18px]">›</span>
-                </button>
-              ))}
-            </div>
-            <div className="px-4 pb-4">
-              <button onClick={onClose} className="w-full py-3.5 rounded-[14px] bg-bg-overlay border border-white/[0.08] text-[15px] font-medium text-ink-muted">Cancel</button>
-            </div>
-          </>
-        )}
-
-        {/* ── Step 2: Edit form ── */}
-        {step === 'form' && form && (
+        {form && (
           <>
             {/* Drag zone covers handle + × header — large touch target */}
             <div
@@ -797,6 +765,41 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
         )}
       </div>
 
+      {/* Save scope picker — asked on Save, not before the form is even shown */}
+      {confirmScope && (
+        <>
+          <div className="fixed inset-0 z-[60]" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={() => setConfirmScope(false)} />
+          <div className="fixed inset-x-0 bottom-0 z-[70] rounded-t-[24px]" style={{ background: 'var(--color-bg-elevated)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+            <div className="flex justify-center pt-3 pb-2">
+              <div className="w-9 h-1 rounded-full bg-white/20" />
+            </div>
+            <div className="px-4 pb-4">
+              <h2 style={{ fontFamily: M, fontSize: 17, fontWeight: 700, color: 'var(--color-ink)' }}>Edit Recurring Event</h2>
+              <p style={{ fontFamily: M, fontSize: 13, color: MUTED, marginTop: 4 }}>This event repeats. What should this change apply to?</p>
+            </div>
+            <div style={{ borderTop: `0.5px solid ${SEP}` }}>
+              {([
+                { s: 'this'      as RecurrenceScope, label: 'This event',             hint: 'Only this occurrence' },
+                { s: 'following' as RecurrenceScope, label: 'This and following',     hint: 'This occurrence and every one after it' },
+              ]).map(({ s, label, hint }, i) => (
+                <button key={s} onClick={() => { void commitSave(s) }}
+                  className="w-full px-4 py-4 text-left"
+                  style={{ borderBottom: i < 1 ? `0.5px solid ${SEP}` : 'none', background: 'none', cursor: 'pointer' }}>
+                  <div style={{ fontFamily: M, fontSize: 15, fontWeight: 500, color: 'var(--color-ink)' }}>{label}</div>
+                  <div style={{ fontFamily: M, fontSize: 12, color: MUTED, marginTop: 2 }}>{hint}</div>
+                </button>
+              ))}
+            </div>
+            <div className="px-4 py-4">
+              <button onClick={() => setConfirmScope(false)}
+                className="w-full py-3.5 rounded-[14px] bg-white/[0.06] text-[15px] font-medium text-ink-muted">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Delete scope picker (for recurring events) */}
       {confirmDelete && (
         <>
@@ -836,12 +839,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
         date={form?.date || localToday()}
         value={form?.recurrenceRule ?? ''}
         onClose={() => setRecurrencePickerOpen(false)}
-        onChange={rule => {
-          set('recurrenceRule', rule)
-          // An instance carries no rule of its own — rewriting the rule can
-          // only mean "this and following", so widen the scope automatically.
-          if (event?.recurrenceRule && rule !== event.recurrenceRule) setScope('following')
-        }}
+        onChange={rule => set('recurrenceRule', rule)}
       />
 
       <LocationPickerSheet

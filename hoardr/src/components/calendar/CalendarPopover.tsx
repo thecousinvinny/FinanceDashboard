@@ -189,7 +189,6 @@ export function CalendarPopover({
   onClose, onSave, onDelete, onDuplicate, saving,
 }: Props) {
   const [form, setForm]               = useState<PopoverFormData>(initial)
-  const [recurScope, setRecurScope]   = useState<RecurScope>('this')
   const isRecurring = mode === 'edit' && !!initial.recurringEventId
 
   // The master's RRULE is fetched asynchronously after the popover opens
@@ -203,25 +202,42 @@ export function CalendarPopover({
     setForm(f => ({ ...f, recurrenceRule: initial.recurrenceRule }))
   }, [initial.recurrenceRule, baseRule])
 
-  // A single instance has no rule of its own — the rule lives on the master.
-  // So changing the repeat rule can only mean "this and following".
-  const scopeLocked = isRecurring && form.recurrenceRule !== baseRule
-  const effScope: RecurScope = scopeLocked ? 'following' : recurScope
-
-  // Picking a rule forces the scope, so the form can't sit in a state that
-  // says "this event only" while also asking to rewrite the series.
   function chooseRule(rule: string) {
     ruleTouched.current = true
     setField('recurrenceRule', rule)
-    if (rule !== baseRule) setRecurScope('following')
   }
 
   // The custom builder only commits on "Set repeat". Saving the event with the
   // builder still open used to discard the whole configuration silently — the
   // event was created with no recurrence at all. Fold it in at save time.
-  function formForSave(): PopoverFormData {
+  function formForSave(scope: RecurScope): PopoverFormData {
     const rule = customOpen ? recToRule(rec) : form.recurrenceRule
-    return { ...form, recurrenceRule: rule, recurScope: customOpen && rule !== baseRule && isRecurring ? 'following' : effScope }
+    return { ...form, recurrenceRule: rule, recurScope: scope }
+  }
+
+  // Notion-style: don't make the user pick a scope up front. Ask only at the
+  // moment it matters — on save or delete, and only for a recurring event.
+  const [scopeAsk, setScopeAsk] = useState<null | 'save' | 'delete'>(null)
+
+  function attemptSave() {
+    if (!canSave || saving) return
+    const rule = customOpen ? recToRule(rec) : form.recurrenceRule
+    if (!isRecurring)      { onSave(formForSave('this')); return }
+    // Rewriting the rule can't apply to one instance — skip the prompt.
+    if (rule !== baseRule) { onSave(formForSave('following')); return }
+    setScopeAsk('save')
+  }
+
+  function attemptDelete() {
+    if (!isRecurring) { onDelete?.('this'); return }
+    setScopeAsk('delete')
+  }
+
+  function resolveScope(scope: RecurScope) {
+    const kind = scopeAsk
+    setScopeAsk(null)
+    if (kind === 'delete') onDelete?.(scope)
+    else                   onSave(formForSave(scope))
   }
   const [repeatOpen, setRepeatOpen]   = useState(false)
   const [startOpen, setStartOpen]     = useState(false)
@@ -355,6 +371,7 @@ export function CalendarPopover({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        if (scopeAsk)      { setScopeAsk(null);       return }
         if (customOpen)    { setCustomOpen(false);    return }
         if (dateRangeOpen) { setDateRangeOpen(false); return }
         if (locOpen)    { setLocOpen(false);    return }
@@ -366,7 +383,7 @@ export function CalendarPopover({
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose, startOpen, endOpen, calDropOpen, locOpen, dateRangeOpen, customOpen])
+  }, [onClose, startOpen, endOpen, calDropOpen, locOpen, dateRangeOpen, customOpen, scopeAsk])
 
   function setField<K extends keyof PopoverFormData>(key: K, val: PopoverFormData[K]) {
     setForm(f => {
@@ -754,7 +771,7 @@ export function CalendarPopover({
         <div style={{ padding: '13px 14px 11px', borderBottom: `0.5px solid ${DIV}`, display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <input ref={titleRef} type="text" placeholder="Title" value={form.title}
             onChange={e => setField('title', e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && canSave && !saving) onSave(formForSave()) }}
+            onKeyDown={e => { if (e.key === "Enter") attemptSave() }}
             style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 18, fontWeight: 500, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', caretColor: GOLD }} />
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: MUTED, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
             <X size={15} />
@@ -764,31 +781,6 @@ export function CalendarPopover({
         {/* Scrollable body */}
         <div style={{ flex: 1, overflowY: 'auto', overscrollBehavior: 'contain' }}>
 
-          {/* Recurring scope — which occurrences an edit/delete applies to */}
-          {isRecurring && (
-            <div style={{ padding: '10px 14px', borderBottom: `0.5px solid ${DIV}` }}>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {([['this', 'This event'], ['following', 'This & following']] as const).map(([val, label]) => {
-                  const on = effScope === val
-                  const off = scopeLocked && val === 'this'
-                  return (
-                    <button key={val} onClick={() => !scopeLocked && setRecurScope(val)} disabled={off}
-                      style={{ flex: 1, padding: '6px 8px', borderRadius: 8, border: 'none', cursor: off ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'var(--font-montserrat)',
-                        background: on ? 'rgba(201,168,76,0.15)' : 'rgba(255,255,255,0.05)',
-                        color: on ? GOLD : 'var(--color-ink)', opacity: off ? 0.4 : 1,
-                        boxShadow: on ? `inset 0 0 0 1px ${GOLD}66` : 'none', transition: 'background 0.12s, color 0.12s' }}>
-                      {label}
-                    </button>
-                  )
-                })}
-              </div>
-              {scopeLocked && (
-                <div style={{ marginTop: 6, fontSize: 10.5, lineHeight: 1.35, color: MUTED, fontFamily: 'var(--font-montserrat)' }}>
-                  Changing the repeat rule applies from this event forward.
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Date row — always FROM → TO */}
           <div style={rowStyle}>
@@ -1005,7 +997,7 @@ export function CalendarPopover({
         {/* Footer */}
         <div style={{ borderTop: `0.5px solid ${DIV}`, padding: '8px 14px', display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center', flexShrink: 0 }}>
           {mode === 'edit' && onDelete && (
-            <button onClick={() => onDelete?.(recurScope)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#ef4444', fontFamily: 'var(--font-montserrat)', padding: '6px 10px', borderRadius: 8, marginRight: 'auto' }}>
+            <button onClick={attemptDelete} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#ef4444', fontFamily: 'var(--font-montserrat)', padding: '6px 10px', borderRadius: 8, marginRight: 'auto' }}>
               Delete
             </button>
           )}
@@ -1014,11 +1006,43 @@ export function CalendarPopover({
               Duplicate
             </button>
           )}
-          <button onClick={() => canSave && !saving && onSave(formForSave())} disabled={!canSave || saving}
+          <button onClick={attemptSave} disabled={!canSave || saving}
             style={{ background: canSave ? GOLD : 'rgba(255,255,255,0.08)', border: 'none', cursor: canSave ? 'pointer' : 'default', color: canSave ? '#fff' : MUTED, fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-montserrat)', padding: '6px 18px', borderRadius: 8, transition: 'all 0.12s' }}>
             {saving ? 'Saving…' : mode === 'create' ? 'Create' : 'Save'}
           </button>
         </div>
+
+        {/* Recurring scope prompt — asked at the moment of action, not up front */}
+        {scopeAsk && (
+          <div
+            onClick={() => setScopeAsk(null)}
+            style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 5 }}
+          >
+            <div onClick={e => e.stopPropagation()}
+              style={{ width: '100%', background: BG, border: `0.5px solid ${DIV}`, borderRadius: 12, padding: 14, boxShadow: '0 12px 32px rgba(0,0,0,0.5)' }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', marginBottom: 3 }}>
+                {scopeAsk === 'delete' ? 'Delete recurring event' : 'Edit recurring event'}
+              </div>
+              <div style={{ fontSize: 11.5, color: MUTED, fontFamily: 'var(--font-montserrat)', marginBottom: 12 }}>
+                This event repeats. {scopeAsk === 'delete' ? 'What should be deleted?' : 'What should this change apply to?'}
+              </div>
+              {([
+                ['this',      'This event',            'Only this occurrence'],
+                ['following', 'This and following',    'This occurrence and every one after it'],
+              ] as const).map(([val, label, hint]) => (
+                <button key={val} onClick={() => resolveScope(val)}
+                  style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 11px', marginBottom: 6, borderRadius: 9, border: `0.5px solid ${DIV}`, background: 'rgba(255,255,255,0.04)', cursor: 'pointer', fontFamily: 'var(--font-montserrat)' }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, color: scopeAsk === 'delete' && val === 'following' ? '#ef4444' : 'var(--color-ink)' }}>{label}</div>
+                  <div style={{ fontSize: 10.5, color: MUTED, marginTop: 1 }}>{hint}</div>
+                </button>
+              ))}
+              <button onClick={() => setScopeAsk(null)}
+                style={{ width: '100%', padding: '7px', marginTop: 2, borderRadius: 9, border: 'none', background: 'none', cursor: 'pointer', fontSize: 12, color: MUTED, fontFamily: 'var(--font-montserrat)' }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   )
