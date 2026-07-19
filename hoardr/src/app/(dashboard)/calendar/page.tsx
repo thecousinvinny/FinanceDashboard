@@ -1457,7 +1457,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
               <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
 
                 {/* Sidebar — extends full height to top of screen */}
-                <div style={{ width: 215, background: 'var(--color-cal-sidebar)', display: 'flex', flexDirection: 'column', borderRight: '0.5px solid var(--color-cal-grid-line)', flexShrink: 0, overflowY: 'auto' }}>
+                <div style={{ width: 247, background: 'var(--color-cal-sidebar)', display: 'flex', flexDirection: 'column', borderRight: '0.5px solid var(--color-cal-grid-line)', flexShrink: 0, overflowY: 'auto' }}>
                   {/* Top section: safe-area pad + List/Month toggle + settings gear */}
                   <div style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)', paddingLeft: 10, paddingRight: 10, paddingBottom: 8, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
                     <div style={{ display: 'flex', background: 'rgb(var(--rgb-ink) / 0.08)', borderRadius: 20, padding: 2, gap: 2, flex: 1 }}>
