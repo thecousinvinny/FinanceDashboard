@@ -21,6 +21,14 @@ function isIsoDate(v: unknown): v is string {
   return typeof v === 'string' && ISO_DATE_RE.test(v)
 }
 
+// Surface Google's own reason ("Invalid recurrence rule", "The specified time
+// range is empty", …) instead of a generic string — a bad RRULE is otherwise
+// indistinguishable from a network failure on the client.
+function gcalMessage(error: { message?: string } | undefined, fallback: string): string {
+  const msg = error?.message
+  return typeof msg === 'string' && msg ? `${fallback}: ${msg}` : fallback
+}
+
 // ── Token management ─────────────────────────────────────────────────────────
 
 async function refreshAccessToken(refreshToken: string): Promise<string> {
@@ -190,10 +198,10 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Missing event body' }, { status: 400 })
       }
       const res  = await fetch(calBase, { method: 'POST', headers, body: JSON.stringify(event) })
-      const json = await res.json() as { id?: string; error?: unknown }
+      const json = await res.json() as { id?: string; error?: { message?: string } }
       if (!res.ok) {
         console.error('[calendar POST create] upstream error:', json.error)
-        return NextResponse.json({ error: 'Failed to create event' }, { status: 502 })
+        return NextResponse.json({ error: gcalMessage(json.error, 'Failed to create event') }, { status: 502 })
       }
       return NextResponse.json({ googleEventId: json.id })
     }
@@ -205,10 +213,10 @@ export async function POST(req: NextRequest) {
       // PATCH merges (preserves a series' recurrence when editing all instances); PUT is a full replace.
       const method = patch === true ? 'PATCH' : 'PUT'
       const res  = await fetch(`${calBase}/${eventId as string}`, { method, headers, body: JSON.stringify(event) })
-      const json = await res.json() as { id?: string; error?: unknown }
+      const json = await res.json() as { id?: string; error?: { message?: string } }
       if (!res.ok) {
         console.error('[calendar POST update] upstream error:', json.error)
-        return NextResponse.json({ error: 'Failed to update event' }, { status: 502 })
+        return NextResponse.json({ error: gcalMessage(json.error, 'Failed to update event') }, { status: 502 })
       }
       return NextResponse.json({ googleEventId: json.id })
     }

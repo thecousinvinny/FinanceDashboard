@@ -869,7 +869,8 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       ? { summary: edits.title, description: edits.notes || undefined, location: edits.location || undefined, start: { date: edits.date }, end: { date: gcalEndDate } }
       : { summary: edits.title, description: edits.notes || undefined, location: edits.location || undefined, start: { dateTime: `${edits.date}T${edits.startTime}:00`, timeZone: 'America/Los_Angeles' }, end: { dateTime: `${edits.endDate || edits.date}T${edits.endTime}:00`, timeZone: 'America/Los_Angeles' } }
     if (edits.recurrenceRule) body.recurrence = [`RRULE:${edits.recurrenceRule}`]
-    await createCalEvent(body, edits.calendarId)
+    const id = await createCalEvent(body, edits.calendarId)
+    if (!id) return   // createCalEvent toasted the reason; keep the sheet open so the edit isn't lost
     showToast('Event created', { type: 'add' })
     setCreateEvent(null)
     setGRefreshKey(k => k + 1)
@@ -928,16 +929,25 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
   async function handlePopoverSave(data: PopoverFormData) {
     setPopoverSaving(true)
     try {
+      // Google all-day end dates are EXCLUSIVE — without the +1 a single-day
+      // event has end === start, which Google rejects as an empty range.
+      const gcalEndDate = (() => {
+        const d = new Date((data.endDate || data.date) + 'T00:00:00')
+        d.setDate(d.getDate() + 1)
+        return d.toISOString().slice(0, 10)
+      })()
       const body: GCalEvent = data.allDay
-        ? { summary: data.title, description: data.notes || undefined, location: data.location || undefined, start: { date: data.date }, end: { date: data.endDate || data.date } }
+        ? { summary: data.title, description: data.notes || undefined, location: data.location || undefined, start: { date: data.date }, end: { date: gcalEndDate } }
         : { summary: data.title, description: data.notes || undefined, location: data.location || undefined, start: { dateTime: `${data.date}T${data.startTime}:00`, timeZone: 'America/Los_Angeles' }, end: { dateTime: `${data.endDate || data.date}T${data.endTime}:00`, timeZone: 'America/Los_Angeles' } }
       // `body` stays recurrence-free: Google rejects a recurrence array on a
       // single expanded instance. Series-level writes attach the rule themselves.
       if (popover?.mode === 'create') {
-        await createCalEvent(
+        const id = await createCalEvent(
           data.recurrenceRule ? { ...body, recurrence: [`RRULE:${data.recurrenceRule}`] } : body,
           data.calendarId,
         )
+        // createCalEvent already toasted the reason on failure — don't claim success over it.
+        if (!id) { setPopoverSaving(false); return }
         showToast('Event created', { type: 'add' })
       } else if (data.eventId) {
         const isRecurring = !!data.recurringEventId

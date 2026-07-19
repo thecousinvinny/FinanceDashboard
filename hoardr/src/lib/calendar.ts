@@ -1,5 +1,11 @@
 // Client-side helpers for calling the /api/calendar proxy route.
 // All Google API calls stay server-side; these just POST instructions.
+//
+// Writes toast their own failures. Google rejects malformed bodies (bad RRULE,
+// empty all-day range) with a 400 that used to be swallowed here, so a failed
+// save looked identical to a successful one — the event just never appeared.
+
+import { showToast } from '@/lib/toast'
 
 export interface GCalEvent {
   summary:      string
@@ -72,9 +78,10 @@ export async function createCalEvent(event: GCalEvent, calendarId?: string): Pro
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ action: 'create', event, calendarId }),
     })
-    const json = await res.json()
-    return (json.googleEventId as string) ?? null
-  } catch { return null }
+    const json = await res.json() as { googleEventId?: string; error?: string }
+    if (!res.ok || json.error) { showToast(json.error ?? 'Failed to create event', { type: 'delete' }); return null }
+    return json.googleEventId ?? null
+  } catch { showToast('Failed to create event', { type: 'delete' }); return null }
 }
 
 export async function updateCalEvent(
@@ -82,14 +89,17 @@ export async function updateCalEvent(
   event: Partial<GCalEvent>,
   calendarId?: string,
   opts?: { patch?: boolean },   // patch = merge (preserves recurrence on a series); default is full replace
-): Promise<void> {
+): Promise<boolean> {
   try {
-    await fetch('/api/calendar', {
+    const res  = await fetch('/api/calendar', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ action: 'update', eventId, event, calendarId, patch: opts?.patch ?? false }),
     })
-  } catch { /* best-effort */ }
+    const json = await res.json() as { error?: string }
+    if (!res.ok || json.error) { showToast(json.error ?? 'Failed to update event', { type: 'delete' }); return false }
+    return true
+  } catch { showToast('Failed to update event', { type: 'delete' }); return false }
 }
 
 export async function moveCalEvent(eventId: string, fromCalendarId: string, toCalendarId: string): Promise<void> {

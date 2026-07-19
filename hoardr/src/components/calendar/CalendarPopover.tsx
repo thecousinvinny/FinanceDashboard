@@ -102,12 +102,21 @@ interface CustomRec {
 }
 const DEFAULT_REC: CustomRec = { freq: 'WEEKLY', interval: 1, byDays: [], byMonths: [], endType: 'never', endDate: '', endCount: 5 }
 
+// End-of-day UTC stamp for an RRULE UNTIL, so the chosen end date is inclusive.
+function untilStamp(endDate: string): string {
+  const [y, m, d] = endDate.split('-').map(Number)
+  const end = new Date(y, m - 1, d, 23, 59, 59)
+  return end.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
+}
+
 function recToRule(c: CustomRec): string {
   let rule = `FREQ=${c.freq}`
   if (c.interval > 1) rule += `;INTERVAL=${c.interval}`
   if (c.freq === 'WEEKLY' && c.byDays.length)  rule += `;BYDAY=${[...c.byDays].sort((a, b) => DOW_RRULE.indexOf(a) - DOW_RRULE.indexOf(b)).join(',')}`
   if (c.freq === 'YEARLY' && c.byMonths.length) rule += `;BYMONTH=${[...c.byMonths].sort((a, b) => a - b).join(',')}`
-  if (c.endType === 'date'  && c.endDate)      rule += `;UNTIL=${c.endDate.replace(/-/g, '')}`
+  // UNTIL must match DTSTART's value type. These events are timed, so a bare
+  // DATE (20260801) is rejected by Google — it has to be a UTC date-time.
+  if (c.endType === 'date'  && c.endDate)      rule += `;UNTIL=${untilStamp(c.endDate)}`
   if (c.endType === 'count' && c.endCount > 0) rule += `;COUNT=${c.endCount}`
   return rule
 }
