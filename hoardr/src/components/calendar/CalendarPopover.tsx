@@ -215,6 +215,14 @@ export function CalendarPopover({
     setField('recurrenceRule', rule)
     if (rule !== baseRule) setRecurScope('following')
   }
+
+  // The custom builder only commits on "Set repeat". Saving the event with the
+  // builder still open used to discard the whole configuration silently — the
+  // event was created with no recurrence at all. Fold it in at save time.
+  function formForSave(): PopoverFormData {
+    const rule = customOpen ? recToRule(rec) : form.recurrenceRule
+    return { ...form, recurrenceRule: rule, recurScope: customOpen && rule !== baseRule && isRecurring ? 'following' : effScope }
+  }
   const [repeatOpen, setRepeatOpen]   = useState(false)
   const [startOpen, setStartOpen]     = useState(false)
   const [endOpen, setEndOpen]         = useState(false)
@@ -746,7 +754,7 @@ export function CalendarPopover({
         <div style={{ padding: '13px 14px 11px', borderBottom: `0.5px solid ${DIV}`, display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <input ref={titleRef} type="text" placeholder="Title" value={form.title}
             onChange={e => setField('title', e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && canSave && !saving) onSave({ ...form, recurScope: effScope }) }}
+            onKeyDown={e => { if (e.key === 'Enter' && canSave && !saving) onSave(formForSave()) }}
             style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 18, fontWeight: 500, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', caretColor: GOLD }} />
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: MUTED, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
             <X size={15} />
@@ -1006,7 +1014,7 @@ export function CalendarPopover({
               Duplicate
             </button>
           )}
-          <button onClick={() => canSave && !saving && onSave({ ...form, recurScope: effScope })} disabled={!canSave || saving}
+          <button onClick={() => canSave && !saving && onSave(formForSave())} disabled={!canSave || saving}
             style={{ background: canSave ? GOLD : 'rgba(255,255,255,0.08)', border: 'none', cursor: canSave ? 'pointer' : 'default', color: canSave ? '#fff' : MUTED, fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-montserrat)', padding: '6px 18px', borderRadius: 8, transition: 'all 0.12s' }}>
             {saving ? 'Saving…' : mode === 'create' ? 'Create' : 'Save'}
           </button>

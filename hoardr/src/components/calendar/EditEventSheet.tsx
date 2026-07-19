@@ -158,12 +158,19 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
   // arrives from Google. Only a genuinely different event resets the form —
   // a late-arriving rule just patches that one field, so edits made in the
   // meantime survive.
-  const lastEditId = useRef<string | undefined>(undefined)
+  const prevEvent = useRef<EditableEvent | null>(null)
   useEffect(() => {
     if (open && event) {
-      const fresh = event.id !== lastEditId.current
-      lastEditId.current = event.id
-      if (!fresh) {
+      const prev = prevEvent.current
+      prevEvent.current = event
+      // The ONLY case that should skip a full re-init is the master's rule
+      // landing on the event we already initialized. Comparing ids alone was
+      // wrong: a create has no id, so `undefined !== undefined` was false and
+      // the form never initialized at all — a blank sheet.
+      const onlyRuleArrived = !!prev && prev !== event
+        && prev.id === event.id && prev.date === event.date && prev.title === event.title
+        && prev.recurrenceRule !== event.recurrenceRule
+      if (onlyRuleArrived) {
         setForm(f => f ? { ...f, recurrenceRule: event.recurrenceRule } : f)
         if (event.recurrenceRule) setStep(s => (s === 'form' ? s : 'scope'))
         return
@@ -190,7 +197,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
         calendarId:     event.calendarId || 'primary',
       })
     } else {
-      lastEditId.current = undefined
+      prevEvent.current = null
       setTimeout(() => { setForm(null); setSaving(false); setConfirmDelete(false); setLocValue(''); setLocOpen(false); setLocSuggestions([]) }, 300)
     }
   }, [open, event])
