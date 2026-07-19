@@ -10,7 +10,7 @@ import { COLOR_PALETTE } from '@/lib/category-meta'
 import { Plus, SlidersHorizontal, Eye, EyeOff, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning, CalendarPlus, type LucideIcon } from 'lucide-react'
 import { GlobalFAB } from '@/components/ui/GlobalFAB'
 import { EditEventSheet, type EditableEvent, type EventEdits, type RecurrenceScope } from '@/components/calendar/EditEventSheet'
-import { CalendarSettingsSheet, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
+import { CalendarSettingsSheet, canWriteToCalendar, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
 import { CalendarPopover, defaultTimes, type PopoverFormData, type RecurScope } from '@/components/calendar/CalendarPopover'
 import { MonthYearPicker } from '@/components/calendar/MonthYearPicker'
 import { createCalEvent, updateCalEvent, deleteCalEvent, moveCalEvent, getCalEvent, extractRRule, rruleUntilBefore, type GCalEvent } from '@/lib/calendar'
@@ -790,12 +790,30 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     } })
   }
 
+  // Calendars we can actually write to. The list is fetched with
+  // minAccessRole=reader so subscribed calendars (holidays, shared-with-you)
+  // still display their events — but creating into one fails with
+  // "You need to have writer access to this calendar."
+  const writableCals = useMemo(
+    () => googleCals.filter(canWriteToCalendar),
+    [googleCals],
+  )
+
+  // Pick a create target that's actually writable, preferring the user's
+  // default, then primary, then any writable calendar.
+  function pickCreateCalId(): string {
+    const writable = new Set(writableCals.map(c => c.id))
+    if (prefs.defaultCalendarId && writable.has(prefs.defaultCalendarId)) return prefs.defaultCalendarId
+    const visibleWritable = writableCals.find(c => prefs.googleCalendarIds.includes(c.id))
+    return visibleWritable?.id
+      ?? writableCals.find(c => c.primary)?.id
+      ?? writableCals[0]?.id
+      ?? 'primary'
+  }
+
   // ── Drag-to-create (multi-day) ────────────────────────────────────────────
   function openCreatePopoverRange(start: string, end: string) {
-    const calId = prefs.defaultCalendarId
-      ?? googleCals.find(c => prefs.googleCalendarIds.includes(c.id))?.id
-      ?? prefs.googleCalendarIds[0]
-      ?? 'primary'
+    const calId = pickCreateCalId()
     setPopover({ anchorRect: null, mode: 'create', data: { title: '', date: start, endDate: end, allDay: true, startTime: '09:00', endTime: '10:00', location: '', notes: '', recurrenceRule: '', calendarId: calId } })
   }
 
@@ -843,19 +861,13 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
   }
 
   function openCreatePopover(anchorRect: DOMRect | null, date: string) {
-    const calId = prefs.defaultCalendarId
-      ?? googleCals.find(c => prefs.googleCalendarIds.includes(c.id))?.id
-      ?? prefs.googleCalendarIds[0]
-      ?? 'primary'
+    const calId = pickCreateCalId()
     const { startTime, endTime } = defaultTimes()
     setPopover({ anchorRect, mode: 'create', data: { title: '', date, endDate: date, allDay: false, startTime, endTime, location: '', notes: '', recurrenceRule: '', calendarId: calId } })
   }
 
   function openCreateSheet(date: string) {
-    const calId = prefs.defaultCalendarId
-      ?? googleCals.find(c => prefs.googleCalendarIds.includes(c.id))?.id
-      ?? prefs.googleCalendarIds[0]
-      ?? 'primary'
+    const calId = pickCreateCalId()
     const { startTime, endTime } = defaultTimes()
     setCreateEvent({ title: '', date, endDate: date, allDay: false, startTime, endTime, location: '', notes: '', recurrenceRule: '', calendarId: calId })
   }
@@ -2312,8 +2324,8 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       ]} />
     )}
 
-    <EditEventSheet open={!!editEvent} event={editEvent} googleCals={googleCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => setEditEvent(null)} onSave={handleEditEvent} onDelete={scope => { if (editEvent) handleSheetDelete(editEvent, scope); setEditEvent(null) }} onDuplicate={edits => { setEditEvent(null); setTimeout(() => setCreateEvent({ title: `${edits.title} (copy)`, date: edits.date, endDate: edits.endDate, allDay: edits.allDay, startTime: edits.startTime, endTime: edits.endTime, location: edits.location, notes: edits.notes, recurrenceRule: edits.recurrenceRule, calendarId: edits.calendarId }), 80) }} />
-    <EditEventSheet open={!!createEvent} event={createEvent} googleCals={googleCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => setCreateEvent(null)} onSave={handleCreateEvent} onDelete={() => setCreateEvent(null)} />
+    <EditEventSheet open={!!editEvent} event={editEvent} googleCals={writableCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => setEditEvent(null)} onSave={handleEditEvent} onDelete={scope => { if (editEvent) handleSheetDelete(editEvent, scope); setEditEvent(null) }} onDuplicate={edits => { setEditEvent(null); setTimeout(() => setCreateEvent({ title: `${edits.title} (copy)`, date: edits.date, endDate: edits.endDate, allDay: edits.allDay, startTime: edits.startTime, endTime: edits.endTime, location: edits.location, notes: edits.notes, recurrenceRule: edits.recurrenceRule, calendarId: edits.calendarId }), 80) }} />
+    <EditEventSheet open={!!createEvent} event={createEvent} googleCals={writableCals.filter(c => prefs.googleCalendarIds.includes(c.id))} onClose={() => setCreateEvent(null)} onSave={handleCreateEvent} onDelete={() => setCreateEvent(null)} />
     <CalendarSettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} prefs={prefs} googleCals={googleCals} calsLoading={calsLoading} calsError={calsError} onSave={savePrefs} />
 
     <MonthYearPicker
@@ -2462,7 +2474,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
         anchorRect={popover.anchorRect}
         mode={popover.mode}
         initial={popover.data}
-        googleCals={googleCals.filter(c => prefs.googleCalendarIds.includes(c.id))}
+        googleCals={writableCals.filter(c => prefs.googleCalendarIds.includes(c.id))}
         googleCalendarColors={prefs.googleCalendarColors}
         onClose={() => { setPopover(null); setSelectedEvId(null) }}
         onSave={handlePopoverSave}

@@ -20,6 +20,14 @@ export interface GCalendar {
   backgroundColor: string
   foregroundColor: string
   primary?:        boolean
+  // Google's per-calendar permission: 'owner' | 'writer' | 'reader' | 'freeBusyReader'.
+  // The list is fetched with minAccessRole=reader so subscribed/shared calendars
+  // still show their events — but only owner/writer can be written to.
+  accessRole?:     string
+}
+
+export function canWriteToCalendar(c: GCalendar): boolean {
+  return c.accessRole === 'owner' || c.accessRole === 'writer'
 }
 
 interface Props {
