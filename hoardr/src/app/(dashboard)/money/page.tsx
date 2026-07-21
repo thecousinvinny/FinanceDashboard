@@ -108,6 +108,29 @@ function CategoryPillBar({ cat, index, isSub = false, onClick, isExpanded = fals
 }
 
 const LIMIT = 100
+// Search hits the DB across all history, so it needs its own (larger) ceiling.
+const SEARCH_LIMIT = 300
+const EXPENSE_COLS = 'id, name, cost, date, description, card_id, savings, categories(name)'
+
+function toSeedTx(e: Record<string, unknown>): SeedTx {
+  return {
+    id:          String(e.id),
+    type:        'Expense' as const,
+    name:        String(e.name),
+    category:    (e.categories as { name: string } | null)?.name ?? 'Other',
+    date:        String(e.date),
+    amount:      Number(e.cost),
+    savings:     e.savings != null ? Number(e.savings) : 0,
+    description: e.description ? String(e.description) : null,
+    card_id:     e.card_id ? String(e.card_id) : null,
+  }
+}
+
+// PostgREST `or=(...)` is comma/paren delimited and ilike treats % and _ as
+// wildcards — strip the structural characters rather than trying to quote them.
+function sanitizeSearch(s: string): string {
+  return s.replace(/[,()"\\%_*]/g, ' ').trim()
+}
 
 interface Sub {
   id:           string
@@ -170,6 +193,9 @@ export default function OutPage() {
   const [loading,       setLoading]      = useState(!cachedTx)
   const [hasMore,       setHasMore]      = useState(false)
   const [loadingMore,   setLoadingMore]  = useState(false)
+  // Server-side search results — spans all history, not just the loaded pages.
+  const [searchRows,    setSearchRows]   = useState<SeedTx[] | null>(null)
+  const [searching,     setSearching]    = useState(false)
   const [sheetOpen,     setSheetOpen]    = useState(false)
   const [editTx,        setEditTx]       = useState<SeedTx | null>(null)
   const [savedMonth,    setSavedMonth]   = useState(0)
@@ -200,6 +226,8 @@ export default function OutPage() {
   const loadGen              = useRef(0)
   const abortRef             = useRef<AbortController | null>(null)
   const txListRef            = useRef<SeedTx[]>(cachedTx ?? [])
+  const offsetRef            = useRef(0)
+  const searchGen            = useRef(0)
   const hasMoreRef           = useRef(false)
   const isLoadingMore        = useRef(false)
   const sentinelRef          = useRef<HTMLDivElement>(null)
@@ -221,9 +249,10 @@ export default function OutPage() {
         { data: monthSav },
       ] = await Promise.all([
         supabase.from('expenses')
-          .select('id, name, cost, date, description, card_id, savings, categories(name)')
+          .select(EXPENSE_COLS)
           .order('date',       { ascending: false })
           .order('created_at', { ascending: false })
+          .order('id',         { ascending: false })
           .limit(LIMIT)
           .abortSignal(controller.signal),
         supabase.from('subscriptions')
@@ -244,17 +273,7 @@ export default function OutPage() {
           .abortSignal(controller.signal),
       ])
 
-      const rows: SeedTx[] = (expenses ?? []).map(e => ({
-        id:          String(e.id),
-        type:        'Expense' as const,
-        name:        String(e.name),
-        category:    (e.categories as unknown as { name: string } | null)?.name ?? 'Other',
-        date:        String(e.date),
-        amount:      Number(e.cost),
-        savings:     e.savings != null ? Number(e.savings) : 0,
-        description: e.description ? String(e.description) : null,
-        card_id:     e.card_id ? String(e.card_id) : null,
-      }))
+      const rows: SeedTx[] = (expenses ?? []).map(e => toSeedTx(e as unknown as Record<string, unknown>))
 
       const newSubs: Sub[] = (subsData ?? []).map(s => ({
         id:           String(s.id),
@@ -296,6 +315,7 @@ export default function OutPage() {
 
       if (gen !== loadGen.current) return
       setTxList(rows)
+      offsetRef.current = expenses?.length ?? 0
       setHasMore((expenses?.length ?? 0) >= LIMIT)
       setSubs(newSubs)
       setWishlist(newWish.filter(w => !pendingWishDeleteIds.current.has(w.id)))
@@ -316,39 +336,37 @@ export default function OutPage() {
 
   const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } = usePullToRefresh(loadData)
 
+  // Offset pagination over the same (date, created_at, id) ordering as the first
+  // page. The id tiebreaker matters: (date, created_at) is not unique, and rows
+  // that tie shuffle between queries, so pages silently overlap and skip rows.
+  // The old version paged with .lte('date', lastDate) and dropped
+  // rows it had already seen — because every refetch re-returned the rows
+  // sharing lastDate, the filtered page was always shorter than LIMIT, so
+  // `hasMore` flipped to false after the very first loadMore and the feed
+  // stopped dead well short of the full history.
   const loadMore = useCallback(async () => {
     if (isLoadingMore.current || !hasMoreRef.current) return
     isLoadingMore.current = true
     setLoadingMore(true)
-    const list     = txListRef.current
-    const lastDate = list[list.length - 1]?.date
-    if (!lastDate) { isLoadingMore.current = false; setLoadingMore(false); return }
-    const existingIds = new Set(list.map(t => t.id))
+    const from = offsetRef.current
     try {
       const { data: expenses } = await supabase
         .from('expenses')
-        .select('id, name, cost, date, description, card_id, savings, categories(name)')
-        .lte('date', lastDate)
+        .select(EXPENSE_COLS)
         .order('date',       { ascending: false })
         .order('created_at', { ascending: false })
-        .limit(LIMIT)
-      const newRows: SeedTx[] = (expenses ?? [])
-        .filter(e => !existingIds.has(String(e.id)))
-        .map(e => ({
-          id:          String(e.id),
-          type:        'Expense' as const,
-          name:        String(e.name),
-          category:    (e.categories as unknown as { name: string } | null)?.name ?? 'Other',
-          date:        String(e.date),
-          amount:      Number(e.cost),
-          savings:     e.savings != null ? Number(e.savings) : 0,
-          description: e.description ? String(e.description) : null,
-          card_id:     e.card_id ? String(e.card_id) : null,
-        }))
-        .sort((a, b) => b.date.localeCompare(a.date))
-        .slice(0, LIMIT)
-      setTxList(prev => [...prev, ...newRows])
-      const more = newRows.length === LIMIT
+        .order('id',         { ascending: false })
+        .range(from, from + LIMIT - 1)
+      const fetched = expenses?.length ?? 0
+      offsetRef.current = from + fetched
+      const existingIds = new Set(txListRef.current.map(t => t.id))
+      const newRows = (expenses ?? [])
+        .map(e => toSeedTx(e as unknown as Record<string, unknown>))
+        .filter(t => !existingIds.has(t.id))
+      if (newRows.length) setTxList(prev => [...prev, ...newRows])
+      // Keyed off the raw page size, not the deduped one — a page that is full
+      // but entirely already-seen still means there is more behind it.
+      const more = fetched === LIMIT
       setHasMore(more)
       hasMoreRef.current = more
     } catch (err) {
@@ -359,6 +377,47 @@ export default function OutPage() {
     }
   }, [supabase])
 
+  // Expense search runs against the DB so it covers every expense ever recorded,
+  // not just the pages the infinite scroll has pulled in. Category matches need
+  // a second query — PostgREST can't OR across a base column and an embedded one.
+  useEffect(() => {
+    const term = sanitizeSearch(q)
+    const gen  = ++searchGen.current
+    if (!term || tab !== 'Expenses') { setSearchRows(null); setSearching(false); return }
+    setSearching(true)
+    const t = setTimeout(async () => {
+      try {
+        const [{ data: byText }, { data: byCategory }] = await Promise.all([
+          supabase.from('expenses').select(EXPENSE_COLS)
+            .or(`name.ilike.%${term}%,description.ilike.%${term}%`)
+            .order('date', { ascending: false })
+            .limit(SEARCH_LIMIT),
+          supabase.from('expenses').select('id, name, cost, date, description, card_id, savings, categories!inner(name)')
+            .ilike('categories.name', `%${term}%`)
+            .order('date', { ascending: false })
+            .limit(SEARCH_LIMIT),
+        ])
+        if (gen !== searchGen.current) return
+        const merged = new Map<string, SeedTx>()
+        for (const e of [...(byText ?? []), ...(byCategory ?? [])]) {
+          const row = toSeedTx(e as unknown as Record<string, unknown>)
+          merged.set(row.id, row)
+        }
+        setSearchRows([...merged.values()].sort((a, b) => b.date.localeCompare(a.date)).slice(0, SEARCH_LIMIT))
+      } catch (err) {
+        console.error('expense search error:', err)
+      } finally {
+        if (gen === searchGen.current) setSearching(false)
+      }
+    }, 250)
+    return () => clearTimeout(t)
+  }, [q, tab, supabase])
+
+  // tab/q are deps because the sentinel is conditionally rendered — without them
+  // the observer would keep watching a detached node after a tab switch. hasMore
+  // is a dep so that re-observing fires an immediate intersection callback once
+  // the first page lands, which keeps a short list from stalling with the
+  // sentinel already on screen.
   useEffect(() => {
     const el = sentinelRef.current
     if (!el) return
@@ -368,7 +427,7 @@ export default function OutPage() {
     )
     obs.observe(el)
     return () => obs.disconnect()
-  }, [loadMore])
+  }, [loadMore, hasMore, tab, q, loading])
 
   useEffect(() => {
     let mounted = true
@@ -394,12 +453,14 @@ export default function OutPage() {
   // ── Expense handlers ───────────────────────────────────────────────────────
 
   function handleDelete(tx: SeedTx) {
-    const snapshot = txListRef.current.slice()
+    const snapshot       = txListRef.current.slice()
+    const searchSnapshot = searchRows?.slice() ?? null
     setTxList(prev => prev.filter(t => t.id !== tx.id))
+    setSearchRows(prev => prev ? prev.filter(t => t.id !== tx.id) : prev)
     showToast(`${tx.name} deleted`, {
       type: 'delete',
       undo: {
-        onUndo:   () => setTxList(snapshot),
+        onUndo:   () => { setTxList(snapshot); setSearchRows(searchSnapshot) },
         onCommit: () => {
           supabase
             .from('expenses')
@@ -441,9 +502,13 @@ export default function OutPage() {
   }
 
   async function handleSave(id: string, updates: TxEdits) {
-    const tx = txList.find(t => t.id === id)
+    // Look in filteredSorted, not txList — while a search is active the edited
+    // row may be a server result that was never in the paged feed.
+    const tx = filteredSorted.find(t => t.id === id)
     if (!tx) return
-    setTxList(prev => prev.map(t => t.id === id ? { ...t, name: updates.name, amount: updates.amount, category: updates.category, date: updates.date, description: updates.description, card_id: updates.card_id } : t))
+    const patch = (t: SeedTx) => t.id === id ? { ...t, name: updates.name, amount: updates.amount, category: updates.category, date: updates.date, description: updates.description, card_id: updates.card_id } : t
+    setTxList(prev => prev.map(patch))
+    setSearchRows(prev => prev ? prev.map(patch) : prev)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { await loadData(); return }
     const { data: existing } = await supabase.from('categories').select('id').eq('user_id', user.id).eq('name', updates.category).maybeSingle()
@@ -770,10 +835,14 @@ export default function OutPage() {
   }, [interestedWish])
 
   const sorted = useMemo(() => [...txList].sort((a, b) => b.date.localeCompare(a.date)), [txList])
-  const filteredSorted = useMemo(
-    () => !q ? sorted : sorted.filter(t => t.name.toLowerCase().includes(q) || (t.category ?? '').toLowerCase().includes(q) || (t.description ?? '').toLowerCase().includes(q)),
-    [sorted, q],
-  )
+  // While the debounced server search is in flight, fall back to filtering the
+  // already-loaded rows so typing feels instant; the all-time results replace
+  // them as soon as they land.
+  const filteredSorted = useMemo(() => {
+    if (!q) return sorted
+    if (searchRows) return searchRows
+    return sorted.filter(t => t.name.toLowerCase().includes(q) || (t.category ?? '').toLowerCase().includes(q) || (t.description ?? '').toLowerCase().includes(q))
+  }, [sorted, q, searchRows])
   const groups = useMemo(() =>
     groupByMonth(filteredSorted).map(g => ({
       ...g,
@@ -1020,7 +1089,14 @@ export default function OutPage() {
       {!loading && tab === 'Expenses' && (
         <div className="mx-4 mt-5 space-y-5">
           {groups.length === 0 && (
-            <div className="py-12 text-center text-ink-faint text-[13px]">{q ? `No expenses match “${query.trim()}”.` : 'No expenses yet — add your first one above.'}</div>
+            <div className="py-12 text-center text-ink-faint text-[13px]">
+              {searching ? 'Searching all history…' : q ? `No expenses match “${query.trim()}”.` : 'No expenses yet — add your first one above.'}
+            </div>
+          )}
+          {q && groups.length > 0 && (
+            <p className="-mb-2 text-center text-[10px] text-ink-faint">
+              {searching ? 'Searching all history…' : `${filteredSorted.length}${filteredSorted.length >= SEARCH_LIMIT ? '+' : ''} match${filteredSorted.length === 1 ? '' : 'es'} across all history`}
+            </p>
           )}
           {groups.map(group => (
             <div key={group.key}>
@@ -1193,11 +1269,14 @@ export default function OutPage() {
         </div>
       )}
 
-      {/* Infinite scroll sentinel (Expenses only) */}
-      {tab === 'Expenses' && (
+      {/* Infinite scroll sentinel (Expenses only, and not while searching —
+          search already returns all-time matches in one shot) */}
+      {tab === 'Expenses' && !q && (
         <>
           <div ref={sentinelRef} className="h-px" />
-          {loadingMore && <p className="py-3 text-center text-[11px] text-ink-faint">Loading…</p>}
+          {loadingMore
+            ? <p className="py-3 text-center text-[11px] text-ink-faint">Loading…</p>
+            : !hasMore && txList.length > 0 && <p className="py-3 text-center text-[11px] text-ink-faint">That’s all {txList.length} expenses.</p>}
         </>
       )}
       <div className="h-10" />

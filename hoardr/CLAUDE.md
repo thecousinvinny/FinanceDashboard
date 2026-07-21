@@ -83,6 +83,23 @@ Google OAuth via Supabase. Login (`(auth)/login`) calls `signInWithOAuth` with `
 
 Rapid tab switching causes in-flight queries to resolve after unmount → Safari WKWebView crashes. Every client page must guard with a generation counter + AbortController. Canonical example: `home/page.tsx`. Pattern: `loadGen = useRef(0)`, `abortRef = useRef<AbortController|null>(null)`, increment gen and abort on each call, discard result if `gen !== loadGen.current`. Cleanup: `return () => { loadGen.current++; abortRef.current?.abort() }`. Second data fetch needs a separate `detailGen` + `detailAbortRef`.
 
+## Paginated feeds (`/money` Expenses, `/in` History)
+
+Both feeds page with `.range(offset, offset + LIMIT - 1)` (LIMIT = 100) behind an
+IntersectionObserver sentinel, tracked by an `offsetRef`.
+
+- **Order by `date, created_at, id` — the `id` tiebreaker is required.** `(date, created_at)` is not unique; tied rows shuffle between queries, so offset pages silently overlap and skip entries. Without it a full walk of 1310 expenses yielded only 1308 distinct rows.
+- `hasMore` must key off the **raw** page length, never the deduped one. A full page that happens to be entirely already-seen still means more rows exist behind it.
+- The sentinel effect's deps must include `hasMore`, the active tab, and the search term — the sentinel is conditionally rendered, and re-observing fires an immediate intersection callback so a short list doesn't stall.
+- `/in` stat tiles + `IncomeBarChart` read `recentIncome` (its own date-bounded query), **not** the paginated `incomeList` — otherwise the totals would drift with scroll depth.
+
+**Search is server-side and spans all history**, not just the loaded pages. Debounced 250ms into a query, with a generation counter to drop stale responses; falls back to filtering loaded rows while in flight. Edit/delete handlers must look the row up in the *displayed* list (`filteredSorted` / `displayIncome`) and patch `searchRows` too — a search hit may never have been in the paged feed.
+
+PostgREST gotchas these queries hit:
+- `or=(...)` is comma/paren delimited and `ilike` treats `%`/`_` as wildcards — `sanitizeSearch()` strips the structural characters.
+- Category matches need a **second query** (`categories!inner(name)` + `.ilike('categories.name', …)`) merged by id; PostgREST can't OR across a base column and an embedded one.
+- **`income.source` is a Postgres enum**, so `ilike` errors with `operator does not exist: income_source ~~*`, and a `::text` cast inside an `or=` logic tree is a parse error. Resolve the term to matching enum labels client-side and match with `source.in.("A","B")` instead.
+
 ## pageCache (`src/lib/page-cache.ts`)
 
 Module-level in-memory cache, TTL = 60s. Used by all tabs to show stale data while background refresh runs.

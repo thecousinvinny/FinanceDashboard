@@ -14,8 +14,8 @@ import { CardVisual } from '@/components/wallet/CardVisual'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { CustomDateInput } from '@/components/ui/CustomDateInput'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
-import type { Card, Bank } from '@/types'
-import { Banknote, X, ArrowUpCircle, ArrowLeftRight, PlusCircle } from 'lucide-react'
+import type { Card, Bank, IncomeSource } from '@/types'
+import { Banknote, X, ArrowUpCircle, ArrowLeftRight, PlusCircle, Search } from 'lucide-react'
 import { GlobalFAB } from '@/components/ui/GlobalFAB'
 import { cn, $f, $fd, $fk, fmtDate, haptic, groupByMonth, localToday, daysUntilLabel } from '@/lib/utils'
 import type { Frequency } from '@/components/wallet/RevenueStreamSheet'
@@ -226,6 +226,40 @@ function StatCard({ label, value, sub, loading }: { label: string; value: number
 // Module-level: survives tab switches, resets only on hard reload
 let sessionAutoGenDone = false
 
+const INCOME_LIMIT        = 100
+const INCOME_SEARCH_LIMIT = 300
+const INCOME_COLS         = 'id, name, amount, date, source, bank_id'
+
+function toIncomeRow(i: Record<string, unknown>): IncomeRow {
+  return {
+    id:      String(i.id),
+    name:    String(i.name),
+    amount:  Number(i.amount),
+    date:    String(i.date),
+    source:  i.source ? String(i.source) : null,
+    bank_id: i.bank_id ? String(i.bank_id) : null,
+  }
+}
+
+// PostgREST `or=(...)` is comma/paren delimited and ilike treats % and _ as
+// wildcards — strip the structural characters rather than trying to quote them.
+function sanitizeSearch(s: string): string {
+  return s.replace(/[,()"\\%_*]/g, ' ').trim()
+}
+
+const INCOME_SOURCES: IncomeSource[] = ['Repayment', 'Refund', 'Projects', 'Freelance', 'Other']
+
+// `income.source` is a Postgres enum, so ilike can't be applied to it (and
+// PostgREST rejects a ::text cast inside an or= logic tree). Resolve the term
+// to matching enum labels up front and match those with an IN list instead.
+function incomeSearchFilter(term: string): string {
+  const t       = term.toLowerCase()
+  const sources = INCOME_SOURCES.filter(s => s.toLowerCase().includes(t))
+  const clauses = [`name.ilike.%${term}%`]
+  if (sources.length) clauses.push(`source.in.(${sources.map(s => `"${s}"`).join(',')})`)
+  return clauses.join(',')
+}
+
 export default function InPage() {
   const [tab,           setTab]          = useState<Tab>('History')
   usePillSwipe(tab, setTab, PILL_OPTIONS)
@@ -243,6 +277,15 @@ export default function InPage() {
   const [editStream,    setEditStream]   = useState<RevenueStreamConfig | null>(null)
   const [incomeList,    setIncomeList]   = useState<IncomeRow[]>([])
   const [incomeLoading, setIncomeLoading] = useState(true)
+  const [incomeHasMore, setIncomeHasMore] = useState(false)
+  const [incomeMoreLoading, setIncomeMoreLoading] = useState(false)
+  // Chart + stat tiles read from their own window of rows so they stay correct
+  // no matter how far the paginated list below has been scrolled.
+  const [recentIncome,  setRecentIncome] = useState<IncomeRow[]>([])
+  const [searchOpen,    setSearchOpen]   = useState(false)
+  const [query,         setQuery]        = useState('')
+  const [searchRows,    setSearchRows]   = useState<IncomeRow[] | null>(null)
+  const [searching,     setSearching]    = useState(false)
   const [interestBank,  setInterestBank] = useState<Bank | null>(null)
   const [intBalance,    setIntBalance]   = useState('')
   const [intApy,        setIntApy]       = useState('')
@@ -267,6 +310,13 @@ export default function InPage() {
   const detailAbortRef    = useRef<AbortController | null>(null)
   const incomeGen         = useRef(0)
   const incomeAbortRef    = useRef<AbortController | null>(null)
+  const incomeOffsetRef   = useRef(0)
+  const incomeListRef     = useRef<IncomeRow[]>([])
+  const incomeHasMoreRef  = useRef(false)
+  const isLoadingMoreInc  = useRef(false)
+  const incomeSentinelRef = useRef<HTMLDivElement>(null)
+  const incomeSearchGen   = useRef(0)
+  const searchInputRef    = useRef<HTMLInputElement>(null)
   const pendingDeleteIds  = useRef(new Set<string>())
   const containerRef      = useRef<HTMLDivElement | null>(null)
   const cardsRef          = useRef<Card[]>(cards)
@@ -359,27 +409,75 @@ export default function InPage() {
     const gen = ++incomeGen.current
     setIncomeLoading(true)
     try {
-      const { data } = await supabase
-        .from('income')
-        .select('id, name, amount, date, source, bank_id')
-        .lte('date', localToday())
-        .order('date', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(200)
-        .abortSignal(controller.signal)
+      const today = localToday()
+      // Stats window: far enough back to cover both the 6-month chart and the
+      // year-to-date tile, independent of how many list pages are loaded.
+      const now        = new Date()
+      const sixAgo     = new Date(now.getFullYear(), now.getMonth() - 5, 1)
+      const chartStart = `${sixAgo.getFullYear()}-${String(sixAgo.getMonth() + 1).padStart(2, '0')}-01`
+      const yearStart  = `${now.getFullYear()}-01-01`
+      const statsStart = chartStart < yearStart ? chartStart : yearStart
+      const [{ data }, { data: statsData }] = await Promise.all([
+        supabase.from('income').select(INCOME_COLS)
+          .lte('date', today)
+          .order('date', { ascending: false })
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: false })
+          .range(0, INCOME_LIMIT - 1)
+          .abortSignal(controller.signal),
+        supabase.from('income').select(INCOME_COLS)
+          .lte('date', today)
+          .gte('date', statsStart)
+          .limit(5000)
+          .abortSignal(controller.signal),
+      ])
       if (gen !== incomeGen.current) return
-      setIncomeList((data ?? []).filter(i => !pendingDeleteIds.current.has(String(i.id))).map(i => ({
-        id:      String(i.id),
-        name:    String(i.name),
-        amount:  Number(i.amount),
-        date:    String(i.date),
-        source:  i.source ? String(i.source) : null,
-        bank_id: i.bank_id ? String(i.bank_id) : null,
-      })))
+      const rows = (data ?? []).filter(i => !pendingDeleteIds.current.has(String(i.id))).map(toIncomeRow)
+      setIncomeList(rows)
+      setRecentIncome((statsData ?? []).filter(i => !pendingDeleteIds.current.has(String(i.id))).map(toIncomeRow))
+      incomeOffsetRef.current = data?.length ?? 0
+      const more = (data?.length ?? 0) >= INCOME_LIMIT
+      setIncomeHasMore(more)
+      incomeHasMoreRef.current = more
       setIncomeLoading(false)
     } catch (err) {
       if ((err as Error)?.name === 'AbortError') return
       console.error('loadIncome error:', err)
+    }
+  }, [supabase])
+
+  const loadMoreIncome = useCallback(async () => {
+    if (isLoadingMoreInc.current || !incomeHasMoreRef.current) return
+    isLoadingMoreInc.current = true
+    setIncomeMoreLoading(true)
+    const from = incomeOffsetRef.current
+    try {
+      const { data } = await supabase
+        .from('income')
+        .select(INCOME_COLS)
+        .lte('date', localToday())
+        // id tiebreaker: (date, created_at) is not unique, and tied rows shuffle
+        // between queries, so offset pages would overlap and skip entries.
+        .order('date', { ascending: false })
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(from, from + INCOME_LIMIT - 1)
+      const fetched = data?.length ?? 0
+      incomeOffsetRef.current = from + fetched
+      const existing = new Set(incomeListRef.current.map(r => r.id))
+      const newRows  = (data ?? [])
+        .filter(i => !pendingDeleteIds.current.has(String(i.id)))
+        .map(toIncomeRow)
+        .filter(r => !existing.has(r.id))
+      if (newRows.length) setIncomeList(prev => [...prev, ...newRows])
+      const more = fetched === INCOME_LIMIT
+      setIncomeHasMore(more)
+      incomeHasMoreRef.current = more
+    } catch (err) {
+      console.error('loadMoreIncome error:', err)
+    } finally {
+      isLoadingMoreInc.current = false
+      setIncomeMoreLoading(false)
     }
   }, [supabase])
 
@@ -391,6 +489,47 @@ export default function InPage() {
     loadIncome()
     return () => { incomeGen.current++; incomeAbortRef.current?.abort() }
   }, [loadIncome])
+
+  useEffect(() => { incomeListRef.current = incomeList }, [incomeList])
+  useEffect(() => { if (searchOpen) searchInputRef.current?.focus() }, [searchOpen])
+
+  const q = searchOpen ? query.trim().toLowerCase() : ''
+
+  // Income search runs against the DB so it spans every income row ever
+  // recorded, not just the pages the infinite scroll has pulled in.
+  useEffect(() => {
+    const term = sanitizeSearch(q)
+    const gen  = ++incomeSearchGen.current
+    if (!term || tab !== 'History') { setSearchRows(null); setSearching(false); return }
+    setSearching(true)
+    const t = setTimeout(async () => {
+      try {
+        const { data } = await supabase.from('income').select(INCOME_COLS)
+          .lte('date', localToday())
+          .or(incomeSearchFilter(term))
+          .order('date', { ascending: false })
+          .limit(INCOME_SEARCH_LIMIT)
+        if (gen !== incomeSearchGen.current) return
+        setSearchRows((data ?? []).filter(i => !pendingDeleteIds.current.has(String(i.id))).map(toIncomeRow))
+      } catch (err) {
+        console.error('income search error:', err)
+      } finally {
+        if (gen === incomeSearchGen.current) setSearching(false)
+      }
+    }, 250)
+    return () => clearTimeout(t)
+  }, [q, tab, supabase])
+
+  useEffect(() => {
+    const el = incomeSentinelRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) loadMoreIncome() },
+      { rootMargin: '200px 0px' },
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [loadMoreIncome, incomeHasMore, tab, q, loading, incomeLoading])
 
   const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } = usePullToRefresh(loadData)
 
@@ -525,11 +664,17 @@ export default function InPage() {
   }
 
   function handleDeleteIncome(id: string) {
-    const row = incomeList.find(i => i.id === id)
+    // Look in displayIncome, not incomeList — while a search is active the
+    // visible row may be a server result that was never in the paged feed.
+    const row = displayIncome.find(i => i.id === id)
     if (!row) return
-    const snapshot = incomeList.slice()
+    const snapshot       = incomeList.slice()
+    const recentSnapshot = recentIncome.slice()
+    const searchSnapshot = searchRows?.slice() ?? null
     pendingDeleteIds.current.add(id)
     setIncomeList(prev => prev.filter(i => i.id !== id))
+    setRecentIncome(prev => prev.filter(i => i.id !== id))
+    setSearchRows(prev => prev ? prev.filter(i => i.id !== id) : prev)
     supabase.from('income').delete().eq('id', id).then()
     showToast(`${row.name} deleted`, {
       type: 'delete',
@@ -537,6 +682,8 @@ export default function InPage() {
         onUndo: () => {
           pendingDeleteIds.current.delete(id)
           setIncomeList(snapshot)
+          setRecentIncome(recentSnapshot)
+          setSearchRows(searchSnapshot)
           supabase.auth.getUser().then(({ data: { user } }) => {
             if (!user) return
             supabase.from('income').insert({
@@ -832,30 +979,38 @@ export default function InPage() {
     }
   }, [supabase, tab])
 
+  // While searching, show the all-time server results instead of the paged feed.
+  // Until they land, filter what's already loaded so typing feels instant.
+  const displayIncome = useMemo(() => {
+    if (!q) return incomeList
+    if (searchRows) return searchRows
+    return incomeList.filter(r => r.name.toLowerCase().includes(q) || (r.source ?? '').toLowerCase().includes(q))
+  }, [incomeList, q, searchRows])
+
   const incomeGroups = useMemo(() =>
-    groupByMonth(incomeList).map(g => ({
+    groupByMonth(displayIncome).map(g => ({
       ...g,
       total: g.rows.reduce((s, r) => s + (r as IncomeRow).amount, 0),
     })),
-  [incomeList])
+  [displayIncome])
 
   const statThisMonth = useMemo(() => {
     const d          = new Date()
     const monthStart = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
     const lastDay    = new Date(d.getFullYear(), d.getMonth() + 1, 0)
     const monthEnd   = `${lastDay.getFullYear()}-${String(lastDay.getMonth() + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`
-    const actual     = incomeList.filter(r => r.date >= monthStart).reduce((s, r) => s + r.amount, 0)
+    const actual     = recentIncome.filter(r => r.date >= monthStart).reduce((s, r) => s + r.amount, 0)
     const projected  = revStreams.reduce((s, stream) => s + projectStreamPayments(stream, monthEnd), 0)
     return actual + projected
-  }, [incomeList, revStreams])
+  }, [recentIncome, revStreams])
 
   const statThisYear = useMemo(() => {
     const yearStart = `${new Date().getFullYear()}-01-01`
     const yearEnd   = `${new Date().getFullYear()}-12-31`
-    const actual    = incomeList.filter(r => r.date >= yearStart).reduce((s, r) => s + r.amount, 0)
+    const actual    = recentIncome.filter(r => r.date >= yearStart).reduce((s, r) => s + r.amount, 0)
     const projected = revStreams.reduce((s, stream) => s + projectStreamPayments(stream, yearEnd), 0)
     return actual + projected
-  }, [incomeList, revStreams])
+  }, [recentIncome, revStreams])
 
   const statNextIn = useMemo(() => {
     const today = localToday()
@@ -896,9 +1051,44 @@ export default function InPage() {
         <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
         <div style={{ height: 'calc(env(safe-area-inset-top, 44px) + 8px)' }} />
 
-        <div className="mx-4 mt-4">
-          <PillGroup options={['History', 'Streams', 'Accounts'] as Tab[]} value={tab} onChange={setTab} />
+        {/* paddingRight reserves the top-right corner for the fixed ProfileDrawer button */}
+        <div className="mx-4 mt-4 flex items-center gap-2" style={{ paddingRight: 44 }}>
+          <div className="flex-1 min-w-0">
+            <PillGroup options={['History', 'Streams', 'Accounts'] as Tab[]} value={tab} onChange={setTab} />
+          </div>
+          {tab === 'History' && (
+            <button
+              onClick={() => { if (searchOpen) { setSearchOpen(false); setQuery('') } else setSearchOpen(true) }}
+              aria-label="Search"
+              className={cn('w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 border transition-colors select-none',
+                searchOpen ? 'bg-emerald/15 border-emerald/40 text-emerald' : 'bg-bg-surface border-white/[0.06] text-ink-muted')}
+            >
+              <Search size={15} strokeWidth={2} />
+            </button>
+          )}
         </div>
+
+        {tab === 'History' && searchOpen && (
+          <div className="mx-4 mt-3">
+            <div className="flex items-center gap-2 h-10 px-3 rounded-[14px] bg-bg-surface border border-white/[0.06] focus-within:border-emerald/40 transition-colors">
+              <Search size={14} className="text-ink-faint flex-shrink-0" strokeWidth={2} />
+              <input
+                ref={searchInputRef}
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Search all income…"
+                autoComplete="off"
+                className="flex-1 min-w-0 bg-transparent text-[14px] text-ink placeholder:text-ink-faint outline-none"
+                style={{ caretColor: 'var(--sem-income)' }}
+              />
+              {query && (
+                <button onClick={() => { setQuery(''); searchInputRef.current?.focus() }} aria-label="Clear" className="flex-shrink-0 text-ink-faint select-none">
+                  <X size={15} strokeWidth={2} />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {tab === 'History' && (
           <div className="mx-4 mt-4 flex gap-2">
@@ -935,7 +1125,7 @@ export default function InPage() {
         {/* ── History ─────────────────────────────────────────────────────── */}
         {!loading && tab === 'History' && (
           <>
-          <IncomeBarChart incomeList={incomeList} />
+          {!q && <IncomeBarChart incomeList={recentIncome} />}
           <div className="mx-4 mt-4 space-y-5">
             {incomeLoading ? (
               <div className="space-y-2">
@@ -944,9 +1134,16 @@ export default function InPage() {
                 ))}
               </div>
             ) : incomeGroups.length === 0 ? (
-              <div className="py-12 text-center text-ink-faint text-[13px]">No income recorded yet — tap + to add.</div>
+              <div className="py-12 text-center text-ink-faint text-[13px]">
+                {searching ? 'Searching all history…' : q ? `No income matches “${query.trim()}”.` : 'No income recorded yet — tap + to add.'}
+              </div>
             ) : (
               <>
+                {q && (
+                  <p className="-mb-2 text-center text-[10px] text-ink-faint">
+                    {searching ? 'Searching all history…' : `${displayIncome.length}${displayIncome.length >= INCOME_SEARCH_LIMIT ? '+' : ''} match${displayIncome.length === 1 ? '' : 'es'} across all history`}
+                  </p>
+                )}
                 {incomeGroups.map(group => (
                   <div key={group.key}>
                     <div className="flex items-center justify-between mb-3">
@@ -974,6 +1171,16 @@ export default function InPage() {
               </>
             )}
           </div>
+          {/* Infinite scroll sentinel — not while searching, since search already
+              returns all-time matches in one shot */}
+          {!incomeLoading && !q && (
+            <>
+              <div ref={incomeSentinelRef} className="h-px" />
+              {incomeMoreLoading
+                ? <p className="py-3 text-center text-[11px] text-ink-faint">Loading…</p>
+                : !incomeHasMore && incomeList.length > 0 && <p className="py-3 text-center text-[11px] text-ink-faint">That’s all {incomeList.length} income entries.</p>}
+            </>
+          )}
           </>
         )}
 
