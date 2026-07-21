@@ -59,7 +59,15 @@ Key invariants:
 
 ## RLS coverage
 
-All tables have RLS enabled with `owner_all` policies (USING `auth.uid() = user_id`). The `cal_events` policy lives in `20260607_cal_events_rls.sql` — if calendar reads/writes return 403 for a valid user, this migration may not have been applied yet in Supabase.
+All 12 tables have RLS **enabled** with exactly one `owner_all` policy each, scoped `TO authenticated`: USING + WITH CHECK `auth.uid() = user_id` (`profiles` keys off `id`). Established by `20260720_enable_rls_all_tables.sql`, which also collapsed 29 overlapping policies down to 12.
+
+**Never disable RLS to fix a write failure.** Nine tables sat with `relrowsecurity = false` for months because writes were failing and RLS looked like the culprit. It wasn't — the sessions were dying (middleware wasn't carrying rotated auth cookies onto redirects, so `auth.uid()` silently became null; see the middleware invariant above). Meanwhile the anon key ships in the client bundle, so every expense, income row, bank, card and profile was publicly readable *and writable*. If writes start failing, check the session first — `db-error.ts` now surfaces these instead of swallowing them.
+
+**Tables are not the whole story — check views and functions too:**
+- **`ledger` is a view, and views ignore RLS unless `security_invoker` is set.** It's owned by `postgres`, so it read straight through every table policy: `/rest/v1/ledger` still returned all expenses/income/subscriptions anonymously *after* the tables were locked down. Fixed in `20260720_secure_ledger_view.sql` with `ALTER VIEW … SET (security_invoker = on)`. Any future view over these tables needs the same.
+- `handle_new_user()` (SECURITY DEFINER signup trigger) had no ACL, so EXECUTE defaulted to PUBLIC and it was callable at `/rest/v1/rpc/handle_new_user`. Now granted only to `postgres`, `supabase_auth_admin`, `service_role` — the grant to `supabase_auth_admin` is what keeps signup working.
+
+To verify, hit the REST API with the anon key and no session: every table must return `0` rows or 401, and so must `ledger`. `mcp__supabase__get_advisors(type: 'security')` catches view/function gaps that a table-only audit misses.
 
 ## Supabase clients
 
