@@ -6,3 +6,6 @@ node_modules/
 tsconfig.tsbuildinfo
 .claude/
 supabase/.temp/
+
+dev.log
+dev.err
