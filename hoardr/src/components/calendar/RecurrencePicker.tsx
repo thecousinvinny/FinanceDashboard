@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { ChevronLeft, Check } from 'lucide-react'
+import { CustomDateInput } from '@/components/ui/CustomDateInput'
 
 const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 const DOW_RRULE  = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA']
@@ -205,7 +206,8 @@ export function RecurrencePicker({ open, date, value, elevated, onClose, onChang
                   { type: 'date'  as const, label: 'On date' },
                   { type: 'count' as const, label: 'After' },
                 ] as const).map(({ type, label }, i, arr) => (
-                  <button key={type} onClick={() => setCustom(c => ({ ...c, endType: type }))} className="w-full flex items-center justify-between px-4 py-[14px]"
+                  /* div, not button — the row hosts nested buttons (date picker / stepper) */
+                  <div key={type} role="button" tabIndex={0} onClick={() => setCustom(c => ({ ...c, endType: type }))} className="w-full flex items-center justify-between px-4 py-[14px]"
                     style={{ background: 'rgba(255,255,255,0.06)', borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none', cursor: 'pointer' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <span style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${custom.endType === type ? GOLD : 'rgba(255,255,255,0.2)'}`, background: custom.endType === type ? GOLD : 'transparent', flexShrink: 0, transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -214,9 +216,11 @@ export function RecurrencePicker({ open, date, value, elevated, onClose, onChang
                       <span style={{ fontFamily: M, fontSize: 15, color: '#fff' }}>{label}</span>
                     </div>
                     {type === 'date' && custom.endType === 'date' && (
-                      <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 8, overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
-                        <input type="date" value={custom.endDate} onChange={e => setCustom(c => ({ ...c, endDate: e.target.value }))}
-                          style={{ background: 'transparent', border: 'none', color: GOLD, fontSize: 14, fontFamily: M, padding: '4px 8px', colorScheme: 'dark', outline: 'none' }} />
+                      <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 8 }} onClick={e => e.stopPropagation()}>
+                        <CustomDateInput value={custom.endDate} min={date}
+                          onChange={v => setCustom(c => ({ ...c, endDate: v }))}
+                          placeholder="Pick a date"
+                          style={{ background: 'transparent', border: 'none', color: GOLD, fontSize: 14, fontFamily: M, padding: '4px 8px', outline: 'none' }} />
                       </div>
                     )}
                     {type === 'count' && custom.endType === 'count' && (
@@ -227,7 +231,7 @@ export function RecurrencePicker({ open, date, value, elevated, onClose, onChang
                         <span style={{ fontFamily: M, fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>times</span>
                       </div>
                     )}
-                  </button>
+                  </div>
                 ))}
               </div>
 

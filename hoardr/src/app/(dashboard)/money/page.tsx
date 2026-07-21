@@ -17,6 +17,7 @@ import { reportDbError, requireUser } from '@/lib/db-error'
 import { SlotNumber } from '@/components/ui/SlotNumber'
 import { pageCache } from '@/lib/page-cache'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
+import { CustomDateInput } from '@/components/ui/CustomDateInput'
 import { PullIndicator } from '@/components/ui/PullIndicator'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { createCalEvent, updateCalEvent, deleteCalEvent, allDayEvent } from '@/lib/calendar'
@@ -1299,10 +1300,9 @@ export default function OutPage() {
         </div>
         <div>
           <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Date</p>
-          <div className="overflow-hidden rounded-[14px]">
-            <input type="date" value={buyDate} onChange={e => setBuyDate(e.target.value)}
-              className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink outline-none focus:border-gold/40"
-              style={{ colorScheme: 'dark' }} />
+          <div className="rounded-[14px]">
+            <CustomDateInput value={buyDate} onChange={setBuyDate}
+              className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink outline-none focus:border-gold/40" />
           </div>
         </div>
         {cards.length > 0 && (

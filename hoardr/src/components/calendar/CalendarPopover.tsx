@@ -5,6 +5,7 @@ import { X, MapPin, AlignLeft, RefreshCw, Clock, ChevronDown, Calendar } from 'l
 import type { GCalendar } from './CalendarSettingsSheet'
 import { DateRangePicker } from './DateRangePicker'
 import { rruleLabel } from '@/lib/rrule'
+import { localToday } from '@/lib/utils'
 import type { RecurScope } from '@/lib/calendar'
 
 export type { RecurScope }
@@ -249,6 +250,8 @@ export function CalendarPopover({
   const [visible, setVisible]         = useState(false)
   const [dateRangeOpen, setDateRangeOpen] = useState(false)
   const [dateAnchor, setDateAnchor]       = useState<DOMRect | null>(null)
+  const [recEndOpen, setRecEndOpen]       = useState(false)
+  const [recEndAnchor, setRecEndAnchor]   = useState<DOMRect | null>(null)
   const [customOpen, setCustomOpen]       = useState(false)
   const [rec, setRec]                     = useState<CustomRec>(DEFAULT_REC)
   const [locValue,       setLocValue]       = useState(initial.location)
@@ -260,6 +263,7 @@ export function CalendarPopover({
   const titleRef     = useRef<HTMLInputElement>(null)
   const popRef       = useRef<HTMLDivElement>(null)
   const dateRowRef   = useRef<HTMLDivElement>(null)
+  const recEndBtnRef = useRef<HTMLButtonElement>(null)
   const startBtnRef  = useRef<HTMLButtonElement>(null)
   const endBtnRef    = useRef<HTMLButtonElement>(null)
   const startDropRef = useRef<HTMLDivElement>(null)
@@ -372,6 +376,7 @@ export function CalendarPopover({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (scopeAsk)      { setScopeAsk(null);       return }
+        if (recEndOpen)    { setRecEndOpen(false);    return }
         if (customOpen)    { setCustomOpen(false);    return }
         if (dateRangeOpen) { setDateRangeOpen(false); return }
         if (locOpen)    { setLocOpen(false);    return }
@@ -383,7 +388,7 @@ export function CalendarPopover({
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose, startOpen, endOpen, calDropOpen, locOpen, dateRangeOpen, customOpen, scopeAsk])
+  }, [onClose, startOpen, endOpen, calDropOpen, locOpen, dateRangeOpen, customOpen, scopeAsk, recEndOpen])
 
   function setField<K extends keyof PopoverFormData>(key: K, val: PopoverFormData[K]) {
     setForm(f => {
@@ -763,6 +768,20 @@ export function CalendarPopover({
         />
       )}
 
+      {/* Repeat "ends on" date picker (PC / iPad) — mounted here, not inside the
+          popover card: that card has a transform, which would make the picker's
+          position:fixed resolve against it and get clipped by its overflow. */}
+      {recEndOpen && recEndAnchor && (
+        <DateRangePicker
+          anchorRect={recEndAnchor}
+          mode="single"
+          startDate={rec.endDate || form.date || localToday()}
+          endDate={rec.endDate || form.date || localToday()}
+          onClose={() => setRecEndOpen(false)}
+          onApply={start => { setRec(c => ({ ...c, endDate: start })); setRecEndOpen(false) }}
+        />
+      )}
+
 
       {/* Popover card */}
       <div ref={popRef} style={popoverStyle}>
@@ -936,10 +955,19 @@ export function CalendarPopover({
                           <button key={val} onClick={() => setRec(c => ({ ...c, endType: val }))} style={seg(rec.endType === val)}>{label}</button>
                         ))}
                       </div>
-                      {rec.endType === 'date' && (
-                        <input type="date" value={rec.endDate} min={form.date} onChange={e => setRec(c => ({ ...c, endDate: e.target.value }))}
-                          style={{ width: '100%', background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 8, padding: '7px 10px', fontSize: 13, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', colorScheme: 'dark', outline: 'none', marginBottom: 10, boxSizing: 'border-box' }} />
-                      )}
+                      {rec.endType === 'date' && (() => {
+                        const fieldStyle: React.CSSProperties = { width: '100%', background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 8, padding: '7px 10px', fontSize: 13, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', outline: 'none', marginBottom: 10, boxSizing: 'border-box', textAlign: 'left' }
+                        return isModal ? (
+                          <input type="date" value={rec.endDate} min={form.date} onChange={e => setRec(c => ({ ...c, endDate: e.target.value }))}
+                            style={{ ...fieldStyle, colorScheme: 'dark' }} />
+                        ) : (
+                          <button ref={recEndBtnRef} type="button"
+                            onClick={() => { setRecEndAnchor(recEndBtnRef.current?.getBoundingClientRect() ?? null); setRecEndOpen(true) }}
+                            style={{ ...fieldStyle, cursor: 'pointer' }}>
+                            {rec.endDate ? fmtDateLabel(rec.endDate) : <span style={{ color: MUTED }}>Pick a date</span>}
+                          </button>
+                        )
+                      })()}
                       {rec.endType === 'count' && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                           <button onClick={() => setRec(c => ({ ...c, endCount: Math.max(1, c.endCount - 1) }))} style={step}>−</button>

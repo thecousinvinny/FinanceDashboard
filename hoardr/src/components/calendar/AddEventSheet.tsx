@@ -5,6 +5,7 @@ import { MapPin, Clock, AlignLeft, X, ChevronDown, RefreshCw } from 'lucide-reac
 import { cn, localToday } from '@/lib/utils'
 import { rruleLabel } from '@/lib/rrule'
 import { RecurrencePicker } from './RecurrencePicker'
+import { CustomDateInput } from '@/components/ui/CustomDateInput'
 import type { GCalendar } from './CalendarSettingsSheet'
 
 export interface NewCalEvent {
@@ -237,13 +238,11 @@ export function AddEventSheet({ open, defaultDate, defaultCalendarId, googleCals
           />
 
           {/* Date — wrapper clips iOS native control to border-radius */}
-          <div className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] overflow-hidden">
-            <input
-              type="date"
+          <div className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px]">
+            <CustomDateInput
               value={form.date}
-              onChange={e => set('date', e.target.value)}
+              onChange={v => set('date', v)}
               className="w-full px-4 py-3 text-[15px] text-ink bg-transparent outline-none"
-              style={{ colorScheme: 'dark' }}
             />
           </div>
 

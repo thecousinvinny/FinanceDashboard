@@ -12,6 +12,7 @@ import { ManualDepositSheet, type IncomeInitial } from '@/components/wallet/Manu
 import { EditCardSheet, type CardEdits } from '@/components/wallet/EditCardSheet'
 import { CardVisual } from '@/components/wallet/CardVisual'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
+import { CustomDateInput } from '@/components/ui/CustomDateInput'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import type { Card, Bank } from '@/types'
 import { Banknote, X, ArrowUpCircle, ArrowLeftRight, PlusCircle } from 'lucide-react'
@@ -1252,10 +1253,9 @@ export default function InPage() {
               </div>
               <div>
                 <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Next payment date</p>
-                <div className="overflow-hidden rounded-[14px]">
-                  <input type="date" value={intDate} onChange={e => setIntDate(e.target.value)}
-                    className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink outline-none focus:border-gold/40"
-                    style={{ colorScheme: 'dark' }} />
+                <div className="rounded-[14px]">
+                  <CustomDateInput value={intDate} onChange={setIntDate}
+                    className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink outline-none focus:border-gold/40" />
                 </div>
               </div>
               {parseFloat(intBalance) > 0 && intDate && (() => {

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { localToday, clamp } from '@/lib/utils'
 import { readTheme } from '@/lib/theme'
@@ -221,7 +222,14 @@ export function DateRangePicker({ anchorRect, startDate, endDate, mode = 'range'
     color: INK,
   }
 
-  return (
+  // Portalled to <body>: bottom sheets set transform / will-change on their
+  // container, which would make this popover's position:fixed resolve against
+  // the sheet instead of the viewport (and get clipped by its overflow).
+  // React events still bubble to the mounting component, so parent
+  // stopPropagation / outside-click guards keep working.
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
     <div
       ref={popRef}
       data-daterange-picker
@@ -326,6 +334,7 @@ export function DateRangePicker({ anchorRect, startDate, endDate, mode = 'range'
           Apply
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
