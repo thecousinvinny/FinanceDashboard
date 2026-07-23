@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Check, ChevronRight, CreditCard, LogOut, CalendarDays, Tag, Settings2, Palette, CalendarCheck } from 'lucide-react'
+import { ArrowLeft, Check, ChevronRight, CreditCard, LogOut, CalendarDays, Tag, Settings2, Palette, CalendarCheck, Smartphone, Monitor, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { connectGoogleCalendar } from '@/lib/gcal-connect'
+import { showToast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 import { type Theme, THEMES, applyTheme, readTheme } from '@/lib/theme'
 import { CalendarSettingsSheet, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
@@ -16,6 +17,55 @@ import { applySemanticColors } from '@/lib/semantic-colors'
 const DEFAULT_PREFS: CalPrefs = { visibleTypes: ['sub', 'income'], googleCalendarIds: [] }
 
 interface SettingsCard { id: string; name: string; last4: string | null }
+
+interface AuthSession {
+  id:           string
+  created_at:   string
+  updated_at:   string
+  refreshed_at: string | null
+  not_after:    string | null
+  user_agent:   string | null
+  ip:           string | null
+  is_current:   boolean
+}
+
+// Friendly device label from a user-agent string, e.g. "Chrome · Windows".
+function deviceLabel(ua: string | null): { os: string; browser: string; isPhone: boolean } {
+  const s = ua ?? ''
+  const isPhone = /iPhone|iPad|Android/i.test(s)
+  const os =
+    /iPhone/i.test(s)        ? 'iPhone'
+    : /iPad/i.test(s)        ? 'iPad'
+    : /Android/i.test(s)     ? 'Android'
+    : /Windows/i.test(s)     ? 'Windows'
+    : /Mac OS X|Macintosh/i.test(s) ? 'Mac'
+    : /Linux/i.test(s)       ? 'Linux'
+    : 'Unknown device'
+  const browser =
+    /Edg\//i.test(s)         ? 'Edge'
+    : /OPR\/|Opera/i.test(s) ? 'Opera'
+    : /Chrome\//i.test(s) && !/Edg\//i.test(s) ? 'Chrome'
+    : /Firefox\//i.test(s)   ? 'Firefox'
+    : /Safari\//i.test(s)    ? 'Safari'
+    : 'Browser'
+  return { os, browser, isPhone }
+}
+
+function relTime(ts: string | null): string {
+  if (!ts) return 'unknown'
+  // refreshed_at has no timezone suffix; treat it as UTC to match Postgres.
+  const iso = /[Z+]/.test(ts) ? ts : ts.replace(' ', 'T') + 'Z'
+  const then = new Date(iso).getTime()
+  if (isNaN(then)) return 'unknown'
+  const mins = Math.max(0, Math.round((Date.now() - then) / 60000))
+  if (mins < 1)    return 'just now'
+  if (mins < 60)   return `${mins}m ago`
+  const hrs = Math.round(mins / 60)
+  if (hrs < 24)    return `${hrs}h ago`
+  const days = Math.round(hrs / 24)
+  if (days < 30)   return `${days}d ago`
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
 
 export default function SettingsPage() {
   const router    = useRouter()
@@ -36,6 +86,9 @@ export default function SettingsPage() {
   const [settingsCards,        setSettingsCards]        = useState<SettingsCard[]>([])
   const [settingsCardsLoading, setSettingsCardsLoading] = useState(false)
   const [semColorsOpen,        setSemColorsOpen]        = useState(false)
+  const [sessions,             setSessions]             = useState<AuthSession[]>([])
+  const [sessionsLoading,      setSessionsLoading]      = useState(true)
+  const [revokingId,           setRevokingId]           = useState<string | null>(null)
 
   useEffect(() => {
     setTheme(readTheme())
@@ -128,6 +181,30 @@ export default function SettingsPage() {
   // Re-grant Google Calendar access without signing out (see gcal-connect.ts)
   async function reconnectCalendar() {
     await connectGoogleCalendar(email)
+  }
+
+  async function loadSessions() {
+    setSessionsLoading(true)
+    const { data, error } = await supabase.rpc('list_my_sessions')
+    if (!error && data) setSessions(data as AuthSession[])
+    setSessionsLoading(false)
+  }
+
+  useEffect(() => { loadSessions() }, [supabase])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function revokeSession(s: AuthSession) {
+    setRevokingId(s.id)
+    const { data, error } = await supabase.rpc('revoke_my_session', { p_session_id: s.id })
+    setRevokingId(null)
+    if (error || data !== true) { showToast('Could not sign out that device', { type: 'delete' }); return }
+    if (s.is_current) {
+      // Revoked our own session — send to login.
+      await supabase.auth.signOut()
+      window.location.href = '/login'
+      return
+    }
+    setSessions(prev => prev.filter(x => x.id !== s.id))
+    showToast('Device signed out', { type: 'add' })
   }
 
   return (
@@ -350,6 +427,54 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ── Devices & Sessions ─────────────────────────────────────────────── */}
+      <div className="px-5 mb-6">
+        <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Devices &amp; Sessions</p>
+        <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
+          {sessionsLoading ? (
+            <div className="px-4 py-4 text-[12px] text-ink-faint">Loading sessions…</div>
+          ) : sessions.length === 0 ? (
+            <div className="px-4 py-4 text-[12px] text-ink-faint">No other sessions.</div>
+          ) : (
+            sessions.map(s => {
+              const { os, browser, isPhone } = deviceLabel(s.user_agent)
+              const DeviceIcon = isPhone ? Smartphone : Monitor
+              return (
+                <div key={s.id} className="flex items-center gap-3 px-4 py-3.5">
+                  <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+                    <DeviceIcon size={15} className={s.is_current ? 'text-emerald' : 'text-gold'} strokeWidth={1.75} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-[14px] font-medium text-ink truncate">{browser} · {os}</p>
+                      {s.is_current && (
+                        <span className="text-[9px] font-semibold text-emerald bg-emerald/10 px-1.5 py-0.5 rounded-full flex-shrink-0">This device</span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-ink-muted truncate">
+                      {relTime(s.refreshed_at ?? s.updated_at)}{s.ip ? ` · ${s.ip}` : ''}
+                    </p>
+                  </div>
+                  {!s.is_current && (
+                    <button
+                      onClick={() => revokeSession(s)}
+                      disabled={revokingId === s.id}
+                      aria-label="Sign out this device"
+                      className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-[10px] text-ruby active:bg-white/[0.03] disabled:opacity-40"
+                    >
+                      <Trash2 size={15} strokeWidth={1.75} />
+                    </button>
+                  )}
+                </div>
+              )
+            })
+          )}
+        </div>
+        <p className="text-[10px] text-ink-faint mt-2 px-1">
+          Sign out any device you don&apos;t recognize. Your other devices stay logged in.
+        </p>
       </div>
 
       {/* ── App ────────────────────────────────────────────────────────────── */}
