@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { EXPENSE_CATEGORIES } from '@/lib/data/transactions'
 import { getCategoryIcon } from '@/components/ui/CategoryIcon'
+import { CustomDateInput } from '@/components/ui/CustomDateInput'
 import { advanceToField } from '@/lib/field-advance'
 
 interface WishSnapshot {
@@ -13,6 +14,8 @@ interface WishSnapshot {
   category:      string | null
   url:           string | null
   description:   string | null
+  status?:       string
+  delivered_at?: string | null
 }
 
 export interface WishEdits {
@@ -21,6 +24,7 @@ export interface WishEdits {
   category:      string | null
   url:           string | null
   description:   string | null
+  delivered_at?: string | null
 }
 
 interface Props {
@@ -36,6 +40,9 @@ export function EditWishlistSheet({ item, open, onClose, onSave }: Props) {
   const [category,    setCategory]    = useState('')
   const [url,         setUrl]         = useState('')
   const [description, setDescription] = useState('')
+  const [deliveredAt, setDeliveredAt] = useState('')
+
+  const isDelivered = item?.status === 'Delivered'
 
   useEffect(() => {
     if (item) {
@@ -44,6 +51,7 @@ export function EditWishlistSheet({ item, open, onClose, onSave }: Props) {
       setCategory(item.category ?? '')
       setUrl(item.url ?? '')
       setDescription(item.description ?? '')
+      setDeliveredAt(item.delivered_at ?? '')
     }
   }, [item])
 
@@ -120,7 +128,7 @@ export function EditWishlistSheet({ item, open, onClose, onSave }: Props) {
 
   useEffect(() => {
     if (!open) {
-      const t = setTimeout(() => { setName(''); setAmount(''); setCategory(''); setUrl(''); setDescription('') }, 300)
+      const t = setTimeout(() => { setName(''); setAmount(''); setCategory(''); setUrl(''); setDescription(''); setDeliveredAt('') }, 300)
       return () => clearTimeout(t)
     }
   }, [open])
@@ -134,6 +142,7 @@ export function EditWishlistSheet({ item, open, onClose, onSave }: Props) {
       category:      category.trim() || null,
       url:           url.trim() || null,
       description:   description.trim() || null,
+      ...(isDelivered ? { delivered_at: deliveredAt || null } : {}),
     })
     onClose()
   }
@@ -256,6 +265,18 @@ export function EditWishlistSheet({ item, open, onClose, onSave }: Props) {
               className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none"
             />
           </div>
+
+          {isDelivered && (
+            <div>
+              <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Delivery Date</p>
+              <div className="overflow-hidden rounded-[14px] bg-bg-overlay">
+                <CustomDateInput
+                  value={deliveredAt} onChange={setDeliveredAt}
+                  className="w-full bg-transparent px-4 py-3 text-[15px] text-ink outline-none"
+                />
+              </div>
+            </div>
+          )}
 
           <button
             ref={saveBtnRef}

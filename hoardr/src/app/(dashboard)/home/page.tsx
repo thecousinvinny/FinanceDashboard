@@ -367,7 +367,9 @@ export default function HomePage() {
     const cached = pageCache.get<HomeCache>('home')
     if (cached) pageCache.set('home', { ...cached, enRoute: cached.enRoute.filter(i => i.id !== id) })
     showToast(`${name} arrived`, { type: 'payment' })
-    await supabase.from('wishlist').delete().eq('id', id)
+    // Keep the item as a Delivered record with today's arrival date (editable later
+    // in OUT → Wishlist → Delivered). Don't delete — it holds the paid + delivery dates.
+    await supabase.from('wishlist').update({ status: 'Delivered', delivered_at: localToday() }).eq('id', id)
   }
 
   const saved = earned - spent

@@ -156,6 +156,7 @@ interface WishItem {
   description:   string | null
   bought_cost:   number | null
   ordered_at:    string | null
+  delivered_at:  string | null
   status:        string
 }
 
@@ -260,7 +261,7 @@ export default function OutPage() {
           .order('next_renewal', { ascending: true, nullsFirst: false })
           .abortSignal(controller.signal),
         supabase.from('wishlist')
-          .select('id, name, original_cost, category, url, description, bought_cost, ordered_at, status')
+          .select('id, name, original_cost, category, url, description, bought_cost, ordered_at, delivered_at, status')
           .order('created_at', { ascending: false })
           .abortSignal(controller.signal),
         supabase.from('expenses')
@@ -299,6 +300,7 @@ export default function OutPage() {
         description:   (w as { description?: unknown }).description ? String((w as { description?: unknown }).description) : null,
         bought_cost:   w.bought_cost != null ? Number(w.bought_cost) : null,
         ordered_at:    w.ordered_at ? String(w.ordered_at) : null,
+        delivered_at:  (w as { delivered_at?: unknown }).delivered_at ? String((w as { delivered_at?: unknown }).delivered_at) : null,
         status:        String(w.status),
       }))
 
@@ -687,7 +689,7 @@ export default function OutPage() {
           pendingWishDeleteIds.current.delete(id)
           const { data: { user } } = await supabase.auth.getUser()
           if (!user) return
-          await supabase.from('wishlist').insert({ id, user_id: user.id, name: item.name, original_cost: item.original_cost, category: item.category, url: item.url, description: item.description, bought_cost: item.bought_cost, ordered_at: item.ordered_at, status: item.status })
+          await supabase.from('wishlist').insert({ id, user_id: user.id, name: item.name, original_cost: item.original_cost, category: item.category, url: item.url, description: item.description, bought_cost: item.bought_cost, ordered_at: item.ordered_at, delivered_at: item.delivered_at, status: item.status })
           setWishlist(prev => [item, ...prev.filter(w => w.id !== id)])
         },
         onCommit: () => { pendingWishDeleteIds.current.delete(id) },
@@ -697,7 +699,7 @@ export default function OutPage() {
 
   async function handleAddWish(item: NewWishItem) {
     const tempId = `temp-${Date.now()}`
-    setWishlist(prev => [{ id: tempId, name: item.name, original_cost: item.original_cost, category: item.category, url: item.url, description: item.description, bought_cost: null, ordered_at: null, status: 'Interested' }, ...prev])
+    setWishlist(prev => [{ id: tempId, name: item.name, original_cost: item.original_cost, category: item.category, url: item.url, description: item.description, bought_cost: null, ordered_at: null, delivered_at: null, status: 'Interested' }, ...prev])
     showToast(`${item.name} added`, { type: 'add' })
     const user = await requireUser(supabase, 'add wishlist item')
     if (!user) { await loadData(); return }
@@ -708,7 +710,10 @@ export default function OutPage() {
 
   async function handleEditWish(id: string, edits: WishEdits) {
     setWishlist(prev => prev.map(w => w.id === id ? { ...w, ...edits } : w))
-    const { error } = await supabase.from('wishlist').update({ name: edits.name, original_cost: edits.original_cost, category: edits.category, url: edits.url, description: edits.description }).eq('id', id)
+    const { error } = await supabase.from('wishlist').update({
+      name: edits.name, original_cost: edits.original_cost, category: edits.category, url: edits.url, description: edits.description,
+      ...(edits.delivered_at !== undefined ? { delivered_at: edits.delivered_at } : {}),
+    }).eq('id', id)
     if (reportDbError(error, 'save wishlist item')) await loadData()
   }
 
@@ -717,10 +722,17 @@ export default function OutPage() {
   const activeSubs    = useMemo(() => subs.filter(s => s.status === 'Active'),    [subs])
   const cancelledSubs = useMemo(() => subs.filter(s => s.status === 'Cancelled'), [subs])
   const interestedWish = useMemo(() => wishlist.filter(w => w.status === 'Interested'), [wishlist])
+  const deliveredWish  = useMemo(
+    () => wishlist
+      .filter(w => w.status === 'Delivered')
+      .sort((a, b) => (b.delivered_at ?? '').localeCompare(a.delivered_at ?? '')),
+    [wishlist],
+  )
 
   const filteredActiveSubs    = useMemo(() => !q ? activeSubs    : activeSubs.filter(s    => s.name.toLowerCase().includes(q) || (s.category ?? '').toLowerCase().includes(q)),    [activeSubs, q])
   const filteredCancelledSubs = useMemo(() => !q ? cancelledSubs : cancelledSubs.filter(s => s.name.toLowerCase().includes(q) || (s.category ?? '').toLowerCase().includes(q)), [cancelledSubs, q])
   const filteredWish          = useMemo(() => !q ? interestedWish : interestedWish.filter(w => w.name.toLowerCase().includes(q) || (w.category ?? '').toLowerCase().includes(q) || (w.description ?? '').toLowerCase().includes(q)), [interestedWish, q])
+  const filteredDelivered     = useMemo(() => !q ? deliveredWish : deliveredWish.filter(w => w.name.toLowerCase().includes(q) || (w.category ?? '').toLowerCase().includes(q) || (w.description ?? '').toLowerCase().includes(q)), [deliveredWish, q])
 
   const subNames = useMemo(() =>
     new Set(activeSubs.map(s => s.name.toLowerCase())),
@@ -1218,53 +1230,93 @@ export default function OutPage() {
       {/* ── Wishlist ─────────────────────────────────────────────────────── */}
       {!loading && tab === 'Wishlist' && (
         <div className="mx-4 mt-4">
-          {filteredWish.length === 0 ? (
+          {filteredWish.length === 0 && filteredDelivered.length === 0 ? (
             <div className="bg-bg-surface border border-white/[0.06] rounded-card py-12 text-center text-ink-faint text-[13px]">
               {q ? `No items match “${query.trim()}”.` : 'Nothing on your wishlist — tap + to add an item.'}
             </div>
           ) : (
-            <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
-              {filteredWish.map(item => (
-                <SwipeToDelete
-                  key={item.id}
-                  onDelete={() => handleDeleteWish(item.id)}
-                  onTap={() => setEditWish(item)}
-                  onRight={item.status === 'Interested' ? () => { setBuyItem(item); setBuyAmount(''); setBuyDate(localToday()); setBuyCardId(defaultCardId) } : undefined}
-                  rightLabel={<CreditCard size={18} strokeWidth={1.5} className="text-white" />}
-                >
-                  <div className="flex items-center gap-3 px-4 py-3.5">
-                    <div className="w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
-                      <CategoryIcon category={item.category ?? 'Other'} type="Expense" size={15} className="text-gold" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[14px] font-medium text-ink truncate">{item.name}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        {(item.description || item.category) && (
-                          <p className="text-[11px] text-ink-muted truncate">{item.description ?? item.category}</p>
-                        )}
-                        {item.url && (
-                          <a href={item.url} target="_blank" rel="noopener noreferrer"
-                            onClick={e => e.stopPropagation()}
-                            className="text-[11px] font-semibold text-gold flex-shrink-0 select-none">
-                            View →
-                          </a>
-                        )}
+            <>
+              {filteredWish.length > 0 && (
+                <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
+                  {filteredWish.map(item => (
+                    <SwipeToDelete
+                      key={item.id}
+                      onDelete={() => handleDeleteWish(item.id)}
+                      onTap={() => setEditWish(item)}
+                      onRight={item.status === 'Interested' ? () => { setBuyItem(item); setBuyAmount(''); setBuyDate(localToday()); setBuyCardId(defaultCardId) } : undefined}
+                      rightLabel={<CreditCard size={18} strokeWidth={1.5} className="text-white" />}
+                    >
+                      <div className="flex items-center gap-3 px-4 py-3.5">
+                        <div className="w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+                          <CategoryIcon category={item.category ?? 'Other'} type="Expense" size={15} className="text-gold" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[14px] font-medium text-ink truncate">{item.name}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {(item.description || item.category) && (
+                              <p className="text-[11px] text-ink-muted truncate">{item.description ?? item.category}</p>
+                            )}
+                            {item.url && (
+                              <a href={item.url} target="_blank" rel="noopener noreferrer"
+                                onClick={e => e.stopPropagation()}
+                                className="text-[11px] font-semibold text-gold flex-shrink-0 select-none">
+                                View →
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          {item.original_cost != null ? (
+                            <>
+                              <p className="text-[15px] font-semibold font-mono text-ink">{$fd(item.original_cost)}</p>
+                              <p className="text-[10px] text-ink-faint">list</p>
+                            </>
+                          ) : (
+                            <p className="text-[11px] text-ink-faint">no price</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      {item.original_cost != null ? (
-                        <>
-                          <p className="text-[15px] font-semibold font-mono text-ink">{$fd(item.original_cost)}</p>
-                          <p className="text-[10px] text-ink-faint">list</p>
-                        </>
-                      ) : (
-                        <p className="text-[11px] text-ink-faint">no price</p>
-                      )}
-                    </div>
+                    </SwipeToDelete>
+                  ))}
+                </div>
+              )}
+
+              {filteredDelivered.length > 0 && (
+                <div className={filteredWish.length > 0 ? 'mt-6' : ''}>
+                  <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2 px-1">Delivered</p>
+                  <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
+                    {filteredDelivered.map(item => (
+                      <SwipeToDelete
+                        key={item.id}
+                        onDelete={() => handleDeleteWish(item.id)}
+                        onTap={() => setEditWish(item)}
+                      >
+                        <div className="flex items-center gap-3 px-4 py-3.5">
+                          <div className="w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+                            <CategoryIcon category={item.category ?? 'Other'} type="Expense" size={15} className="text-emerald" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[14px] font-medium text-ink truncate">{item.name}</p>
+                            <p className="text-[11px] text-ink-muted truncate mt-0.5">{item.category ?? 'Uncategorized'}</p>
+                            <p className="text-[10px] text-ink-faint mt-0.5">
+                              {item.ordered_at && <>Paid {fmtDate(item.ordered_at)}</>}
+                              {item.ordered_at && item.delivered_at && ' · '}
+                              {item.delivered_at && <>Arrived {fmtDate(item.delivered_at)}</>}
+                            </p>
+                          </div>
+                          {item.bought_cost != null && (
+                            <div className="text-right flex-shrink-0">
+                              <p className="text-[15px] font-semibold font-mono text-ink">{$fd(item.bought_cost)}</p>
+                              <p className="text-[10px] text-ink-faint">paid</p>
+                            </div>
+                          )}
+                        </div>
+                      </SwipeToDelete>
+                    ))}
                   </div>
-                </SwipeToDelete>
-              ))}
-            </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
