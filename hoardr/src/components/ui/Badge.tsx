@@ -17,7 +17,8 @@ const STYLE: Record<string, string> = {
   Procured:      'bg-emerald/10 text-emerald',
   // Wishlist
   Interested:    'bg-blue-400/10 text-blue-400',
-  Purchased:     'bg-emerald/10 text-emerald',
+  Delivered:     'bg-emerald/10 text-emerald',
+  Purchased:     'bg-emerald/10 text-emerald',   // legacy status, still color-mapped
 }
 
 export function Badge({ status, className }: { status: AnyStatus; className?: string }) {

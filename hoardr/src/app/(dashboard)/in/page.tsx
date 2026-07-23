@@ -785,7 +785,7 @@ export default function InPage() {
       id: `tmp-${Date.now()}`, user_id: user.id, bank_id: newCard.bank_id, name: newCard.name,
       alias: newCard.alias, type: newCard.type, last4: newCard.last4, network: newCard.network,
       expires: newCard.expires, cardholder: newCard.cardholder, style: newCard.style,
-      texture: newCard.texture, is_default: false, created_at: new Date().toISOString(),
+      texture: newCard.texture, is_default: false, sort_order: 999, created_at: new Date().toISOString(),
     }
     setCards(prev => [optimistic, ...prev])
     showToast(`${newCard.name} added`, { type: 'add' })
