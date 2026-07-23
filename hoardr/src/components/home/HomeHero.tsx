@@ -70,6 +70,30 @@ export function HomeHero({ spent, points, annualPoints }: Props) {
     isSwiping.current   = false
   }
 
+  // Desktop: mouse-drag flick mirrors the touch swipe. SparkChart's hover
+  // scrub is harmless during a drag, so no capture/stopPropagation needed.
+  function onMouseDownSwipe(e: React.MouseEvent) {
+    swipeStart.current = { x: e.clientX, y: e.clientY }
+    isSwiping.current  = false
+  }
+  function onMouseMoveSwipe(e: React.MouseEvent) {
+    if (!swipeStart.current) return
+    const dx = e.clientX - swipeStart.current.x
+    const dy = e.clientY - swipeStart.current.y
+    if (!isSwiping.current && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      isSwiping.current = true
+    }
+  }
+  function onMouseUpSwipe(e: React.MouseEvent) {
+    if (!swipeStart.current) return
+    if (isSwiping.current) {
+      const dx = e.clientX - swipeStart.current.x
+      if (Math.abs(dx) > 40) setView(v => v === 'month' ? 'year' : 'month')
+    }
+    swipeStart.current = null
+    isSwiping.current  = false
+  }
+
   return (
     <div
       className="mx-4 mt-5 bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden"
@@ -77,6 +101,10 @@ export function HomeHero({ spent, points, annualPoints }: Props) {
       onTouchStartCapture={onTouchStartCapture}
       onTouchMoveCapture={onTouchMoveCapture}
       onTouchEndCapture={onTouchEndCapture}
+      onMouseDown={onMouseDownSwipe}
+      onMouseMove={onMouseMoveSwipe}
+      onMouseUp={onMouseUpSwipe}
+      onMouseLeave={onMouseUpSwipe}
     >
       {/* Two-panel chart rail — slides horizontally on view switch */}
       <div
@@ -118,23 +146,39 @@ export function HomeHero({ spent, points, annualPoints }: Props) {
           <p className="text-[9px] font-bold tracking-[0.12em] uppercase text-ink-faint">
             {isYear ? 'This Year' : 'This Month'}
           </p>
-          <div className="flex items-center gap-1">
-            <div
-              className="rounded-full transition-all duration-300"
-              style={{
-                width:      view === 'month' ? 10 : 4,
-                height:     4,
-                background: view === 'month' ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.18)',
-              }}
-            />
-            <div
-              className="rounded-full transition-all duration-300"
-              style={{
-                width:      view === 'year' ? 10 : 4,
-                height:     4,
-                background: view === 'year' ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.18)',
-              }}
-            />
+          <div className="flex items-center gap-1 pointer-events-auto">
+            <button
+              type="button"
+              aria-label="This month"
+              onClick={() => setView('month')}
+              className="flex items-center justify-center cursor-pointer"
+              style={{ padding: 4, margin: -4 }}
+            >
+              <span
+                className="block rounded-full transition-all duration-300"
+                style={{
+                  width:      view === 'month' ? 10 : 4,
+                  height:     4,
+                  background: view === 'month' ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.18)',
+                }}
+              />
+            </button>
+            <button
+              type="button"
+              aria-label="This year"
+              onClick={() => setView('year')}
+              className="flex items-center justify-center cursor-pointer"
+              style={{ padding: 4, margin: -4 }}
+            >
+              <span
+                className="block rounded-full transition-all duration-300"
+                style={{
+                  width:      view === 'year' ? 10 : 4,
+                  height:     4,
+                  background: view === 'year' ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.18)',
+                }}
+              />
+            </button>
           </div>
         </div>
 
