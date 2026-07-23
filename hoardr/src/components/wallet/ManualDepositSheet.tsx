@@ -34,6 +34,23 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
   const dragStartY    = useRef<number | null>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
 
+  // Auto-advance: refs so completing a field scrolls/focuses the next one
+  const amountSecRef   = useRef<HTMLDivElement>(null)
+  const amountInputRef = useRef<HTMLInputElement>(null)
+  const bankSecRef     = useRef<HTMLDivElement>(null)
+  const categorySecRef = useRef<HTMLDivElement>(null)
+  const dateSecRef     = useRef<HTMLDivElement>(null)
+  const addBtnRef      = useRef<HTMLButtonElement>(null)
+
+  function advanceTo(sec: HTMLElement | null, focusEl?: HTMLElement | null) {
+    const sc = scrollAreaRef.current
+    if (sc && sec) {
+      const delta = sec.getBoundingClientRect().top - sc.getBoundingClientRect().top
+      sc.scrollTo({ top: sc.scrollTop + delta - 12, behavior: 'smooth' })
+    }
+    if (focusEl) requestAnimationFrame(() => focusEl.focus())
+  }
+
   const [label,   setLabel]   = useState('')
   const [amount,  setAmount]  = useState('')
   const [source,  setSource]  = useState<string>('Other')
@@ -211,27 +228,31 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
           <div>
             <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Label</p>
             <input type="text" value={label} onChange={e => setLabel(e.target.value)} placeholder="Venmo, Zelle, freelance…"
+              enterKeyHint="next"
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); advanceTo(amountSecRef.current, amountInputRef.current) } }}
               className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40"/>
           </div>
 
           {/* Amount */}
-          <div>
+          <div ref={amountSecRef}>
             <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Amount</p>
             <div className="flex items-center gap-1.5 bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 focus-within:border-gold/40">
               <span className="text-[22px] font-light text-ink-muted font-mono">$</span>
-              <input type="number" inputMode="decimal" placeholder="0.00" value={amount} onChange={e => setAmount(e.target.value)}
+              <input ref={amountInputRef} type="number" inputMode="decimal" placeholder="0.00" value={amount} onChange={e => setAmount(e.target.value)}
+                enterKeyHint="next"
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); advanceTo(bankSecRef.current ?? categorySecRef.current) } }}
                 className="flex-1 bg-transparent text-[22px] font-mono text-ink outline-none placeholder:text-ink-faint"/>
             </div>
           </div>
 
           {/* Bank */}
           {banks.length > 0 && (
-            <div>
+            <div ref={bankSecRef}>
               <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Bank account</p>
               <div className="relative">
                 <select
                   value={bankId ?? ''}
-                  onChange={e => setBankId(e.target.value || null)}
+                  onChange={e => { setBankId(e.target.value || null); advanceTo(categorySecRef.current) }}
                   className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 text-[15px] text-ink appearance-none outline-none pr-10 focus:border-gold/40"
                   style={{ colorScheme: 'dark' }}
                 >
@@ -248,11 +269,11 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
           )}
 
           {/* Category */}
-          <div>
+          <div ref={categorySecRef}>
             <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Category</p>
             <div className="grid grid-cols-4 gap-2">
               {(['Other', 'Projects', 'Repayment', 'Refund'] as const).map(s => (
-                <button key={s} onClick={() => setSource(s)}
+                <button key={s} onClick={() => { setSource(s); advanceTo(dateSecRef.current) }}
                   className={cn(
                     'flex flex-col items-center gap-1 py-2.5 rounded-[14px] transition-all select-none',
                     source === s ? 'bg-gold/15 ring-1 ring-gold/40' : 'bg-bg-overlay',
@@ -265,10 +286,10 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
           </div>
 
           {/* Date */}
-          <div>
+          <div ref={dateSecRef}>
             <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Date</p>
             <div className="overflow-hidden rounded-[14px]">
-              <CustomDateInput value={date} onChange={setDate}
+              <CustomDateInput value={date} onChange={d => { setDate(d); advanceTo(addBtnRef.current) }}
                 className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink outline-none focus:border-gold/40" />
             </div>
           </div>
@@ -283,7 +304,7 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
             </div>
           )}
 
-          <button onClick={handleSave} disabled={!valid || saving}
+          <button ref={addBtnRef} onClick={handleSave} disabled={!valid || saving}
             className="w-full gradient-gold rounded-[14px] py-3.5 text-[15px] font-bold text-white disabled:opacity-40 transition-opacity">
             {saving ? 'Saving…' : isEdit ? 'Save Changes' : (valid ? `Add ${$fd(amt)}` : 'Add Income')}
           </button>

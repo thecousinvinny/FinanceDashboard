@@ -55,6 +55,26 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
   const dragStartY    = useRef<number | null>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
 
+  // Auto-advance: refs to each field so completing one scrolls/focuses the next
+  const nameInputRef   = useRef<HTMLInputElement>(null)
+  const amountSecRef   = useRef<HTMLDivElement>(null)
+  const amountInputRef = useRef<HTMLInputElement>(null)
+  const categorySecRef = useRef<HTMLDivElement>(null)
+  const pickerSecRef   = useRef<HTMLDivElement>(null)  // Card (expense) or Bank (income)
+  const dateSecRef     = useRef<HTMLDivElement>(null)
+  const addBtnRef      = useRef<HTMLButtonElement>(null)
+
+  // Scroll a field to the top of the sheet's scroll area; optionally focus an input.
+  // Uses scrollTo on the container (not scrollIntoView, which misbehaves in iOS WKWebView fixed sheets).
+  function advanceTo(sec: HTMLElement | null, focusEl?: HTMLElement | null) {
+    const sc = scrollAreaRef.current
+    if (sc && sec) {
+      const delta = sec.getBoundingClientRect().top - sc.getBoundingClientRect().top
+      sc.scrollTo({ top: sc.scrollTop + delta - 12, behavior: 'smooth' })
+    }
+    if (focusEl) requestAnimationFrame(() => focusEl.focus())
+  }
+
   useEffect(() => {
     if (!open) return
     const scrollY = window.scrollY
@@ -237,13 +257,16 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
               {type === 'Expense' ? 'Merchant' : 'Source'}
             </p>
             <input
+              ref={nameInputRef}
               type="text" placeholder={type === 'Expense' ? 'e.g. Blue Bottle' : 'e.g. Studio Co'}
               value={name} onChange={e => setName(e.target.value)}
+              enterKeyHint="next"
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); advanceTo(amountSecRef.current, amountInputRef.current) } }}
               className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none"
             />
           </div>
 
-          <div>
+          <div ref={amountSecRef}>
             <div className="flex items-center justify-between mb-2">
               <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint">Amount</p>
               {type === 'Expense' && (
@@ -274,9 +297,12 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
                 <div className="flex items-center gap-1.5 bg-bg-overlay rounded-[14px] px-4 py-2.5">
                   <span className="text-[20px] font-light text-ink-muted font-mono">$</span>
                   <input
+                    ref={amountInputRef}
                     type="text" inputMode="decimal" placeholder="0.00"
                     value={amount}
                     onChange={e => handleAmountChange(e.target.value)}
+                    enterKeyHint="next"
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); advanceTo(categorySecRef.current) } }}
                     className="flex-1 bg-transparent text-[22px] font-bold font-mono text-ink outline-none placeholder:text-ink-faint"
                   />
                   <span className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint">paid</span>
@@ -291,8 +317,11 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
               <div className="flex items-center gap-1.5 bg-bg-overlay rounded-[14px] px-4 py-2.5">
                 <span className="text-[20px] font-light text-ink-muted font-mono">$</span>
                 <input
+                  ref={amountInputRef}
                   type="text" inputMode="decimal" placeholder="0.00" value={amount}
                   onChange={e => handleAmountChange(e.target.value)}
+                  enterKeyHint="next"
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); advanceTo(categorySecRef.current) } }}
                   className="flex-1 bg-transparent text-[22px] font-bold font-mono text-ink outline-none placeholder:text-ink-faint"
                 />
               </div>
@@ -310,7 +339,7 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
             />
           </div>
 
-          <div>
+          <div ref={categorySecRef}>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Category</p>
             <div className="grid grid-cols-4 gap-2">
               {categories.map(cat => {
@@ -318,7 +347,7 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
                 const active = category === cat.name
                 return (
                   <button
-                    key={cat.name} onClick={() => setCategory(cat.name)}
+                    key={cat.name} onClick={() => { setCategory(cat.name); advanceTo(pickerSecRef.current ?? dateSecRef.current) }}
                     className={cn(
                       'flex flex-col items-center gap-1 py-2.5 rounded-[14px] text-[10px] font-semibold transition-all select-none',
                       active ? 'bg-gold/15 text-gold ring-1 ring-gold/40' : 'bg-bg-overlay text-ink-muted',
@@ -334,7 +363,7 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
 
           {/* Card picker (expenses) */}
           {type === 'Expense' && (
-            <div>
+            <div ref={pickerSecRef}>
               <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Card</p>
               {cards.length === 0 ? (
                 <p className="text-[12px] text-ink-faint py-2">No cards yet — add one in Wallet</p>
@@ -342,7 +371,7 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
                 <div className="relative">
                   <select
                     value={cardId ?? ''}
-                    onChange={e => setCardId(e.target.value || null)}
+                    onChange={e => { setCardId(e.target.value || null); advanceTo(dateSecRef.current) }}
                     className="w-full bg-bg-overlay border border-white/[0.06] rounded-[14px] px-4 py-3 text-[15px] text-ink appearance-none outline-none pr-10"
                     style={{ colorScheme: 'dark' }}
                   >
@@ -363,7 +392,7 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
 
           {/* Bank picker (income) */}
           {type === 'Income' && (
-            <div>
+            <div ref={pickerSecRef}>
               <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Bank</p>
               {banks.length === 0 ? (
                 <p className="text-[12px] text-ink-faint py-2">No banks yet — add one in Wallet</p>
@@ -371,7 +400,7 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
                 <div className="relative">
                   <select
                     value={bankId ?? ''}
-                    onChange={e => setBankId(e.target.value || null)}
+                    onChange={e => { setBankId(e.target.value || null); advanceTo(dateSecRef.current) }}
                     className="w-full bg-bg-overlay border border-white/[0.06] rounded-[14px] px-4 py-3 text-[15px] text-ink appearance-none outline-none pr-10"
                     style={{ colorScheme: 'dark' }}
                   >
@@ -388,17 +417,18 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
             </div>
           )}
 
-          <div>
+          <div ref={dateSecRef}>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Date</p>
             <div className="overflow-hidden rounded-[14px] bg-bg-overlay">
               <CustomDateInput
-                value={date} onChange={setDate}
+                value={date} onChange={d => { setDate(d); advanceTo(addBtnRef.current) }}
                 className="w-full bg-transparent px-4 py-3 text-[15px] text-ink outline-none"
               />
             </div>
           </div>
 
           <button
+            ref={addBtnRef}
             onClick={handleAdd} disabled={!canAdd}
             className={cn(
               'w-full py-3.5 rounded-[14px] text-[15px] font-semibold transition-all select-none',
