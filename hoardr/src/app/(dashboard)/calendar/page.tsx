@@ -7,7 +7,7 @@ import { getWeekStartsMonday } from '@/lib/week-start'
 import { cn, nextRenewalDate } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
 import { COLOR_PALETTE } from '@/lib/category-meta'
-import { Plus, SlidersHorizontal, Eye, EyeOff, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning, CalendarPlus, type LucideIcon } from 'lucide-react'
+import { Plus, SlidersHorizontal, Eye, EyeOff, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning, CalendarPlus, MapPin, type LucideIcon } from 'lucide-react'
 import { GlobalFAB } from '@/components/ui/GlobalFAB'
 import { EditEventSheet, type EditableEvent, type EventEdits, type RecurrenceScope } from '@/components/calendar/EditEventSheet'
 import { CalendarSettingsSheet, canWriteToCalendar, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
@@ -144,7 +144,7 @@ function EventRow({ ev, onEdit }: { ev: CalEvent; onEdit: (ev: CalEvent) => void
       <span className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5" style={{ background: ev.color ?? DOT_COLOR[ev.type] }} />
       <div className="flex-1 min-w-0">
         <p className="text-[14px] font-medium text-ink">{ev.title}</p>
-        {ev.location && <p className="text-[11px] text-ink-muted mt-0.5 truncate">📍 {ev.location}</p>}
+        {ev.location && <p className="text-[11px] text-ink-muted mt-0.5 truncate flex items-center gap-1"><MapPin size={11} strokeWidth={1.75} className="flex-shrink-0" />{ev.location}</p>}
         {ev.notes    && <p className="text-[11px] text-ink-faint mt-0.5 line-clamp-2">{ev.notes}</p>}
       </div>
       {displayAmt && <span className="text-[11px] font-semibold font-mono px-2 py-0.5 rounded-md flex-shrink-0 bg-blue-500/20 text-blue-300">{displayAmt}</span>}

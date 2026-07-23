@@ -344,7 +344,7 @@ export default function DefaultsPage() {
               {settingsBanks.map(bank => (
                 <button key={bank.id} onClick={() => handleSetDefaultBank(bank.id)}
                   className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]">
-                  <div className="w-8 h-8 rounded-[10px] bg-bg-surface ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0 text-base">🏦</div>
+                  <div className="w-8 h-8 rounded-[10px] bg-bg-surface ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0"><Landmark size={15} className="text-ink-muted" strokeWidth={1.75} /></div>
                   <div className="flex-1 min-w-0"><p className="text-[14px] font-medium text-ink truncate">{bank.name}</p></div>
                   {bank.id === defaultBankId && <div className="w-5 h-5 rounded-full gradient-gold flex items-center justify-center"><Check size={9} className="text-white" strokeWidth={2.5} /></div>}
                 </button>

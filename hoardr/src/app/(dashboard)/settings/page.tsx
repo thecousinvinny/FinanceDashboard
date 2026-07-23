@@ -454,7 +454,7 @@ export default function SettingsPage() {
                       )}
                     </div>
                     <p className="text-[11px] text-ink-muted truncate">
-                      {relTime(s.refreshed_at ?? s.updated_at)}{s.ip ? ` · ${s.ip}` : ''}
+                      Last active {relTime(s.refreshed_at ?? s.updated_at)}
                     </p>
                   </div>
                   {!s.is_current && (

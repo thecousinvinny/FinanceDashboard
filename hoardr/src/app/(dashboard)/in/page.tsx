@@ -15,7 +15,7 @@ import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { CustomDateInput } from '@/components/ui/CustomDateInput'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import type { Card, Bank, IncomeSource } from '@/types'
-import { Banknote, X, ArrowUpCircle, ArrowLeftRight, PlusCircle, Search } from 'lucide-react'
+import { Banknote, X, ArrowUpCircle, ArrowLeftRight, PlusCircle, Search, Landmark } from 'lucide-react'
 import { GlobalFAB } from '@/components/ui/GlobalFAB'
 import { cn, $f, $fd, $fk, fmtDate, haptic, groupByMonth, localToday, daysUntilLabel } from '@/lib/utils'
 import type { Frequency } from '@/components/wallet/RevenueStreamSheet'
@@ -1235,7 +1235,7 @@ export default function InPage() {
                         })
                       }} onTap={() => setInterestBank(bank)}>
                         <div className="flex items-center gap-3 px-4 py-3.5">
-                          <div className="w-10 h-10 rounded-[12px] bg-emerald/10 flex items-center justify-center text-lg flex-shrink-0">🏦</div>
+                          <div className="w-10 h-10 rounded-[12px] bg-emerald/10 flex items-center justify-center flex-shrink-0"><Landmark size={18} className="text-emerald" strokeWidth={1.75} /></div>
                           <div className="flex-1 min-w-0">
                             <p className="text-[14px] font-medium text-ink truncate">{bank.name} Interest</p>
                             <p className="text-[11px] text-ink-muted">{bank.apy}% APY · {freq}</p>
@@ -1272,7 +1272,7 @@ export default function InPage() {
                     return (
                       <SwipeToDelete key={bank.id} onDelete={() => handleDeleteBank(bank.id)} onTap={() => setInterestBank(bank)}>
                         <div className="flex items-center gap-3 px-4 py-4 bg-bg-surface">
-                          <div className="w-10 h-10 rounded-[10px] bg-bg-overlay flex items-center justify-center text-lg flex-shrink-0">🏦</div>
+                          <div className="w-10 h-10 rounded-[10px] bg-bg-overlay flex items-center justify-center flex-shrink-0"><Landmark size={18} className="text-ink-muted" strokeWidth={1.75} /></div>
                           <div className="flex-1 min-w-0">
                             <p className="text-[14px] font-medium text-ink">{bank.name}</p>
                             <p className="text-[11px] text-ink-muted">

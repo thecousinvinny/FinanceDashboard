@@ -12,7 +12,7 @@ import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { PullIndicator } from '@/components/ui/PullIndicator'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { pageCache } from '@/lib/page-cache'
-import { Paintbrush, ImagePlus, UserPlus } from 'lucide-react'
+import { Paintbrush, ImagePlus, UserPlus, CalendarDays, Check } from 'lucide-react'
 import { GlobalFAB } from '@/components/ui/GlobalFAB'
 
 type Filter = 'All' | 'Pending' | 'Approved' | 'In Progress'
@@ -305,8 +305,9 @@ export default function StudioPage() {
 
                 {/* Meta row */}
                 <div className="flex items-center gap-2 mb-3">
-                  <span className={cn('text-[11px]', isPastDue ? 'text-ruby' : 'text-ink-faint')}>
-                    📅 {c.deadline ? fmtDate(c.deadline) : 'No deadline'}
+                  <span className={cn('text-[11px] flex items-center gap-1', isPastDue ? 'text-ruby' : 'text-ink-faint')}>
+                    <CalendarDays size={11} strokeWidth={1.75} className="flex-shrink-0" />
+                    {c.deadline ? fmtDate(c.deadline) : 'No deadline'}
                     {deadline ? ` · ${deadline}` : ''}
                   </span>
                   <span className={cn(
@@ -335,7 +336,7 @@ export default function StudioPage() {
                 {/* Paid badge */}
                 {c.status === 'Paid' && (
                   <p className="text-[11px] text-emerald flex items-center gap-1.5">
-                    <span>✓</span> Logged to income
+                    <Check size={12} strokeWidth={2} className="flex-shrink-0" /> Logged to income
                   </p>
                 )}
 
