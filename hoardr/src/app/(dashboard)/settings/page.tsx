@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Check, ChevronRight, CreditCard, LogOut, CalendarDays, Tag, Settings2, Palette } from 'lucide-react'
+import { ArrowLeft, Check, ChevronRight, CreditCard, LogOut, CalendarDays, Tag, Settings2, Palette, CalendarCheck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { connectGoogleCalendar } from '@/lib/gcal-connect'
 import { cn } from '@/lib/utils'
 import { type Theme, THEMES, applyTheme, readTheme } from '@/lib/theme'
 import { CalendarSettingsSheet, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
@@ -122,6 +123,11 @@ export default function SettingsPage() {
   async function signOut() {
     await supabase.auth.signOut()
     window.location.href = '/login'
+  }
+
+  // Re-grant Google Calendar access without signing out (see gcal-connect.ts)
+  async function reconnectCalendar() {
+    await connectGoogleCalendar(email)
   }
 
   return (
@@ -300,6 +306,21 @@ export default function SettingsPage() {
             <div className="flex-1 min-w-0">
               <p className="text-[14px] font-medium text-ink">Filters &amp; Google Calendars</p>
               <p className="text-[11px] text-ink-muted">Event types, linked calendars</p>
+            </div>
+            <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
+          </button>
+
+          {/* Connect / reconnect Google Calendar — re-grants access without signing out */}
+          <button
+            onClick={reconnectCalendar}
+            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]"
+          >
+            <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+              <CalendarCheck size={15} className="text-emerald" strokeWidth={1.75} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[14px] font-medium text-ink">Connect Google Calendar</p>
+              <p className="text-[11px] text-ink-muted">Re-grant access if events stop syncing — no sign-out needed</p>
             </div>
             <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
           </button>

@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
 
     const refreshToken = await getCallerToken(supabase, user.id)
     if (!refreshToken) {
-      return NextResponse.json({ error: 'No Google Calendar access. Sign out and back in to grant calendar permissions.' }, { status: 403 })
+      return NextResponse.json({ error: 'No Google Calendar access. Tap “Connect Google Calendar” in Settings to grant access.' }, { status: 403 })
     }
 
     const token   = await refreshAccessToken(refreshToken)
@@ -144,6 +144,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(json)
 
   } catch (err) {
+    // A stale/revoked refresh token can no longer mint an access token — tell the
+    // user to reconnect rather than surfacing a generic error.
+    if (err instanceof Error && err.message === 'token_refresh_failed') {
+      return NextResponse.json({ error: 'Google Calendar access expired. Tap “Connect Google Calendar” in Settings to reconnect.' }, { status: 403 })
+    }
     console.error('[calendar GET]', err)
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 })
   }
@@ -184,7 +189,7 @@ export async function POST(req: NextRequest) {
     const refreshToken = await getCallerToken(supabase, user.id)
     if (!refreshToken) {
       return NextResponse.json(
-        { error: 'No Google Calendar access. Sign out and back in to grant calendar permissions.' },
+        { error: 'No Google Calendar access. Tap “Connect Google Calendar” in Settings to grant access.' },
         { status: 403 },
       )
     }
@@ -249,6 +254,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
 
   } catch (err) {
+    if (err instanceof Error && err.message === 'token_refresh_failed') {
+      return NextResponse.json({ error: 'Google Calendar access expired. Tap “Connect Google Calendar” in Settings to reconnect.' }, { status: 403 })
+    }
     console.error('[calendar POST]', err)
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 })
   }
