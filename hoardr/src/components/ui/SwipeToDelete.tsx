@@ -170,7 +170,7 @@ export function SwipeToDelete({
     setPos(clampX(dx), false)
   }
 
-  function onMouseUp() {
+  function onMouseUp(e: React.MouseEvent) {
     if (!mouseDown.current) return
     mouseDown.current = false
     clearPress()
@@ -185,7 +185,9 @@ export function SwipeToDelete({
     } else {
       setPos(0, true, true)
       revealed.current = 'none'
-      if (!didSwipe.current && startWasRevealed.current === 'none') { haptic('tap'); onTap?.() }
+      const target = e.target as Element | null
+      const isInteractive = !!target?.closest('button, a, input, [role="button"]')
+      if (!didSwipe.current && startWasRevealed.current === 'none' && !isInteractive) { haptic('tap'); onTap?.() }
     }
   }
 
