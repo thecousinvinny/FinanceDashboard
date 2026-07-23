@@ -14,6 +14,7 @@ import { CalendarSettingsSheet, canWriteToCalendar, type CalPrefs, type GCalenda
 import { CalendarPopover, defaultTimes, type PopoverFormData, type RecurScope } from '@/components/calendar/CalendarPopover'
 import { MonthYearPicker } from '@/components/calendar/MonthYearPicker'
 import { createCalEvent, updateCalEvent, deleteCalEvent, moveCalEvent, getCalEvent, extractRRule, rruleUntilBefore, type GCalEvent } from '@/lib/calendar'
+import { connectGoogleCalendar } from '@/lib/gcal-connect'
 
 type EventType = 'income' | 'sub' | 'google'
 
@@ -215,6 +216,9 @@ export default function CalendarPage() {
   const [calsLoading, setCalsLoading] = useState(false)
   const [calsError,   setCalsError]   = useState(false)
   const [settingsOpen,   setSettingsOpen]   = useState(false)
+  const [needsCalConnect,    setNeedsCalConnect]    = useState(false)  // 403 from /api/calendar → prompt to reconnect
+  const [calConnectDismissed, setCalConnectDismissed] = useState(false)
+  const [userEmail,          setUserEmail]          = useState<string | null>(null)
   const [weatherMap,     setWeatherMap]     = useState<Record<string, DayWeather>>({})
   const [editEvent,      setEditEvent]      = useState<EditableEvent | null>(null)
   const [createEvent,    setCreateEvent]    = useState<EditableEvent | null>(null)
@@ -485,12 +489,25 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     fetch('/api/calendar?action=calendars')
       .then(async r => {
         const d = await r.json() as { items?: GCalendar[]; error?: string }
+        if (r.status === 403) { setNeedsCalConnect(true); throw new Error('no_token') }
         if (!r.ok || d.error) throw new Error(d.error ?? 'no_token')
+        setNeedsCalConnect(false)
         setGoogleCals(d.items ?? [])
       })
       .catch(() => setCalsError(true))
       .finally(() => setCalsLoading(false))
   }, [settingsOpen, googleCals.length, prefs.googleCalendarIds.length])
+
+  // On mount / manual refresh: probe Calendar access so we can prompt to connect
+  // right here on the Calendar tab when the token is missing or expired (403).
+  useEffect(() => {
+    let cancelled = false
+    supabase.auth.getUser().then(({ data }) => { if (!cancelled) setUserEmail(data.user?.email ?? null) })
+    fetch('/api/calendar?action=calendars')
+      .then(r => { if (!cancelled) setNeedsCalConnect(r.status === 403) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [supabase, gRefreshKey])
 
   useEffect(() => {
     const calIds = prefs.googleCalendarIds
@@ -1451,6 +1468,36 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     <>
     {/* Root — fixed viewport clip */}
     <div className="tab-enter" style={{ position: 'fixed', inset: 0, overflow: 'hidden' }}>
+
+      {/* Connect-Google-Calendar prompt — shown when /api/calendar returns 403
+          (token missing or expired). Lets the user re-grant right here without
+          leaving for Settings or signing out. */}
+      {needsCalConnect && !calConnectDismissed && (
+        <div
+          style={{ position: 'fixed', top: 'calc(env(safe-area-inset-top, 44px) + 8px)', left: 12, right: 12, zIndex: 50 }}
+        >
+          <div className="flex items-center gap-3 bg-bg-surface border border-emerald/30 rounded-[14px] px-4 py-3 shadow-lg">
+            <CalendarPlus size={18} className="text-emerald flex-shrink-0" strokeWidth={1.75} />
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-semibold text-ink leading-tight">Connect Google Calendar</p>
+              <p className="text-[11px] text-ink-muted leading-tight mt-0.5">Grant access to sync your events here.</p>
+            </div>
+            <button
+              onClick={() => connectGoogleCalendar(userEmail)}
+              className="flex-shrink-0 gradient-gold text-white text-[12px] font-semibold px-3 py-1.5 rounded-[10px] select-none"
+            >
+              Connect
+            </button>
+            <button
+              onClick={() => setCalConnectDismissed(true)}
+              aria-label="Dismiss"
+              className="flex-shrink-0 w-6 h-6 flex items-center justify-center text-[18px] text-ink-faint select-none"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Sliding rail (2 panels × 100vw) ──────────────────────────────── */}
       <div style={{ display: 'flex', width: '200vw', height: '100%', transform: `translateX(-${viewIndex * 100}vw)`, transition: 'transform 0.32s cubic-bezier(0.4,0,0.2,1)', willChange: 'transform' }}>
