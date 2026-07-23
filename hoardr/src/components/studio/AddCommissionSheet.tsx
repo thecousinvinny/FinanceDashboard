@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { localToday, cn } from '@/lib/utils'
 import { CustomDateInput } from '@/components/ui/CustomDateInput'
+import { advanceToField } from '@/lib/field-advance'
 
 export interface NewCommission {
   client_name:  string
@@ -33,6 +34,19 @@ export function AddCommissionSheet({ open, onClose, onAdd }: Props) {
   const sheetRef    = useRef<HTMLDivElement>(null)
   const dragStartY    = useRef<number | null>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
+
+  // Auto-advance: refs so completing a field scrolls/focuses the next one
+  const projectSecRef   = useRef<HTMLDivElement>(null)
+  const projectInputRef = useRef<HTMLInputElement>(null)
+  const valueSecRef     = useRef<HTMLDivElement>(null)
+  const valueInputRef   = useRef<HTMLInputElement>(null)
+  const typeSecRef      = useRef<HTMLDivElement>(null)
+  const typeInputRef    = useRef<HTMLInputElement>(null)
+  const detailsSecRef   = useRef<HTMLDivElement>(null)
+  const depositInputRef = useRef<HTMLInputElement>(null)
+  const notesSecRef     = useRef<HTMLDivElement>(null)
+  const advanceTo = (sec: HTMLElement | null, focusEl?: HTMLElement | null) =>
+    advanceToField(scrollAreaRef.current, sec, focusEl)
 
   useEffect(() => {
     if (!open) return
@@ -153,48 +167,59 @@ export function AddCommissionSheet({ open, onClose, onAdd }: Props) {
           <div>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Client Name</p>
             <input type="text" placeholder="e.g. Acme Studio" value={client} onChange={e => setClient(e.target.value)}
+              enterKeyHint="next"
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); advanceTo(projectSecRef.current, projectInputRef.current) } }}
               className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none" />
           </div>
 
           {/* Project name */}
-          <div>
+          <div ref={projectSecRef}>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Project Name</p>
-            <input type="text" placeholder="e.g. Brand Identity Pack" value={project} onChange={e => setProject(e.target.value)}
+            <input ref={projectInputRef} type="text" placeholder="e.g. Brand Identity Pack" value={project} onChange={e => setProject(e.target.value)}
+              enterKeyHint="next"
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); advanceTo(valueSecRef.current, valueInputRef.current) } }}
               className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none" />
           </div>
 
           {/* Value */}
-          <div>
+          <div ref={valueSecRef}>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Commission Value</p>
             <div className="flex items-center gap-1.5 bg-bg-overlay rounded-[14px] px-4 py-2.5">
               <span className="text-[20px] font-light text-ink-muted font-mono">$</span>
               <input
+                ref={valueInputRef}
                 type="text" inputMode="decimal" placeholder="0.00" value={value}
                 onChange={e => handleAmount(e.target.value, setValue)}
+                enterKeyHint="next"
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); advanceTo(typeSecRef.current, typeInputRef.current) } }}
                 className="flex-1 bg-transparent text-[22px] font-bold font-mono text-ink outline-none placeholder:text-ink-faint"
               />
             </div>
           </div>
 
           {/* Project type */}
-          <div>
+          <div ref={typeSecRef}>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
               Project Type <span className="normal-case text-ink-faint/60">(optional)</span>
             </p>
-            <input type="text" placeholder="e.g. Portrait pack, Logo design" value={projectType} onChange={e => setProjectType(e.target.value)}
+            <input ref={typeInputRef} type="text" placeholder="e.g. Portrait pack, Logo design" value={projectType} onChange={e => setProjectType(e.target.value)}
+              enterKeyHint="next"
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); advanceTo(detailsSecRef.current, depositInputRef.current) } }}
               className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none" />
           </div>
 
           {/* Deposit + Deadline */}
-          <div className="grid grid-cols-2 gap-3">
+          <div ref={detailsSecRef} className="grid grid-cols-2 gap-3">
             <div>
               <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
                 Deposit <span className="normal-case text-ink-faint/60">(opt.)</span>
               </p>
               <div className="flex items-center gap-1 bg-bg-overlay rounded-[14px] px-3 py-2.5">
                 <span className="text-[14px] font-light text-ink-muted font-mono">$</span>
-                <input type="text" inputMode="decimal" placeholder="0.00" value={deposit}
+                <input ref={depositInputRef} type="text" inputMode="decimal" placeholder="0.00" value={deposit}
                   onChange={e => handleAmount(e.target.value, setDeposit)}
+                  enterKeyHint="next"
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); advanceTo(notesSecRef.current) } }}
                   className="flex-1 bg-transparent text-[15px] font-mono text-ink outline-none placeholder:text-ink-faint min-w-0" />
               </div>
             </div>
@@ -203,7 +228,7 @@ export function AddCommissionSheet({ open, onClose, onAdd }: Props) {
                 Deadline <span className="normal-case text-ink-faint/60">(opt.)</span>
               </p>
               <div className="overflow-hidden rounded-[14px] bg-bg-overlay">
-                <CustomDateInput value={deadline} onChange={setDeadline}
+                <CustomDateInput value={deadline} onChange={d => { setDeadline(d); advanceTo(notesSecRef.current) }}
                   min={localToday()} placeholder="No deadline"
                   className="w-full bg-transparent px-4 py-3 text-[15px] text-ink outline-none" />
               </div>
@@ -211,7 +236,7 @@ export function AddCommissionSheet({ open, onClose, onAdd }: Props) {
           </div>
 
           {/* Notes */}
-          <div>
+          <div ref={notesSecRef}>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
               Notes <span className="normal-case text-ink-faint/60">(optional)</span>
             </p>

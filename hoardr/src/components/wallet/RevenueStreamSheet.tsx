@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { X, Banknote } from 'lucide-react'
 import { cn, localToday, $fd } from '@/lib/utils'
 import { CustomDateInput } from '@/components/ui/CustomDateInput'
+import { advanceToField } from '@/lib/field-advance'
 
 export interface BankOption { id: string; name: string }
 
@@ -40,6 +41,16 @@ export function RevenueStreamSheet({ open, onClose, banks, onDone, initial }: Pr
   const sheetRef      = useRef<HTMLDivElement>(null)
   const dragStartY    = useRef<number | null>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
+
+  // Auto-advance: refs so completing a field scrolls/focuses the next one
+  const amountSecRef   = useRef<HTMLDivElement>(null)
+  const amountInputRef = useRef<HTMLInputElement>(null)
+  const freqSecRef     = useRef<HTMLDivElement>(null)
+  const bankSecRef     = useRef<HTMLDivElement>(null)
+  const dateSecRef     = useRef<HTMLDivElement>(null)
+  const saveBtnRef     = useRef<HTMLButtonElement>(null)
+  const advanceTo = (sec: HTMLElement | null, focusEl?: HTMLElement | null) =>
+    advanceToField(scrollAreaRef.current, sec, focusEl)
 
   const [name,        setName]        = useState('Main Job')
   const [amount,      setAmount]      = useState('')
@@ -185,25 +196,29 @@ export function RevenueStreamSheet({ open, onClose, banks, onDone, initial }: Pr
           <div>
             <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Name</p>
             <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Main Job"
+              enterKeyHint="next"
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); advanceTo(amountSecRef.current, amountInputRef.current) } }}
               className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40"/>
           </div>
 
           {/* Amount */}
-          <div>
+          <div ref={amountSecRef}>
             <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Amount per payment</p>
             <div className="flex items-center gap-1.5 bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 focus-within:border-gold/40">
               <span className="text-[22px] font-light text-ink-muted font-mono">$</span>
-              <input type="number" inputMode="decimal" placeholder="0.00" value={amount} onChange={e => setAmount(e.target.value)}
+              <input ref={amountInputRef} type="number" inputMode="decimal" placeholder="0.00" value={amount} onChange={e => setAmount(e.target.value)}
+                enterKeyHint="next"
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); advanceTo(freqSecRef.current) } }}
                 className="flex-1 bg-transparent text-[22px] font-mono text-ink outline-none placeholder:text-ink-faint"/>
             </div>
           </div>
 
           {/* Frequency */}
-          <div>
+          <div ref={freqSecRef}>
             <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Frequency</p>
             <div className="grid grid-cols-2 gap-2">
               {FREQUENCIES.map(f => (
-                <button key={f.id} onClick={() => setFreq(f.id)}
+                <button key={f.id} onClick={() => { setFreq(f.id); advanceTo(bankSecRef.current ?? dateSecRef.current) }}
                   className={cn('rounded-[14px] p-3 text-left border transition-colors',
                     freq === f.id ? 'border-gold/50 bg-bg-overlay' : 'border-white/[0.06] bg-bg-overlay')}>
                   <p className={cn('text-[13px] font-semibold leading-tight', freq === f.id ? 'text-gold' : 'text-ink')}>{f.label}</p>
@@ -215,16 +230,16 @@ export function RevenueStreamSheet({ open, onClose, banks, onDone, initial }: Pr
 
           {/* Bank */}
           {banks.length > 0 && (
-            <div>
+            <div ref={bankSecRef}>
               <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Bank account</p>
               <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-                <button onClick={() => setBankId(null)}
+                <button onClick={() => { setBankId(null); advanceTo(dateSecRef.current) }}
                   className={cn('flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all select-none',
                     bankId === null ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
                   None
                 </button>
                 {banks.map(b => (
-                  <button key={b.id} onClick={() => setBankId(b.id)}
+                  <button key={b.id} onClick={() => { setBankId(b.id); advanceTo(dateSecRef.current) }}
                     className={cn('flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all select-none',
                       bankId === b.id ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
                     {b.name}
@@ -235,10 +250,10 @@ export function RevenueStreamSheet({ open, onClose, banks, onDone, initial }: Pr
           )}
 
           {/* Next payment date */}
-          <div>
+          <div ref={dateSecRef}>
             <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Next payment date</p>
             <div className="overflow-hidden rounded-[14px]">
-              <CustomDateInput value={nextPayDate} onChange={setNextPayDate}
+              <CustomDateInput value={nextPayDate} onChange={d => { setNextPayDate(d); advanceTo(saveBtnRef.current) }}
                 className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 text-[15px] text-ink outline-none focus:border-gold/40" />
             </div>
           </div>
@@ -254,7 +269,7 @@ export function RevenueStreamSheet({ open, onClose, banks, onDone, initial }: Pr
             </div>
           )}
 
-          <button onClick={handleSave} disabled={!valid}
+          <button ref={saveBtnRef} onClick={handleSave} disabled={!valid}
             className="w-full gradient-gold rounded-[14px] py-3.5 text-[15px] font-bold text-white disabled:opacity-40 transition-opacity">
             {initial ? 'Save Changes' : 'Save Stream'}
           </button>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
+import { advanceToField } from '@/lib/field-advance'
 import type { BankType } from '@/types'
 
 const BANK_TYPES: BankType[] = ['Checking', 'Savings', 'Investment', 'Business']
@@ -27,6 +28,14 @@ export function AddBankSheet({ open, onClose, onAdd }: Props) {
   const sheetRef    = useRef<HTMLDivElement>(null)
   const dragStartY    = useRef<number | null>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
+
+  // Auto-advance: refs so completing a field scrolls/focuses the next one
+  const typeSecRef    = useRef<HTMLDivElement>(null)
+  const last4SecRef   = useRef<HTMLDivElement>(null)
+  const last4InputRef = useRef<HTMLInputElement>(null)
+  const addBtnRef     = useRef<HTMLButtonElement>(null)
+  const advanceTo = (sec: HTMLElement | null, focusEl?: HTMLElement | null) =>
+    advanceToField(scrollAreaRef.current, sec, focusEl)
 
   useEffect(() => {
     if (!open) return
@@ -160,15 +169,17 @@ export function AddBankSheet({ open, onClose, onAdd }: Props) {
           <div>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Bank Name</p>
             <input type="text" placeholder="e.g. Chase" value={name} onChange={e => setName(e.target.value)}
+              enterKeyHint="next"
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); advanceTo(typeSecRef.current) } }}
               className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none" />
           </div>
 
           {/* Type */}
-          <div>
+          <div ref={typeSecRef}>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Account Type</p>
             <div className="grid grid-cols-2 gap-2">
               {BANK_TYPES.map(t => (
-                <button key={t} onClick={() => setType(t)}
+                <button key={t} onClick={() => { setType(t); advanceTo(last4SecRef.current, last4InputRef.current) }}
                   className={cn('py-2.5 rounded-[14px] text-[12px] font-semibold transition-all select-none', type === t ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
                   {t}
                 </button>
@@ -177,17 +188,19 @@ export function AddBankSheet({ open, onClose, onAdd }: Props) {
           </div>
 
           {/* Last 4 */}
-          <div>
+          <div ref={last4SecRef}>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
               Last 4 Digits <span className="normal-case text-ink-faint/60">(optional)</span>
             </p>
-            <input type="text" inputMode="numeric" placeholder="1234" value={last4}
+            <input ref={last4InputRef} type="text" inputMode="numeric" placeholder="1234" value={last4}
               onChange={e => setLast4(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              enterKeyHint="done"
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); advanceTo(addBtnRef.current) } }}
               className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] font-mono text-ink placeholder:text-ink-faint outline-none" />
           </div>
 
           {/* Submit */}
-          <button onClick={handleAdd} disabled={!canAdd}
+          <button ref={addBtnRef} onClick={handleAdd} disabled={!canAdd}
             className={cn('w-full py-3.5 rounded-[14px] text-[15px] font-semibold transition-all select-none', canAdd ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-faint')}>
             Add Bank
           </button>

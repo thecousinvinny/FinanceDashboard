@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { EXPENSE_CATEGORIES } from '@/lib/data/transactions'
 import { getCategoryIcon } from '@/components/ui/CategoryIcon'
+import { advanceToField } from '@/lib/field-advance'
 
 export interface NewWishItem {
   name:          string
@@ -30,6 +31,18 @@ export function AddWishlistSheet({ open, onClose, onAdd }: Props) {
   const sheetRef    = useRef<HTMLDivElement>(null)
   const dragStartY    = useRef<number | null>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
+
+  // Auto-advance: refs so completing a field scrolls/focuses the next one
+  const priceSecRef    = useRef<HTMLDivElement>(null)
+  const priceInputRef  = useRef<HTMLInputElement>(null)
+  const descSecRef     = useRef<HTMLDivElement>(null)
+  const descInputRef   = useRef<HTMLInputElement>(null)
+  const categorySecRef = useRef<HTMLDivElement>(null)
+  const urlSecRef      = useRef<HTMLDivElement>(null)
+  const urlInputRef    = useRef<HTMLInputElement>(null)
+  const addBtnRef      = useRef<HTMLButtonElement>(null)
+  const advanceTo = (sec: HTMLElement | null, focusEl?: HTMLElement | null) =>
+    advanceToField(scrollAreaRef.current, sec, focusEl)
 
   useEffect(() => {
     if (!open) return
@@ -155,36 +168,44 @@ export function AddWishlistSheet({ open, onClose, onAdd }: Props) {
             <input
               type="text" placeholder="e.g. iPhone" value={name}
               onChange={e => setName(e.target.value)}
+              enterKeyHint="next"
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); advanceTo(priceSecRef.current, priceInputRef.current) } }}
               className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none"
             />
           </div>
 
-          <div>
+          <div ref={priceSecRef}>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
               List Price <span className="normal-case text-ink-faint/60">(optional)</span>
             </p>
             <div className="flex items-center gap-1.5 bg-bg-overlay rounded-[14px] px-4 py-2.5">
               <span className="text-[20px] font-light text-ink-muted font-mono">$</span>
               <input
+                ref={priceInputRef}
                 type="text" inputMode="decimal" placeholder="0.00" value={amount}
                 onChange={e => handleAmountChange(e.target.value)}
+                enterKeyHint="next"
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); advanceTo(descSecRef.current, descInputRef.current) } }}
                 className="flex-1 bg-transparent text-[22px] font-bold font-mono text-ink outline-none placeholder:text-ink-faint"
               />
             </div>
           </div>
 
-          <div>
+          <div ref={descSecRef}>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
               Description <span className="normal-case text-ink-faint/60">(optional)</span>
             </p>
             <input
+              ref={descInputRef}
               type="text" placeholder="e.g. iPhone 17 Pro Max 256GB" value={description}
               onChange={e => setDescription(e.target.value)}
+              enterKeyHint="next"
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); advanceTo(categorySecRef.current) } }}
               className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none"
             />
           </div>
 
-          <div>
+          <div ref={categorySecRef}>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
               Category <span className="normal-case text-ink-faint/60">(optional)</span>
             </p>
@@ -195,7 +216,7 @@ export function AddWishlistSheet({ open, onClose, onAdd }: Props) {
                 return (
                   <button
                     key={cat.name}
-                    onClick={() => setCategory(active ? '' : cat.name)}
+                    onClick={() => { const next = active ? '' : cat.name; setCategory(next); if (next) advanceTo(urlSecRef.current, urlInputRef.current) }}
                     className={cn(
                       'flex flex-col items-center gap-1 py-2.5 rounded-[14px] text-[10px] font-semibold transition-all select-none',
                       active ? 'bg-gold/15 text-gold ring-1 ring-gold/40' : 'bg-bg-overlay text-ink-muted',
@@ -209,18 +230,22 @@ export function AddWishlistSheet({ open, onClose, onAdd }: Props) {
             </div>
           </div>
 
-          <div>
+          <div ref={urlSecRef}>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
               Buy Link <span className="normal-case text-ink-faint/60">(optional)</span>
             </p>
             <input
+              ref={urlInputRef}
               type="url" placeholder="https://..." value={url}
               onChange={e => setUrl(e.target.value)}
+              enterKeyHint="done"
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); advanceTo(addBtnRef.current) } }}
               className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none"
             />
           </div>
 
           <button
+            ref={addBtnRef}
             onClick={handleAdd} disabled={!canAdd}
             className={cn(
               'w-full py-3.5 rounded-[14px] text-[15px] font-semibold transition-all select-none',

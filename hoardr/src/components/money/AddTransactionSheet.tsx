@@ -11,6 +11,7 @@ import {
 import { localToday, cn, $fd } from '@/lib/utils'
 import { ChevronDown } from 'lucide-react'
 import { CustomDateInput } from '@/components/ui/CustomDateInput'
+import { advanceToField } from '@/lib/field-advance'
 
 type TxType = 'Expense' | 'Income'
 
@@ -64,16 +65,8 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
   const dateSecRef     = useRef<HTMLDivElement>(null)
   const addBtnRef      = useRef<HTMLButtonElement>(null)
 
-  // Scroll a field to the top of the sheet's scroll area; optionally focus an input.
-  // Uses scrollTo on the container (not scrollIntoView, which misbehaves in iOS WKWebView fixed sheets).
-  function advanceTo(sec: HTMLElement | null, focusEl?: HTMLElement | null) {
-    const sc = scrollAreaRef.current
-    if (sc && sec) {
-      const delta = sec.getBoundingClientRect().top - sc.getBoundingClientRect().top
-      sc.scrollTo({ top: sc.scrollTop + delta - 12, behavior: 'smooth' })
-    }
-    if (focusEl) requestAnimationFrame(() => focusEl.focus())
-  }
+  const advanceTo = (sec: HTMLElement | null, focusEl?: HTMLElement | null) =>
+    advanceToField(scrollAreaRef.current, sec, focusEl)
 
   useEffect(() => {
     if (!open) return

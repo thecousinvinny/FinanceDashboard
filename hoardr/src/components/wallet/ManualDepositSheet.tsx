@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useMemo } from 'react'
 import { X, Banknote, ChevronDown } from 'lucide-react'
 import { cn, localToday, $fd } from '@/lib/utils'
 import { CustomDateInput } from '@/components/ui/CustomDateInput'
+import { advanceToField } from '@/lib/field-advance'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import { showToast } from '@/lib/toast'
 import { createClient } from '@/lib/supabase/client'
@@ -42,14 +43,8 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
   const dateSecRef     = useRef<HTMLDivElement>(null)
   const addBtnRef      = useRef<HTMLButtonElement>(null)
 
-  function advanceTo(sec: HTMLElement | null, focusEl?: HTMLElement | null) {
-    const sc = scrollAreaRef.current
-    if (sc && sec) {
-      const delta = sec.getBoundingClientRect().top - sc.getBoundingClientRect().top
-      sc.scrollTo({ top: sc.scrollTop + delta - 12, behavior: 'smooth' })
-    }
-    if (focusEl) requestAnimationFrame(() => focusEl.focus())
-  }
+  const advanceTo = (sec: HTMLElement | null, focusEl?: HTMLElement | null) =>
+    advanceToField(scrollAreaRef.current, sec, focusEl)
 
   const [label,   setLabel]   = useState('')
   const [amount,  setAmount]  = useState('')

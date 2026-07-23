@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
+import { advanceToField } from '@/lib/field-advance'
 import type { CardType, CardNetwork, CardStyle, CardTexture } from '@/types'
 import { CARD_STYLE_DEFS, CARD_TEXTURE_DEFS, STYLE_GROUPS } from '@/lib/cardStyles'
 
@@ -46,6 +47,21 @@ export function AddCardSheet({ open, onClose, onAdd, banks }: Props) {
   const sheetRef    = useRef<HTMLDivElement>(null)
   const dragStartY    = useRef<number | null>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
+
+  // Auto-advance: refs so completing a field scrolls/focuses the next one
+  const aliasSecRef       = useRef<HTMLDivElement>(null)
+  const aliasInputRef     = useRef<HTMLInputElement>(null)
+  const typeSecRef        = useRef<HTMLDivElement>(null)
+  const networkSecRef     = useRef<HTMLDivElement>(null)
+  const detailsSecRef     = useRef<HTMLDivElement>(null)
+  const last4InputRef     = useRef<HTMLInputElement>(null)
+  const expiresInputRef   = useRef<HTMLInputElement>(null)
+  const cardholderSecRef  = useRef<HTMLDivElement>(null)
+  const cardholderInputRef = useRef<HTMLInputElement>(null)
+  const bankSecRef        = useRef<HTMLDivElement>(null)
+  const addBtnRef         = useRef<HTMLButtonElement>(null)
+  const advanceTo = (sec: HTMLElement | null, focusEl?: HTMLElement | null) =>
+    advanceToField(scrollAreaRef.current, sec, focusEl)
 
   useEffect(() => {
     if (!open) return
@@ -143,12 +159,15 @@ export function AddCardSheet({ open, onClose, onAdd, banks }: Props) {
   }, [open])
 
   function handleLast4(raw: string) {
-    setLast4(raw.replace(/\D/g, '').slice(0, 4))
+    const v = raw.replace(/\D/g, '').slice(0, 4)
+    setLast4(v)
+    if (v.length === 4) expiresInputRef.current?.focus()  // full → jump to Expires
   }
 
   function handleExpires(raw: string) {
     const d = raw.replace(/\D/g, '').slice(0, 4)
     setExpires(d.length >= 3 ? `${d.slice(0, 2)}/${d.slice(2)}` : d)
+    if (d.length === 4) advanceTo(cardholderSecRef.current, cardholderInputRef.current)  // MM/YY complete
   }
 
   function handleAdd() {
@@ -241,24 +260,28 @@ export function AddCardSheet({ open, onClose, onAdd, banks }: Props) {
           <div>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Card Name</p>
             <input type="text" placeholder="e.g. LUMEN" value={name} onChange={e => setName(e.target.value)}
+              enterKeyHint="next"
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); advanceTo(aliasSecRef.current, aliasInputRef.current) } }}
               className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none" />
           </div>
 
           {/* Alias */}
-          <div>
+          <div ref={aliasSecRef}>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
               Nickname <span className="normal-case text-ink-faint/60">(optional)</span>
             </p>
-            <input type="text" placeholder="e.g. Daily Driver" value={alias} onChange={e => setAlias(e.target.value)}
+            <input ref={aliasInputRef} type="text" placeholder="e.g. Daily Driver" value={alias} onChange={e => setAlias(e.target.value)}
+              enterKeyHint="next"
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); advanceTo(typeSecRef.current) } }}
               className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none" />
           </div>
 
           {/* Type */}
-          <div>
+          <div ref={typeSecRef}>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-3">Type</p>
             <div className="grid grid-cols-2 gap-2">
               {CARD_TYPES.map(t => (
-                <button key={t} onClick={() => setType(t)}
+                <button key={t} onClick={() => { setType(t); advanceTo(networkSecRef.current) }}
                   className={cn('py-2.5 rounded-[14px] text-[12px] font-semibold transition-all select-none', type === t ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
                   {t}
                 </button>
@@ -267,11 +290,11 @@ export function AddCardSheet({ open, onClose, onAdd, banks }: Props) {
           </div>
 
           {/* Network */}
-          <div>
+          <div ref={networkSecRef}>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-3">Network</p>
             <div className="grid grid-cols-2 gap-2">
               {NETWORKS.map(n => (
-                <button key={n} onClick={() => setNetwork(n)}
+                <button key={n} onClick={() => { setNetwork(n); advanceTo(detailsSecRef.current, last4InputRef.current) }}
                   className={cn('py-2.5 rounded-[14px] text-[12px] font-semibold transition-all select-none', network === n ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
                   {n}
                 </button>
@@ -280,39 +303,41 @@ export function AddCardSheet({ open, onClose, onAdd, banks }: Props) {
           </div>
 
           {/* Last 4 + Expires */}
-          <div className="grid grid-cols-2 gap-3">
+          <div ref={detailsSecRef} className="grid grid-cols-2 gap-3">
             <div>
               <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Last 4</p>
-              <input type="text" inputMode="numeric" placeholder="1234" value={last4} onChange={e => handleLast4(e.target.value)}
+              <input ref={last4InputRef} type="text" inputMode="numeric" placeholder="1234" value={last4} onChange={e => handleLast4(e.target.value)}
                 className="w-full bg-bg-overlay rounded-[14px] px-4 py-3.5 text-[15px] font-mono text-ink placeholder:text-ink-faint outline-none" />
             </div>
             <div>
               <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Expires</p>
-              <input type="text" inputMode="numeric" placeholder="MM/YY" value={expires} onChange={e => handleExpires(e.target.value)}
+              <input ref={expiresInputRef} type="text" inputMode="numeric" placeholder="MM/YY" value={expires} onChange={e => handleExpires(e.target.value)}
                 className="w-full bg-bg-overlay rounded-[14px] px-4 py-3.5 text-[15px] font-mono text-ink placeholder:text-ink-faint outline-none" />
             </div>
           </div>
 
           {/* Cardholder */}
-          <div>
+          <div ref={cardholderSecRef}>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Cardholder Name</p>
-            <input type="text" placeholder="e.g. JOHN DOE" value={cardholder} onChange={e => setCardholder(e.target.value)}
+            <input ref={cardholderInputRef} type="text" placeholder="e.g. JOHN DOE" value={cardholder} onChange={e => setCardholder(e.target.value)}
+              enterKeyHint="done"
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); advanceTo(bankSecRef.current ?? addBtnRef.current) } }}
               className="w-full bg-bg-overlay rounded-[14px] px-4 py-3.5 text-[15px] font-mono text-ink placeholder:text-ink-faint outline-none" />
           </div>
 
           {/* Linked bank */}
           {banks.length > 0 && (
-            <div>
+            <div ref={bankSecRef}>
               <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-3">
                 Linked Bank <span className="normal-case text-ink-faint/60">(optional)</span>
               </p>
               <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => setBankId(null)}
+                <button onClick={() => { setBankId(null); advanceTo(addBtnRef.current) }}
                   className={cn('py-2.5 rounded-[14px] text-[12px] font-semibold transition-all select-none', bankId === null ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
                   None
                 </button>
                 {banks.map(b => (
-                  <button key={b.id} onClick={() => setBankId(b.id)}
+                  <button key={b.id} onClick={() => { setBankId(b.id); advanceTo(addBtnRef.current) }}
                     className={cn('py-2.5 rounded-[14px] text-[12px] font-semibold transition-all select-none', bankId === b.id ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
                     {b.name}
                   </button>
@@ -322,7 +347,7 @@ export function AddCardSheet({ open, onClose, onAdd, banks }: Props) {
           )}
 
           {/* Submit */}
-          <button onClick={handleAdd} disabled={!canAdd}
+          <button ref={addBtnRef} onClick={handleAdd} disabled={!canAdd}
             className={cn('w-full py-3.5 rounded-[14px] text-[15px] font-semibold transition-all select-none', canAdd ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-faint')}>
             Add Card
           </button>

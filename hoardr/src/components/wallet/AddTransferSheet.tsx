@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { ChevronDown, ArrowLeftRight } from 'lucide-react'
 import { cn, localToday } from '@/lib/utils'
 import { CustomDateInput } from '@/components/ui/CustomDateInput'
+import { advanceToField } from '@/lib/field-advance'
 
 export interface TransferPayload {
   from_bank_id: string
@@ -32,6 +33,16 @@ export function AddTransferSheet({ open, onClose, onAdd, banks }: Props) {
   const sheetRef      = useRef<HTMLDivElement>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const dragStartY    = useRef<number | null>(null)
+
+  // Auto-advance: refs so completing a field scrolls/focuses the next one
+  const fromSecRef   = useRef<HTMLDivElement>(null)
+  const toSecRef     = useRef<HTMLDivElement>(null)
+  const dateSecRef   = useRef<HTMLDivElement>(null)
+  const noteSecRef   = useRef<HTMLDivElement>(null)
+  const noteInputRef = useRef<HTMLInputElement>(null)
+  const addBtnRef    = useRef<HTMLButtonElement>(null)
+  const advanceTo = (sec: HTMLElement | null, focusEl?: HTMLElement | null) =>
+    advanceToField(scrollAreaRef.current, sec, focusEl)
 
   // Seed from/to when banks load or sheet opens
   useEffect(() => {
@@ -173,13 +184,15 @@ export function AddTransferSheet({ open, onClose, onAdd, banks }: Props) {
               <input
                 type="text" inputMode="decimal" placeholder="0.00" value={amount}
                 onChange={e => handleAmountChange(e.target.value)}
+                enterKeyHint="next"
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); advanceTo(fromSecRef.current) } }}
                 className="flex-1 bg-transparent text-[22px] font-bold font-mono text-ink outline-none placeholder:text-ink-faint"
               />
             </div>
           </div>
 
           {/* From / To banks with swap button */}
-          <div>
+          <div ref={fromSecRef}>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">From</p>
             {banks.length < 2 ? (
               <p className="text-[12px] text-ink-faint py-2">Need at least 2 banks to transfer.</p>
@@ -187,7 +200,7 @@ export function AddTransferSheet({ open, onClose, onAdd, banks }: Props) {
               <div className="relative">
                 <select
                   value={fromId}
-                  onChange={e => setFromId(e.target.value)}
+                  onChange={e => { setFromId(e.target.value); advanceTo(toSecRef.current) }}
                   className="w-full bg-bg-overlay border border-white/[0.06] rounded-[14px] px-4 py-3 text-[15px] text-ink appearance-none outline-none pr-10"
                   style={{ colorScheme: 'dark' }}
                 >
@@ -215,13 +228,13 @@ export function AddTransferSheet({ open, onClose, onAdd, banks }: Props) {
             </div>
           )}
 
-          <div>
+          <div ref={toSecRef}>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">To</p>
             {banks.length >= 2 && (
               <div className="relative">
                 <select
                   value={toId}
-                  onChange={e => setToId(e.target.value)}
+                  onChange={e => { setToId(e.target.value); advanceTo(dateSecRef.current) }}
                   className="w-full bg-bg-overlay border border-white/[0.06] rounded-[14px] px-4 py-3 text-[15px] text-ink appearance-none outline-none pr-10"
                   style={{ colorScheme: 'dark' }}
                 >
@@ -248,27 +261,31 @@ export function AddTransferSheet({ open, onClose, onAdd, banks }: Props) {
           )}
 
           {/* Date */}
-          <div>
+          <div ref={dateSecRef}>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Date</p>
             <div className="overflow-hidden rounded-[14px] bg-bg-overlay">
               <CustomDateInput
-                value={date} onChange={setDate}
+                value={date} onChange={d => { setDate(d); advanceTo(noteSecRef.current, noteInputRef.current) }}
                 className="w-full bg-transparent px-4 py-3 text-[15px] text-ink outline-none"
               />
             </div>
           </div>
 
           {/* Note */}
-          <div>
+          <div ref={noteSecRef}>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Note <span className="normal-case">(optional)</span></p>
             <input
+              ref={noteInputRef}
               type="text" placeholder="e.g. Monthly savings" value={note}
               onChange={e => setNote(e.target.value)}
+              enterKeyHint="done"
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); advanceTo(addBtnRef.current) } }}
               className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none"
             />
           </div>
 
           <button
+            ref={addBtnRef}
             onClick={handleAdd} disabled={!canAdd}
             className={cn(
               'w-full py-3.5 rounded-[14px] text-[15px] font-semibold transition-all select-none',

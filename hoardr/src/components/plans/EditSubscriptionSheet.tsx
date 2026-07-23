@@ -8,6 +8,7 @@ import type { CardOption, BankOption } from '@/components/money/AddTransactionSh
 import { EXPENSE_CATEGORIES } from '@/lib/data/transactions'
 import { getCategoryIcon } from '@/components/ui/CategoryIcon'
 import { ChevronDown } from 'lucide-react'
+import { advanceToField } from '@/lib/field-advance'
 
 const BILLING_OPTIONS: { value: BillingCycle; label: string }[] = [
   { value: 'Weekly',    label: 'Weekly'    },
@@ -76,6 +77,17 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave, cards = [], 
   const sheetRef    = useRef<HTMLDivElement>(null)
   const dragStartY    = useRef<number | null>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
+
+  // Auto-advance: refs so completing a field scrolls/focuses the next one
+  const costSecRef     = useRef<HTMLDivElement>(null)
+  const costInputRef   = useRef<HTMLInputElement>(null)
+  const billingSecRef  = useRef<HTMLDivElement>(null)
+  const categorySecRef = useRef<HTMLDivElement>(null)
+  const paymentSecRef  = useRef<HTMLDivElement>(null)
+  const renewalSecRef  = useRef<HTMLDivElement>(null)
+  const saveBtnRef     = useRef<HTMLButtonElement>(null)
+  const advanceTo = (sec: HTMLElement | null, focusEl?: HTMLElement | null) =>
+    advanceToField(scrollAreaRef.current, sec, focusEl)
 
   useEffect(() => {
     if (!open) return
@@ -202,28 +214,33 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave, cards = [], 
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Name</p>
             <input
               type="text" value={name} onChange={e => setName(e.target.value)}
+              enterKeyHint="next"
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); advanceTo(costSecRef.current, costInputRef.current) } }}
               className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none"
             />
           </div>
 
-          <div>
+          <div ref={costSecRef}>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Cost</p>
             <div className="flex items-center gap-1.5 bg-bg-overlay rounded-[14px] px-4 py-2.5">
               <span className="text-[20px] font-light text-ink-muted font-mono">$</span>
               <input
+                ref={costInputRef}
                 type="text" inputMode="decimal" placeholder="0.00" value={amount}
                 onChange={e => handleAmountChange(e.target.value)}
+                enterKeyHint="next"
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); advanceTo(billingSecRef.current) } }}
                 className="flex-1 bg-transparent text-[22px] font-bold font-mono text-ink outline-none placeholder:text-ink-faint"
               />
             </div>
           </div>
 
-          <div>
+          <div ref={billingSecRef}>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Billing Cycle</p>
             <div className="grid grid-cols-3 gap-2">
               {BILLING_OPTIONS.map(opt => (
                 <button
-                  key={opt.value} onClick={() => setBilling(opt.value)}
+                  key={opt.value} onClick={() => { setBilling(opt.value); advanceTo(categorySecRef.current) }}
                   className={cn(
                     'py-2.5 rounded-[14px] text-[12px] font-semibold transition-all select-none',
                     billing === opt.value ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted',
@@ -235,7 +252,7 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave, cards = [], 
             </div>
           </div>
 
-          <div>
+          <div ref={categorySecRef}>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Category <span className="normal-case">(optional)</span></p>
             <div className="grid grid-cols-4 gap-2">
               {EXPENSE_CATEGORIES.map(cat => {
@@ -244,7 +261,7 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave, cards = [], 
                 return (
                   <button
                     key={cat.name}
-                    onClick={() => setCategory(active ? null : cat.name)}
+                    onClick={() => { const next = active ? null : cat.name; setCategory(next); if (next) advanceTo(paymentSecRef.current) }}
                     className={cn(
                       'flex flex-col items-center gap-1 py-2.5 rounded-[14px] text-[10px] font-semibold transition-all select-none',
                       active ? 'bg-gold/15 text-gold ring-1 ring-gold/40' : 'bg-bg-overlay text-ink-muted',
@@ -259,7 +276,7 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave, cards = [], 
           </div>
 
           {/* Payment method: Direct toggle + Card or Bank picker */}
-          <div>
+          <div ref={paymentSecRef}>
             <div className="flex items-center justify-between mb-2">
               <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint">
                 {direct ? 'Bank' : 'Card'}
@@ -281,7 +298,7 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave, cards = [], 
                 <div className="relative">
                   <select
                     value={bankId ?? ''}
-                    onChange={e => setBankId(e.target.value || null)}
+                    onChange={e => { setBankId(e.target.value || null); advanceTo(renewalSecRef.current) }}
                     className="w-full bg-bg-overlay border border-white/[0.06] rounded-[14px] px-4 py-3 text-[15px] text-ink appearance-none outline-none pr-10"
                     style={{ colorScheme: 'dark' }}
                   >
@@ -300,7 +317,7 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave, cards = [], 
                 <div className="relative">
                   <select
                     value={cardId ?? ''}
-                    onChange={e => setCardId(e.target.value || null)}
+                    onChange={e => { setCardId(e.target.value || null); advanceTo(renewalSecRef.current) }}
                     className="w-full bg-bg-overlay border border-white/[0.06] rounded-[14px] px-4 py-3 text-[15px] text-ink appearance-none outline-none pr-10"
                     style={{ colorScheme: 'dark' }}
                   >
@@ -319,17 +336,18 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave, cards = [], 
             )}
           </div>
 
-          <div>
+          <div ref={renewalSecRef}>
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Next Renewal</p>
             <div className="overflow-hidden rounded-[14px] bg-bg-overlay">
               <CustomDateInput
-                value={nextRenewal} onChange={setNextRenewal}
+                value={nextRenewal} onChange={d => { setNextRenewal(d); advanceTo(saveBtnRef.current) }}
                 className="w-full bg-transparent px-4 py-3 text-[15px] text-ink outline-none"
               />
             </div>
           </div>
 
           <button
+            ref={saveBtnRef}
             onClick={handleSave} disabled={!canSave}
             className={cn(
               'w-full py-3.5 rounded-[14px] text-[15px] font-semibold transition-all select-none',
