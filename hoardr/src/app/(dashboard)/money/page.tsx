@@ -21,7 +21,7 @@ import { CustomDateInput } from '@/components/ui/CustomDateInput'
 import { PullIndicator } from '@/components/ui/PullIndicator'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { createCalEvent, updateCalEvent, deleteCalEvent, allDayEvent } from '@/lib/calendar'
-import { RefreshCw, CreditCard, XCircle, MinusCircle, Repeat2, ShoppingCart, Search, X } from 'lucide-react'
+import { RefreshCw, CreditCard, XCircle, MinusCircle, Repeat2, ShoppingCart, Search, X, Truck } from 'lucide-react'
 import type { BillingCycle } from '@/types'
 import { usePillSwipe } from '@/hooks/usePillSwipe'
 import { getAppPrefs } from '@/lib/app-prefs'
@@ -717,11 +717,33 @@ export default function OutPage() {
     if (reportDbError(error, 'save wishlist item')) await loadData()
   }
 
+  // Mark an Ordered (en-route) item as arrived — mirrors Home's handleMarkArrived.
+  // Sets today's delivery date and drops it from Home's cached En Route so the two
+  // stay in sync without a refetch.
+  async function handleMarkWishDelivered(id: string) {
+    const item = wishlist.find(w => w.id === id)
+    if (!item) return
+    const today = localToday()
+    setWishlist(prev => prev.map(w => w.id === id ? { ...w, status: 'Delivered', delivered_at: today } : w))
+    // Keep Home's En Route section in sync (it reads this cached list on mount).
+    const homeCache = pageCache.get<{ enRoute?: { id: string }[] }>('home')
+    if (homeCache?.enRoute) pageCache.set('home', { ...homeCache, enRoute: homeCache.enRoute.filter(i => i.id !== id) })
+    showToast(`${item.name} arrived`, { type: 'payment' })
+    const { error } = await supabase.from('wishlist').update({ status: 'Delivered', delivered_at: today }).eq('id', id)
+    if (reportDbError(error, 'mark delivered')) await loadData()
+  }
+
   // ── Computed ───────────────────────────────────────────────────────────────
 
   const activeSubs    = useMemo(() => subs.filter(s => s.status === 'Active'),    [subs])
   const cancelledSubs = useMemo(() => subs.filter(s => s.status === 'Cancelled'), [subs])
   const interestedWish = useMemo(() => wishlist.filter(w => w.status === 'Interested'), [wishlist])
+  const orderedWish    = useMemo(
+    () => wishlist
+      .filter(w => w.status === 'Ordered')
+      .sort((a, b) => (b.ordered_at ?? '').localeCompare(a.ordered_at ?? '')),
+    [wishlist],
+  )
   const deliveredWish  = useMemo(
     () => wishlist
       .filter(w => w.status === 'Delivered')
@@ -732,6 +754,7 @@ export default function OutPage() {
   const filteredActiveSubs    = useMemo(() => !q ? activeSubs    : activeSubs.filter(s    => s.name.toLowerCase().includes(q) || (s.category ?? '').toLowerCase().includes(q)),    [activeSubs, q])
   const filteredCancelledSubs = useMemo(() => !q ? cancelledSubs : cancelledSubs.filter(s => s.name.toLowerCase().includes(q) || (s.category ?? '').toLowerCase().includes(q)), [cancelledSubs, q])
   const filteredWish          = useMemo(() => !q ? interestedWish : interestedWish.filter(w => w.name.toLowerCase().includes(q) || (w.category ?? '').toLowerCase().includes(q) || (w.description ?? '').toLowerCase().includes(q)), [interestedWish, q])
+  const filteredEnRoute       = useMemo(() => !q ? orderedWish : orderedWish.filter(w => w.name.toLowerCase().includes(q) || (w.category ?? '').toLowerCase().includes(q) || (w.description ?? '').toLowerCase().includes(q)), [orderedWish, q])
   const filteredDelivered     = useMemo(() => !q ? deliveredWish : deliveredWish.filter(w => w.name.toLowerCase().includes(q) || (w.category ?? '').toLowerCase().includes(q) || (w.description ?? '').toLowerCase().includes(q)), [deliveredWish, q])
 
   const subNames = useMemo(() =>
@@ -1230,7 +1253,7 @@ export default function OutPage() {
       {/* ── Wishlist ─────────────────────────────────────────────────────── */}
       {!loading && tab === 'Wishlist' && (
         <div className="mx-4 mt-4">
-          {filteredWish.length === 0 && filteredDelivered.length === 0 ? (
+          {filteredWish.length === 0 && filteredEnRoute.length === 0 && filteredDelivered.length === 0 ? (
             <div className="bg-bg-surface border border-white/[0.06] rounded-card py-12 text-center text-ink-faint text-[13px]">
               {q ? `No items match “${query.trim()}”.` : 'Nothing on your wishlist — tap + to add an item.'}
             </div>
@@ -1281,8 +1304,44 @@ export default function OutPage() {
                 </div>
               )}
 
-              {filteredDelivered.length > 0 && (
+              {filteredEnRoute.length > 0 && (
                 <div className={filteredWish.length > 0 ? 'mt-6' : ''}>
+                  <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2 px-1">En Route</p>
+                  <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
+                    {filteredEnRoute.map(item => (
+                      <SwipeToDelete
+                        key={item.id}
+                        onDelete={() => handleDeleteWish(item.id)}
+                        onTap={() => setEditWish(item)}
+                        onRight={() => handleMarkWishDelivered(item.id)}
+                        rightLabel={<Truck size={18} strokeWidth={1.5} className="text-white" />}
+                      >
+                        <div className="flex items-center gap-3 px-4 py-3.5">
+                          <div className="w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+                            <Truck size={15} strokeWidth={1.75} className="text-gold" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[14px] font-medium text-ink truncate">{item.name}</p>
+                            <p className="text-[11px] text-ink-muted truncate mt-0.5">{item.category ?? 'Uncategorized'}</p>
+                            <p className="text-[10px] text-ink-faint mt-0.5">
+                              {item.ordered_at ? <>Paid {fmtDate(item.ordered_at)} · en route</> : 'En route'}
+                            </p>
+                          </div>
+                          {item.bought_cost != null && (
+                            <div className="text-right flex-shrink-0">
+                              <p className="text-[15px] font-semibold font-mono text-ink">{$fd(item.bought_cost)}</p>
+                              <p className="text-[10px] text-ink-faint">paid</p>
+                            </div>
+                          )}
+                        </div>
+                      </SwipeToDelete>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {filteredDelivered.length > 0 && (
+                <div className={filteredWish.length > 0 || filteredEnRoute.length > 0 ? 'mt-6' : ''}>
                   <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2 px-1">Delivered</p>
                   <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
                     {filteredDelivered.map(item => (
