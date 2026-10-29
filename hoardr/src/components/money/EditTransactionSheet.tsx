@@ -12,6 +12,7 @@ import { ChevronDown } from 'lucide-react'
 import { CustomDateInput } from '@/components/ui/CustomDateInput'
 import { advanceToField } from '@/lib/field-advance'
 import type { CardOption, BankOption } from './AddTransactionSheet'
+import { Select } from '@/components/ui/Select'
 
 export interface TxEdits {
   name:        string
@@ -296,11 +297,9 @@ export function EditTransactionSheet({ tx, open, onClose, onSave, cards = [], ba
                 <p className="text-[12px] text-ink-faint py-2">No cards yet — add one in Wallet</p>
               ) : (
                 <div className="relative">
-                  <select
+                  <Select
                     value={cardId ?? ''}
                     onChange={e => { setCardId(e.target.value || null); advanceTo(dateSecRef.current) }}
-                    className="w-full bg-bg-overlay border border-white/[0.06] rounded-[14px] px-4 py-3 text-[15px] text-ink appearance-none outline-none pr-10"
-                    style={{ colorScheme: 'dark' }}
                   >
                     <option value="">None</option>
                     {[...cards]
@@ -310,8 +309,7 @@ export function EditTransactionSheet({ tx, open, onClose, onSave, cards = [], ba
                           {c.name}{c.last4 ? ` ••••${c.last4}` : ''}
                         </option>
                       ))}
-                  </select>
-                  <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
+                  </Select>
                 </div>
               )}
             </div>
@@ -325,11 +323,9 @@ export function EditTransactionSheet({ tx, open, onClose, onSave, cards = [], ba
                 <p className="text-[12px] text-ink-faint py-2">No banks yet — add one in Wallet</p>
               ) : (
                 <div className="relative">
-                  <select
+                  <Select
                     value={bankId ?? ''}
                     onChange={e => { setBankId(e.target.value || null); advanceTo(dateSecRef.current) }}
-                    className="w-full bg-bg-overlay border border-white/[0.06] rounded-[14px] px-4 py-3 text-[15px] text-ink appearance-none outline-none pr-10"
-                    style={{ colorScheme: 'dark' }}
                   >
                     <option value="">None</option>
                     {[...banks]
@@ -337,8 +333,7 @@ export function EditTransactionSheet({ tx, open, onClose, onSave, cards = [], ba
                       .map(b => (
                         <option key={b.id} value={b.id}>{b.name}</option>
                       ))}
-                  </select>
-                  <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
+                  </Select>
                 </div>
               )}
             </div>

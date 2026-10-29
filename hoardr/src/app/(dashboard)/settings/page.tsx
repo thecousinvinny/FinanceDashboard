@@ -13,6 +13,7 @@ import { SemanticColorSheet } from '@/components/ui/SemanticColorSheet'
 import { type IconColorMode, getIconColorMode, setIconColorMode } from '@/lib/category-meta'
 import { getWeekStartsMonday, setWeekStartsMonday } from '@/lib/week-start'
 import { applySemanticColors } from '@/lib/semantic-colors'
+import { calFetch } from '@/lib/calendar'
 
 const DEFAULT_PREFS: CalPrefs = { visibleTypes: ['sub', 'income'], googleCalendarIds: [] }
 
@@ -130,7 +131,7 @@ export default function SettingsPage() {
     if (!calOpen || googleCals.length > 0) return
     setCalsLoading(true)
     setCalsError(false)
-    fetch('/api/calendar?action=calendars')
+    calFetch('/api/calendar?action=calendars')
       .then(async r => {
         const d = await r.json() as { items?: unknown[]; error?: string }
         if (!r.ok || d.error) throw new Error(d.error ?? 'no_token')

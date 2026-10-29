@@ -2,8 +2,10 @@
 
 import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { isAuthRetryableFetchError } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { showToast } from '@/lib/toast'
+import { syncAppPrefs } from '@/lib/app-prefs'
 
 /**
  * Global session guard for the dashboard.
@@ -25,6 +27,9 @@ export function AuthWatcher() {
   useEffect(() => {
     const supabase = createClient()
 
+    // Pull shared defaults (default bank etc.) so this device matches the others
+    void syncAppPrefs()
+
     function forceReauth() {
       if (redirecting.current) return
       redirecting.current = true
@@ -44,18 +49,27 @@ export function AuthWatcher() {
     // expired access token — the refresh token is usually still valid and can
     // silently restore the session, so writes just work again. Only when the
     // refresh itself fails (or there's no session at all) do we send to login.
+    //
+    // getSession() already refreshes an expired session itself, so there's no
+    // separate refreshSession() call — a second refresh racing the first is
+    // exactly the kind of token reuse that gets a session revoked.
+    let inFlight = false
+    let lastRun  = 0
     async function revalidate() {
-      let session
+      // focus + visibilitychange both fire on resume; run once
+      if (inFlight || Date.now() - lastRun < 2000) return
+      inFlight = true
+      lastRun  = Date.now()
       try {
-        session = (await supabase.auth.getSession()).data.session
+        const { data, error } = await supabase.auth.getSession()
+        // A network failure (phone just woke, offline) is retryable — the
+        // refresh token is still good, so never sign out over it.
+        if (error && isAuthRetryableFetchError(error)) return
+        if (!data.session) forceReauth()
       } catch {
-        return // network error while offline — don't punish the user
-      }
-      if (!session) { forceReauth(); return }
-      const expMs = (session.expires_at ?? 0) * 1000
-      if (expMs && expMs <= Date.now()) {
-        const { error } = await supabase.auth.refreshSession()
-        if (error) forceReauth()
+        // network error while offline — don't punish the user
+      } finally {
+        inFlight = false
       }
     }
 

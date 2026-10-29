@@ -13,7 +13,8 @@ import { EditEventSheet, type EditableEvent, type EventEdits, type RecurrenceSco
 import { CalendarSettingsSheet, canWriteToCalendar, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
 import { CalendarPopover, defaultTimes, type PopoverFormData, type RecurScope } from '@/components/calendar/CalendarPopover'
 import { MonthYearPicker } from '@/components/calendar/MonthYearPicker'
-import { createCalEvent, updateCalEvent, deleteCalEvent, moveCalEvent, getCalEvent, extractRRule, rruleUntilBefore, type GCalEvent } from '@/lib/calendar'
+import { pageCache } from '@/lib/page-cache'
+import { createCalEvent, updateCalEvent, deleteCalEvent, moveCalEvent, getCalEvent, extractRRule, rruleUntilBefore, type GCalEvent, calFetch } from '@/lib/calendar'
 import { connectGoogleCalendar } from '@/lib/gcal-connect'
 
 type EventType = 'income' | 'sub' | 'google'
@@ -87,6 +88,32 @@ function monthLabel(y: number, m: number) {
 function daysBetween(from: string, to: string): number {
   return Math.round((new Date(to + 'T00:00:00').getTime() - new Date(from + 'T00:00:00').getTime()) / 86400000)
 }
+function addDays(ds: string, n: number): string {
+  const [y, m, d] = ds.split('-').map(Number)
+  const dt = new Date(y, m - 1, d + n)
+  return toDateStr(dt.getFullYear(), dt.getMonth(), dt.getDate())
+}
+// Start/end for `ev` moved from `fromDate` to begin on `toDate`, keeping its
+// length (multi-day spans, past-midnight timed events). All-day ends are
+// exclusive in Google — an end equal to the start is rejected as empty.
+function shiftedTimes(ev: CalEvent, fromDate: string, toDate: string): { start: GCalEvent['start']; end: GCalEvent['end']; endDate?: string } {
+  const endDay = addDays(ev.endDate ?? fromDate, daysBetween(fromDate, toDate))
+  const endDate = endDay !== toDate ? endDay : undefined
+  if (!ev.amount?.trim()) return { start: { date: toDate }, end: { date: addDays(endDay, 1) }, endDate }
+  const [st, et] = ev.amount.split(' – ').map(t => t.trim())
+  return {
+    start: { dateTime: `${toDate}T${st || '09:00'}:00`, timeZone: 'America/Los_Angeles' },
+    end:   { dateTime: `${endDay}T${et || st || '10:00'}:00`, timeZone: 'America/Los_Angeles' },
+    endDate,
+  }
+}
+// Google events within a day: all-day first, then by start time.
+// `amount` is "HH:MM – HH:MM" for timed events, '' for all-day.
+function byStart(a: CalEvent, b: CalEvent): number {
+  const x = a.amount ? a.amount.slice(0, 5) : ''
+  const y = b.amount ? b.amount.slice(0, 5) : ''
+  return x < y ? -1 : x > y ? 1 : 0
+}
 function addWeeks(weekStart: string, n: number): string {
   const [y, m, d] = weekStart.split('-').map(Number)
   const date = new Date(y, m - 1, d + n * 7)
@@ -120,6 +147,34 @@ function allocateSpanLanes(
     if (!placed) lanes.push([{ startCol, endCol, ev: span.ev }])
   }
   return lanes
+}
+
+type SpanBar  = { startCol: number; endCol: number; ev: CalEvent }
+type CellSlot =
+  | { kind: 'bar'; bar: SpanBar; lane: number }
+  | { kind: 'gap' }
+  | { kind: 'ev'; ev: CalEvent; timed: boolean }
+
+// Google-Calendar-style month cell: each week row is one grid of EV_ROW_H
+// slots. A multi-day bar owns its lane's slot on every day it covers; a lane
+// slot with no bar on this day is filled by the day's next single-day event
+// rather than left blank, so a day is never pushed down by bars it isn't part
+// of and items line up across the week. Bars always show; single events stop
+// at `cap` slots and the rest are reported as overflow.
+function layoutCell(lanes: SpanBar[][], col: number, singles: Array<{ ev: CalEvent; timed: boolean }>, cap: number): { slots: CellSlot[]; overflow: number } {
+  const covers = (b: SpanBar) => b.startCol <= col && b.endCol >= col
+  let lastLane = -1
+  lanes.forEach((lane, li) => { if (lane.some(covers)) lastLane = li })
+  const slots: CellSlot[] = []
+  let si = 0
+  for (let li = 0; li <= lastLane; li++) {
+    const bar = lanes[li].find(covers)
+    if (bar)                                          slots.push({ kind: 'bar', bar, lane: li })
+    else if (si < singles.length && slots.length < cap) slots.push({ kind: 'ev', ...singles[si++] })
+    else                                              slots.push({ kind: 'gap' })
+  }
+  while (si < singles.length && slots.length < cap) slots.push({ kind: 'ev', ...singles[si++] })
+  return { slots, overflow: singles.length - si }
 }
 
 const SAFE_TOP = 'calc(max(env(safe-area-inset-top, 0px), 44px) + 12px)'
@@ -209,8 +264,10 @@ export default function CalendarPage() {
   })
 
   // Data
-  const [eventMap,    setEventMap]    = useState<Record<string, CalEvent[]>>({})
-  const [googleEvMap, setGoogleEvMap] = useState<Record<string, CalEvent[]>>({})
+  // Seeded from the page cache so revisiting the tab paints last-known events
+  // immediately; the fetches below replace them.
+  const [eventMap,    setEventMap]    = useState<Record<string, CalEvent[]>>(() => pageCache.get('cal-events') ?? {})
+  const [googleEvMap, setGoogleEvMap] = useState<Record<string, CalEvent[]>>(() => pageCache.get('cal-google') ?? {})
   const [prefs,       setPrefs]       = useState<CalPrefs>(DEFAULT_PREFS)
   const [googleCals,  setGoogleCals]  = useState<GCalendar[]>([])
   const [calsLoading, setCalsLoading] = useState(false)
@@ -223,7 +280,7 @@ export default function CalendarPage() {
   const [editEvent,      setEditEvent]      = useState<EditableEvent | null>(null)
   const [createEvent,    setCreateEvent]    = useState<EditableEvent | null>(null)
   const [popover,        setPopover]        = useState<{ anchorRect: DOMRect | null; mode: 'create' | 'edit'; data: PopoverFormData } | null>(null)
-  const [dataLoaded,     setDataLoaded]     = useState(false)
+  const [dataLoaded,     setDataLoaded]     = useState(() => !!pageCache.get('cal-events'))
   const [gRefreshKey,    setGRefreshKey]    = useState(0)
   // Month-grid weeks whose "+N more" was clicked open. Session-only on purpose:
   // a refresh collapses every row back to the normal height.
@@ -433,6 +490,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
         push(renewDate, { title: String(s.name), type: 'sub', amount: `$${Number(s.cost).toFixed(2)}` })
       }
       setEventMap(map)
+      pageCache.set('cal-events', map)
       setDataLoaded(true)
     } catch (err) {
       if ((err as Error)?.name === 'AbortError') return
@@ -488,7 +546,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     if (!settingsOpen && prefs.googleCalendarIds.length === 0) return
     setCalsLoading(true)
     setCalsError(false)
-    fetch('/api/calendar?action=calendars')
+    calFetch('/api/calendar?action=calendars')
       .then(async r => {
         const d = await r.json() as { items?: GCalendar[]; error?: string }
         if (r.status === 403) { setNeedsCalConnect(true); throw new Error('no_token') }
@@ -505,7 +563,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
   useEffect(() => {
     let cancelled = false
     supabase.auth.getUser().then(({ data }) => { if (!cancelled) setUserEmail(data.user?.email ?? null) })
-    fetch('/api/calendar?action=calendars')
+    calFetch('/api/calendar?action=calendars')
       .then(r => { if (!cancelled) setNeedsCalConnect(r.status === 403) })
       .catch(() => {})
     return () => { cancelled = true }
@@ -524,12 +582,18 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     const clr: Record<string, string> = {}
     for (const c of googleCals) clr[c.id] = c.backgroundColor
     Promise.all(calIds.map(calId =>
-      fetch(`/api/calendar?action=events&calendarId=${encodeURIComponent(calId)}&timeMin=${encodeURIComponent(tMin)}&timeMax=${encodeURIComponent(tMax)}`)
-        .then(r => r.json())
-        .then((d: { items?: Array<{ id: string; summary?: string; description?: string; location?: string; start: { date?: string; dateTime?: string }; end: { date?: string; dateTime?: string } }> }) => ({ calId, items: d.items ?? [] }))
-        .catch(() => ({ calId, items: [] }))
+      calFetch(`/api/calendar?action=events&calendarId=${encodeURIComponent(calId)}&timeMin=${encodeURIComponent(tMin)}&timeMax=${encodeURIComponent(tMax)}`)
+        .then(async r => {
+          const d = await r.json() as { items?: Array<{ id: string; summary?: string; description?: string; location?: string; start: { date?: string; dateTime?: string }; end: { date?: string; dateTime?: string } }> }
+          return { calId, items: d.items ?? [], ok: r.ok, status: r.status }
+        })
+        .catch(() => ({ calId, items: [], ok: false, status: 0 }))
     )).then(results => {
       if (gen !== gEvGen.current) return
+      // A calendar whose fetch failed keeps its last-known events instead of
+      // blanking out; 403 (needs reconnect) already has its own banner.
+      const failed = new Set(results.filter(r => !r.ok).map(r => r.calId))
+      if (results.some(r => !r.ok && r.status !== 403)) showToast('Couldn’t refresh some calendars — showing last loaded events', { type: 'delete' })
       const map: Record<string, CalEvent[]> = {}
       for (const { calId, items } of results) {
         const color = prefs.googleCalendarColors?.[calId] ?? clr[calId] ?? '#4285F4'
@@ -554,7 +618,21 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
           map[date].push({ id: ev.id, title: ev.summary ?? '(no title)', type: 'google', amount: st ? `${st}${et ? ` – ${et}` : ''}` : '', location: ev.location, notes: ev.description, color, endDate, calendarId: calId, instanceDate: date, recurringEventId: (ev as { recurringEventId?: string }).recurringEventId })
         }
       }
-      setGoogleEvMap(map)
+      setGoogleEvMap(prev => {
+        if (failed.size) {
+          for (const [date, evs] of Object.entries(prev)) {
+            const keep = evs.filter(e => e.calendarId && failed.has(e.calendarId))
+            if (keep.length) map[date] = [...(map[date] ?? []), ...keep]
+          }
+        }
+        // Merge across calendars by time: all-day first, then by start
+        // ("HH:MM" strings sort chronologically; all-day has none).
+        for (const date of Object.keys(map)) {
+          map[date].sort(byStart)
+        }
+        pageCache.set('cal-google', map)
+        return map
+      })
     })
     return () => { gEvGen.current++ }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -697,20 +775,16 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       } else if (e.key === 'v' && copiedEvent) {
         e.preventDefault()
         const target = pasteDate ?? todayStr
-        const allDay = !copiedEvent.amount?.trim()
-        const body: GCalEvent = allDay
-          ? { summary: copiedEvent.title, location: copiedEvent.location, description: copiedEvent.notes, start: { date: target }, end: { date: target } }
-          : (() => {
-              const parts = (copiedEvent.amount ?? '').split(' – ').map(t => t.trim())
-              return {
-                summary: copiedEvent.title, location: copiedEvent.location, description: copiedEvent.notes,
-                start: { dateTime: `${target}T${parts[0] || '09:00'}:00`, timeZone: 'America/Los_Angeles' },
-                end:   { dateTime: `${target}T${parts[1] || '10:00'}:00`, timeZone: 'America/Los_Angeles' },
-              }
-            })()
-        createCalEvent(body, copiedEvent.calendarId ?? 'primary')
-          .then(() => { showToast('Event pasted', { type: 'add' }); setGRefreshKey(k => k + 1) })
-          .catch(() => showToast('Failed to paste', { type: 'delete' }))
+        const { start, end, endDate } = shiftedTimes(copiedEvent, copiedEvent.instanceDate ?? target, target)
+        const body: GCalEvent = { summary: copiedEvent.title, location: copiedEvent.location, description: copiedEvent.notes, start, end }
+        // Paste into a calendar we can write to, even if the source was read-only
+        const calId = writableCals.some(c => c.id === copiedEvent.calendarId) ? copiedEvent.calendarId! : pickCreateCalId()
+        // Optimistic, like the popover: show it now, sync in the background
+        const tmpId = `tmp-${Date.now()}`
+        setGoogleEvMap(prev => ({ ...prev, [target]: [...(prev[target] ?? []), { ...copiedEvent, id: tmpId, instanceDate: target, endDate, calendarId: calId, recurringEventId: undefined }] }))
+        showToast('Event pasted', { type: 'add' })
+        // createCalEvent toasts the reason on failure; the refetch drops the stand-in
+        void createCalEvent(body, calId).then(() => setGRefreshKey(k => k + 1))
       }
     }
     document.addEventListener('keydown', onKey)
@@ -767,8 +841,8 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
   }
 
   async function handleEventDrop(ev: CalEvent, newDate: string, originDate: string) {
-    if (!ev.id || newDate === originDate) return
-    const allDay = !ev.amount?.trim()
+    if (!ev.id || ev.id.startsWith('tmp-') || newDate === originDate) return
+    const { start, end, endDate } = shiftedTimes(ev, originDate, newDate)
     // Optimistic: move event to the new date in local state
     setGoogleEvMap(prev => {
       const m = { ...prev }
@@ -776,27 +850,16 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
         m[originDate] = m[originDate].filter(e => e.id !== ev.id)
         if (!m[originDate].length) delete m[originDate]
       }
-      const updated: CalEvent = { ...ev, instanceDate: newDate }
-      m[newDate] = [...(m[newDate] ?? []), updated]
+      const updated: CalEvent = { ...ev, instanceDate: newDate, endDate }
+      m[newDate] = [...(m[newDate] ?? []), updated].sort(byStart)
       return m
     })
-    try {
-      const body: GCalEvent = allDay
-        ? { summary: ev.title, start: { date: newDate }, end: { date: newDate } }
-        : (() => {
-            const parts = (ev.amount ?? '').split(' – ').map(t => t.trim())
-            return {
-              summary: ev.title,
-              start: { dateTime: `${newDate}T${parts[0] || '09:00'}:00`, timeZone: 'America/Los_Angeles' },
-              end:   { dateTime: `${newDate}T${parts[1] || '10:00'}:00`, timeZone: 'America/Los_Angeles' },
-            }
-          })()
-      await updateCalEvent(ev.id, body, ev.calendarId ?? 'primary')
-      showToast('Event moved', { type: 'payment' })
-    } catch {
-      showToast('Failed to move event', { type: 'delete' })
-      setGRefreshKey(k => k + 1)
-    }
+    showToast('Event moved', { type: 'payment' })
+    // PATCH only the times. A PUT with just summary/start/end replaced the whole
+    // event and wiped its location, notes and reminders.
+    const ok = await updateCalEvent(ev.id, { start, end }, ev.calendarId ?? 'primary', { patch: true })
+    // updateCalEvent toasted the reason — put the event back where Google has it
+    if (!ok) setGRefreshKey(k => k + 1)
   }
 
   // ── Right-click context menu (large-screen grid) ──────────────────────────
@@ -1001,11 +1064,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
   // recurrence-free: Google rejects a recurrence array on a single expanded
   // instance, so series-level writes attach the rule themselves.
   function gcalBody(f: EventEdits): GCalEvent {
-    const gcalEndDate = (() => {
-      const d = new Date((f.endDate || f.date) + 'T00:00:00')
-      d.setDate(d.getDate() + 1)
-      return d.toISOString().slice(0, 10)
-    })()
+    const gcalEndDate = addDays(f.endDate || f.date, 1)
     return f.allDay
       ? { summary: f.title, description: f.notes || undefined, location: f.location || undefined, start: { date: f.date }, end: { date: gcalEndDate } }
       : { summary: f.title, description: f.notes || undefined, location: f.location || undefined, start: { dateTime: `${f.date}T${f.startTime}:00`, timeZone: 'America/Los_Angeles' }, end: { dateTime: `${f.endDate || f.date}T${f.endTime}:00`, timeZone: 'America/Los_Angeles' } }
@@ -1037,7 +1096,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
         }
       }
       const date = ev.instanceDate!
-      m[date] = [...(m[date] ?? []), ev]
+      m[date] = [...(m[date] ?? []), ev].sort(byStart)
       return m
     })
   }
@@ -1813,8 +1872,6 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                       const weekSpans = multiDayEvents.filter(s => s.startDate <= days[6] && s.endDate >= days[0])
                       const spanLanes = allocateSpanLanes(weekSpans, days)
                       const SPAN_H = 18, SPAN_GAP = EV_ROW_H - SPAN_H
-                      const maxLanes  = spanLanes.length
-                      const singleSlots = Math.max(0, MAX_VIS_EVENTS - maxLanes)
                       const weekExpanded = expandedWeeks.has(weekStart)
                       const toggleWeek = (e: React.MouseEvent) => {
                         e.stopPropagation()
@@ -1836,12 +1893,11 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                             const singleEvs    = allEvs.filter(ev => !ev.endDate)
                             const allDayEvs    = singleEvs.filter(ev => ev.type !== 'google' || !ev.amount)
                             const timedEvs     = singleEvs.filter(ev => ev.type === 'google' && !!ev.amount)
-                            const cellSlots    = weekExpanded ? singleEvs.length : singleSlots
-                            const shownAllDay  = Math.min(allDayEvs.length, cellSlots)
-                            const shownTimed   = Math.min(timedEvs.length, cellSlots - shownAllDay)
-                            const overflow     = singleEvs.length - shownAllDay - shownTimed
+                            const singles      = [...allDayEvs.map(ev => ({ ev, timed: false })), ...timedEvs.map(ev => ({ ev, timed: true }))]
+                            const cellLayout   = layoutCell(spanLanes, ci, singles, weekExpanded ? Infinity : MAX_VIS_EVENTS)
+                            const overflow     = cellLayout.overflow
                             // Cells that would overflow when collapsed get the "Show less" toggle
-                            const wouldOverflow = singleEvs.length > singleSlots
+                            const wouldOverflow = weekExpanded && layoutCell(spanLanes, ci, singles, MAX_VIS_EVENTS).overflow > 0
                             return (
                               <div
                                 key={ds}
@@ -1916,97 +1972,82 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                                       </div>
                                     )
                                   ) : (<>
-                                  {/* Multi-day span lanes — reserve rows only up to the deepest lane
-                                      with a bar in THIS cell, so days without (or with shallower)
-                                      multi-day bars stack from the top instead of being pushed down. */}
-                                  {maxLanes > 0 && (() => {
-                                    let lastLane = -1
-                                    spanLanes.forEach((lane, li) => { if (lane.some(b => b.startCol <= ci && b.endCol >= ci)) lastLane = li })
-                                    if (lastLane < 0) return null
-                                    return (
-                                    <div style={{ flexShrink: 0, marginBottom: 3 }}>
-                                      {spanLanes.slice(0, lastLane + 1).map((lane, li) => {
-                                        const bar = lane.find(b => b.startCol === ci || (b.startCol < ci && b.endCol >= ci))
-                                        if (!bar) return <div key={li} style={{ height: SPAN_H + SPAN_GAP }} />
+                                  {/* One slot grid per week row (see layoutCell): multi-day bars hold
+                                      their lane, and lane slots a bar doesn't cover on this day take
+                                      the day's own events, so nothing is pushed down below an empty
+                                      row and items line up across the week. */}
+                                  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                                    {cellLayout.slots.map((slot, si) => {
+                                      if (slot.kind === 'gap') return <div key={`g${si}`} style={{ height: EV_ROW_H, flexShrink: 0 }} />
+                                      if (slot.kind === 'bar') {
+                                        const bar     = slot.bar
                                         const isStart = bar.startCol === ci
                                         const isEnd   = bar.endCol   === ci
                                         const bg = notionColor(bar.ev)
                                         const barSel     = selectedEvId   === bar.ev.id
                                         const barHovered = hoveredPillKey === bar.ev.id
                                         return (
-                                          <div key={li}
+                                          <div key={`b${slot.lane}`}
                                             data-cal-event
                                             onContextMenu={(e) => openEvCtx(e, bar.ev, days[bar.startCol] ?? ds)}
                                             onMouseEnter={() => bar.ev.id && setHoveredPillKey(bar.ev.id)}
                                             onMouseLeave={() => setHoveredPillKey(null)}
                                             onClick={bar.ev.type === 'google' && bar.ev.id ? (e) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), bar.ev, days[bar.startCol] ?? ds) } : undefined}
-                                            style={{ height: SPAN_H, marginBottom: SPAN_GAP, marginLeft: isStart ? 2 : 0, marginRight: isEnd ? 2 : 0, borderRadius: isStart ? '4px 0 0 4px' : isEnd ? '0 4px 4px 0' : 0, background: isPast ? bg + '8C' : bg, display: 'flex', alignItems: 'center', paddingLeft: isStart ? 4 : 2, overflow: 'hidden', cursor: (bar.ev.type === 'google') && bar.ev.id ? 'pointer' : 'default', position: 'relative', boxShadow: barSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none' }}>
+                                            style={{ height: SPAN_H, marginBottom: SPAN_GAP, marginLeft: isStart ? 4 : 0, marginRight: isEnd ? 4 : 0, borderRadius: isStart && isEnd ? 4 : isStart ? '4px 0 0 4px' : isEnd ? '0 4px 4px 0' : 0, background: isPast ? bg + '8C' : bg, display: 'flex', alignItems: 'center', paddingLeft: isStart ? 5 : 2, overflow: 'hidden', flexShrink: 0, cursor: (bar.ev.type === 'google') && bar.ev.id ? 'pointer' : 'default', position: 'relative', boxShadow: barSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none' }}>
                                             {(barHovered || barSel) && bar.ev.id && <div style={{ position: 'absolute', inset: 0, background: barSel ? 'rgba(255,255,255,0.145)' : 'rgba(255,255,255,0.071)', pointerEvents: 'none' }} />}
-                                            {isStart && <span className={isPast ? 'cal-pill-title-past' : 'cal-pill-title'} style={{ fontSize: 9, color: isPast ? lightTextColor(bg, true) : '#fff', fontFamily: 'var(--font-montserrat)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bar.ev.title}</span>}
+                                            {isStart && <span className={isPast ? 'cal-pill-title-past' : 'cal-pill-title'} style={{ fontSize: 10, color: isPast ? lightTextColor(bg, true) : '#fff', fontFamily: 'var(--font-montserrat)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bar.ev.title}</span>}
                                           </div>
                                         )
-                                      })}
-                                    </div>
-                                    )
-                                  })()}
-                                  {/* Single-day events */}
-                                  <div style={{ paddingLeft: 4, paddingRight: 4, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
-                                    {allDayEvs.slice(0, shownAllDay).map((ev, ei) => {
-                                      const evColor  = notionColor(ev)
-                                      const pillSel  = selectedEvId   === ev.id
-                                      const pillHov  = hoveredPillKey === ev.id
-                                      const isDraggable = ev.type === 'google' && !!ev.id
+                                      }
+                                      const ev = slot.ev
+                                      const isDraggable    = ev.type === 'google' && !!ev.id
                                       const isBeingDragged = !!dragState && !!ev.id && dragState.ev.id === ev.id
-                                      return (
-                                        <div
-                                          key={ei}
-                                          draggable={isDraggable}
-                                          onDragStart={isDraggable ? (e) => { e.stopPropagation(); setDragState({ ev, originDate: ds }) } : undefined}
-                                          onDragEnd={isDraggable ? () => { setDragState(null); setDragOverDate(null); dragOverRef.current = null } : undefined}
-                                          onMouseEnter={() => ev.id && setHoveredPillKey(ev.id)}
-                                          onMouseLeave={() => setHoveredPillKey(null)}
-                                          onClick={ev.type === 'google' && ev.id ? (e) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), ev, ds) } : undefined}
-                                          data-cal-event
-                                          onContextMenu={(e) => openEvCtx(e, ev, ds)}
-                                          style={{ background: isPast ? evColor + '8C' : evColor, borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, minWidth: 0, width: '100%', boxSizing: 'border-box', cursor: isDraggable ? 'grab' : 'default', position: 'relative', boxShadow: pillSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none', opacity: isBeingDragged ? 0.4 : 1, transition: 'opacity 0.1s' }}
-                                        >
-                                          {(pillHov || pillSel) && ev.id && <div style={{ position: 'absolute', inset: 0, background: pillSel ? 'rgba(255,255,255,0.145)' : 'rgba(255,255,255,0.071)', pointerEvents: 'none', borderRadius: 4 }} />}
-                                          <span style={{ fontSize: 10, color: isPast ? lightTextColor(evColor, true) : '#fff', fontFamily: 'var(--font-montserrat)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
-                                        </div>
-                                      )
-                                    })}
-                                    {/* Timed / financial events */}
-                                    {timedEvs.slice(0, shownTimed).map((ev, ei) => {
-                                      const bar      = notionColor(ev)
-                                      const timeStr  = (ev.type === 'google') && ev.amount
+                                      const sel = selectedEvId   === ev.id
+                                      const hov = hoveredPillKey === ev.id
+                                      const common = {
+                                        draggable: isDraggable,
+                                        onDragStart: isDraggable ? (e: React.DragEvent) => { e.stopPropagation(); setDragState({ ev, originDate: ds }) } : undefined,
+                                        onDragEnd: isDraggable ? () => { setDragState(null); setDragOverDate(null); dragOverRef.current = null } : undefined,
+                                        onMouseEnter: () => { if (ev.id) setHoveredPillKey(ev.id) },
+                                        onMouseLeave: () => setHoveredPillKey(null),
+                                        onClick: ev.type === 'google' && ev.id ? (e: React.MouseEvent<HTMLDivElement>) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), ev, ds) } : undefined,
+                                        onContextMenu: (e: React.MouseEvent) => openEvCtx(e, ev, ds),
+                                        'data-cal-event': true,
+                                      }
+                                      if (!slot.timed) {
+                                        const evColor = notionColor(ev)
+                                        return (
+                                          <div key={`e${si}`} style={{ padding: '0 4px', flexShrink: 0 }}>
+                                            <div {...common}
+                                              style={{ background: isPast ? evColor + '8C' : evColor, borderRadius: 4, padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', overflow: 'hidden', minWidth: 0, width: '100%', boxSizing: 'border-box', cursor: isDraggable ? 'grab' : 'default', position: 'relative', boxShadow: sel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none', opacity: isBeingDragged ? 0.4 : 1, transition: 'opacity 0.1s' }}
+                                            >
+                                              {(hov || sel) && ev.id && <div style={{ position: 'absolute', inset: 0, background: sel ? 'rgba(255,255,255,0.145)' : 'rgba(255,255,255,0.071)', pointerEvents: 'none', borderRadius: 4 }} />}
+                                              <span style={{ fontSize: 10, color: isPast ? lightTextColor(evColor, true) : '#fff', fontFamily: 'var(--font-montserrat)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
+                                            </div>
+                                          </div>
+                                        )
+                                      }
+                                      const bar     = notionColor(ev)
+                                      const timeStr = ev.amount
                                         ? ev.amount.split(' – ')[0].trim().replace(/^(\d{2}):(\d{2})$/, (_, hh, mm) => { const n = Number(hh); return `${n % 12 || 12}:${mm}${n >= 12 ? 'p' : 'a'}` })
                                         : null
-                                      const timedSel = selectedEvId   === ev.id
-                                      const timedHov = hoveredPillKey === ev.id
-                                      const isDraggable = ev.type === 'google' && !!ev.id
-                                      const isBeingDragged = !!dragState && !!ev.id && dragState.ev.id === ev.id
                                       return (
-                                        <div
-                                          key={ei}
-                                          draggable={isDraggable}
-                                          onDragStart={isDraggable ? (e) => { e.stopPropagation(); setDragState({ ev, originDate: ds }) } : undefined}
-                                          onDragEnd={isDraggable ? () => { setDragState(null); setDragOverDate(null); dragOverRef.current = null } : undefined}
-                                          onMouseEnter={() => ev.id && setHoveredPillKey(ev.id)}
-                                          onMouseLeave={() => setHoveredPillKey(null)}
-                                          onClick={ev.type === 'google' && ev.id ? (e) => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), ev, ds) } : undefined}
-                                          data-cal-event
-                                          onContextMenu={(e) => openEvCtx(e, ev, ds)}
-                                          style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 2, height: 18, overflow: 'hidden', flexShrink: 0, minWidth: 0, width: '100%', boxSizing: 'border-box', background: 'transparent', borderRadius: 3, cursor: isDraggable ? 'grab' : 'default', position: 'relative', boxShadow: timedSel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none', opacity: isBeingDragged ? 0.4 : 1, transition: 'opacity 0.1s' }}
-                                        >
-                                          {(timedHov || timedSel) && ev.id && <div style={{ position: 'absolute', inset: 0, background: timedSel ? 'rgba(255,255,255,0.145)' : 'rgba(255,255,255,0.071)', pointerEvents: 'none', borderRadius: 3 }} />}
-                                          <div style={{ width: 3, height: '100%', borderRadius: '3px 0 0 3px', background: isPast ? bar + '8C' : bar, flexShrink: 0 }} />
-                                          <span style={{ fontSize: 10, color: lightTextColor(bar, isPast), fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, paddingLeft: 4, paddingRight: 3 }}>
-                                            {timeStr && <span style={{ color: lightTextColor(bar, true), marginRight: 3 }}>{timeStr}</span>}{ev.title}
-                                          </span>
+                                        <div key={`e${si}`} style={{ padding: '0 4px', flexShrink: 0 }}>
+                                          <div {...common}
+                                            style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 2, height: 18, overflow: 'hidden', minWidth: 0, width: '100%', boxSizing: 'border-box', background: 'transparent', borderRadius: 3, cursor: isDraggable ? 'grab' : 'default', position: 'relative', boxShadow: sel ? 'inset 0 0 0 2px rgba(255,255,255,0.6)' : 'none', opacity: isBeingDragged ? 0.4 : 1, transition: 'opacity 0.1s' }}
+                                          >
+                                            {(hov || sel) && ev.id && <div style={{ position: 'absolute', inset: 0, background: sel ? 'rgba(255,255,255,0.145)' : 'rgba(255,255,255,0.071)', pointerEvents: 'none', borderRadius: 3 }} />}
+                                            <div style={{ width: 3, height: '100%', borderRadius: '3px 0 0 3px', background: isPast ? bar + '8C' : bar, flexShrink: 0 }} />
+                                            <span style={{ fontSize: 10, color: lightTextColor(bar, isPast), fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, paddingLeft: 4, paddingRight: 3 }}>
+                                              {timeStr && <span style={{ color: lightTextColor(bar, true), marginRight: 3 }}>{timeStr}</span>}{ev.title}
+                                            </span>
+                                          </div>
                                         </div>
                                       )
                                     })}
-                                    {(overflow > 0 || (weekExpanded && wouldOverflow)) && (
+                                  </div>
+                                  <div style={{ paddingLeft: 4, paddingRight: 4, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+                                    {(overflow > 0 || wouldOverflow) && (
                                       <button
                                         type="button"
                                         data-cal-event

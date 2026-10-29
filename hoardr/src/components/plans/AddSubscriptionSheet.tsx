@@ -9,6 +9,7 @@ import { EXPENSE_CATEGORIES } from '@/lib/data/transactions'
 import { getCategoryIcon } from '@/components/ui/CategoryIcon'
 import { ChevronDown } from 'lucide-react'
 import { advanceToField } from '@/lib/field-advance'
+import { Select } from '@/components/ui/Select'
 
 const BILLING_OPTIONS: { value: BillingCycle; label: string }[] = [
   { value: 'Weekly',    label: 'Weekly'    },
@@ -272,18 +273,15 @@ export function AddSubscriptionSheet({ open, onClose, onAdd, cards = [], banks =
                 <p className="text-[12px] text-ink-faint py-2">No banks yet — add one in Wallet</p>
               ) : (
                 <div className="relative">
-                  <select
+                  <Select
                     value={bankId ?? ''}
                     onChange={e => { setBankId(e.target.value || null); advanceTo(renewalSecRef.current) }}
-                    className="w-full bg-bg-overlay border border-white/[0.06] rounded-[14px] px-4 py-3 text-[15px] text-ink appearance-none outline-none pr-10"
-                    style={{ colorScheme: 'dark' }}
                   >
                     <option value="">None</option>
                     {[...banks].map(b => (
                       <option key={b.id} value={b.id}>{b.name}</option>
                     ))}
-                  </select>
-                  <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
+                  </Select>
                 </div>
               )
             ) : (
@@ -291,11 +289,9 @@ export function AddSubscriptionSheet({ open, onClose, onAdd, cards = [], banks =
                 <p className="text-[12px] text-ink-faint py-2">No cards yet — add one in Wallet</p>
               ) : (
                 <div className="relative">
-                  <select
+                  <Select
                     value={cardId ?? ''}
                     onChange={e => { setCardId(e.target.value || null); advanceTo(renewalSecRef.current) }}
-                    className="w-full bg-bg-overlay border border-white/[0.06] rounded-[14px] px-4 py-3 text-[15px] text-ink appearance-none outline-none pr-10"
-                    style={{ colorScheme: 'dark' }}
                   >
                     <option value="">None</option>
                     {[...cards]
@@ -305,8 +301,7 @@ export function AddSubscriptionSheet({ open, onClose, onAdd, cards = [], banks =
                           {c.name}{c.last4 ? ` ••••${c.last4}` : ''}
                         </option>
                       ))}
-                  </select>
-                  <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
+                  </Select>
                 </div>
               )
             )}

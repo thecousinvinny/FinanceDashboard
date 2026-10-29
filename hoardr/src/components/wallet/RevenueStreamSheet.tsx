@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { X, Banknote } from 'lucide-react'
 import { cn, localToday, $fd } from '@/lib/utils'
+import { resolveDefaultBankId } from '@/lib/app-prefs'
 import { CustomDateInput } from '@/components/ui/CustomDateInput'
 import { advanceToField } from '@/lib/field-advance'
 
@@ -70,7 +71,7 @@ export function RevenueStreamSheet({ open, onClose, banks, onDone, initial }: Pr
     setName(ini?.name ?? 'Main Job')
     setAmount(ini?.amount ? String(ini.amount) : '')
     setFreq(ini?.freq ?? 'Biweekly')
-    setBankId(ini?.bankId ?? bk[0]?.id ?? null)
+    setBankId(ini ? ini.bankId : resolveDefaultBankId(bk))
     setNextPayDate(ini?.nextPayDate ?? localToday())
   }, [open])
 

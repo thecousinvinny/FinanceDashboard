@@ -9,9 +9,11 @@ import {
   type SeedTx,
 } from '@/lib/data/transactions'
 import { localToday, cn, $fd } from '@/lib/utils'
+import { resolveDefaultBankId } from '@/lib/app-prefs'
 import { ChevronDown } from 'lucide-react'
 import { CustomDateInput } from '@/components/ui/CustomDateInput'
 import { advanceToField } from '@/lib/field-advance'
+import { Select } from '@/components/ui/Select'
 
 type TxType = 'Expense' | 'Income'
 
@@ -155,6 +157,9 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
   useEffect(() => {
     if (open) {
       setCardId(defaultCardId ?? null)
+      // Bank used to be set only by the close-reset, so the first income of a
+      // session saved with no bank while the picker displayed the default.
+      setBankId(resolveDefaultBankId(banks))
       setCategory(type === 'Expense' ? (defaultCategory ?? null) : null)
     } else {
       const t = setTimeout(() => {
@@ -251,7 +256,7 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
             </p>
             <input
               ref={nameInputRef}
-              type="text" placeholder={type === 'Expense' ? 'e.g. Blue Bottle' : 'e.g. Studio Co'}
+              type="text" placeholder={type === 'Expense' ? 'e.g. Blue Bottle' : 'e.g. Paycheck'}
               value={name} onChange={e => setName(e.target.value)}
               enterKeyHint="next"
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); advanceTo(amountSecRef.current, amountInputRef.current) } }}
@@ -362,11 +367,9 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
                 <p className="text-[12px] text-ink-faint py-2">No cards yet — add one in Wallet</p>
               ) : (
                 <div className="relative">
-                  <select
+                  <Select
                     value={cardId ?? ''}
                     onChange={e => { setCardId(e.target.value || null); advanceTo(dateSecRef.current) }}
-                    className="w-full bg-bg-overlay border border-white/[0.06] rounded-[14px] px-4 py-3 text-[15px] text-ink appearance-none outline-none pr-10"
-                    style={{ colorScheme: 'dark' }}
                   >
                     <option value="">None</option>
                     {[...cards]
@@ -376,8 +379,7 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
                           {c.name}{c.last4 ? ` ••••${c.last4}` : ''}
                         </option>
                       ))}
-                  </select>
-                  <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
+                  </Select>
                 </div>
               )}
             </div>
@@ -391,11 +393,9 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
                 <p className="text-[12px] text-ink-faint py-2">No banks yet — add one in Wallet</p>
               ) : (
                 <div className="relative">
-                  <select
+                  <Select
                     value={bankId ?? ''}
                     onChange={e => { setBankId(e.target.value || null); advanceTo(dateSecRef.current) }}
-                    className="w-full bg-bg-overlay border border-white/[0.06] rounded-[14px] px-4 py-3 text-[15px] text-ink appearance-none outline-none pr-10"
-                    style={{ colorScheme: 'dark' }}
                   >
                     <option value="">None</option>
                     {[...banks]
@@ -403,8 +403,7 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
                       .map(b => (
                         <option key={b.id} value={b.id}>{b.name}</option>
                       ))}
-                  </select>
-                  <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
+                  </Select>
                 </div>
               )}
             </div>

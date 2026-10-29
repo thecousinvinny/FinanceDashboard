@@ -6,6 +6,23 @@
 // save looked identical to a successful one — the event just never appeared.
 
 import { showToast } from '@/lib/toast'
+import { createClient } from '@/lib/supabase/client'
+
+/**
+ * fetch() for /api/calendar that authenticates with the browser's current
+ * access token. The route no longer reads the session from cookies: doing so
+ * let the server rotate the refresh token, and when the response carrying the
+ * new cookie never arrived (iOS suspending the PWA mid-request) the browser
+ * kept the revoked token and Supabase killed the session on its next use.
+ * getSession() refreshes in the browser first if needed — the browser is the
+ * only place tokens are refreshed.
+ */
+export async function calFetch(input: string, init?: RequestInit): Promise<Response> {
+  const { data: { session } } = await createClient().auth.getSession()
+  const headers = new Headers(init?.headers)
+  if (session) headers.set('Authorization', `Bearer ${session.access_token}`)
+  return fetch(input, { ...init, headers })
+}
 
 export interface GCalEvent {
   summary:      string
@@ -34,7 +51,7 @@ export interface GCalFetchedEvent {
 // requires fetching the master via its recurringEventId.
 export async function getCalEvent(eventId: string, calendarId?: string): Promise<GCalFetchedEvent | null> {
   try {
-    const res = await fetch(
+    const res = await calFetch(
       `/api/calendar?action=event&eventId=${encodeURIComponent(eventId)}`
       + `&calendarId=${encodeURIComponent(calendarId ?? 'primary')}`,
     )
@@ -73,7 +90,7 @@ export function rruleUntilBefore(rule: string, beforeDate: string, allDay: boole
 
 export async function createCalEvent(event: GCalEvent, calendarId?: string): Promise<string | null> {
   try {
-    const res  = await fetch('/api/calendar', {
+    const res  = await calFetch('/api/calendar', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ action: 'create', event, calendarId }),
@@ -91,7 +108,7 @@ export async function updateCalEvent(
   opts?: { patch?: boolean },   // patch = merge (preserves recurrence on a series); default is full replace
 ): Promise<boolean> {
   try {
-    const res  = await fetch('/api/calendar', {
+    const res  = await calFetch('/api/calendar', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ action: 'update', eventId, event, calendarId, patch: opts?.patch ?? false }),
@@ -104,7 +121,7 @@ export async function updateCalEvent(
 
 export async function moveCalEvent(eventId: string, fromCalendarId: string, toCalendarId: string): Promise<boolean> {
   try {
-    const res  = await fetch('/api/calendar', {
+    const res  = await calFetch('/api/calendar', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ action: 'move', eventId, calendarId: fromCalendarId, destination: toCalendarId }),
@@ -117,7 +134,7 @@ export async function moveCalEvent(eventId: string, fromCalendarId: string, toCa
 
 export async function deleteCalEvent(eventId: string, calendarId?: string): Promise<boolean> {
   try {
-    const res  = await fetch('/api/calendar', {
+    const res  = await calFetch('/api/calendar', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ action: 'delete', eventId, calendarId }),

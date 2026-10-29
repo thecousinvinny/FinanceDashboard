@@ -509,3 +509,20 @@ html.midnight-teal .pac-item:hover,
 html.midnight-teal .pac-item-selected { background-color: #1C2A36 !important; }
 html.midnight-teal .pac-item-query    { color: #E2EAF0 !important; }
 html.midnight-teal .pac-matched       { color: #2DD4BF !important; font-weight: 600 !important; }
+
+/* Shared <Select> menu (large screens) */
+@keyframes selectIn {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+.select-menu { animation: selectIn 0.14s cubic-bezier(0.22,1,0.36,1) both; }
+
+/* Respect the OS "reduce motion" setting across every animation */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

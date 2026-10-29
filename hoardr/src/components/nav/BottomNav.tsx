@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Coins, TrendingDown, TrendingUp, Palette, CalendarDays } from 'lucide-react'
+import { Coins, TrendingDown, TrendingUp, CalendarDays } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const tabs = [
@@ -10,7 +10,6 @@ const tabs = [
   { href: '/money',    label: 'Out',      Icon: TrendingDown },
   { href: '/in',       label: 'In',       Icon: TrendingUp   },
   { href: '/calendar', label: 'Calendar', Icon: CalendarDays },
-  { href: '/studio',   label: 'Studio',   Icon: Palette      },
 ]
 
 const N       = tabs.length
@@ -21,7 +20,9 @@ const N       = tabs.length
 // bar width = tabWidth - 24px
 //           = (100% - 16px) / N - 24px
 const BAR_W = `calc((100% - 16px) / ${N} - 24px)`
-const barL  = (i: number) => `calc(20px + ${i} * (100% - 16px) / ${N})`
+// Slide with transform, not `left` — `left` re-lays-out every frame. A tab is
+// the bar's own width + 24px, and translate percentages are of the bar itself.
+const barX  = (i: number) => `translateX(calc(${i} * (100% + 24px)))`
 
 export default function BottomNav() {
   const pathname  = usePathname()
@@ -52,8 +53,10 @@ export default function BottomNav() {
           className="absolute top-0 h-[2px] rounded-full bg-gold pointer-events-none"
           style={{
             width:      BAR_W,
-            left:       barL(activeIdx),
-            transition: 'left 340ms cubic-bezier(0.34,1.56,0.64,1)',
+            left:       20,
+            transform:  barX(activeIdx),
+            transition: 'transform 340ms cubic-bezier(0.34,1.56,0.64,1)',
+            willChange: 'transform',
           }}
         />
       )}

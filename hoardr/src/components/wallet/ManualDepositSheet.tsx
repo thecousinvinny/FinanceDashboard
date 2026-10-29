@@ -1,13 +1,15 @@
 'use client'
 
 import { useEffect, useRef, useState, useMemo } from 'react'
-import { X, Banknote, ChevronDown } from 'lucide-react'
+import { X, Banknote } from 'lucide-react'
 import { cn, localToday, $fd } from '@/lib/utils'
+import { resolveDefaultBankId } from '@/lib/app-prefs'
 import { CustomDateInput } from '@/components/ui/CustomDateInput'
 import { advanceToField } from '@/lib/field-advance'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import { showToast } from '@/lib/toast'
 import { createClient } from '@/lib/supabase/client'
+import { Select } from '@/components/ui/Select'
 
 export interface IncomeInitial {
   id:      string
@@ -54,11 +56,9 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
   const [saving,  setSaving]  = useState(false)
 
   const banksRef     = useRef(banks)
-  const defBankRef   = useRef(defaultBankId)
   const defLabelRef  = useRef(defaultLabel)
   const initialRef   = useRef(initial)
   useEffect(() => { banksRef.current = banks }, [banks])
-  useEffect(() => { defBankRef.current = defaultBankId }, [defaultBankId])
   useEffect(() => { defLabelRef.current = defaultLabel }, [defaultLabel])
   useEffect(() => { initialRef.current = initial }, [initial])
 
@@ -76,7 +76,7 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
       setLabel(defLabelRef.current ?? '')
       setAmount('')
       setSource('Other')
-      setBankId(defBankRef.current ?? banksRef.current[0]?.id ?? null)
+      setBankId(resolveDefaultBankId(banksRef.current))
       setDate(localToday())
     }
   }, [open])
@@ -245,11 +245,9 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
             <div ref={bankSecRef}>
               <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Bank account</p>
               <div className="relative">
-                <select
+                <Select
                   value={bankId ?? ''}
                   onChange={e => { setBankId(e.target.value || null); advanceTo(categorySecRef.current) }}
-                  className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 text-[15px] text-ink appearance-none outline-none pr-10 focus:border-gold/40"
-                  style={{ colorScheme: 'dark' }}
                 >
                   <option value="">None</option>
                   {[...banks]
@@ -257,8 +255,7 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
                     .map(b => (
                       <option key={b.id} value={b.id}>{b.name}</option>
                     ))}
-                </select>
-                <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
+                </Select>
               </div>
             </div>
           )}

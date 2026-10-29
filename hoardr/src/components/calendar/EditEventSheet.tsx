@@ -6,6 +6,7 @@ import { localToday } from '@/lib/utils'
 import { rruleLabel } from '@/lib/rrule'
 import { RecurrencePicker } from './RecurrencePicker'
 import { LocationPickerSheet } from './LocationPickerSheet'
+import { Select } from '@/components/ui/Select'
 import { DateRangePicker } from './DateRangePicker'
 import { useIsLargeScreen } from '@/lib/use-large-screen'
 import type { GCalendar } from './CalendarSettingsSheet'
@@ -695,24 +696,26 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
 
               {/* 8 — Calendar selector */}
               {googleCals.length > 0 && (
-                <div style={{ position: 'relative' }}>
-                  <div style={rowStyle}>
-                    <span style={{ width: 10, height: 10, borderRadius: 3, background: calDotColor, flexShrink: 0, display: 'inline-block' }} />
-                    <span style={{ flex: 1, fontSize: 14, color: 'var(--color-ink)', fontFamily: M }}>{calName}</span>
-                    <ChevronDown size={14} color={MUTED} style={{ flexShrink: 0 }} />
-                  </div>
-                  <select
-                    value={form.calendarId}
-                    onChange={e => set('calendarId', e.target.value)}
-                    style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }}
-                  >
-                    {googleCals.map(cal => (
-                      <option key={cal.id} value={cal.primary ? 'primary' : cal.id}>
-                        {cal.summary}{cal.primary ? ' (primary)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <Select
+                  value={form.calendarId}
+                  onChange={e => set('calendarId', e.target.value)}
+                  aria-label="Calendar"
+                  className="w-full text-left cursor-pointer"
+                  style={{ background: 'none', border: 'none', padding: 0, display: 'block' }}
+                  trigger={
+                    <div style={rowStyle}>
+                      <span style={{ width: 10, height: 10, borderRadius: 3, background: calDotColor, flexShrink: 0, display: 'inline-block' }} />
+                      <span style={{ flex: 1, fontSize: 14, color: 'var(--color-ink)', fontFamily: M }}>{calName}</span>
+                      <ChevronDown size={14} color={MUTED} style={{ flexShrink: 0 }} />
+                    </div>
+                  }
+                >
+                  {googleCals.map(cal => (
+                    <option key={cal.id} value={cal.primary ? 'primary' : cal.id}>
+                      {cal.summary}{cal.primary ? ' (primary)' : ''}
+                    </option>
+                  ))}
+                </Select>
               )}
 
               {/* Duplicate — only when editing an existing event */}

@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { ChevronDown, ArrowLeftRight } from 'lucide-react'
+import { ArrowLeftRight } from 'lucide-react'
 import { cn, localToday } from '@/lib/utils'
 import { CustomDateInput } from '@/components/ui/CustomDateInput'
 import { advanceToField } from '@/lib/field-advance'
+import { Select } from '@/components/ui/Select'
 
 export interface TransferPayload {
   from_bank_id: string
@@ -198,17 +199,14 @@ export function AddTransferSheet({ open, onClose, onAdd, banks }: Props) {
               <p className="text-[12px] text-ink-faint py-2">Need at least 2 banks to transfer.</p>
             ) : (
               <div className="relative">
-                <select
+                <Select
                   value={fromId}
                   onChange={e => { setFromId(e.target.value); advanceTo(toSecRef.current) }}
-                  className="w-full bg-bg-overlay border border-white/[0.06] rounded-[14px] px-4 py-3 text-[15px] text-ink appearance-none outline-none pr-10"
-                  style={{ colorScheme: 'dark' }}
                 >
                   {banks.map(b => (
                     <option key={b.id} value={b.id}>{b.name}{b.balance != null ? ` — $${Number(b.balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}</option>
                   ))}
-                </select>
-                <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
+                </Select>
               </div>
             )}
           </div>
@@ -232,17 +230,14 @@ export function AddTransferSheet({ open, onClose, onAdd, banks }: Props) {
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">To</p>
             {banks.length >= 2 && (
               <div className="relative">
-                <select
+                <Select
                   value={toId}
                   onChange={e => { setToId(e.target.value); advanceTo(dateSecRef.current) }}
-                  className="w-full bg-bg-overlay border border-white/[0.06] rounded-[14px] px-4 py-3 text-[15px] text-ink appearance-none outline-none pr-10"
-                  style={{ colorScheme: 'dark' }}
                 >
                   {banks.map(b => (
                     <option key={b.id} value={b.id}>{b.name}{b.balance != null ? ` — $${Number(b.balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}</option>
                   ))}
-                </select>
-                <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
+                </Select>
               </div>
             )}
             {fromId && toId && fromId === toId && (

@@ -3,7 +3,9 @@
 
 type Entry = { data: unknown; at: number }
 const store = new Map<string, Entry>()
-const TTL = 60_000  // 60 seconds
+// Pages always refetch on mount and only use this for first paint, so a long
+// TTL just means a revisited tab shows its last data instead of a skeleton.
+const TTL = 30 * 60_000  // 30 minutes
 
 export const pageCache = {
   get<T>(key: string): T | undefined {

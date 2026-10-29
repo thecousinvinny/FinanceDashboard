@@ -16,11 +16,11 @@ Next.js 15 App Router, two route groups:
 - `(auth)/login` — public Google OAuth sign-in
 - `(dashboard)/*` — protected; all tabs share the `BottomNav` shell + `ProfileDrawer` avatar button
 
-`middleware.ts` guards every route (unauthenticated → `/login`; logged-in on `/login` → `/home`; `/` → one or the other).
+`src/middleware.ts` guards every route (unauthenticated → `/login`; logged-in on `/login` → `/home`; `/` → one or the other). It **must** live in `src/` — at the project root Next silently ignores it (it did, for months; the build output's `ƒ Middleware` line confirms it's registered).
 
-## Navigation — five tabs
+## Navigation — four tabs
 
-`BottomNav` has five tabs. All `<Link>` use the `replace` prop so tab-switching does **not** build browser history — this prevents the iOS back-swipe gesture from navigating between tabs.
+`BottomNav` has four tabs. All `<Link>` use the `replace` prop so tab-switching does **not** build browser history — this prevents the iOS back-swipe gesture from navigating between tabs.
 
 | Route | Label | Feature |
 |---|---|---|
@@ -28,9 +28,8 @@ Next.js 15 App Router, two route groups:
 | `/money` | Out | 30-day bar chart + expense/income feed with filter |
 | `/in` | In | Income list + Cards + Banks (three-tab PillGroup) |
 | `/calendar` | Calendar | Compact month grid (phone) / Notion-style infinite grid (iPad+) |
-| `/studio` | Studio | Commission desk — Pending → Approved → In Progress → Completed → Paid |
 
-`/wallet` and `/plans` redirect to `/in`. `/settings` still exists (categories + defaults sub-pages) but is **not** in the nav — reached via the profile button.
+`/wallet` and `/plans` redirect to `/in`; `/studio` (removed commission desk) redirects to `/home`. The `commissions` table and `income.commission_id` remain in the DB but nothing in the app reads them. `/settings` still exists (categories + defaults sub-pages) but is **not** in the nav — reached via the profile button.
 
 **Profile button** (`src/components/profile/ProfileDrawer.tsx`) — fixed avatar button top-right on every page; hidden on `/profile` and `/settings`. Tapping navigates to `/profile`. Hidden by checking `usePathname()`.
 
@@ -81,7 +80,12 @@ Google OAuth via Supabase. Login (`(auth)/login`) calls `signInWithOAuth` with `
 
 **Re-granting Calendar access without signing out** — `profiles.google_refresh_token` is per-user and used server-side by `/api/calendar` for every device, so once a valid token is stored Calendar works on all devices. To re-grant a stale/missing token, call `connectGoogleCalendar(email)` (`src/lib/gcal-connect.ts`), wired to the **Settings → "Connect Google Calendar"** button. It re-runs `signInWithOAuth` with `prompt: 'consent'` + `login_hint` as the same account — the Supabase session is just re-issued (never signed out), and `/auth/callback` stores the fresh token. Do **not** tell users to sign out for this. The `/api/calendar` route returns a 403 with reconnect copy both when the token is missing and when `refreshAccessToken` fails (`token_refresh_failed`, i.e. the stored token was revoked/expired).
 
-**`middleware.ts` invariant — carry refreshed cookies onto redirects.** `getUser()` may rotate the refresh token and set new cookies on `supabaseResponse`. Every `NextResponse.redirect(...)` the middleware returns **must** copy those over (`supabaseResponse.cookies.getAll().forEach(c => res.cookies.set(c))`), or the browser keeps the old, now-revoked token → the next refresh fails with `refresh_token_not_found` → silent sign-out, after which RLS writes fail with no error. The matcher excludes `api` and `auth` so `getUser()` doesn't run there (less rotation churn).
+**Refresh-token rotation — the browser is the only refresher.** Supabase rotates the refresh token on every refresh; if a rotation happens server-side and the response carrying the new cookie is lost (iOS suspending the PWA mid-request, the router aborting a fetch), the browser keeps the revoked token, its next use is flagged as reuse, and the whole session is killed (`Refresh Token Not Found` in auth logs). Rules:
+- `src/middleware.ts` calls `getUser()` (may refresh) **only on full document loads** (`Sec-Fetch-Dest: document`). RSC navigations/prefetches just check the `sb-*-auth-token` cookie exists — Next strips its own `RSC` header before middleware, so don't key off that. A network error from `getUser()` with a cookie present is not treated as signed out.
+- Every redirect the middleware returns copies `supabaseResponse` cookies across (rotated tokens must reach the browser).
+- On document loads the middleware re-issues the auth cookies server-side with a 400-day maxAge — Safari ITP caps JS-written cookies (the browser client's) at 7 days.
+- `/api/calendar` authenticates from an `Authorization: Bearer <access_token>` header (`calFetch` in `src/lib/calendar.ts`), never the cookie session, and never refreshes. All client calls to it must go through `calFetch`.
+- `AuthWatcher` only checks `getSession()` (which refreshes in-browser if needed) — no extra `refreshSession()` racing it — and never signs out over a retryable network error.
 
 **`AuthWatcher`** (`src/components/auth/AuthWatcher.tsx`, mounted in `(dashboard)/layout.tsx`) — global session guard. On `onAuthStateChange` `SIGNED_OUT` it toasts and routes to `/login`. On focus/visibility it revalidates via `getSession()`, silently refreshing an expired-but-recoverable session (no forced re-login); only a genuinely dead session routes to login. Prefer `getSession()` over `getUser()` for this — `getUser()` 401s on a merely-expired access token even when the refresh token is still valid.
 
@@ -112,7 +116,7 @@ PostgREST gotchas these queries hit:
 
 ## pageCache (`src/lib/page-cache.ts`)
 
-Module-level in-memory cache, TTL = 60s. Used by all tabs to show stale data while background refresh runs.
+Module-level in-memory cache, TTL = 30 min. Used by all tabs (and the calendar) for first paint only — every page still refetches on mount — so revisiting a tab shows its last data instead of a skeleton.
 - `pageCache.get<T>(key)` / `pageCache.set(key, data)` — call set after successful load, before `setLoading(false)`
 - Init state: `useState(pageCache.get('key') ?? [])` and `useState(!pageCache.get('key'))` for loading flag
 
@@ -129,7 +133,7 @@ Module-level emitter — call from anywhere. `<ToastContainer />` mounted in `(d
 
 ## UI components (`src/components/`)
 
-- `nav/BottomNav.tsx` — 5-tab fixed nav, 72px tall. Tab order: Hoard/Out/In/Calendar/Studio. All `<Link>` use `replace`. Active = 2px sliding gold bar at **top** of nav.
+- `nav/BottomNav.tsx` — 4-tab fixed nav, 72px tall. Tab order: Hoard/Out/In/Calendar. All `<Link>` use `replace`. Active = 2px gold bar at **top** of nav, slid with `transform` (not `left`).
 - `nav/TabSwipeNavigator.tsx` — **not mounted anywhere**; file exists but is unused. Inter-tab swipe was removed in favour of `replace` navigation.
 - `hooks/usePillSwipe.ts` — used by `/money` and `/in`. Handles **intra-tab pill switching only** — cross-route navigation was removed. Args: `(tab, setTab, options)`.
 - `ui/CategoryIcon.tsx` — checks `categoryMeta[name]` first (DB icon/color), then hardcoded defaults. `text-gold` expenses, `text-emerald` income. DB color applied via inline `style={{ color }}`, overriding Tailwind.
@@ -278,7 +282,7 @@ Import from here, never re-define:
 
 ## App preferences
 
-- `src/lib/app-prefs.ts` — `AppPrefs { defaultBankId, defaultBankName, defaultExpCat, defaultBilling }` in `localStorage('hoardr-app-prefs')`. `getAppPrefs()` / `setAppPrefs(patch)`.
+- `src/lib/app-prefs.ts` — `AppPrefs { defaultBankId, defaultBankName, defaultExpCat, defaultBilling }`. Read synchronously from `localStorage('hoardr-app-prefs')`; `setAppPrefs(patch)` also writes `profiles.app_prefs` (jsonb, migration `20261028_profiles_app_prefs.sql`) and `syncAppPrefs()` (run by `AuthWatcher`) pulls it down, so every device shares the same defaults. New-income sheets pick their bank with `resolveDefaultBankId(banks)` — falls back to the first bank when the saved id no longer exists.
 - `src/lib/week-start.ts` — `getWeekStartsMonday()` / `setWeekStartsMonday(v)` in `localStorage('week-start-monday')`.
 
 ## `/in` page data storage
@@ -301,7 +305,9 @@ Import from here, never re-define:
 
 ## Picker standardization in sheets
 
-**Card picker** — all add/edit sheets (`AddTransactionSheet`, `EditTransactionSheet`, `AddSubscriptionSheet`, `EditSubscriptionSheet`) use a native `<select>` dropdown with `style={{ colorScheme: 'dark' }}` and a `<ChevronDown>` overlay. Sort the options so the current/default card appears first. Call `setDefaultCardId(cardId)` when user picks a card so it persists as the in-session default.
+**Dropdowns** — never use a raw `<select>`. Use `ui/Select.tsx` (same `value` / `onChange(e.target.value)` / `<option>` children): an invisible native select over the trigger on phone (iOS wheel), an app-themed menu portaled to `<body>` on large screens. Pass `trigger` for a custom row (see the calendar picker in `EditEventSheet`).
+
+**Card picker** — all add/edit sheets (`AddTransactionSheet`, `EditTransactionSheet`, `AddSubscriptionSheet`, `EditSubscriptionSheet`) use `<Select>`. Sort the options so the current/default card appears first. Call `setDefaultCardId(cardId)` when user picks a card so it persists as the in-session default.
 
 **Category picker** — grid of `<button>` cells (`grid-cols-4`). Active: `bg-gold/15 text-gold ring-1 ring-gold/40`. Inactive: `bg-bg-overlay text-ink-muted`. Use `text-[10px] font-semibold` **on the button itself** (not a child span) so the icon and label both inherit the active/inactive color. Always import `getCategoryIcon` (not `CategoryIcon`) for these grids.
 
@@ -319,7 +325,7 @@ Single client component (`calendar/page.tsx`), two panels on a horizontal rail: 
 
 **`notionWeeks`** — large-screen month grid only. 48 weeks centered on today's Sunday. `addWeeks()` uses local `new Date(y, m-1, d + n*7)` (never UTC).
 
-**Notion grid**: `MAX_VIS_EVENTS=6`, `EV_ROW_H=20`, `CELL_MIN_H=163`. Drag-and-drop: `isBeingDragged = !!dragState && !!ev.id && dragState.ev.id === ev.id` — the `!!ev.id` guard is critical; `undefined === undefined` would fade all finance pills.
+**Notion grid**: `MAX_VIS_EVENTS=6`, `EV_ROW_H=20`, `CELL_MIN_H=163`. Cells lay out through `layoutCell()`: each week row is one grid of `EV_ROW_H` slots, multi-day bars keep their lane, and a lane slot with no bar on that day takes the day's next single event — so days line up across the week instead of being pushed down by empty lane rows. Each day's Google events are sorted with `byStart` (all-day first, then start time) across calendars. A calendar whose fetch fails keeps its last events. `pageCache` (`cal-events` / `cal-google`) seeds first paint on revisit. Drag-and-drop: `isBeingDragged = !!dragState && !!ev.id && dragState.ev.id === ev.id` — the `!!ev.id` guard is critical; `undefined === undefined` would fade all finance pills.
 
 **"+N more"** in a Notion-grid cell toggles that whole week row open (`expandedWeeks`, session-only state — a refresh collapses it).
 
@@ -339,8 +345,6 @@ For Google events:
 - `'following'` splits the series: `rruleUntilBefore()` caps the old master, then a new series is created from the split date. Modified/excepted instances after the split point are lost — same tradeoff Google's own UI makes.
 - Changing the repeat rule forces scope to `'following'` (an instance has no rule of its own), and the UI disables "This event" with an inline explanation.
 
-## Studio commission flow
+## Google Calendar proxy
 
-`Pending → Approved → In Progress → Completed → Paid`
-
-Approve → creates Google Calendar event (`cal_event_id`). Mark Paid → creates `income` row (`source: 'Freelance'`). Google Calendar proxied through `src/app/api/calendar/route.ts`. Always use `timedEvent()` from `src/lib/calendar.ts` — never build GCal `dateTime` strings manually.
+All Google Calendar calls go through `src/app/api/calendar/route.ts` (client helpers in `src/lib/calendar.ts`). Always use `timedEvent()` / `allDayEvent()` from `src/lib/calendar.ts` — never build GCal `dateTime` strings manually. The route caches Google access tokens per refresh token while the instance is warm (one mint per burst), fetches events with `timeZone=America/Los_Angeles` (the client reads wall-clock time straight off `dateTime`), and pages through `nextPageToken`. Moves (drag-and-drop) PATCH only `start`/`end` — a PUT replaces the event and wipes location/notes/reminders. Google all-day `end.date` is exclusive (`shiftedTimes()` in the calendar page keeps durations on move/paste).
