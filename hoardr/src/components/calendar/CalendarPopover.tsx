@@ -326,7 +326,13 @@ export function CalendarPopover({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Main popover outside-click — ignore clicks inside any child dropdown
+  // Main popover outside-click — ignore clicks inside any child dropdown.
+  // Registered once, reading onClose through a ref: the parent passes a new
+  // onClose every render, and the calendar re-renders on every cell hover, so
+  // re-registering (with the 60ms open-click guard) left the listener detached
+  // almost the whole time the mouse moved — clicking outside did nothing.
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       if (
@@ -337,11 +343,11 @@ export function CalendarPopover({
         !locDropRef.current?.contains(e.target as Node) &&
         !(e.target as Element)?.closest?.('[data-daterange-picker]') &&
         !(e.target as Element)?.closest?.('[data-recur-picker]')
-      ) onClose()
+      ) onCloseRef.current()
     }
     const t = setTimeout(() => document.addEventListener('mousedown', onDown), 60)
     return () => { clearTimeout(t); document.removeEventListener('mousedown', onDown) }
-  }, [onClose])
+  }, [])
 
   // Individual dropdown outside-clicks
   useEffect(() => {

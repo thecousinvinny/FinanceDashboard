@@ -570,3 +570,44 @@ html.midnight-teal .pac-matched       { color: #2DD4BF !important; font-weight: 
   color-scheme: light !important;
 }
 html.slate-mist { --seg-thumb: #ffffff; }
+
+/* ── Calendar surfaces follow the app theme ──
+   The calendar used to carry its own grey palette per theme, so it never
+   matched the rest of the app (or its own List view). :root:root outranks
+   the per-theme html.<theme> blocks above. */
+:root:root {
+  --color-cal-bg:         var(--color-bg-base);
+  --color-cal-cell:       var(--color-bg-base);
+  --color-cal-cell-hover: rgb(var(--rgb-ink) / 0.03);
+  --color-cal-sidebar:    var(--color-bg-surface);
+  --color-cal-grid-line:  rgb(var(--rgb-ink) / 0.07);
+}
+
+/* ── Desktop calendar toolbar / agenda ── */
+.cal-tb-icon {
+  width: 32px; height: 32px; border-radius: 8px; border: none; background: transparent;
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  color: rgb(var(--rgb-ink-muted)); cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.cal-tb-icon:hover { background: rgb(var(--rgb-ink) / 0.07); color: rgb(var(--rgb-ink)); }
+.cal-tb-icon:active { background: rgb(var(--rgb-ink) / 0.11); }
+.cal-tb-icon-sm { width: 26px; height: 26px; border-radius: 7px; }
+.cal-tb-btn {
+  height: 30px; padding: 0 12px; border-radius: 8px; cursor: pointer;
+  border: 0.5px solid rgb(var(--rgb-ink) / 0.16); background: transparent;
+  font: 500 13px var(--font-montserrat); color: rgb(var(--rgb-ink));
+  transition: background 0.12s ease;
+}
+.cal-tb-btn:hover { background: rgb(var(--rgb-ink) / 0.06); }
+.cal-tb-primary {
+  height: 32px; padding: 0 14px 0 11px; border-radius: 8px; border: none; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+  background: #D4AF37; color: #1a1200; font: 600 13px var(--font-montserrat);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.35);
+  transition: filter 0.12s ease, transform 0.12s ease;
+}
+.cal-tb-primary:hover { filter: brightness(1.06); }
+.cal-tb-primary:active { transform: scale(0.97); }
+.cal-agenda-ev { cursor: pointer; transition: background 0.12s ease; outline: none; }
+.cal-agenda-ev:hover, .cal-agenda-ev:focus-visible { background: rgb(var(--rgb-ink) / 0.05); }

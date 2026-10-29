@@ -1,8 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { X } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { Check } from 'lucide-react'
 import { COLOR_PALETTE } from '@/lib/category-meta'
+import { Sheet } from '@/components/ui/Sheet'
+import { FormGroup, FormRow, Toggle } from '@/components/ui/Form'
 
 export type EventTypeFilter = 'income' | 'sub'
 
@@ -45,27 +48,28 @@ const TYPE_META: { type: EventTypeFilter; label: string; color: string }[] = [
   { type: 'sub',    label: 'Subscriptions', color: '#F36369' },
 ]
 
+/** Color swatch that opens the palette. */
+function ColorDot({ color, onPick }: { color: string; onPick: (r: DOMRect) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={e => { e.stopPropagation(); onPick(e.currentTarget.getBoundingClientRect()) }}
+      title="Change color"
+      aria-label="Change color"
+      className="flex-shrink-0 w-[22px] h-[22px] rounded-full flex items-center justify-center active:scale-90 transition-transform"
+    >
+      <span className="w-[14px] h-[14px] rounded-full block" style={{ background: color, boxShadow: '0 0 0 0.5px rgb(var(--rgb-ink) / 0.15)' }} />
+    </button>
+  )
+}
+
 export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLoading, calsError, onSave }: Props) {
-  const [local,  setLocal]  = useState<CalPrefs>(prefs)
-  const [dragY,  setDragY]  = useState(0)
+  const [local, setLocal] = useState<CalPrefs>(prefs)
   const [swatchFor, setSwatchFor] = useState<{ key: string; kind: 'google' | 'finance'; top: number; left: number } | null>(null)
-  const backdropRef = useRef<HTMLDivElement>(null)
-  const swatchRef   = useRef<HTMLDivElement>(null)
-  const dragStartY  = useRef<number | null>(null)
+  const swatchRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (open) setLocal(prefs)
-  }, [open, prefs])
-
-  useEffect(() => {
-    const el = backdropRef.current
-    if (!el || !open) return
-    const prevent = (e: TouchEvent) => e.preventDefault()
-    el.addEventListener('touchmove', prevent, { passive: false })
-    return () => el.removeEventListener('touchmove', prevent)
-  }, [open])
-
-  useEffect(() => { if (!open) { setDragY(0); setSwatchFor(null) } }, [open])
+  useEffect(() => { if (open) setLocal(prefs) }, [open, prefs])
+  useEffect(() => { if (!open) setSwatchFor(null) }, [open])
 
   useEffect(() => {
     if (!swatchFor) return
@@ -73,16 +77,6 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
     document.addEventListener('mousedown', onDown)
     return () => document.removeEventListener('mousedown', onDown)
   }, [swatchFor])
-
-  function onDragStart(e: React.TouchEvent) { dragStartY.current = e.touches[0].clientY }
-  function onDragMove(e: React.TouchEvent) {
-    if (dragStartY.current === null) return
-    setDragY(Math.max(0, e.touches[0].clientY - dragStartY.current))
-  }
-  function onDragEnd() {
-    const dy = dragY; dragStartY.current = null; setDragY(0)
-    if (dy > 80) onClose()
-  }
 
   function toggleType(type: EventTypeFilter) {
     setLocal(p => ({
@@ -103,215 +97,138 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
     })
   }
 
+  const enabledCals = googleCals.filter(c => local.googleCalendarIds.includes(c.id) && canWriteToCalendar(c))
+
   return (
     <>
-      <div
-        ref={backdropRef}
-        className={`fixed inset-0 z-40 transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-        style={{ background: 'rgba(0,0,0,0.72)' }}
-        onClick={onClose}
-      />
-
-      <div
-        className="fixed inset-x-0 bottom-0 z-50 rounded-t-[24px] bg-bg-surface"
-        style={{
-          willChange: 'transform',
-          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-          transform: open ? `translateY(${dragY}px)` : 'translateY(100%)',
-          transition: dragY > 0 ? 'none' : 'transform 0.3s cubic-bezier(0.4,0,0.2,1)',
-        }}
+      <Sheet
+        open={open}
+        onClose={onClose}
+        title="Calendars"
+        action={{ label: 'Done', onClick: () => { onSave(local); onClose() } }}
       >
-        {/* Handle — drag target */}
-        <div
-          onTouchStart={onDragStart}
-          onTouchMove={onDragMove}
-          onTouchEnd={onDragEnd}
-          className="flex justify-center pt-3 pb-3"
-          style={{ touchAction: 'none' }}
-        >
-          <div className="w-9 h-1 rounded-full bg-ink/20" />
-        </div>
+        <FormGroup header="Finance" footer="Tap a color to change it.">
+          {TYPE_META.map(({ type, label, color: defaultColor }) => (
+            <FormRow key={type} label={
+              <span className="flex items-center gap-3">
+                <ColorDot color={local.typeColors?.[type] ?? defaultColor} onPick={r => setSwatchFor({ key: type, kind: 'finance', top: r.bottom + 6, left: r.left })} />
+                {label}
+              </span>
+            }>
+              <Toggle label={label} checked={local.visibleTypes.includes(type)} onChange={() => toggleType(type)} />
+            </FormRow>
+          ))}
+        </FormGroup>
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 mb-4">
-          <h2 className="text-[18px] font-bold text-ink">Calendar Filters</h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center">
-            <X size={14} className="text-ink-muted" />
-          </button>
-        </div>
-
-        {/* Scrollable content */}
-        <div
-          className="px-5 overflow-y-auto"
-          style={{ maxHeight: '70vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}
-        >
-          {/* ── Show on Calendar ───────────────────────────────────── */}
-          <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">
-            Show on Calendar
-          </p>
-          <div className="bg-bg-overlay border border-ink/[0.06] rounded-[18px] overflow-hidden divide-y divide-ink/[0.04] mb-5">
-            {/* Income & Subscriptions */}
-            {TYPE_META.map(({ type, label, color: defaultColor }) => {
-              const on          = local.visibleTypes.includes(type)
-              const activeColor = local.typeColors?.[type] ?? defaultColor
-              const isCustom    = !!local.typeColors?.[type]
-              return (
-                <div key={type} className="flex items-center gap-2 px-4 py-3.5 select-none">
-                  <button
-                    onClick={e => { const r = e.currentTarget.getBoundingClientRect(); setSwatchFor({ key: type, kind: 'finance', top: r.bottom + 4, left: r.left }) }}
-                    className="relative flex-shrink-0 cursor-pointer flex items-center justify-center bg-transparent border-0 p-0"
-                    style={{ width: 20, height: 20 }}
-                    title="Change color"
-                  >
-                    <span className="w-2.5 h-2.5 rounded-full block" style={{ background: activeColor }} />
-                  </button>
-                  {isCustom && (
-                    <button onClick={() => setLocal(p => { const c = { ...(p.typeColors ?? {}) }; delete c[type]; return { ...p, typeColors: c } })}
-                      className="flex-shrink-0 text-[9px] text-ink-faint leading-none">✕</button>
+        <FormGroup header="Google Calendar">
+          {calsLoading && <FormRow label="Loading calendars…" />}
+          {calsError && (
+            <FormRow alignTop label={
+              <span className="flex flex-col">
+                <span className="text-ruby">Calendar access not granted</span>
+                <span className="text-[13px] text-ink-muted">Use “Connect Google Calendar” in Settings.</span>
+              </span>
+            } />
+          )}
+          {!calsLoading && !calsError && googleCals.length === 0 && <FormRow label="No calendars found" />}
+          {!calsLoading && !calsError && googleCals.map(cal => (
+            <FormRow key={cal.id} label={
+              <span className="flex items-center gap-3 min-w-0">
+                <ColorDot color={local.googleCalendarColors?.[cal.id] ?? cal.backgroundColor} onPick={r => setSwatchFor({ key: cal.id, kind: 'google', top: r.bottom + 6, left: r.left })} />
+                <span className="flex flex-col min-w-0">
+                  <span className="truncate">{cal.summary}</span>
+                  {(cal.primary || !canWriteToCalendar(cal)) && (
+                    <span className="text-[12px] text-ink-muted">{cal.primary ? 'Primary' : 'Read-only'}</span>
                   )}
-                  <button onClick={() => toggleType(type)} className="flex-1 text-left min-w-0">
-                    <span className="text-[14px] font-medium text-ink truncate block">{label}</span>
-                  </button>
-                  <span onClick={() => toggleType(type)} className={`w-11 h-6 rounded-full relative transition-colors flex-shrink-0 cursor-pointer ${on ? 'gradient-gold' : 'bg-bg-base border border-ink/10'}`}>
-                    <span className={`absolute top-0.5 left-0 w-5 h-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+                </span>
+              </span>
+            }>
+              <Toggle label={cal.summary} checked={local.googleCalendarIds.includes(cal.id)} onChange={() => toggleCal(cal.id)} />
+            </FormRow>
+          ))}
+        </FormGroup>
+
+        {enabledCals.length > 0 && (
+          <FormGroup header="New events go to">
+            {enabledCals.map(cal => {
+              const calKey   = cal.primary ? 'primary' : cal.id
+              const isActive = (local.defaultCalendarId ?? 'primary') === calKey
+              return (
+                <FormRow key={cal.id} onClick={() => setLocal(p => ({ ...p, defaultCalendarId: calKey }))} label={
+                  <span className="flex items-center gap-3">
+                    <span className="w-[10px] h-[10px] rounded-full flex-shrink-0" style={{ background: local.googleCalendarColors?.[cal.id] ?? cal.backgroundColor }} />
+                    {cal.summary}
                   </span>
-                </div>
+                }>
+                  {isActive && <Check size={18} strokeWidth={2.5} className="text-gold" />}
+                </FormRow>
               )
             })}
-            {/* Individual Google calendars */}
-            {calsLoading && (
-              <div className="px-4 py-3.5 text-[13px] text-ink-faint">Loading calendars…</div>
-            )}
-            {calsError && (
-              <div className="px-4 py-3 space-y-0.5">
-                <p className="text-[13px] font-medium text-ruby">Calendar access not granted</p>
-                <p className="text-[11px] text-ink-faint leading-relaxed">Sign out and back in to grant access.</p>
-              </div>
-            )}
-            {!calsLoading && !calsError && googleCals.map(cal => {
-              const on          = local.googleCalendarIds.includes(cal.id)
-              const activeColor = local.googleCalendarColors?.[cal.id] ?? cal.backgroundColor
-              const isCustom    = !!local.googleCalendarColors?.[cal.id]
-              return (
-                <div key={cal.id} className="flex items-center gap-2 px-4 py-3.5 select-none">
-                  {/* Color dot — tap opens swatch picker */}
-                  <button
-                    onClick={e => { const r = e.currentTarget.getBoundingClientRect(); setSwatchFor({ key: cal.id, kind: 'google', top: r.bottom + 4, left: r.left }) }}
-                    className="relative flex-shrink-0 cursor-pointer flex items-center justify-center bg-transparent border-0 p-0"
-                    style={{ width: 20, height: 20 }}
-                    title="Change color"
-                  >
-                    <span className="w-2.5 h-2.5 rounded-full block" style={{ background: activeColor }} />
-                  </button>
-                  {isCustom && (
-                    <button onClick={() => setLocal(p => { const c = { ...(p.googleCalendarColors ?? {}) }; delete c[cal.id]; return { ...p, googleCalendarColors: c } })}
-                      className="flex-shrink-0 text-[9px] text-ink-faint leading-none">✕</button>
-                  )}
-                  <button onClick={() => toggleCal(cal.id)} className="flex-1 text-left min-w-0">
-                    <span className="text-[14px] font-medium text-ink truncate block">
-                      {cal.summary}{cal.primary ? ' (primary)' : ''}
-                    </span>
-                  </button>
-                  <span onClick={() => toggleCal(cal.id)} className={`w-11 h-6 rounded-full relative transition-colors flex-shrink-0 cursor-pointer ${on ? 'gradient-gold' : 'bg-bg-base border border-ink/10'}`}>
-                    <span className={`absolute top-0.5 left-0 w-5 h-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
-                  </span>
-                </div>
-              )
-            })}
-          </div>
+          </FormGroup>
+        )}
+      </Sheet>
 
-          {/* ── Default Calendar ───────────────────────────────── */}
-          {(() => {
-            const enabledCals = googleCals.filter(c => local.googleCalendarIds.includes(c.id))
-            if (enabledCals.length === 0) return null
-            return (
-              <>
-                <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3 mt-5">
-                  Default Calendar
-                </p>
-                <div className="bg-bg-overlay border border-ink/[0.06] rounded-[18px] overflow-hidden divide-y divide-ink/[0.04]">
-                  {enabledCals.map(cal => {
-                    const calKey   = cal.primary ? 'primary' : cal.id
-                    const isActive = (local.defaultCalendarId ?? 'primary') === calKey
-                    return (
-                      <button
-                        key={cal.id}
-                        onClick={() => setLocal(p => ({ ...p, defaultCalendarId: calKey }))}
-                        className="w-full flex items-center gap-3 px-4 py-3.5 text-left select-none"
-                      >
-                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: local.googleCalendarColors?.[cal.id] ?? cal.backgroundColor }} />
-                        <span className="text-[14px] font-medium text-ink flex-1 truncate">
-                          {cal.summary}{cal.primary ? ' (primary)' : ''}
-                        </span>
-                        <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${isActive ? 'border-gold' : 'border-ink/20'}`}>
-                          {isActive && <span className="w-2.5 h-2.5 rounded-full bg-gold" />}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </>
-            )
-          })()}
-
-          <button
-            onClick={() => { onSave(local); onClose() }}
-            className="mt-5 w-full gradient-gold rounded-[14px] py-4 text-[15px] font-bold text-white"
-          >
-            Done
-          </button>
-        </div>
-      </div>
-
-      {/* Color swatch picker */}
-      {swatchFor && (() => {
+      {/* Color palette — portaled so it floats above the sheet */}
+      {swatchFor && createPortal((() => {
         const isFinance = swatchFor.kind === 'finance'
         const currentColor = isFinance
           ? (local.typeColors?.[swatchFor.key] ?? TYPE_META.find(t => t.type === swatchFor.key)?.color ?? '#4ADE80')
           : (local.googleCalendarColors?.[swatchFor.key] ?? googleCals.find(c => c.id === swatchFor.key)?.backgroundColor ?? '#4285F4')
-        const popW = 4 * 22 + 3 * 6 + 20
+        const isCustom = isFinance ? !!local.typeColors?.[swatchFor.key] : !!local.googleCalendarColors?.[swatchFor.key]
+        const popW = 4 * 26 + 3 * 8 + 24
         return (
-          <div ref={swatchRef} onMouseDown={e => e.stopPropagation()} style={{
+          <div ref={swatchRef} onMouseDown={e => e.stopPropagation()} className="select-menu" style={{
             position: 'fixed',
-            top: Math.min(swatchFor.top, window.innerHeight - 180),
+            top: Math.min(swatchFor.top, window.innerHeight - 220),
             left: Math.max(8, Math.min(swatchFor.left, window.innerWidth - popW - 8)),
-            zIndex: 80,
+            zIndex: 230,
+            width: popW,
             background: 'var(--color-bg-elevated)',
             border: '0.5px solid rgb(var(--rgb-ink) / 0.12)',
-            borderRadius: 10,
-            padding: 10,
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 22px)',
-            gap: 6,
-            boxShadow: '0 4px 24px rgba(0,0,0,0.6)',
+            borderRadius: 14,
+            padding: 12,
+            boxShadow: '0 12px 36px rgba(0,0,0,0.45)',
           }}>
-            {COLOR_PALETTE.map(color => {
-              const isSel = color.toLowerCase() === currentColor?.toLowerCase()
-              return (
-                <button
-                  key={color}
-                  onClick={() => {
-                    if (isFinance) {
-                      setLocal(p => ({ ...p, typeColors: { ...(p.typeColors ?? {}), [swatchFor.key]: color } }))
-                    } else {
-                      setLocal(p => ({ ...p, googleCalendarColors: { ...(p.googleCalendarColors ?? {}), [swatchFor.key]: color } }))
-                    }
-                    setSwatchFor(null)
-                  }}
-                  style={{
-                    width: 22, height: 22, borderRadius: 4, background: color, padding: 0,
-                    border: isSel ? '2px solid rgb(var(--rgb-ink) / 0.9)' : '2px solid transparent',
-                    cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxSizing: 'border-box',
-                  }}
-                >
-                  {isSel && <span style={{ color: 'white', fontSize: 12, fontWeight: 700, lineHeight: 1, textShadow: '0 1px 2px rgba(0,0,0,0.4)' }}>✓</span>}
-                </button>
-              )
-            })}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 26px)', gap: 8 }}>
+              {COLOR_PALETTE.map(color => {
+                const isSel = color.toLowerCase() === currentColor?.toLowerCase()
+                return (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => {
+                      if (isFinance) setLocal(p => ({ ...p, typeColors: { ...(p.typeColors ?? {}), [swatchFor.key]: color } }))
+                      else           setLocal(p => ({ ...p, googleCalendarColors: { ...(p.googleCalendarColors ?? {}), [swatchFor.key]: color } }))
+                      setSwatchFor(null)
+                    }}
+                    aria-label={color}
+                    className="flex items-center justify-center active:scale-90 transition-transform"
+                    style={{
+                      width: 26, height: 26, borderRadius: '50%', background: color, padding: 0, border: 'none', cursor: 'pointer',
+                      boxShadow: isSel ? `0 0 0 2px var(--color-bg-elevated), 0 0 0 4px ${color}` : 'none',
+                    }}
+                  >
+                    {isSel && <Check size={13} strokeWidth={3} color="#fff" />}
+                  </button>
+                )
+              })}
+            </div>
+            {isCustom && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (isFinance) setLocal(p => { const c = { ...(p.typeColors ?? {}) }; delete c[swatchFor.key]; return { ...p, typeColors: c } })
+                  else           setLocal(p => { const c = { ...(p.googleCalendarColors ?? {}) }; delete c[swatchFor.key]; return { ...p, googleCalendarColors: c } })
+                  setSwatchFor(null)
+                }}
+                className="mt-3 w-full text-center text-[13px] text-gold"
+              >
+                Reset to default
+              </button>
+            )}
           </div>
         )
-      })()}
+      })(), document.body)}
     </>
   )
 }

@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
@@ -7,7 +7,7 @@ import { getWeekStartsMonday } from '@/lib/week-start'
 import { cn, nextRenewalDate } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
 import { COLOR_PALETTE } from '@/lib/category-meta'
-import { Plus, SlidersHorizontal, Eye, EyeOff, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning, CalendarPlus, MapPin, type LucideIcon } from 'lucide-react'
+import { Plus, SlidersHorizontal, Eye, EyeOff, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning, CalendarPlus, MapPin, type LucideIcon , ChevronLeft, ChevronRight} from 'lucide-react'
 import { GlobalFAB } from '@/components/ui/GlobalFAB'
 import { EditEventSheet, type EditableEvent, type EventEdits, type RecurrenceScope } from '@/components/calendar/EditEventSheet'
 import { CalendarSettingsSheet, canWriteToCalendar, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
@@ -17,6 +17,7 @@ import { pageCache } from '@/lib/page-cache'
 import { createCalEvent, updateCalEvent, deleteCalEvent, moveCalEvent, getCalEvent, extractRRule, rruleUntilBefore, type GCalEvent, calFetch } from '@/lib/calendar'
 import { connectGoogleCalendar } from '@/lib/gcal-connect'
 import { useOnScreenReturn, useScreenActive } from '@/lib/tab-nav'
+import { Segmented } from '@/components/ui/Form'
 
 type EventType = 'income' | 'sub' | 'google'
 
@@ -178,6 +179,7 @@ function layoutCell(lanes: SpanBar[][], col: number, singles: Array<{ ev: CalEve
   return { slots, overflow: singles.length - si }
 }
 
+const DESK_VIEWS = ['month', 'list'] as const
 const SAFE_TOP = 'calc(max(env(safe-area-inset-top, 0px), 44px) + 12px)'
 const GRID_EXPANDED = 280  // px — compact month grid height in split view
 
@@ -286,6 +288,8 @@ export default function CalendarPage() {
   // Month-grid weeks whose "+N more" was clicked open. Session-only on purpose:
   // a refresh collapses every row back to the normal height.
   const [expandedWeeks,  setExpandedWeeks]  = useState<Set<string>>(() => new Set())
+  // Set on mousedown when the click only dismisses a popover/selection, so it doesn't also create
+  const dismissingRef = useRef(false)
 
   // Infinite scroll
   const [months, setMonths] = useState<MonthKey[]>(() =>
@@ -1378,8 +1382,10 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     const sc = monthGridRef.current
     if (!sc) return
     const handleScroll = () => {
+      // Sample the middle of the visible grid: the top row is usually a week
+      // half scrolled away, which made the title lag a month behind
       const scRect = sc.getBoundingClientRect()
-      const el = document.elementFromPoint(scRect.left + scRect.width / 4, scRect.top + 5)
+      const el = document.elementFromPoint(scRect.left + scRect.width / 2, scRect.top + scRect.height / 2)
       let node: Element | null = el
       while (node && node !== sc) {
         const ds = node.getAttribute('data-caldate')
@@ -1580,6 +1586,31 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     if (dx > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) setViewIndex(0)
   }, [])
 
+  // ── Desktop toolbar ────────────────────────────────────────────────────────
+  // Month: scroll the grid a month at a time (sidebarYear/Month track the
+  // month in view). Agenda: rebuild the list around the target month.
+  function scrollGridToDate(ds: string, offset = 8) {
+    const el = monthCellRefs.current.get(ds), sc = monthGridRef.current
+    if (!el || !sc) return
+    sc.scrollTo({ top: sc.scrollTop + el.getBoundingClientRect().top - sc.getBoundingClientRect().top - offset, behavior: 'smooth' })
+  }
+  function deskNav(delta: -1 | 0 | 1) {
+    if (calView === 'list') {
+      if (delta === 0) { jumpToMonth(today.getFullYear(), today.getMonth()); return }
+      const t = addMonths(gridYear, gridMonth, delta)
+      jumpToMonth(t.year, t.month)
+      return
+    }
+    if (delta === 0) { scrollGridToDate(todayStr, 120); return }
+    const t = addMonths(sidebarYear, sidebarMonth, delta)
+    scrollGridToDate(toDateStr(t.year, t.month, 1))
+  }
+  const deskTitle = (() => {
+    const lbl = calView === 'month' ? notionGridLbl : gridMonthLbl
+    const k = lbl.lastIndexOf(' ')
+    return { month: lbl.slice(0, k), year: lbl.slice(k + 1) }
+  })()
+
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <>
@@ -1628,50 +1659,34 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
             style={{ width: '100vw', height: '100%', flex: 'none', display: 'flex', flexDirection: 'column', background: 'var(--color-cal-bg)', userSelect: 'none', cursor: 'default' }}>
 
 
-            {/* Notion-Style Month Grid */}
-            {calView === 'month' && (
-              <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+            {/* ── Desktop shell: sidebar + toolbar, shared by Month and Agenda ── */}
+            <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
 
                 {/* Sidebar — extends full height to top of screen */}
                 <div style={{ width: 247, background: 'var(--color-cal-sidebar)', display: 'flex', flexDirection: 'column', borderRight: '0.5px solid var(--color-cal-grid-line)', flexShrink: 0, overflowY: 'auto' }}>
-                  {/* Top section: safe-area pad + List/Month toggle + settings gear */}
-                  <div style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)', paddingLeft: 10, paddingRight: 10, paddingBottom: 8, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <div style={{ display: 'flex', background: 'rgb(var(--rgb-ink) / 0.08)', borderRadius: 20, padding: 2, gap: 2, flex: 1 }}>
-                      {(['list', 'month'] as const).map(v => (
-                        <button key={v} onClick={() => switchCalView(v)} style={{
-                          flex: 1, padding: '4px 0', borderRadius: 18, border: 'none', cursor: 'pointer',
-                          fontSize: 10, fontWeight: 600, fontFamily: 'var(--font-montserrat)', letterSpacing: '0.04em',
-                          background: calView === v ? 'linear-gradient(135deg,#F7DF9E,#D4AF37,#A47F23)' : 'transparent',
-                          color: calView === v ? '#000' : 'rgb(var(--rgb-ink) / 0.4)',
-                          transition: 'background 0.15s, color 0.15s',
-                        }}>{v === 'list' ? 'List' : 'Month'}</button>
-                      ))}
-                    </div>
-                    <button onClick={() => setSettingsOpen(true)} style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgb(var(--rgb-ink) / 0.06)', border: '1px solid rgb(var(--rgb-ink) / 0.07)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <SlidersHorizontal size={12} color="rgb(var(--rgb-ink) / 0.4)" />
-                    </button>
-                  </div>
+                  {/* Top spacer — lines the mini month up with the toolbar title */}
+                  <div style={{ height: 'calc(env(safe-area-inset-top, 0px) + 20px)', flexShrink: 0 }} />
                   {/* Mini month navigator */}
                   <div style={{ padding: '0 12px 10px', flexShrink: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8, gap: 2 }}>
-                      <button onClick={() => {
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6, padding: '0 4px' }}>
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)' }}>
+                        {new Date(sidebarYear, sidebarMonth, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                      </span>
+                      <button type="button" className="cal-tb-icon cal-tb-icon-sm" aria-label="Previous month" onClick={() => {
                         const nm = sidebarMonth === 0 ? 11 : sidebarMonth - 1
                         const ny = sidebarMonth === 0 ? sidebarYear - 1 : sidebarYear
                         setSidebarMonth(nm); setSidebarYear(ny)
-                      }} style={{ width: 22, height: 22, borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer', color: '#C9A84C', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>‹</button>
-                      <span style={{ flex: 1, textAlign: 'center', fontSize: 10, fontWeight: 700, color: '#C9A84C', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                        {new Date(sidebarYear, sidebarMonth, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase()}
-                      </span>
-                      <button onClick={() => {
+                      }}><ChevronLeft size={15} strokeWidth={2} /></button>
+                      <button type="button" className="cal-tb-icon cal-tb-icon-sm" aria-label="Next month" onClick={() => {
                         const nm = sidebarMonth === 11 ? 0 : sidebarMonth + 1
                         const ny = sidebarMonth === 11 ? sidebarYear + 1 : sidebarYear
                         setSidebarMonth(nm); setSidebarYear(ny)
-                      }} style={{ width: 22, height: 22, borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer', color: '#C9A84C', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>›</button>
+                      }}><ChevronRight size={15} strokeWidth={2} /></button>
                     </div>
                     {/* DOW mini header */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0,1fr))', marginBottom: 2 }}>
                       {(wsMon ? ['M','T','W','T','F','S','S'] : ['S','M','T','W','T','F','S']).map((d, i) => (
-                        <div key={i} style={{ textAlign: 'center', fontSize: 8, fontWeight: 600, color: 'rgb(var(--rgb-ink) / 0.25)', fontFamily: 'var(--font-montserrat)', paddingBottom: 2 }}>{d}</div>
+                        <div key={i} style={{ textAlign: 'center', fontSize: 10, fontWeight: 500, color: 'rgb(var(--rgb-ink-muted))', fontFamily: 'var(--font-montserrat)', paddingBottom: 2 }}>{d}</div>
                       ))}
                     </div>
                     {/* Mini day grid */}
@@ -1710,6 +1725,12 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                                 onMouseLeave={() => setHoveredSidebarDay(p => p === ds ? null : p)}
                                 onClick={() => {
                                   if (cell.overflow) { setSidebarYear(cell.year); setSidebarMonth(cell.month) }
+                                  if (calView === 'list') {
+                                    const ael = dayRefs.current.get(ds), asc = scrollRef.current
+                                    if (ael && asc) asc.scrollTo({ top: ael.offsetTop - 8, behavior: 'smooth' })
+                                    else jumpToMonth(cell.year, cell.month)
+                                    return
+                                  }
                                   const el = monthCellRefs.current.get(ds)
                                   const sc = monthGridRef.current
                                   if (el && sc) {
@@ -1722,8 +1743,8 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                               >
                                 {/* Fixed 28×28 inner frame — highlight lives here, never affects grid row height */}
                                 <div style={{ position: 'relative', width: '100%', height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                                  <div style={{ position: 'absolute', inset: 0, borderRadius: 5, background: hlBg, transition: 'background 0.1s' }} />
-                                  <span style={{ position: 'relative', zIndex: 1, fontSize: 9, fontWeight: isToday ? 700 : 400, color: isToday ? '#000' : 'rgb(var(--rgb-ink) / 0.55)', fontFamily: 'var(--font-montserrat)', opacity: cell.overflow ? 0.35 : 1 }}>{cell.day}</span>
+                                  <div style={{ position: 'absolute', width: 24, height: 24, left: '50%', top: '50%', transform: 'translate(-50%,-50%)', borderRadius: '50%', background: hlBg, transition: 'background 0.1s' }} />
+                                  <span style={{ position: 'relative', zIndex: 1, fontSize: 11, fontWeight: isToday ? 700 : 400, color: isToday ? '#1a1200' : 'rgb(var(--rgb-ink) / 0.75)', fontFamily: 'var(--font-montserrat)', opacity: cell.overflow ? 0.35 : 1 }}>{cell.day}</span>
                                   {hasEvs && !isToday && <span style={{ position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)', width: 3, height: 3, borderRadius: '50%', background: '#C9A84C', opacity: 0.5, zIndex: 1 }} />}
                                 </div>
                               </button>
@@ -1732,28 +1753,15 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                         </div>
                       )
                     })()}
-                    {/* Today button */}
-                    <button onClick={() => {
-                      setSidebarYear(today.getFullYear()); setSidebarMonth(today.getMonth())
-                      const el = monthCellRefs.current.get(todayStr)
-                      const sc = monthGridRef.current
-                      if (el && sc) {
-                        const cRect = sc.getBoundingClientRect()
-                        const eRect = el.getBoundingClientRect()
-                        sc.scrollTop = sc.scrollTop + eRect.top - cRect.top - 120
-                      }
-                    }} style={{ marginTop: 8, width: '100%', height: 26, borderRadius: 13, background: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.2)', cursor: 'pointer', fontSize: 10, fontWeight: 600, color: '#D4AF37', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.04em' }}>
-                      Today
-                    </button>
                   </div>
 
                   {/* Divider */}
                   <div style={{ height: 1, background: 'var(--color-cal-grid-line)', flexShrink: 0 }} />
 
                   {/* Calendar legend toggles */}
-                  <div style={{ padding: '12px 10px 8px', flexShrink: 0 }}>
-                    <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgb(var(--rgb-ink) / 0.25)', marginBottom: 8, fontFamily: 'var(--font-montserrat)' }}>Calendars</p>
-                    <p style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgb(var(--rgb-ink) / 0.18)', marginBottom: 4, fontFamily: 'var(--font-montserrat)', paddingLeft: 4 }}>Finance</p>
+                  <div style={{ padding: '14px 8px 8px', flexShrink: 0 }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-ink)', marginBottom: 8, fontFamily: 'var(--font-montserrat)', paddingLeft: 6 }}>Calendars</p>
+                    <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.02em', color: 'rgb(var(--rgb-ink-muted))', marginBottom: 4, fontFamily: 'var(--font-montserrat)', paddingLeft: 4 }}>Finance</p>
                     {([
                       { type: 'income' as EventType, label: 'Income',        defaultColor: DOT_COLOR.income },
                       { type: 'sub'    as EventType, label: 'Subscriptions', defaultColor: DOT_COLOR.sub    },
@@ -1765,7 +1773,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                       return (
                         <div
                           key={item.type}
-                          style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: '3px 4px', borderRadius: 6, background: hovered ? 'rgb(var(--rgb-ink) / 0.03)' : 'transparent', transition: 'background 0.12s' }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: '5px 6px', borderRadius: 7, background: hovered ? 'rgb(var(--rgb-ink) / 0.05)' : 'transparent', transition: 'background 0.12s' }}
                           onMouseEnter={() => setHoveredSidebarRow(item.type)}
                           onMouseLeave={() => setHoveredSidebarRow(null)}
                           onContextMenu={e => { e.preventDefault(); setSidebarCtxMenu({ id: item.type, kind: 'type', x: e.clientX, y: e.clientY }) }}
@@ -1774,7 +1782,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                           onTouchMove={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null } }}
                         >
                           <div style={{ position: 'relative', width: 16, height: 16, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                            <span style={{ width: 10, height: 10, borderRadius: 3, background: hidden ? 'transparent' : activeColor, border: `1.5px solid ${activeColor}`, display: 'block', transition: 'all 0.15s', opacity: hidden ? 0.4 : 1, flexShrink: 0, pointerEvents: 'none' }} />
+                            <span style={{ width: 12, height: 12, borderRadius: 4, background: hidden ? 'transparent' : activeColor, border: `1.5px solid ${activeColor}`, display: 'block', transition: 'all 0.15s', opacity: hidden ? 0.4 : 1, flexShrink: 0, pointerEvents: 'none' }} />
                             <input
                               type="color"
                               ref={el => { if (el) colorInputRefs.current.set(item.type, el) }}
@@ -1785,7 +1793,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                           </div>
                           <button onClick={() => setHiddenTypes(prev => { const next = new Set(prev); if (next.has(item.type)) next.delete(item.type); else next.add(item.type); return next })}
                             style={{ background: 'none', border: 'none', cursor: 'pointer', flex: 1, textAlign: 'left', padding: 0 }}>
-                            <span style={{ fontSize: 11, color: hidden ? 'rgb(var(--rgb-ink) / 0.25)' : 'rgb(var(--rgb-ink) / 0.7)', fontFamily: 'var(--font-montserrat)', fontWeight: 500, transition: 'color 0.15s' }}>{item.label}</span>
+                            <span style={{ fontSize: 13, color: hidden ? 'rgb(var(--rgb-ink) / 0.3)' : 'rgb(var(--rgb-ink) / 0.88)', fontFamily: 'var(--font-montserrat)', fontWeight: 500, transition: 'color 0.15s' }}>{item.label}</span>
                           </button>
                           {hovered ? (
                             <button
@@ -1808,7 +1816,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                     {googleCals.filter(c => prefs.googleCalendarIds.includes(c.id)).length > 0 && (
                       <div style={{ marginTop: 8, marginBottom: 4 }}>
                         <div style={{ height: '0.5px', background: 'rgb(var(--rgb-ink) / 0.08)', marginBottom: 6 }} />
-                        <p style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgb(var(--rgb-ink) / 0.18)', margin: 0, fontFamily: 'var(--font-montserrat)', paddingLeft: 4 }}>Google</p>
+                        <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.02em', color: 'rgb(var(--rgb-ink-muted))', margin: 0, fontFamily: 'var(--font-montserrat)', paddingLeft: 4 }}>Google</p>
                       </div>
                     )}
                     {googleCals.filter(c => prefs.googleCalendarIds.includes(c.id)).map(cal => {
@@ -1818,7 +1826,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                       return (
                         <div
                           key={cal.id}
-                          style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: '3px 4px', borderRadius: 6, background: hovered ? 'rgb(var(--rgb-ink) / 0.03)' : 'transparent', transition: 'background 0.12s' }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: '5px 6px', borderRadius: 7, background: hovered ? 'rgb(var(--rgb-ink) / 0.05)' : 'transparent', transition: 'background 0.12s' }}
                           onMouseEnter={() => setHoveredSidebarRow(cal.id)}
                           onMouseLeave={() => setHoveredSidebarRow(null)}
                           onContextMenu={e => { e.preventDefault(); setSidebarCtxMenu({ id: cal.id, kind: 'google', x: e.clientX, y: e.clientY }) }}
@@ -1827,7 +1835,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                           onTouchMove={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null } }}
                         >
                           <div style={{ position: 'relative', width: 16, height: 16, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                            <span style={{ width: 10, height: 10, borderRadius: 3, background: hidden ? 'transparent' : activeColor, border: `1.5px solid ${activeColor}`, display: 'block', transition: 'all 0.15s', opacity: hidden ? 0.4 : 1, flexShrink: 0, pointerEvents: 'none' }} />
+                            <span style={{ width: 12, height: 12, borderRadius: 4, background: hidden ? 'transparent' : activeColor, border: `1.5px solid ${activeColor}`, display: 'block', transition: 'all 0.15s', opacity: hidden ? 0.4 : 1, flexShrink: 0, pointerEvents: 'none' }} />
                             <input
                               type="color"
                               ref={el => { if (el) colorInputRefs.current.set(cal.id, el); else colorInputRefs.current.delete(cal.id) }}
@@ -1839,7 +1847,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                           </div>
                           <button onClick={() => setHiddenGoogleCals(prev => { const next = new Set(prev); if (next.has(cal.id)) next.delete(cal.id); else next.add(cal.id); return next })}
                             style={{ background: 'none', border: 'none', cursor: 'pointer', flex: 1, textAlign: 'left', padding: 0 }}>
-                            <span style={{ fontSize: 11, color: hidden ? 'rgb(var(--rgb-ink) / 0.25)' : 'rgb(var(--rgb-ink) / 0.7)', fontFamily: 'var(--font-montserrat)', fontWeight: 500, transition: 'color 0.15s' }}>{cal.summary}</span>
+                            <span style={{ fontSize: 13, color: hidden ? 'rgb(var(--rgb-ink) / 0.3)' : 'rgb(var(--rgb-ink) / 0.88)', fontFamily: 'var(--font-montserrat)', fontWeight: 500, transition: 'color 0.15s' }}>{cal.summary}</span>
                           </button>
                           {hovered && (
                             <button
@@ -1858,7 +1866,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                   <div style={{ flex: 1 }} />
 
                   {/* Add Calendar */}
-                  <div style={{ padding: '8px 10px 16px', flexShrink: 0 }}>
+                  <div style={{ padding: '8px 14px 16px', flexShrink: 0 }}>
                     <button onClick={() => setSettingsOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', background: 'transparent', border: '1px solid rgb(var(--rgb-ink) / 0.08)', borderRadius: 8, cursor: 'pointer', padding: '7px 8px' }}>
                       <Plus size={11} color="rgb(var(--rgb-ink) / 0.35)" />
                       <span style={{ fontSize: 11, color: 'rgb(var(--rgb-ink) / 0.35)', fontFamily: 'var(--font-montserrat)', fontWeight: 500 }}>Add Calendar</span>
@@ -1866,18 +1874,32 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                   </div>
                 </div>
 
-                {/* Main Notion grid */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, background: 'var(--color-cal-bg)' }}>
-                  {/* Safe-area top + month label */}
-                  <div style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 10px)', paddingLeft: 10, paddingBottom: 5, flexShrink: 0 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#C9A84C', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.75 }}>{notionGridLbl}</span>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, background: 'var(--color-cal-bg)' }}>
+                {/* ── Toolbar (shared by Month + Agenda) ── paddingRight clears the fixed ProfileDrawer avatar */}
+                <div style={{ height: 60, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 14, padding: '0 64px 0 24px', borderBottom: '0.5px solid var(--color-cal-grid-line)', background: 'var(--color-cal-bg)' }}>
+                  <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', whiteSpace: 'nowrap', minWidth: 200, margin: 0 }}>
+                    {deskTitle.month} <span style={{ fontWeight: 400, color: 'rgb(var(--rgb-ink-muted))' }}>{deskTitle.year}</span>
+                  </h1>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <button type="button" className="cal-tb-icon" onClick={() => deskNav(-1)} aria-label="Previous month" title="Previous month"><ChevronLeft size={18} strokeWidth={2} /></button>
+                    <button type="button" className="cal-tb-btn" onClick={() => deskNav(0)}>Today</button>
+                    <button type="button" className="cal-tb-icon" onClick={() => deskNav(1)} aria-label="Next month" title="Next month"><ChevronRight size={18} strokeWidth={2} /></button>
                   </div>
-                  {/* Sticky DOW header */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0,1fr))', background: 'var(--color-cal-bg)', borderBottom: '0.5px solid var(--color-cal-grid-line)', flexShrink: 0 }}>
-                    {(wsMon ? ['MON','TUE','WED','THU','FRI','SAT','SUN'] : ['SUN','MON','TUE','WED','THU','FRI','SAT']).map(d => (
-                      <div key={d} style={{ textAlign: 'center', padding: '4px 0 3px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#C9A84C', fontFamily: 'var(--font-montserrat)' }}>{d}</div>
-                    ))}
+                  <div style={{ flex: 1 }} />
+                  <div style={{ width: 176 }}>
+                    <Segmented options={DESK_VIEWS} labels={{ month: 'Month', list: 'Agenda' }} value={calView} onChange={switchCalView} />
                   </div>
+                  <button type="button" className="cal-tb-icon" onClick={() => setSettingsOpen(true)} aria-label="Calendars and filters" title="Calendars and filters"><SlidersHorizontal size={16} strokeWidth={2} /></button>
+                  <button type="button" className="cal-tb-primary" onClick={() => openCreatePopover(null, todayStr)}><Plus size={15} strokeWidth={2.5} />New</button>
+                </div>
+
+                {calView === 'month' ? (<>
+                {/* Weekday header — muted, right-aligned over the date numbers */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0,1fr))', borderBottom: '0.5px solid var(--color-cal-grid-line)', flexShrink: 0, background: 'var(--color-cal-bg)' }}>
+                  {(wsMon ? ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] : ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']).map(d => (
+                    <div key={d} style={{ textAlign: 'right', padding: '8px 10px 6px', fontSize: 12, fontWeight: 500, color: 'rgb(var(--rgb-ink-muted))', fontFamily: 'var(--font-montserrat)' }}>{d}</div>
+                  ))}
+                </div>
                   {/* Scrollable weeks */}
                   <div ref={monthGridRef} style={{ flex: 1, overflowY: 'auto', background: 'var(--color-cal-bg)', position: 'relative' }}>
                     <div ref={monthGridTopSentRef} style={{ height: 1 }} />
@@ -1917,8 +1939,11 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                                 key={ds}
                                 data-caldate={ds}
                                 ref={el => { if (el) monthCellRefs.current.set(ds, el); else monthCellRefs.current.delete(ds) }}
-                                onClick={() => setSelectedEvId(null)}
-                                onDoubleClick={e => { navigator.vibrate?.(6); if (calView === 'month') openCreatePopover(e.currentTarget.getBoundingClientRect(), ds) }}
+                                onClick={e => {
+                                  if (dismissingRef.current) { dismissingRef.current = false; return }
+                                  if ((e.target as HTMLElement).closest('[data-cal-event]')) return
+                                  openCreatePopover(e.currentTarget.getBoundingClientRect(), ds)
+                                }}
                                 onDragOver={e => {
                                   if (!dragState) return
                                   e.preventDefault()
@@ -1932,6 +1957,9 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                                   handleEventDrop(ev, ds, originDate)
                                 }}
                                 onMouseDown={e => {
+                                  // Remember whether this click is just dismissing something
+                                  dismissingRef.current = !!popover || !!selectedEvId || !!evCtxMenu
+                                  if (dismissingRef.current) setSelectedEvId(null)
                                   if (e.button !== 0 || dragState) return
                                   if ((e.target as HTMLElement).closest('[data-cal-event]')) return
                                   startCreateDrag(ds)
@@ -1946,7 +1974,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                                 }}
                                 onMouseLeave={() => setPasteDate(p => p === ds ? null : p)}
                                 className="group"
-                                style={{ minHeight: CELL_MIN_H, borderRight: ci < 6 ? '0.5px solid var(--color-cal-grid-line)' : 'none', padding: '5px 0 4px', cursor: 'pointer', display: 'flex', flexDirection: 'column', background: isToday ? 'rgba(201,168,76,0.05)' : 'var(--color-cal-cell)', position: 'relative', userSelect: createDrag ? 'none' : undefined }}
+                                style={{ minHeight: CELL_MIN_H, borderRight: ci < 6 ? '0.5px solid var(--color-cal-grid-line)' : 'none', padding: '5px 0 4px', cursor: 'pointer', display: 'flex', flexDirection: 'column', background: isToday ? 'rgba(212,175,55,0.045)' : 'var(--color-cal-cell)', position: 'relative', userSelect: createDrag ? 'none' : undefined }}
                               >
                                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none" style={{ background: 'rgb(var(--rgb-ink) / 0.03)' }} />
                                 {dragOverDate === ds && dragState && (
@@ -1957,11 +1985,11 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                                 )}
                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                                   {/* Date number row */}
-                                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: 3, flexShrink: 0, paddingLeft: 4, paddingRight: 4 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: 3, flexShrink: 0, paddingLeft: 6, paddingRight: 6 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginLeft: 'auto', flexShrink: 0 }}>
                                       {isMonthStart && (
-                                        <span style={{ fontSize: 10, fontWeight: 700, color: '#C9A84C', opacity: isPast ? 0.35 : 1, fontFamily: 'var(--font-montserrat)', letterSpacing: '0.03em', textTransform: 'uppercase', lineHeight: 1 }}>
-                                          {new Date(cy, cm - 1, 1).toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
+                                        <span style={{ fontSize: 12, fontWeight: 600, color: isPast ? 'rgb(var(--rgb-ink) / 0.3)' : 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', lineHeight: 1 }}>
+                                          {new Date(cy, cm - 1, 1).toLocaleDateString('en-US', { month: 'short' })}
                                         </span>
                                       )}
                                       <span style={{
@@ -1969,7 +1997,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                                         fontWeight: isToday ? 600 : 400,
                                         color: isToday ? '#1a1200' : isPast ? 'rgb(var(--rgb-ink) / 0.3)' : 'var(--color-ink)',
                                         fontFamily: 'var(--font-montserrat)', lineHeight: 1,
-                                        ...(isToday ? { background: '#C9A84C', borderRadius: 5, padding: '3px 5px' } : {}),
+                                        ...(isToday ? { background: '#D4AF37', borderRadius: 999, minWidth: 22, height: 22, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px' } : {}),
                                       }}>
                                         {cd}
                                       </span>
@@ -2090,182 +2118,95 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                     <div ref={monthGridBotSentRef} style={{ height: 1 }} />
                     <div style={{ height: 88 }} />
                   </div>
-                </div>
-              </div>
-            )}
-
-            {/* List mode (calView === 'list') — Fantastical split view matching mobile */}
-            {calView === 'list' && (
-            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--color-bg-base)' }}>
-
-              {/* Compact month grid — collapsible */}
-              <div style={{ height: gridH, overflow: 'hidden', flexShrink: 0, transition: isDraggingHandle ? 'none' : 'height 0.3s cubic-bezier(0.4,0,0.2,1)', background: 'var(--color-bg-surface)' }}>
-                <div style={{ height: GRID_EXPANDED, display: 'flex', flexDirection: 'column' }}>
-                  {/* Single header row: [List/Month toggle] — [month label] — [‹ › settings Today] */}
-                  {/* paddingRight clears the fixed ProfileDrawer button in the top-right corner */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 12, paddingRight: 56, paddingTop: 10, paddingBottom: 6, flexShrink: 0 }}>
-                    {/* List / Month toggle */}
-                    <div style={{ display: 'flex', background: 'rgb(var(--rgb-ink) / 0.06)', borderRadius: 20, padding: 2, gap: 2, flexShrink: 0 }}>
-                      {(['list', 'month'] as const).map(v => (
-                        <button key={v} onClick={() => switchCalView(v)} style={{
-                          padding: '4px 12px', borderRadius: 18, border: 'none', cursor: 'pointer',
-                          fontSize: 11, fontWeight: 600, fontFamily: 'var(--font-montserrat)', letterSpacing: '0.04em',
-                          background: calView === v ? 'linear-gradient(135deg,#F7DF9E,#D4AF37,#A47F23)' : 'transparent',
-                          color: calView === v ? '#000' : 'rgb(var(--rgb-ink) / 0.4)',
-                          transition: 'background 0.15s, color 0.15s',
-                        }}>{v === 'list' ? 'List' : 'Month'}</button>
-                      ))}
-                    </div>
-                    {/* Month label — centered; tap to open month/year picker */}
-                    <button
-                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, background: 'none', border: 'none', textAlign: 'center', fontSize: 15, fontWeight: 700, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', userSelect: 'none', cursor: 'pointer', letterSpacing: '-0.01em', touchAction: 'manipulation' }}
-                      onClick={() => setMonthPickerOpen(true)}
-                    >
-                      {gridMonthLbl}
-                      <span style={{ fontSize: 9, color: '#C9A84C', opacity: 0.8 }}>▾</span>
-                    </button>
-                    {/* Right controls */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                      <button onClick={goToPrev} style={{ width: 24, height: 24, borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer', color: '#C9A84C', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
-                      <button onClick={goToNext} style={{ width: 24, height: 24, borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer', color: '#C9A84C', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
-                      <button onClick={() => setSettingsOpen(true)} style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgb(var(--rgb-ink) / 0.06)', border: '1px solid rgb(var(--rgb-ink) / 0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <SlidersHorizontal size={13} color="rgb(var(--rgb-ink) / 0.45)" />
-                      </button>
-                      <button onClick={() => jumpToMonth(today.getFullYear(), today.getMonth())} style={{ fontSize: 11, fontWeight: 600, color: '#D4AF37', background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.02em' }}>Today</button>
-                    </div>
-                  </div>
-                  {/* DOW labels */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', paddingLeft: 8, paddingRight: 8, paddingTop: 10, paddingBottom: 4, flexShrink: 0 }}>
-                    {(wsMon ? ['M','T','W','T','F','S','S'] : ['S','M','T','W','T','F','S']).map((d, i) => (
-                      <div key={i} style={{ textAlign: 'center', fontSize: 9, fontWeight: 700, color: 'rgba(212,175,55,0.55)', letterSpacing: '0.05em', fontFamily: 'var(--font-montserrat)' }}>{d}</div>
-                    ))}
-                  </div>
-                  {/* Grid cells */}
-                  <div
-                    style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gridAutoRows: '1fr', paddingLeft: 6, paddingRight: 6, paddingBottom: 4 }}
-                    onMouseDown={(e) => { gridSwipe.current = { x: e.clientX, y: e.clientY } }}
-                    onMouseUp={(e) => {
-                      const s = gridSwipe.current; gridSwipe.current = null; if (!s) return
-                      const dx = e.clientX - s.x, dy = e.clientY - s.y
-                      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) { if (dx < 0) goToNext(); else goToPrev() }
-                    }}
-                    onMouseLeave={() => { gridSwipe.current = null }}
-                  >
-                    {gridCells.map((day, i) => {
-                      if (day === null) return <div key={i} />
-                      const ds = gds(day)
-                      const isToday = ds === todayStr
-                      const isSel   = ds === gridSel
-                      const dots    = (visibleMap[ds] ?? []).slice(0, 3).map(ev => notionColor(ev))
+                </>) : (<>
+                {/* ── Agenda (desktop list) ── days with events, Notion/Fantastical style.
+                    Every day keeps a ref'd anchor (even empty ones) so jump-to-month,
+                    scroll-to-today and the infinite-scroll sentinels keep working. */}
+                <div ref={scrollRef} onScroll={handleDetailScroll} style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', position: 'relative', background: 'var(--color-cal-bg)' }}>
+                  <div ref={topSentRef} style={{ height: 1 }} />
+                  <div style={{ maxWidth: 880, margin: '0 auto', padding: '4px 32px 0' }}>
+                    {months.map(({ year: y, month: m }) => {
+                      const dim = getDaysInMonth(y, m)
                       return (
-                        <button key={i}
-                          onClick={() => {
-                            setGridSel(ds)
-                            const sc = scrollRef.current, el = dayRefs.current.get(ds)
-                            if (sc && el) { const cR = sc.getBoundingClientRect(), eR = el.getBoundingClientRect(); sc.scrollTop = sc.scrollTop + eR.top - cR.top - 16 }
-                          }}
-                          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'none', cursor: 'pointer', outline: 'none', gap: 2, minWidth: 0 }}
-                        >
-                          <div style={{ width: 26, height: 26, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isToday ? '#D4AF37' : isSel ? 'rgba(212,175,55,0.15)' : 'transparent', flexShrink: 0 }}>
-                            <span style={{ fontSize: 12, fontWeight: isToday ? 700 : isSel ? 600 : 400, color: isToday ? '#000' : isSel ? '#D4AF37' : 'rgb(var(--rgb-ink) / 0.72)', fontFamily: 'var(--font-montserrat)', lineHeight: 1 }}>{day}</span>
-                          </div>
-                          {dots.length > 0 && (
-                            <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
-                              {dots.map((c, di) => <span key={di} style={{ width: 3, height: 3, borderRadius: '50%', background: c, flexShrink: 0 }} />)}
-                            </div>
-                          )}
-                        </button>
+                        <section key={`${y}-${m}`}>
+                          <h2 style={{ position: 'sticky', top: 0, zIndex: 2, margin: 0, padding: '18px 0 8px', fontSize: 13, fontWeight: 600, color: 'rgb(var(--rgb-ink-muted))', fontFamily: 'var(--font-montserrat)', background: 'var(--color-cal-bg)', borderBottom: '0.5px solid var(--color-cal-grid-line)' }}>
+                            {new Date(y, m, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                          </h2>
+                          {Array.from({ length: dim }, (_, i) => {
+                            const day    = i + 1
+                            const ds     = toDateStr(y, m, day)
+                            const isTod  = ds === todayStr
+                            const isPast = ds < todayStr
+                            const events = visibleMap[ds] ?? []
+                            const setRef = (el: HTMLDivElement | null) => { if (el) dayRefs.current.set(ds, el); else dayRefs.current.delete(ds) }
+                            if (events.length === 0 && !isTod) return <div key={ds} ref={setRef} style={{ height: 0 }} />
+                            const dt = new Date(y, m, day)
+                            return (
+                              <div
+                                key={ds}
+                                ref={setRef}
+                                className="cal-agenda-day"
+                                onClick={e => { if ((e.target as HTMLElement).closest('[data-cal-event]')) return; openCreatePopover(e.currentTarget.getBoundingClientRect(), ds) }}
+                                style={{ display: 'flex', gap: 24, padding: '14px 0', borderBottom: '0.5px solid var(--color-cal-grid-line)', cursor: 'default' }}
+                              >
+                                <div style={{ width: 92, flexShrink: 0, display: 'flex', alignItems: 'baseline', gap: 8, paddingTop: 2 }}>
+                                  <span style={{
+                                    fontSize: 22, fontWeight: 600, lineHeight: 1, fontFamily: 'var(--font-montserrat)', fontVariantNumeric: 'tabular-nums',
+                                    color: isTod ? '#1a1200' : isPast ? 'rgb(var(--rgb-ink-muted))' : 'var(--color-ink)',
+                                    ...(isTod ? { background: '#D4AF37', borderRadius: 999, minWidth: 34, height: 34, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 17 } : {}),
+                                  }}>{day}</span>
+                                  <span style={{ fontSize: 12, fontWeight: 500, color: isTod ? '#D4AF37' : 'rgb(var(--rgb-ink-muted))', fontFamily: 'var(--font-montserrat)' }}>
+                                    {dt.toLocaleDateString('en-US', { weekday: 'short' })}
+                                  </span>
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                  {events.length === 0 && (
+                                    <p style={{ fontSize: 13, color: 'rgb(var(--rgb-ink-faint))', fontFamily: 'var(--font-montserrat)', padding: '8px 10px', margin: 0 }}>No events — click to add one</p>
+                                  )}
+                                  {events.map((ev, idx) => {
+                                    const color   = notionColor(ev)
+                                    const timed   = ev.type === 'google' && !!ev.amount
+                                    const editable = ev.type === 'google' && !!ev.id && !ev.id.startsWith('tmp-')
+                                    const sel     = selectedEvId === ev.id && !!ev.id
+                                    return (
+                                      <div
+                                        key={ev.id ?? idx}
+                                        data-cal-event
+                                        role={editable ? 'button' : undefined}
+                                        tabIndex={editable ? 0 : undefined}
+                                        className={editable ? 'cal-agenda-ev' : undefined}
+                                        onClick={editable ? e => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), ev, ds) } : undefined}
+                                        onKeyDown={editable ? e => { if (e.key === 'Enter') openEditPopover(e.currentTarget.getBoundingClientRect(), ev, ds) } : undefined}
+                                        onContextMenu={e => openEvCtx(e, ev, ds)}
+                                        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 10px', borderRadius: 8, opacity: isPast ? 0.6 : 1, background: sel ? 'rgb(var(--rgb-ink) / 0.06)' : undefined }}
+                                      >
+                                        <span style={{ width: 104, flexShrink: 0, fontSize: 13, color: 'rgb(var(--rgb-ink-muted))', fontFamily: 'var(--font-montserrat)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                                          {timed ? getTimeRange(ev) : ev.type === 'google' ? 'All day' : ev.amount}
+                                        </span>
+                                        <span style={{ width: 4, alignSelf: 'stretch', minHeight: 18, borderRadius: 2, background: color, flexShrink: 0 }} />
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                          <p style={{ margin: 0, fontSize: 14.5, fontWeight: 500, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</p>
+                                          {ev.location && (
+                                            <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgb(var(--rgb-ink-muted))', fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.location}</p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </section>
                       )
                     })}
                   </div>
-                </div>
-              </div>
-
-              {/* Drag handle */}
-              <div
-                style={{ height: 22, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'row-resize', background: 'var(--color-bg-base)', borderTop: '1px solid rgb(var(--rgb-ink) / 0.05)' }}
-                onClick={() => { if (!handleDragRef.current) setGridH(g => g > 0 ? 0 : GRID_EXPANDED) }}
-                onTouchStart={(e) => { e.stopPropagation(); handleDragRef.current = { startY: e.touches[0].clientY, startH: gridH }; setIsDraggingHandle(true) }}
-                onTouchMove={(e) => { if (!handleDragRef.current) return; e.stopPropagation(); const dy = e.touches[0].clientY - handleDragRef.current.startY; setGridH(Math.max(0, Math.min(GRID_EXPANDED, handleDragRef.current.startH + dy))) }}
-                onTouchEnd={(e) => { e.stopPropagation(); setIsDraggingHandle(false); handleDragRef.current = null; setGridH(g => g > GRID_EXPANDED / 2 ? GRID_EXPANDED : 0) }}
-              >
-                <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgb(var(--rgb-ink) / 0.18)' }} />
-              </div>
-
-              {/* Infinite scroll list */}
-              <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-                <div ref={scrollRef} onScroll={handleDetailScroll}
-                  style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', position: 'relative' }}>
-                  <div ref={topSentRef} style={{ height: 1 }} />
-                  {months.map(({ year: y, month: m }) => {
-                    const dim = getDaysInMonth(y, m)
-                    return Array.from({ length: dim }, (_, i) => {
-                      const day    = i + 1
-                      const ds     = toDateStr(y, m, day)
-                      const isTod  = ds === todayStr
-                      const events = visibleMap[ds] ?? []
-                      const abbr   = new Date(y, m, day).toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()
-                      const stripe = Math.floor(new Date(y, m, day).getTime() / 86400000) % 2 === 0
-                      return (
-                        <div
-                          key={ds}
-                          ref={el => { if (el) dayRefs.current.set(ds, el); else dayRefs.current.delete(ds) }}
-                          onMouseDown={e => rowMouseDown(e, ds)}
-                          onMouseUp={rowMouseUp}
-                          onMouseLeave={() => { rowSwipe.current = null }}
-                          style={{ display: 'flex', alignItems: 'stretch', paddingLeft: gridH === 0 ? 20 : 6, background: 'var(--color-bg-surface)', cursor: 'grab',
-                                   transition: isDraggingHandle ? 'none' : 'padding-left 0.3s cubic-bezier(0.4,0,0.2,1)' }}
-                        >
-                          <div style={{ width: gridH === 0 ? 60 : 'calc((100% - 6px) / 7)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-surface)',
-                                        transition: isDraggingHandle ? 'none' : 'width 0.3s cubic-bezier(0.4,0,0.2,1)' }}>
-                            <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 9, letterSpacing: '0.09em', textTransform: 'uppercase', lineHeight: 1.2, userSelect: 'none', whiteSpace: 'nowrap' }}>
-                              <span style={{ color: isTod ? '#D4AF37' : 'rgb(var(--rgb-ink) / 0.75)', fontWeight: 700 }}>{abbr}</span>
-                              <span style={{ color: isTod ? '#c9a84c' : 'rgb(var(--rgb-ink) / 0.25)', fontWeight: 500 }}>{' '}{day}</span>
-                            </span>
-                          </div>
-                          <div style={{ width: 1, flexShrink: 0, background: isTod ? 'rgba(201,168,76,0.35)' : 'rgb(var(--rgb-ink) / 0.04)', marginTop: 8, marginBottom: 8 }} />
-                          <div
-                            onClick={() => openCreatePopover(null, ds)}
-                            style={{ flex: 1, paddingLeft: 12, paddingRight: 14, paddingTop: 6, paddingBottom: 6, display: 'flex', flexDirection: 'column', gap: 2, minHeight: 112, background: stripe ? 'var(--color-bg-surface)' : 'var(--color-bg-elevated)', cursor: 'text' }}>
-                            {events.map((ev, idx) => {
-                              const bar  = ev.color ?? DETAIL_DOT[ev.type]
-                              const M    = 'var(--font-montserrat)'
-                              const row2: string | null = ev.type === 'google'
-                                ? (ev.amount ? getTimeRange(ev) : 'ALL DAY')
-                                : (ev.amount || null)
-                              return (
-                                <button key={idx} onClick={e => { e.stopPropagation(); if (ev.id) { handleOpenEdit(ev) } else { setSelectedDay(ds); setViewIndex(1) } }}
-                                  style={{ display: 'flex', alignItems: 'stretch', width: '100%', background: 'none', border: 'none', padding: '10px 0', cursor: 'pointer', textAlign: 'left', gap: 9 }}>
-                                  <div style={{ width: 3, borderRadius: 2, background: bar, flexShrink: 0 }} />
-                                  <div style={{ flex: 1, minWidth: 0 }}>
-                                    <p style={{ fontSize: 14, fontWeight: 500, color: isTod ? 'rgb(var(--rgb-ink) / 0.95)' : 'rgb(var(--rgb-ink) / 0.82)', fontFamily: M, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.35 }}>
-                                      {ev.title}
-                                    </p>
-                                    {row2 && (
-                                      <p style={{ fontSize: 11, color: 'rgb(var(--rgb-ink) / 0.32)', fontFamily: M, margin: '3px 0 0', lineHeight: 1.3 }}>
-                                        {row2}
-                                      </p>
-                                    )}
-                                    {ev.location && (
-                                      <p style={{ fontSize: 11, color: 'rgb(var(--rgb-ink) / 0.26)', fontFamily: M, margin: '2px 0 0', lineHeight: 1.3 }}>
-                                        {ev.location}
-                                      </p>
-                                    )}
-                                  </div>
-                                </button>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      )
-                    })
-                  })}
                   <div ref={botSentRef} style={{ height: 1 }} />
                   <div style={{ height: 96 }} />
                 </div>
+                </>)}
               </div>
             </div>
-            )}
           </div>
         ) : (
           /* ── Mobile: Fantastical-style split view ── */
