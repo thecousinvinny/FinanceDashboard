@@ -154,6 +154,10 @@ export function LocationPickerSheet({ open, initial, onClose, onSelect }: Props)
   const showFavorites  = !query.trim() && favorites.length > 0
   const showRecents    = !query.trim() && recents.length > 0
   const showSuggestions = query.trim().length > 0
+  // While typing: saved places containing the text come first, then Google
+  const ql = query.trim().toLowerCase()
+  const savedMatches = ql ? [...new Set([...favorites, ...recents])].filter(t => t.toLowerCase().includes(ql)).slice(0, 5) : []
+  const placeResults = suggestions.filter(s => !savedMatches.includes(s.description))
 
   return (
     <>
@@ -264,15 +268,28 @@ export function LocationPickerSheet({ open, initial, onClose, onSelect }: Props)
             </>
           )}
 
-          {/* Autocomplete suggestions */}
+          {/* Autocomplete: typed text, saved matches, then Google */}
           {showSuggestions && (
             <>
-              {suggestions.length === 0 && query.length > 1 && (
-                <p style={{ fontFamily: M, fontSize: 13, color: MUTED, padding: '20px 16px', textAlign: 'center' }}>
-                  No results for &ldquo;{query}&rdquo;
-                </p>
-              )}
-              {suggestions.map(sug => (
+              <div {...rowProps(query.trim())}>
+                <MapPin size={15} color={GOLD} style={{ flexShrink: 0 }} />
+                <span style={{ flex: 1, fontSize: 14, color: 'var(--color-ink)', fontFamily: M, lineHeight: 1.4, textAlign: 'left' }}>
+                  Use &ldquo;{query.trim()}&rdquo;
+                </span>
+              </div>
+              {savedMatches.length > 0 && <p style={sectionLabel}>Saved</p>}
+              {savedMatches.map(loc => (
+                <div key={`s:${loc}`} {...rowProps(loc)}>
+                  {isFav(loc) ? <Star size={15} color={GOLD} fill={GOLD} style={{ flexShrink: 0 }} /> : <Clock size={15} color={MUTED} style={{ flexShrink: 0 }} />}
+                  <span style={{ flex: 1, fontSize: 14, color: 'var(--color-ink)', fontFamily: M, lineHeight: 1.4, textAlign: 'left' }}>{highlightMatch(loc, query)}</span>
+                  <button onClick={e => toggleFavorite(e, loc)} aria-label={isFav(loc) ? 'Remove favorite' : 'Add favorite'}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0 }}>
+                    <Star size={14} color={isFav(loc) ? GOLD : MUTED} fill={isFav(loc) ? GOLD : 'none'} />
+                  </button>
+                </div>
+              ))}
+              {placeResults.length > 0 && savedMatches.length > 0 && <p style={sectionLabel}>Suggestions</p>}
+              {placeResults.map(sug => (
                 <div key={sug.placeId} {...rowProps(sug.description)}>
                   <MapPin size={15} color={MUTED} style={{ flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>

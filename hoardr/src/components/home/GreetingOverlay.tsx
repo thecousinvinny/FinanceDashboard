@@ -16,6 +16,26 @@ import type { Session } from '@supabase/supabase-js'
 
 const LS_AVATAR = 'hoardr-avatar-url'
 const LS_NAME   = 'hoardr-greeting-name'
+const LS_LAST   = 'hoardr-greeting-at'      // ms timestamp of the last showing
+const SS_SHOWN  = 'hoardr-greeting-session'
+const COOLDOWN  = 30 * 60_000
+
+/**
+ * Once per app launch (browser session), and never twice within 30 minutes.
+ * The overlay lives in the dashboard layout, so anything that remounts it —
+ * a reload, a deploy refreshing the page, a bounce through /login — used to
+ * bring it back, which on desktop looked random.
+ */
+function shouldShow(): boolean {
+  try {
+    if (sessionStorage.getItem(SS_SHOWN)) return false
+    const last = Number(localStorage.getItem(LS_LAST) ?? 0)
+    if (Date.now() - last < COOLDOWN) return false
+    sessionStorage.setItem(SS_SHOWN, '1')
+    localStorage.setItem(LS_LAST, String(Date.now()))
+    return true
+  } catch { return true }
+}
 const M = 'var(--font-montserrat)'
 
 function timeGreeting(): string {
@@ -67,6 +87,7 @@ export function GreetingOverlay() {
   const authSubRef = useRef<{ unsubscribe: () => void } | null>(null)
 
   useEffect(() => {
+    if (!shouldShow()) return
     const today = localToday()
     setTodayStr(today)
     setGreeting(timeGreeting())

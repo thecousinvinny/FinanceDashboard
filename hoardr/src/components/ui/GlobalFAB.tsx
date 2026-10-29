@@ -14,7 +14,7 @@ export interface FABAction {
 // Spring for the button; UIKit's curve for the menu
 const SPRING = 'cubic-bezier(0.34, 1.56, 0.64, 1)'
 const EASE   = 'cubic-bezier(0.32, 0.72, 0, 1)'
-const MENU_MS = 320
+const MENU_MS = 260
 
 /**
  * Floating add button. One action → tapping runs it directly (no menu for a
@@ -76,17 +76,17 @@ export function GlobalFAB({ actions }: { actions: FABAction[] }) {
 
   const menu = present && (
     <>
-      {/* Dim + soften the page behind, like a long-press menu */}
+      {/* Dim the page behind. No backdrop blur: re-blurring the whole page
+          every frame is what made the menu stutter on open. */}
       <div
         onClick={() => setOpen(false)}
         className="fixed inset-0"
         style={{
           zIndex: 45,
-          background: 'rgba(0,0,0,0.28)',
-          backdropFilter: 'blur(6px)',
-          WebkitBackdropFilter: 'blur(6px)',
+          background: 'rgba(0,0,0,0.32)',
           opacity: shown ? 1 : 0,
           transition: `opacity ${MENU_MS}ms ${EASE}`,
+          willChange: 'opacity',
         }}
       />
       <div
@@ -99,16 +99,14 @@ export function GlobalFAB({ actions }: { actions: FABAction[] }) {
           bottom: 'calc(env(safe-area-inset-bottom, 0px) + 158px)',
           minWidth: 230,
           borderRadius: 14,
-          background: 'rgb(var(--rgb-bg-elevated) / 0.78)',
-          backdropFilter: 'blur(40px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(40px) saturate(180%)',
-          boxShadow: '0 18px 50px rgba(0,0,0,0.45), 0 0 0 0.5px rgb(var(--rgb-ink) / 0.12)',
+          // Opaque surface: a blurred panel has to re-blur on every frame it scales
+          background: 'var(--color-bg-elevated)',
+          boxShadow: '0 16px 40px rgba(0,0,0,0.35), 0 0 0 0.5px rgb(var(--rgb-ink) / 0.12)',
           transformOrigin: 'bottom right',
-          transform: shown ? 'scale(1)' : 'scale(0.4)',
+          transform: shown ? 'scale(1)' : 'scale(0.88)',
           opacity: shown ? 1 : 0,
-          transition: shown
-            ? `transform 420ms ${SPRING}, opacity 180ms ease`
-            : `transform ${MENU_MS}ms ${EASE}, opacity ${MENU_MS - 80}ms ease`,
+          transition: `transform ${MENU_MS}ms ${EASE}, opacity ${shown ? 160 : 200}ms ease`,
+          willChange: 'transform, opacity',
         }}
       >
         {actions.map((a, i) => (
@@ -120,9 +118,6 @@ export function GlobalFAB({ actions }: { actions: FABAction[] }) {
             className="fab-menu-item relative flex items-center justify-between w-full h-[48px] pl-4 pr-4 gap-6 text-left outline-none"
             style={{
               borderTop: i > 0 ? '0.5px solid rgb(var(--rgb-ink) / 0.12)' : undefined,
-              opacity: shown ? 1 : 0,
-              transform: shown ? 'none' : 'translateY(6px)',
-              transition: `opacity 220ms ease ${shown ? 60 + (actions.length - 1 - i) * 30 : 0}ms, transform 320ms ${EASE} ${shown ? 60 + (actions.length - 1 - i) * 30 : 0}ms`,
             }}
           >
             <span className="text-[16px] text-ink whitespace-nowrap">{a.label}</span>

@@ -9,7 +9,7 @@ import { showToast } from '@/lib/toast'
 import { createClient } from '@/lib/supabase/client'
 import { Select } from '@/components/ui/Select'
 import { Sheet } from '@/components/ui/Sheet'
-import { FormGroup, FormRow, AmountHero, CategoryPicker, rowInput } from '@/components/ui/Form'
+import { FormGroup, FormRow, AmountHero, CategoryPicker, rowInput, amountStr } from '@/components/ui/Form'
 
 export interface IncomeInitial {
   id:      string
@@ -57,7 +57,7 @@ export function ManualDepositSheet({ open, onClose, banks, onDone, defaultBankId
     const ini = initialRef.current
     if (ini) {
       setLabel(ini.name)
-      setAmount(String(ini.amount))
+      setAmount(amountStr(ini.amount))
       setSource(ini.source ?? 'Other')
       setBankId(ini.bank_id)
       setDate(ini.date)

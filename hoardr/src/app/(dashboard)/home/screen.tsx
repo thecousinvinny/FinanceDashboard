@@ -18,7 +18,7 @@ import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import type { DayPoint } from '@/components/home/SparkChart'
 import type { SeedTx } from '@/lib/data/transactions'
-import { Truck, PlusCircle, Star } from 'lucide-react'
+import { Truck, PlusCircle, Star, ArrowUpCircle } from 'lucide-react'
 import { HoardChest } from '@/components/home/HoardChest'
 import { GlobalFAB } from '@/components/ui/GlobalFAB'
 import { useOnScreenReturn } from '@/lib/tab-nav'
@@ -68,6 +68,7 @@ export default function HomePage() {
   const [loading,            setLoading]            = useState(!cached)
   const [expenseOpen,   setExpenseOpen]   = useState(false)
   const [detailItem,    setDetailItem]    = useState<ActivityRef | null>(null)
+  const [txMode,        setTxMode]        = useState<'Expense' | 'Income'>('Expense')
   const [wishlistOpen,  setWishlistOpen]  = useState(false)
   const [cards,         setCards]         = useState<CardOption[]>([])
   const [banks,         setBanks]         = useState<BankOption[]>([])
@@ -488,10 +489,12 @@ export default function HomePage() {
     {/* ── FAB ─────────────────────────────────────────────────────────── */}
     <GlobalFAB actions={[
       { Icon: Star,       label: 'Add to Wishlist', onTap: () => setWishlistOpen(true) },
-      { Icon: PlusCircle, label: 'Add Transaction', onTap: () => setExpenseOpen(true)  },
+      { Icon: ArrowUpCircle, label: 'New Income',   onTap: () => { setTxMode('Income');  setExpenseOpen(true) } },
+      { Icon: PlusCircle, label: 'New Expense',     onTap: () => { setTxMode('Expense'); setExpenseOpen(true) } },
     ]} />
 
     <AddTransactionSheet
+      mode={txMode}
       open={expenseOpen}
       onClose={() => setExpenseOpen(false)}
       onAdd={handleAdd}

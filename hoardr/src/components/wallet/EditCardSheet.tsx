@@ -1,9 +1,13 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { cn } from '@/lib/utils'
+import { useState, useEffect } from 'react'
+import { Star, Landmark } from 'lucide-react'
 import type { Card, CardType, CardNetwork, CardStyle, CardTexture } from '@/types'
 import { CARD_STYLE_DEFS, CARD_TEXTURE_DEFS, STYLE_GROUPS } from '@/lib/cardStyles'
+import { CardVisual } from './CardVisual'
+import { Select } from '@/components/ui/Select'
+import { Sheet } from '@/components/ui/Sheet'
+import { FormGroup, FormRow, Segmented, ChoiceChips, rowInput } from '@/components/ui/Form'
 
 export interface CardEdits {
   name:       string
@@ -59,106 +63,6 @@ export function EditCardSheet({ card, open, onClose, onSave, onMakeDefault, bank
     }
   }, [card])
 
-  const backdropRef = useRef<HTMLDivElement>(null)
-  const sheetRef    = useRef<HTMLDivElement>(null)
-  const dragStartY    = useRef<number | null>(null)
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    const scrollY = window.scrollY
-    document.body.style.position = 'fixed'
-    document.body.style.top = `-${scrollY}px`
-    document.body.style.width = '100%'
-    document.documentElement.style.overscrollBehavior = 'none'
-    let lastY = 0
-    const onStart = (e: TouchEvent) => { lastY = e.touches[0].clientY }
-    const onMove = (e: TouchEvent) => {
-      const el = scrollAreaRef.current
-      if (!el?.contains(e.target as Node)) { e.preventDefault(); return }
-      const dy = e.touches[0].clientY - lastY
-      lastY = e.touches[0].clientY
-      const { scrollTop, scrollHeight, clientHeight } = el
-      if ((scrollTop <= 0 && dy > 0) || (scrollTop + clientHeight >= scrollHeight - 1 && dy < 0)) e.preventDefault()
-    }
-    document.addEventListener('touchstart', onStart, { passive: true })
-    document.addEventListener('touchmove', onMove, { passive: false })
-    return () => {
-      document.body.style.position = ''
-      document.body.style.top = ''
-      document.body.style.width = ''
-      document.documentElement.style.overscrollBehavior = ''
-      document.removeEventListener('touchstart', onStart)
-      document.removeEventListener('touchmove', onMove)
-      window.scrollTo(0, scrollY)
-    }
-  }, [open])
-
-  // Keyboard-aware scroll: scroll focused field above keyboard
-  useEffect(() => {
-    if (!open) return
-    const vv = window.visualViewport
-    if (!vv) return
-    const onResize = () => {
-      const sc = scrollAreaRef.current
-      if (!sc) return
-      const kbH = Math.max(0, window.innerHeight - vv.height)
-      if (kbH > 50) {
-        sc.style.paddingBottom = `${kbH + 24}px`
-        requestAnimationFrame(() => {
-          const focused = document.activeElement as HTMLElement | null
-          if (!focused || !sc.contains(focused)) return
-          const clearance = vv.height - 16
-          if (focused.getBoundingClientRect().bottom > clearance) {
-            sc.scrollTop += focused.getBoundingClientRect().bottom - clearance
-          }
-        })
-      } else {
-        sc.style.paddingBottom = ''
-      }
-    }
-    vv.addEventListener('resize', onResize)
-    return () => {
-      vv.removeEventListener('resize', onResize)
-      if (scrollAreaRef.current) scrollAreaRef.current.style.paddingBottom = ''
-    }
-  }, [open])
-
-  function onDragStart(e: React.TouchEvent) { dragStartY.current = e.touches[0].clientY }
-  function onDragMove(e: React.TouchEvent) {
-    if (dragStartY.current === null || !sheetRef.current) return
-    const dy = Math.max(0, e.touches[0].clientY - dragStartY.current)
-    sheetRef.current.style.transform = `translateY(${dy}px)`
-    sheetRef.current.style.transition = 'none'
-  }
-  function onDragEnd(e: React.TouchEvent) {
-    if (!sheetRef.current) return
-    const dy = dragStartY.current !== null ? Math.max(0, e.changedTouches[0].clientY - dragStartY.current) : 0
-    dragStartY.current = null
-    if (dy > 80) {
-      sheetRef.current.style.transition = 'transform 0.28s cubic-bezier(0.4,0,0.2,1)'
-      sheetRef.current.style.transform  = 'translateY(100%)'
-      setTimeout(() => {
-        if (sheetRef.current) { sheetRef.current.style.transform = ''; sheetRef.current.style.transition = '' }
-        onClose()
-      }, 280)
-    } else {
-      sheetRef.current.style.transform = ''
-      sheetRef.current.style.transition = ''
-    }
-  }
-
-  useEffect(() => {
-    if (!open) {
-      const t = setTimeout(() => {
-        setName(''); setAlias(''); setType('Debit'); setLast4('')
-        setNetwork('Visa'); setExpires(''); setCardholder('')
-        setStyle('black'); setTexture('none'); setBankId(null)
-      }, 300)
-      return () => clearTimeout(t)
-    }
-  }, [open])
-
   function handleLast4(raw: string) {
     setLast4(raw.replace(/\D/g, '').slice(0, 4))
   }
@@ -181,182 +85,106 @@ export function EditCardSheet({ card, open, onClose, onSave, onMakeDefault, bank
 
   const canSave = !!name.trim() && last4.length === 4
 
+  const done = (e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } }
+  const bank = banks.find(b => b.id === bankId)
+
   return (
-    <>
-      <div
-        ref={backdropRef}
-        onClick={onClose}
-        className={cn('fixed inset-0 z-[59] transition-opacity duration-300', open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none')}
-        style={{ background: 'rgba(0,0,0,0.72)' }}
-      />
-      <div
-        ref={sheetRef}
-        className={cn('fixed inset-x-0 bottom-0 z-[60] rounded-t-[24px] bg-bg-surface transition-transform duration-300', open ? 'translate-y-0' : 'translate-y-full')}
-        style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)', height: 'calc(100dvh - env(safe-area-inset-top, 44px) - 8px)', display: 'flex', flexDirection: 'column' }}
-      >
-        <div
-          onTouchStart={onDragStart}
-          onTouchMove={onDragMove}
-          onTouchEnd={onDragEnd}
-          className="flex justify-center pt-3 pb-3"
-          style={{ touchAction: 'none' }}
-        >
-          <div className="w-9 h-1 rounded-full bg-white/20" />
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title="Edit Card"
+      action={{ label: 'Save', onClick: handleSave, disabled: !canSave }}
+    >
+      {/* Live preview */}
+      {card && (
+        <div className="pt-3 pb-1 max-w-[340px] mx-auto">
+          <CardVisual card={{ ...card, name: name || card.name, alias: alias || null, type, last4, network, expires, cardholder, style, texture }} />
         </div>
-        <div className="flex items-center justify-between px-5 mb-4">
-          <h2 className="text-[18px] font-bold tracking-tight text-ink">Edit Card</h2>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-[22px] text-ink-muted">×</button>
-        </div>
+      )}
 
-        <div ref={scrollAreaRef} className="px-5 space-y-4 overflow-y-auto" style={{ flex: 1, paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
+      <FormGroup>
+        {card?.is_default ? (
+          <FormRow icon={Star} label="Default card"><span className="text-gold">Yes</span></FormRow>
+        ) : (
+          <FormRow icon={Star} label="Make default card" chevron onClick={() => { if (card) { onMakeDefault(card.id); onClose() } }} />
+        )}
+      </FormGroup>
 
-          {/* Default badge / make default button */}
-          {card?.is_default ? (
-            <div className="w-full py-3 rounded-[14px] text-[13px] font-semibold bg-gold/10 text-gold text-center">
-              ★ Default Card
-            </div>
-          ) : (
-            <button
-              onClick={() => { if (card) { onMakeDefault(card.id); onClose() } }}
-              className="w-full py-3 rounded-[14px] text-[13px] font-semibold bg-bg-overlay text-gold ring-1 ring-gold/30 select-none"
-            >
-              ☆ Make Default Card
-            </button>
-          )}
+      <FormGroup>
+        <FormRow label="Name">
+          <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="CHASE SAPPHIRE" enterKeyHint="done" onKeyDown={done} className={rowInput} />
+        </FormRow>
+        <FormRow label="Nickname">
+          <input type="text" value={alias} onChange={e => setAlias(e.target.value)} placeholder="Optional" enterKeyHint="done" onKeyDown={done} className={rowInput} />
+        </FormRow>
+        <FormRow label="Cardholder">
+          <input type="text" value={cardholder} onChange={e => setCardholder(e.target.value)} placeholder="JOHN DOE" enterKeyHint="done" onKeyDown={done} className={rowInput} />
+        </FormRow>
+        <FormRow label="Last 4">
+          <input type="text" inputMode="numeric" value={last4} onChange={e => handleLast4(e.target.value)} placeholder="1234" enterKeyHint="done" onKeyDown={done} className={`${rowInput} tabular-nums`} />
+        </FormRow>
+        <FormRow label="Expires">
+          <input type="text" inputMode="numeric" value={expires} onChange={e => handleExpires(e.target.value)} placeholder="MM/YY" enterKeyHint="done" onKeyDown={done} className={`${rowInput} tabular-nums`} />
+        </FormRow>
+        {banks.length > 0 && (
+          <Select
+            value={bankId ?? ''}
+            onChange={e => setBankId(e.target.value || null)}
+            aria-label="Linked bank"
+            className="w-full text-left"
+            trigger={<FormRow icon={Landmark} label="Linked bank" chevron><span className="truncate">{bank?.name ?? 'None'}</span></FormRow>}
+          >
+            <option value="">None</option>
+            {banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </Select>
+        )}
+      </FormGroup>
 
-          {/* Style picker */}
-          <div>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-3">Color</p>
-            <div className="space-y-3">
-              {STYLE_GROUPS.map(group => (
-                <div key={group.label}>
-                  <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint/50 mb-1.5">{group.label}</p>
-                  <div className="grid grid-cols-4 gap-2">
-                    {group.styles.map(s => {
-                      const def = CARD_STYLE_DEFS[s]
-                      return (
-                        <button
-                          key={s}
-                          onClick={() => setStyle(s)}
-                          className={cn('h-[52px] rounded-[12px] border-2 transition-all select-none flex items-end p-1.5 overflow-hidden', style === s ? 'border-gold' : 'border-transparent')}
-                          style={{ background: def.gradient }}
-                        >
-                          <span className="text-[9px] font-semibold leading-tight" style={{ color: def.textPrimary }}>{def.label}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+      <FormGroup header="Type" plain>
+        <Segmented options={CARD_TYPES} value={type} onChange={setType} />
+      </FormGroup>
 
-          {/* Texture picker */}
-          <div>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-3">Texture</p>
-            <div className="grid grid-cols-4 gap-2">
-              {(Object.keys(CARD_TEXTURE_DEFS) as CardTexture[]).map(t => (
-                <button
-                  key={t}
-                  onClick={() => setTexture(t)}
-                  className={cn('py-2.5 rounded-[12px] text-[10px] font-semibold transition-all select-none', texture === t ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}
-                >
-                  {CARD_TEXTURE_DEFS[t].label}
-                </button>
-              ))}
-            </div>
-          </div>
+      <FormGroup header="Network" plain>
+        <Segmented options={NETWORKS} value={network} onChange={setNetwork} />
+      </FormGroup>
 
-          {/* Name */}
-          <div>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Card Name</p>
-            <input type="text" placeholder="e.g. CHASE SAPPHIRE" value={name} onChange={e => setName(e.target.value)}
-              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none" />
-          </div>
-
-          {/* Alias */}
-          <div>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
-              Nickname <span className="normal-case text-ink-faint/60">(optional)</span>
-            </p>
-            <input type="text" placeholder="e.g. Daily Driver" value={alias} onChange={e => setAlias(e.target.value)}
-              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none" />
-          </div>
-
-          {/* Type */}
-          <div>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-3">Type</p>
-            <div className="grid grid-cols-2 gap-2">
-              {CARD_TYPES.map(t => (
-                <button key={t} onClick={() => setType(t)}
-                  className={cn('py-2.5 rounded-[14px] text-[12px] font-semibold transition-all select-none', type === t ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
-                  {t}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Network */}
-          <div>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-3">Network</p>
-            <div className="grid grid-cols-2 gap-2">
-              {NETWORKS.map(n => (
-                <button key={n} onClick={() => setNetwork(n)}
-                  className={cn('py-2.5 rounded-[14px] text-[12px] font-semibold transition-all select-none', network === n ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
-                  {n}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Last 4 + Expires */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Last 4</p>
-              <input type="text" inputMode="numeric" placeholder="1234" value={last4} onChange={e => handleLast4(e.target.value)}
-                className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] font-mono text-ink placeholder:text-ink-faint outline-none" />
-            </div>
-            <div>
-              <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Expires</p>
-              <input type="text" inputMode="numeric" placeholder="MM/YY" value={expires} onChange={e => handleExpires(e.target.value)}
-                className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] font-mono text-ink placeholder:text-ink-faint outline-none" />
-            </div>
-          </div>
-
-          {/* Cardholder */}
-          <div>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Cardholder Name</p>
-            <input type="text" placeholder="e.g. JOHN DOE" value={cardholder} onChange={e => setCardholder(e.target.value)}
-              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] font-mono text-ink placeholder:text-ink-faint outline-none" />
-          </div>
-
-          {/* Linked bank */}
-          {banks.length > 0 && (
-            <div>
-              <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-3">
-                Linked Bank <span className="normal-case text-ink-faint/60">(optional)</span>
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => setBankId(null)}
-                  className={cn('py-2.5 rounded-[14px] text-[12px] font-semibold transition-all select-none', bankId === null ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
-                  None
-                </button>
-                {banks.map(b => (
-                  <button key={b.id} onClick={() => setBankId(b.id)}
-                    className={cn('py-2.5 rounded-[14px] text-[12px] font-semibold transition-all select-none', bankId === b.id ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
-                    {b.name}
-                  </button>
-                ))}
+      <FormGroup header="Color" plain>
+        <div className="space-y-3">
+          {STYLE_GROUPS.map(group => (
+            <div key={group.label}>
+              <p className="px-1 mb-1.5 text-[12px] text-ink-muted">{group.label}</p>
+              <div className="grid grid-cols-4 gap-2">
+                {group.styles.map(s => {
+                  const def = CARD_STYLE_DEFS[s]
+                  const on  = style === s
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setStyle(s)}
+                      className="h-[52px] rounded-[12px] select-none flex items-end p-1.5 overflow-hidden transition-shadow"
+                      style={{ background: def.gradient, boxShadow: on ? '0 0 0 2px var(--color-bg-surface), 0 0 0 3.5px #D4AF37' : 'inset 0 0 0 0.5px rgb(var(--rgb-ink) / 0.12)' }}
+                    >
+                      <span className="text-[9px] font-semibold leading-tight" style={{ color: def.textPrimary }}>{def.label}</span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
-          )}
-
-          <button onClick={handleSave} disabled={!canSave}
-            className={cn('w-full py-3.5 rounded-[14px] text-[15px] font-semibold transition-all select-none', canSave ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-faint')}>
-            Save Changes
-          </button>
+          ))}
         </div>
-      </div>
-    </>
+      </FormGroup>
+
+      <FormGroup header="Texture" plain>
+        <div className="-mx-4 -my-3">
+          <ChoiceChips
+            options={Object.keys(CARD_TEXTURE_DEFS) as CardTexture[]}
+            labels={Object.fromEntries(Object.entries(CARD_TEXTURE_DEFS).map(([k, v]) => [k, v.label])) as Partial<Record<CardTexture, string>>}
+            value={texture}
+            onChange={setTexture}
+          />
+        </div>
+      </FormGroup>
+    </Sheet>
   )
 }

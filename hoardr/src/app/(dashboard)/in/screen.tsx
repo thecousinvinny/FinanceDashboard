@@ -127,12 +127,15 @@ function IncomeBarChart({ incomeList }: { incomeList: IncomeRow[] }) {
 
   const maxVal = Math.max(...months.map(m => m.total), 1)
 
+  // Grow from zero only when the screen is shown. A data refresh (and a
+  // return to the tab triggers a couple) must not reset the bars — that made
+  // them bounce up and down; new totals just ease to their new height.
   useEffect(() => {
     setAnimated(false)
-    if (visit === 0) return   // grow the bars when shown, every time it's shown
+    if (visit === 0) return
     const t = setTimeout(() => setAnimated(true), 30)
     return () => clearTimeout(t)
-  }, [incomeList, visit])
+  }, [visit])
 
   const hoveredMonth = hoverIdx !== null ? months[hoverIdx] : null
 

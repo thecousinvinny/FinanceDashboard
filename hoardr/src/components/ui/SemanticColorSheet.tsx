@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import { HexColorPicker, HexColorInput } from 'react-colorful'
 import { cn } from '@/lib/utils'
 import { COLOR_PALETTE } from '@/lib/category-meta'
@@ -11,6 +10,8 @@ import {
   getSemanticColors,
   setSemanticColors as persistSemanticColors,
 } from '@/lib/semantic-colors'
+import { Sheet } from '@/components/ui/Sheet'
+import { FormGroup, FormRow } from '@/components/ui/Form'
 
 const TYPES: Array<{ key: keyof SemanticColors; label: string; defaultHex: string }> = [
   { key: 'income',  label: 'Income',        defaultHex: '#22c55e' },
@@ -195,10 +196,6 @@ interface Props {
 }
 
 export function SemanticColorSheet({ open, onClose }: Props) {
-  const sheetRef      = useRef<HTMLDivElement>(null)
-  const dragStartY    = useRef<number | null>(null)
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
-
   const [colors,  setColors]  = useState<SemanticColors>({})
   const [editing, setEditing] = useState<keyof SemanticColors | null>(null)
   const [draft,   setDraft]   = useState<ColorPref>({ type: 'flat', hex: '#22c55e' })
@@ -214,67 +211,6 @@ export function SemanticColorSheet({ open, onClose }: Props) {
     if (!open) {
       const t = setTimeout(() => setEditing(null), 300)
       return () => clearTimeout(t)
-    }
-  }, [open])
-
-  // Body scroll lock
-  useEffect(() => {
-    if (!open) return
-    const scrollY = window.scrollY
-    document.body.style.position  = 'fixed'
-    document.body.style.top       = `-${scrollY}px`
-    document.body.style.width     = '100%'
-    document.documentElement.style.overscrollBehavior = 'none'
-    let lastY = 0
-    const onStart = (e: TouchEvent) => { lastY = e.touches[0].clientY }
-    const onMove  = (e: TouchEvent) => {
-      const el = scrollAreaRef.current
-      if (!el?.contains(e.target as Node)) { e.preventDefault(); return }
-      const dy = e.touches[0].clientY - lastY
-      lastY = e.touches[0].clientY
-      const { scrollTop, scrollHeight, clientHeight } = el
-      if ((scrollTop <= 0 && dy > 0) || (scrollTop + clientHeight >= scrollHeight - 1 && dy < 0)) e.preventDefault()
-    }
-    document.addEventListener('touchstart', onStart, { passive: true })
-    document.addEventListener('touchmove',  onMove,  { passive: false })
-    return () => {
-      document.body.style.position  = ''
-      document.body.style.top       = ''
-      document.body.style.width     = ''
-      document.documentElement.style.overscrollBehavior = ''
-      document.removeEventListener('touchstart', onStart)
-      document.removeEventListener('touchmove',  onMove)
-      window.scrollTo(0, scrollY)
-    }
-  }, [open])
-
-  // Keyboard-aware scroll: scroll focused field above keyboard
-  useEffect(() => {
-    if (!open) return
-    const vv = window.visualViewport
-    if (!vv) return
-    const onResize = () => {
-      const sc = scrollAreaRef.current
-      if (!sc) return
-      const kbH = Math.max(0, window.innerHeight - vv.height)
-      if (kbH > 50) {
-        sc.style.paddingBottom = `${kbH + 24}px`
-        requestAnimationFrame(() => {
-          const focused = document.activeElement as HTMLElement | null
-          if (!focused || !sc.contains(focused)) return
-          const clearance = vv.height - 16
-          if (focused.getBoundingClientRect().bottom > clearance) {
-            sc.scrollTop += focused.getBoundingClientRect().bottom - clearance
-          }
-        })
-      } else {
-        sc.style.paddingBottom = ''
-      }
-    }
-    vv.addEventListener('resize', onResize)
-    return () => {
-      vv.removeEventListener('resize', onResize)
-      if (scrollAreaRef.current) scrollAreaRef.current.style.paddingBottom = ''
     }
   }, [open])
 
@@ -306,132 +242,39 @@ export function SemanticColorSheet({ open, onClose }: Props) {
     return `linear-gradient(${c.angle}deg, ${c.from}, ${c.to})`
   }
 
-  // Drag dismiss
-  function onDragStart(e: React.TouchEvent) { dragStartY.current = e.touches[0].clientY }
-  function onDragMove(e: React.TouchEvent) {
-    if (dragStartY.current === null || !sheetRef.current) return
-    const dy = Math.max(0, e.touches[0].clientY - dragStartY.current)
-    sheetRef.current.style.transform  = `translateY(${dy}px)`
-    sheetRef.current.style.transition = 'none'
-  }
-  function onDragEnd(e: React.TouchEvent) {
-    if (!sheetRef.current) return
-    const dy = dragStartY.current !== null
-      ? Math.max(0, e.changedTouches[0].clientY - dragStartY.current)
-      : 0
-    dragStartY.current = null
-    if (dy > 80) {
-      sheetRef.current.style.transition = 'transform 0.28s cubic-bezier(0.4,0,0.2,1)'
-      sheetRef.current.style.transform  = 'translateY(100%)'
-      setTimeout(() => {
-        if (sheetRef.current) { sheetRef.current.style.transform = ''; sheetRef.current.style.transition = '' }
-        onClose()
-      }, 280)
-    } else {
-      sheetRef.current.style.transform  = ''
-      sheetRef.current.style.transition = ''
-    }
-  }
-
   const editingMeta = editing ? TYPES.find(t => t.key === editing) : null
 
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        onClick={onClose}
-        className={cn(
-          'fixed inset-0 z-[59] transition-opacity duration-300',
-          open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
-        )}
-        style={{ background: 'rgba(0,0,0,0.72)' }}
-      />
-
-      {/* Sheet */}
-      <div
-        ref={sheetRef}
-        className={cn(
-          'fixed inset-x-0 bottom-0 z-[60] rounded-t-[24px] bg-bg-surface transition-transform duration-300',
-          open ? 'translate-y-0' : 'translate-y-full',
-        )}
-        style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)', height: 'calc(100dvh - env(safe-area-inset-top, 44px) - 8px)', display: 'flex', flexDirection: 'column' }}
-      >
-        {/* Drag handle */}
-        <div
-          onTouchStart={onDragStart}
-          onTouchMove={onDragMove}
-          onTouchEnd={onDragEnd}
-          className="flex justify-center pt-3 pb-3"
-          style={{ touchAction: 'none' }}
-        >
-          <div className="w-9 h-1 rounded-full bg-ink/20" />
+    <Sheet
+      open={open}
+      onClose={editing ? () => setEditing(null) : onClose}
+      title={editingMeta?.label ?? 'Accent Colors'}
+      cancelLabel={editing ? 'Back' : 'Done'}
+    >
+      {!editing ? (
+        <FormGroup footer="Used for amounts, charts and icons across the app.">
+          {TYPES.map(({ key, label }) => (
+            <FormRow key={key} chevron onClick={() => openEditor(key)} label={
+              <span className="flex items-center gap-3">
+                <span className="w-[22px] h-[22px] rounded-full flex-shrink-0" style={{ background: getCurrentSwatch(key), boxShadow: '0 0 0 0.5px rgb(var(--rgb-ink) / 0.15)' }} />
+                {label}
+              </span>
+            }>
+              {colors[key] ? 'Custom' : 'Default'}
+            </FormRow>
+          ))}
+        </FormGroup>
+      ) : (
+        <div className="pt-3">
+          <ColorPicker
+            key={editing}
+            value={draft}
+            onChange={setDraft}
+            onApply={applyDraft}
+            onReset={colors[editing] ? resetCurrent : undefined}
+          />
         </div>
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 mb-5">
-          {editing ? (
-            <button onClick={() => setEditing(null)} className="flex items-center gap-1 text-gold">
-              <ChevronLeft size={18} strokeWidth={2} />
-              <span className="text-[14px] font-medium">Back</span>
-            </button>
-          ) : (
-            <h2 className="text-[18px] font-bold text-ink">Accent Colors</h2>
-          )}
-          <button
-            onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center text-[22px] leading-none text-ink-muted"
-          >
-            ×
-          </button>
-        </div>
-
-        {/* Content */}
-        <div
-          ref={scrollAreaRef}
-          className="px-5 overflow-y-auto"
-          style={{
-            flex:               1,
-            paddingBottom:      'calc(env(safe-area-inset-bottom, 0px) + 32px)',
-            overflowX:          'hidden',
-            overscrollBehavior: 'contain',
-          }}
-        >
-          {!editing ? (
-            <div className="bg-bg-overlay border border-ink/[0.06] rounded-[18px] overflow-hidden divide-y divide-ink/[0.04]">
-              {TYPES.map(({ key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => openEditor(key)}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-ink/[0.03]"
-                >
-                  <div
-                    className="w-7 h-7 rounded-full flex-shrink-0 ring-1 ring-ink/[0.12]"
-                    style={{ background: getCurrentSwatch(key) }}
-                  />
-                  <p className="flex-1 text-[14px] font-medium text-ink">{label}</p>
-                  {colors[key] && (
-                    <span className="text-[11px] text-gold mr-1">Custom</span>
-                  )}
-                  <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
-                </button>
-              ))}
-            </div>
-          ) : (
-            <>
-              {editingMeta && (
-                <p className="text-[11px] text-ink-muted mb-4">{editingMeta.label}</p>
-              )}
-              <ColorPicker
-                key={editing}
-                value={draft}
-                onChange={setDraft}
-                onApply={applyDraft}
-                onReset={colors[editing] ? resetCurrent : undefined}
-              />
-            </>
-          )}
-        </div>
-      </div>
-    </>
+      )}
+    </Sheet>
   )
 }

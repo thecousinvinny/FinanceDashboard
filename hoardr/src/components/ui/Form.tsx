@@ -1,7 +1,6 @@
 'use client'
 
 import { ChevronRight, type LucideIcon } from 'lucide-react'
-import { categoryMeta } from '@/lib/category-meta'
 import { getCategoryIcon } from '@/components/ui/CategoryIcon'
 import { cn, haptic } from '@/lib/utils'
 
@@ -10,6 +9,10 @@ import { cn, haptic } from '@/lib/utils'
  * theme's ink channel at low alpha, so they read correctly in every theme,
  * light or dark.
  */
+
+/** An existing amount as the AmountHero's editable string: 6.5 → "6.50", 12 → "12". */
+export const amountStr = (n: number | null | undefined): string =>
+  n == null ? '' : Number.isInteger(n) ? String(n) : n.toFixed(2)
 
 /** Text input/textarea inside a FormRow — right-aligned like iOS value fields. */
 export const rowInput =
@@ -39,14 +42,11 @@ export function FormGroup({ header, footer, children, className, plain }: {
   )
 }
 
-/** iOS Settings-style tinted icon square. */
-export function RowIcon({ icon: Icon, color = '#D4AF37' }: { icon: LucideIcon; color?: string }) {
+/** Row glyph — plain and muted, like the rest of the app (no colored tiles). */
+export function RowIcon({ icon: Icon }: { icon: LucideIcon; color?: string }) {
   return (
-    <span
-      className="flex items-center justify-center w-[29px] h-[29px] rounded-[7px] flex-shrink-0"
-      style={{ background: color }}
-    >
-      <Icon size={17} strokeWidth={2} color="#fff" />
+    <span className="flex items-center justify-center w-[22px] flex-shrink-0 text-ink-muted">
+      <Icon size={18} strokeWidth={1.75} />
     </span>
   )
 }
@@ -72,7 +72,7 @@ export function FormRow({ icon, iconColor, label, children, onClick, chevron, al
         onClick && 'active:bg-[rgb(var(--rgb-ink)/0.06)] transition-colors',
         className,
       )}
-      style={{ ['--sep-inset' as string]: icon ? '58px' : '16px' }}
+      style={{ ['--sep-inset' as string]: icon ? '50px' : '16px' }}
     >
       {icon && <RowIcon icon={icon} color={iconColor} />}
       {label !== undefined && <span className="text-[16px] text-ink flex-shrink-0">{label}</span>}
@@ -206,7 +206,6 @@ export function CategoryPicker({ categories, value, onChange, type, optional }: 
     <div className="grid grid-cols-4 gap-y-3 gap-x-1 px-2 py-4">
       {categories.map(cat => {
         const Icon   = getCategoryIcon(cat.name, type)
-        const color  = categoryMeta[cat.name]?.color ?? (type === 'Income' ? '#22c55e' : '#D4AF37')
         const active = value === cat.name
         return (
           <button
@@ -215,15 +214,15 @@ export function CategoryPicker({ categories, value, onChange, type, optional }: 
             onClick={() => { haptic('tap'); onChange(active && optional ? null : cat.name) }}
             className="flex flex-col items-center gap-1.5 select-none active:scale-95 transition-transform"
           >
+            {/* Same icon cell as Hoard's lists: neutral tile, semantic glyph */}
             <span
-              className="flex items-center justify-center w-[46px] h-[46px] rounded-full"
-              style={{
-                background: active ? color : `${color}26`,
-                boxShadow: active ? `0 0 0 2px var(--color-bg-surface), 0 0 0 4px ${color}` : 'none',
-                transition: 'background 0.2s ease, box-shadow 0.2s ease',
-              }}
+              className={cn(
+                'flex items-center justify-center w-[46px] h-[46px] rounded-[14px] bg-bg-overlay transition-shadow duration-200',
+                type === 'Income' ? 'text-emerald' : 'text-gold',
+              )}
+              style={{ boxShadow: active ? '0 0 0 1.5px currentColor' : '0 0 0 1px rgb(var(--rgb-ink) / 0.06)' }}
             >
-              <Icon size={20} strokeWidth={active ? 2.25 : 1.9} color={active ? '#fff' : color} />
+              <Icon size={19} strokeWidth={active ? 2.1 : 1.75} />
             </span>
             <span className={cn('text-[11px] leading-tight truncate max-w-full', active ? 'text-ink font-semibold' : 'text-ink-muted')}>
               {cat.name}
@@ -236,10 +235,11 @@ export function CategoryPicker({ categories, value, onChange, type, optional }: 
 }
 
 /** Choice chips for short option sets (billing cycle, source, frequency). */
-export function ChoiceChips<T extends string>({ options, value, onChange }: {
+export function ChoiceChips<T extends string>({ options, value, onChange, labels }: {
   options:  readonly T[]
   value:    T | null
   onChange: (v: T) => void
+  labels?:  Partial<Record<T, string>>
 }) {
   return (
     <div className="flex flex-wrap gap-2 px-4 py-3">
@@ -256,7 +256,7 @@ export function ChoiceChips<T extends string>({ options, value, onChange }: {
             )}
             style={active ? undefined : { background: 'rgb(var(--rgb-ink) / 0.08)' }}
           >
-            {o}
+            {labels?.[o] ?? o}
           </button>
         )
       })}

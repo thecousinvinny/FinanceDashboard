@@ -2,21 +2,22 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Check, ChevronRight, CreditCard, LogOut, CalendarDays, Tag, Settings2, Palette, CalendarCheck, Smartphone, Monitor, Trash2 } from 'lucide-react'
+import { ArrowLeft, Check, CreditCard, LogOut, CalendarDays, Tag, Settings2, Palette, CalendarCheck, Smartphone, Monitor } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { connectGoogleCalendar } from '@/lib/gcal-connect'
 import { showToast } from '@/lib/toast'
-import { cn } from '@/lib/utils'
 import { type Theme, THEMES, applyTheme, readTheme } from '@/lib/theme'
 import { CalendarSettingsSheet, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
 import { SemanticColorSheet } from '@/components/ui/SemanticColorSheet'
-import { type IconColorMode, getIconColorMode, setIconColorMode } from '@/lib/category-meta'
 import { getWeekStartsMonday, setWeekStartsMonday } from '@/lib/week-start'
 import { applySemanticColors } from '@/lib/semantic-colors'
 import { calFetch } from '@/lib/calendar'
 import { useOnScreenReturn } from '@/lib/tab-nav'
+import { Sheet } from '@/components/ui/Sheet'
+import { FormGroup, FormRow, Segmented } from '@/components/ui/Form'
 
 const DEFAULT_PREFS: CalPrefs = { visibleTypes: ['sub', 'income'], googleCalendarIds: [] }
+const WEEK_START = ['Sun', 'Mon'] as const
 
 interface SettingsCard { id: string; name: string; last4: string | null }
 
@@ -74,7 +75,6 @@ export default function SettingsPage() {
   const supabase  = useMemo(() => createClient(), [])
 
   const [theme,                setTheme]                = useState<Theme>('obsidian')
-  const [iconMode,             setIconMode]             = useState<IconColorMode>('category')
   const [email,                setEmail]                = useState<string | null>(null)
   const [wsMon,                setWsMon]                = useState(false)
   const [calOpen,              setCalOpen]              = useState(false)
@@ -94,7 +94,6 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setTheme(readTheme())
-    setIconMode(getIconColorMode())
     setWsMon(getWeekStartsMonday())
     applySemanticColors()
   }, [])
@@ -142,17 +141,7 @@ export default function SettingsPage() {
       .finally(() => setCalsLoading(false))
   }, [calOpen, googleCals.length])
 
-  const anyPickerOpen = defaultCardOpen
-
-  useEffect(() => {
-    if (!anyPickerOpen) return
-    document.documentElement.style.overflow = 'hidden'
-    return () => { document.documentElement.style.overflow = '' }
-  }, [anyPickerOpen])
-
   function selectTheme(t: Theme) { setTheme(t); applyTheme(t) }
-
-  function selectIconMode(m: IconColorMode) { setIconMode(m); setIconColorMode(m) }
 
   function selectWsMon(v: boolean) { setWsMon(v); setWeekStartsMonday(v) }
 
@@ -213,300 +202,142 @@ export default function SettingsPage() {
   return (
     <>
     <div className="min-h-screen bg-bg-base tab-enter pb-28">
+      <div className="mx-auto w-full max-w-[640px] px-4 md:px-6">
 
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 pb-4" style={{ paddingTop: 'calc(env(safe-area-inset-top, 44px) + 8px)' }}>
-        <button
-          onClick={() => router.back()}
-          className="w-9 h-9 flex items-center justify-center rounded-full bg-bg-overlay text-ink-muted"
-        >
-          <ArrowLeft size={18} strokeWidth={2} />
-        </button>
-        <h1 className="text-[22px] font-bold tracking-[-0.02em] text-ink">Settings</h1>
-      </div>
-
-      {/* ── Accounts ───────────────────────────────────────────────────────── */}
-      <div className="px-5 mb-6">
-        <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Accounts</p>
-        <div className="bg-bg-surface border border-ink/[0.06] rounded-card overflow-hidden divide-y divide-ink/[0.04]">
+        {/* Header */}
+        <div className="flex items-center gap-3 pb-2" style={{ paddingTop: 'calc(env(safe-area-inset-top, 44px) + 8px)' }}>
           <button
-            onClick={() => router.push('/settings/categories')}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-ink/[0.03]"
+            onClick={() => router.back()}
+            aria-label="Back"
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-bg-overlay text-ink-muted active:scale-95 transition-transform"
           >
-            <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-ink/[0.06] flex items-center justify-center flex-shrink-0">
-              <Tag size={15} className="text-gold" strokeWidth={1.75} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-medium text-ink">Categories</p>
-              <p className="text-[11px] text-ink-muted">Icons and colors</p>
-            </div>
-            <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
+            <ArrowLeft size={18} strokeWidth={2} />
           </button>
-
-          <button
-            onClick={() => setDefaultCardOpen(true)}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-ink/[0.03]"
-          >
-            <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-ink/[0.06] flex items-center justify-center flex-shrink-0">
-              <CreditCard size={15} className="text-gold" strokeWidth={1.75} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-medium text-ink">Default Card</p>
-              <p className="text-[11px] text-ink-muted">{defaultCardName ?? 'None set'}</p>
-            </div>
-            <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
-          </button>
+          <h1 className="text-[28px] font-bold tracking-[-0.02em] text-ink">Settings</h1>
         </div>
-      </div>
 
-      {/* ── Defaults ───────────────────────────────────────────────────────── */}
-      <div className="px-5 mb-6">
-        <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Defaults</p>
-        <div className="bg-bg-surface border border-ink/[0.06] rounded-card overflow-hidden divide-y divide-ink/[0.04]">
-          <button
-            onClick={() => router.push('/settings/defaults')}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-ink/[0.03]"
-          >
-            <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-ink/[0.06] flex items-center justify-center flex-shrink-0">
-              <Settings2 size={15} className="text-gold" strokeWidth={1.75} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-medium text-ink">Form Defaults</p>
-              <p className="text-[11px] text-ink-muted">Card, bank, category, billing</p>
-            </div>
-            <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
-          </button>
-        </div>
-      </div>
+        {/* Account */}
+        {email && (
+          <FormGroup>
+            <FormRow label={
+              <span className="flex items-center gap-3 min-w-0">
+                <span className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center flex-shrink-0 text-[15px] font-bold text-[#1a1200]">
+                  {email.charAt(0).toUpperCase()}
+                </span>
+                <span className="flex flex-col min-w-0">
+                  <span className="text-[16px] font-medium text-ink truncate">{email}</span>
+                  <span className="text-[13px] text-ink-muted">Signed in with Google</span>
+                </span>
+              </span>
+            } />
+          </FormGroup>
+        )}
 
-      {/* ── Appearance ─────────────────────────────────────────────────────── */}
-      <div className="px-5 mb-6">
-        <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Appearance</p>
-        <div className="grid grid-cols-3 gap-2.5">
-          {THEMES.map(t => {
-            const active = theme === t.id
-            return (
-              <button
-                key={t.id}
-                onClick={() => selectTheme(t.id)}
-                className={cn(
-                  'rounded-[14px] p-2.5 text-left border transition-colors',
-                  active
-                    ? 'border-gold/50 bg-bg-overlay'
-                    : 'border-ink/[0.06] bg-bg-overlay'
-                )}
-              >
-                <div className="flex gap-1 mb-2">
-                  {t.swatches.map((color, i) => (
-                    <div
-                      key={i}
-                      className="h-6 rounded-[5px] flex-1"
-                      style={{ background: color, border: '1px solid rgba(0,0,0,0.08)' }}
-                    />
-                  ))}
-                </div>
-                <div className="flex items-start justify-between gap-1">
-                  <div>
-                    <p className="text-[11px] font-semibold text-ink leading-tight">{t.label}</p>
-                    <p className="text-[9px] text-ink-muted leading-tight mt-0.5">{t.subtitle}</p>
+        {/* Appearance */}
+        <FormGroup header="Appearance" plain>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+            {THEMES.map(t => {
+              const active = theme === t.id
+              const [base, surface, accent] = t.swatches
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => selectTheme(t.id)}
+                  className="rounded-[14px] p-2 text-left bg-bg-surface transition-shadow"
+                  style={{ boxShadow: active ? '0 0 0 2px #D4AF37' : '0 0 0 0.5px rgb(var(--rgb-ink) / 0.1)' }}
+                >
+                  {/* Mini preview of the theme */}
+                  <div className="h-[58px] rounded-[9px] p-2 flex flex-col gap-1.5 overflow-hidden" style={{ background: base, boxShadow: 'inset 0 0 0 0.5px rgba(0,0,0,0.08)' }}>
+                    <div className="h-[18px] rounded-[5px]" style={{ background: surface, boxShadow: '0 0 0 0.5px rgba(0,0,0,0.06)' }} />
+                    <div className="h-[6px] w-1/2 rounded-full" style={{ background: accent }} />
                   </div>
-                  {active && (
-                    <div className="w-[15px] h-[15px] rounded-full gradient-gold flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Check size={8} className="text-white" strokeWidth={2.5} />
+                  <div className="flex items-center justify-between gap-1 px-0.5 pt-2 pb-0.5">
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-semibold text-ink leading-tight truncate">{t.label}</p>
+                      <p className="text-[11px] text-ink-muted leading-tight">{t.subtitle}</p>
                     </div>
-                  )}
-                </div>
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Accent colors */}
-        <div className="mt-4">
-          <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Accent Colors</p>
-          <button
-            onClick={() => setSemColorsOpen(true)}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left bg-bg-overlay border border-ink/[0.06] rounded-card active:bg-ink/[0.03]"
-          >
-            <div className="w-8 h-8 rounded-[10px] bg-bg-surface ring-1 ring-ink/[0.06] flex items-center justify-center flex-shrink-0">
-              <Palette size={15} className="text-gold" strokeWidth={1.75} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-medium text-ink">Income, Expense &amp; Subs</p>
-              <p className="text-[11px] text-ink-muted">Flat or gradient accent colors</p>
-            </div>
-            <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
-          </button>
-        </div>
-
-        {/* Icon color mode */}
-        <div className="mt-4">
-          <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Icon Colors</p>
-          <div className="flex gap-2">
-            {([
-              { id: 'category' as IconColorMode, label: 'Category', sub: 'Custom per-category' },
-              { id: 'semantic' as IconColorMode, label: 'Type',     sub: 'Green / White / Gold'  },
-            ]).map(opt => (
-              <button
-                key={opt.id}
-                onClick={() => selectIconMode(opt.id)}
-                className={cn(
-                  'flex-1 rounded-[14px] p-3 text-left border transition-colors',
-                  iconMode === opt.id ? 'border-gold/50 bg-bg-overlay' : 'border-ink/[0.06] bg-bg-overlay'
-                )}
-              >
-                <div className="flex items-start justify-between gap-1">
-                  <div>
-                    <p className="text-[12px] font-semibold text-ink leading-tight">{opt.label}</p>
-                    <p className="text-[10px] text-ink-muted leading-tight mt-0.5">{opt.sub}</p>
+                    {active && <Check size={15} strokeWidth={2.5} className="text-gold flex-shrink-0" />}
                   </div>
-                  {iconMode === opt.id && (
-                    <div className="w-[15px] h-[15px] rounded-full gradient-gold flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Check size={8} className="text-white" strokeWidth={2.5} />
-                    </div>
-                  )}
-                </div>
-              </button>
-            ))}
+                </button>
+              )
+            })}
           </div>
-        </div>
-      </div>
+        </FormGroup>
 
-      {/* ── Calendar ───────────────────────────────────────────────────────── */}
-      <div className="px-5 mb-6">
-        <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Calendar</p>
-        <div className="bg-bg-surface border border-ink/[0.06] rounded-card overflow-hidden divide-y divide-ink/[0.04]">
-          <button
-            onClick={() => setCalOpen(true)}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-ink/[0.03]"
-          >
-            <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-ink/[0.06] flex items-center justify-center flex-shrink-0">
-              <CalendarDays size={15} className="text-gold" strokeWidth={1.75} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-medium text-ink">Filters &amp; Google Calendars</p>
-              <p className="text-[11px] text-ink-muted">Event types, linked calendars</p>
-            </div>
-            <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
-          </button>
+        <FormGroup footer="The colors used for income, expenses and subscriptions throughout the app.">
+          <FormRow icon={Palette} label="Accent colors" chevron onClick={() => setSemColorsOpen(true)}>
+            <span className="flex items-center gap-1.5">
+              {['var(--sem-income)', 'var(--sem-expense)', 'var(--sem-sub)'].map(c => (
+                <span key={c} className="w-3.5 h-3.5 rounded-full" style={{ background: c, boxShadow: '0 0 0 0.5px rgb(var(--rgb-ink) / 0.15)' }} />
+              ))}
+            </span>
+          </FormRow>
+        </FormGroup>
 
-          {/* Connect / reconnect Google Calendar — re-grants access without signing out */}
-          <button
-            onClick={reconnectCalendar}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-ink/[0.03]"
-          >
-            <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-ink/[0.06] flex items-center justify-center flex-shrink-0">
-              <CalendarCheck size={15} className="text-emerald" strokeWidth={1.75} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-medium text-ink">Connect Google Calendar</p>
-              <p className="text-[11px] text-ink-muted">Re-grant access if events stop syncing — no sign-out needed</p>
-            </div>
-            <ChevronRight size={16} className="text-ink-faint flex-shrink-0" strokeWidth={1.75} />
-          </button>
+        {/* Money */}
+        <FormGroup header="Money">
+          <FormRow icon={Tag} label="Categories" chevron onClick={() => router.push('/settings/categories')} />
+          <FormRow icon={CreditCard} label="Default card" chevron onClick={() => setDefaultCardOpen(true)}>
+            <span className="truncate">{defaultCardName ?? 'None'}</span>
+          </FormRow>
+          <FormRow icon={Settings2} label="Form defaults" chevron onClick={() => router.push('/settings/defaults')}>
+            <span className="truncate">Bank, category, billing</span>
+          </FormRow>
+        </FormGroup>
 
-          {/* Week starts on */}
-          <div className="px-4 py-3.5 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-ink/[0.06] flex items-center justify-center flex-shrink-0">
-              <CalendarDays size={15} className="text-gold" strokeWidth={1.75} />
+        {/* Calendar */}
+        <FormGroup header="Calendar" footer="Reconnect if events stop syncing — you stay signed in.">
+          <FormRow icon={CalendarDays} label="Calendars & filters" chevron onClick={() => setCalOpen(true)} />
+          <FormRow icon={CalendarCheck} label="Connect Google Calendar" chevron onClick={reconnectCalendar} />
+          <FormRow label="Week starts on">
+            <div className="w-[128px]">
+              <Segmented options={WEEK_START} value={wsMon ? 'Mon' : 'Sun'} onChange={v => selectWsMon(v === 'Mon')} />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-medium text-ink">Week Starts On</p>
-            </div>
-            <div className="flex rounded-[10px] overflow-hidden border border-ink/[0.08] flex-shrink-0">
-              {(['Sun', 'Mon'] as const).map((label, idx) => {
-                const active = idx === 0 ? !wsMon : wsMon
-                return (
-                  <button
-                    key={label}
-                    onClick={() => selectWsMon(idx === 1)}
-                    className={cn(
-                      'px-3 py-1.5 text-[12px] font-semibold transition-colors',
-                      active ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted'
-                    )}
-                  >{label}</button>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
+          </FormRow>
+        </FormGroup>
 
-      {/* ── Devices & Sessions ─────────────────────────────────────────────── */}
-      <div className="px-5 mb-6">
-        <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Devices &amp; Sessions</p>
-        <div className="bg-bg-surface border border-ink/[0.06] rounded-card overflow-hidden divide-y divide-ink/[0.04]">
+        {/* Devices */}
+        <FormGroup header="Devices & sessions" footer="Sign out any device you don’t recognize. Your other devices stay signed in.">
           {sessionsLoading ? (
-            <div className="px-4 py-4 text-[12px] text-ink-faint">Loading sessions…</div>
+            <FormRow label={<span className="text-ink-muted">Loading…</span>} />
           ) : sessions.length === 0 ? (
-            <div className="px-4 py-4 text-[12px] text-ink-faint">No other sessions.</div>
+            <FormRow label={<span className="text-ink-muted">No sessions</span>} />
           ) : (
             sessions.map(s => {
               const { os, browser, isPhone } = deviceLabel(s.user_agent)
-              const DeviceIcon = isPhone ? Smartphone : Monitor
               return (
-                <div key={s.id} className="flex items-center gap-3 px-4 py-3.5">
-                  <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-ink/[0.06] flex items-center justify-center flex-shrink-0">
-                    <DeviceIcon size={15} className={s.is_current ? 'text-emerald' : 'text-gold'} strokeWidth={1.75} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-[14px] font-medium text-ink truncate">{browser} · {os}</p>
-                      {s.is_current && (
-                        <span className="text-[9px] font-semibold text-emerald bg-emerald/10 px-1.5 py-0.5 rounded-full flex-shrink-0">This device</span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-ink-muted truncate">
-                      Last active {relTime(s.refreshed_at ?? s.updated_at)}
-                    </p>
-                  </div>
+                <FormRow key={s.id} icon={isPhone ? Smartphone : Monitor} label={
+                  <span className="flex flex-col min-w-0">
+                    <span className="truncate">{browser} · {os}</span>
+                    <span className="text-[13px] text-ink-muted">
+                      {s.is_current ? 'This device' : `Active ${relTime(s.refreshed_at ?? s.updated_at)}`}
+                    </span>
+                  </span>
+                }>
                   {!s.is_current && (
                     <button
+                      type="button"
                       onClick={() => revokeSession(s)}
                       disabled={revokingId === s.id}
-                      aria-label="Sign out this device"
-                      className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-[10px] text-ruby active:bg-ink/[0.03] disabled:opacity-40"
+                      className="sheet-nav-btn text-[15px] text-ruby px-1 disabled:opacity-40"
                     >
-                      <Trash2 size={15} strokeWidth={1.75} />
+                      Sign out
                     </button>
                   )}
-                </div>
+                </FormRow>
               )
             })
           )}
-        </div>
-        <p className="text-[10px] text-ink-faint mt-2 px-1">
-          Sign out any device you don&apos;t recognize. Your other devices stay logged in.
-        </p>
-      </div>
+        </FormGroup>
 
-      {/* ── App ────────────────────────────────────────────────────────────── */}
-      <div className="px-5">
-        <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">App</p>
-        <div className="bg-bg-surface border border-ink/[0.06] rounded-card overflow-hidden divide-y divide-ink/[0.04]">
-          {email && (
-            <div className="px-4 py-3.5 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full gradient-gold flex items-center justify-center flex-shrink-0">
-                <span className="text-[11px] font-bold text-white">
-                  {email.charAt(0).toUpperCase()}
-                </span>
-              </div>
-              <p className="text-[13px] text-ink-muted truncate">{email}</p>
-            </div>
-          )}
-          <button
-            onClick={signOut}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-ink/[0.03]"
-          >
-            <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-ink/[0.06] flex items-center justify-center flex-shrink-0">
-              <LogOut size={15} className="text-ruby" strokeWidth={1.75} />
-            </div>
-            <span className="text-[14px] font-medium text-ink">Sign Out</span>
-          </button>
-        </div>
-      </div>
+        {/* Sign out */}
+        <FormGroup>
+          <FormRow onClick={signOut} label={<span className="flex items-center gap-2 text-ruby"><LogOut size={17} strokeWidth={1.9} />Sign out</span>} />
+        </FormGroup>
 
       </div>
+    </div>
 
       <SemanticColorSheet
         open={semColorsOpen}
@@ -523,54 +354,27 @@ export default function SettingsPage() {
         onSave={savePrefs}
       />
 
-      {/* ── Default Card picker ── */}
-      <div
-        onClick={() => setDefaultCardOpen(false)}
-        className={cn('fixed inset-0 z-[59] transition-opacity duration-300', defaultCardOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none')}
-        style={{ background: 'rgba(0,0,0,0.72)' }}
-      />
-      <div
-        className={cn('fixed inset-x-0 bottom-0 z-[60] rounded-t-[24px] bg-bg-surface transition-transform duration-300', defaultCardOpen ? 'translate-y-0' : 'translate-y-full')}
-        style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-      >
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-9 h-1 rounded-full bg-ink/20" />
-        </div>
-        <div className="flex items-center justify-between px-5 mb-4">
-          <h2 className="text-[18px] font-bold text-ink">Default Card</h2>
-          <button onClick={() => setDefaultCardOpen(false)} className="w-8 h-8 flex items-center justify-center text-[22px] text-ink-muted">×</button>
-        </div>
-        <div className="px-5 overflow-y-auto" style={{ maxHeight: '60vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 32px)' }}>
+      {/* Default card picker */}
+      <Sheet open={defaultCardOpen} onClose={() => setDefaultCardOpen(false)} title="Default Card" cancelLabel="Done">
+        <FormGroup footer="New expenses start on this card.">
           {settingsCardsLoading ? (
-            <div className="py-10 text-center text-ink-faint text-[13px]">Loading…</div>
+            <FormRow label={<span className="text-ink-muted">Loading…</span>} />
           ) : settingsCards.length === 0 ? (
-            <div className="py-10 text-center text-ink-faint text-[13px]">No cards yet — add one in the In tab.</div>
+            <FormRow label={<span className="text-ink-muted">No cards yet — add one in the In tab</span>} />
           ) : (
-            <div className="bg-bg-overlay border border-ink/[0.06] rounded-[18px] overflow-hidden divide-y divide-ink/[0.04]">
-              {settingsCards.map(card => (
-                <button
-                  key={card.id}
-                  onClick={() => handleSetDefaultCard(card.id)}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-ink/[0.03]"
-                >
-                  <div className="w-8 h-8 rounded-[10px] bg-bg-surface ring-1 ring-ink/[0.06] flex items-center justify-center flex-shrink-0">
-                    <CreditCard size={14} className="text-gold" strokeWidth={1.75} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[14px] font-medium text-ink truncate">{card.name}</p>
-                    {card.last4 && <p className="text-[11px] text-ink-muted">····{card.last4}</p>}
-                  </div>
-                  {card.id === defaultCardId && (
-                    <div className="w-5 h-5 rounded-full gradient-gold flex items-center justify-center flex-shrink-0">
-                      <Check size={9} className="text-white" strokeWidth={2.5} />
-                    </div>
-                  )}
-                </button>
-              ))}
-            </div>
+            settingsCards.map(card => (
+              <FormRow key={card.id} icon={CreditCard} onClick={() => handleSetDefaultCard(card.id)} label={
+                <span className="flex flex-col min-w-0">
+                  <span className="truncate">{card.name}</span>
+                  {card.last4 && <span className="text-[13px] text-ink-muted tabular-nums">•••• {card.last4}</span>}
+                </span>
+              }>
+                {card.id === defaultCardId && <Check size={18} strokeWidth={2.5} className="text-gold" />}
+              </FormRow>
+            ))
           )}
-        </div>
-      </div>
+        </FormGroup>
+      </Sheet>
     </>
   )
 }

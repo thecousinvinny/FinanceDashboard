@@ -13,7 +13,7 @@ import { CustomDateInput } from '@/components/ui/CustomDateInput'
 import { advanceToField } from '@/lib/field-advance'
 import { Select } from '@/components/ui/Select'
 import { Sheet } from '@/components/ui/Sheet'
-import { FormGroup, FormRow, Toggle, Segmented, AmountHero, CategoryPicker, rowInput } from '@/components/ui/Form'
+import { FormGroup, FormRow, Toggle, AmountHero, CategoryPicker, rowInput } from '@/components/ui/Form'
 
 type TxType = 'Expense' | 'Income'
 
@@ -29,12 +29,13 @@ interface Props {
   defaultCardId?:    string | null
   defaultBankId?:    string | null
   defaultCategory?:  string | null
+  /** Which kind of entry this sheet adds. There's no in-sheet switch — each
+   *  FAB action opens the sheet for the one thing it says. */
+  mode?:             TxType
 }
 
-const TYPES = ['Expense', 'Income'] as const
-
-export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = [], defaultCardId, defaultBankId, defaultCategory }: Props) {
-  const [type,          setType]          = useState<TxType>('Expense')
+export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = [], defaultCardId, defaultBankId, defaultCategory, mode = 'Expense' }: Props) {
+  const type = mode
   const [amount,        setAmount]        = useState('')
   const [originalPrice, setOriginalPrice] = useState('')
   const [hasDiscount,   setHasDiscount]   = useState(false)
@@ -47,13 +48,6 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
 
   const categories = type === 'Expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES
 
-  useEffect(() => {
-    // On tab switch (and mount): restore the default category for expenses, clear for income.
-    // Setting the default here instead of null avoids clobbering it on mount.
-    setCategory(type === 'Expense' ? (defaultCategory ?? null) : null)
-    if (type === 'Income') { setHasDiscount(false); setOriginalPrice('') }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [type])
 
   // Auto-advance: completing one field scrolls/focuses the next
   const scrollRef      = useRef<HTMLDivElement>(null)
@@ -71,13 +65,12 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
       setCategory(type === 'Expense' ? (defaultCategory ?? null) : null)
     } else {
       const t = setTimeout(() => {
-        setType('Expense')
         setAmount('')
         setOriginalPrice('')
         setHasDiscount(false)
         setName('')
         setDescription('')
-        setCategory(defaultCategory ?? null)
+        setCategory(type === 'Expense' ? (defaultCategory ?? null) : null)
         setDate(localToday())
         setCardId(defaultCardId ?? null)
         setBankId(defaultBankId ?? null)
@@ -125,10 +118,6 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
       action={{ label: 'Add', onClick: handleAdd, disabled: !canAdd }}
       scrollRef={scrollRef}
     >
-      <div className="pt-1">
-        <Segmented options={TYPES} value={type} onChange={setType} />
-      </div>
-
       <AmountHero
         value={amount}
         onChange={setAmount}

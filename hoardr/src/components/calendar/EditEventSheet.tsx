@@ -11,6 +11,7 @@ import { DateRangePicker } from './DateRangePicker'
 import { useIsLargeScreen } from '@/lib/use-large-screen'
 import type { GCalendar } from './CalendarSettingsSheet'
 import type { RecurScope } from '@/lib/calendar'
+import { pushLocRecent } from '@/lib/location-prefs'
 
 export interface EditableEvent {
   id?:            string
@@ -446,6 +447,8 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
     // failed (read-only calendar, rejected RRULE, network). onSave reports
     // success; on failure the sheet stays open with the form intact and the
     // caller's toast explains why.
+    // Remember the location (typed text included) for next time's suggestions
+    if (form.location.trim()) pushLocRecent(form.location)
     const ok = await onSave(form, s)
     if (ok === false) { setSaving(false); return }
     onClose()

@@ -42,11 +42,18 @@ function CategoryPillBar({ cat, index, isSub = false, onClick, isExpanded = fals
   const [animPct, setAnimPct] = useState(0)
   const visit = useScreenVisit()   // fill when shown, every time it's shown
 
+  // Fill from zero when the screen is shown; on a data refresh just ease to the
+  // new width instead of resetting (which made the bars jump)
+  const lastVisit = useRef(-1)
   useEffect(() => {
-    setAnimPct(0)
     if (visit === 0) return
-    const t = setTimeout(() => setAnimPct(cat.pct), 50 + index * 80)
-    return () => clearTimeout(t)
+    if (lastVisit.current !== visit) {
+      lastVisit.current = visit
+      setAnimPct(0)
+      const t = setTimeout(() => setAnimPct(cat.pct), 50 + index * 80)
+      return () => clearTimeout(t)
+    }
+    setAnimPct(cat.pct)
   }, [cat.pct, index, visit])
 
   const fillGradient = variant === 'emerald'

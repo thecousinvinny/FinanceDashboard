@@ -280,7 +280,7 @@ export function SparkChart({ points, onHover, gestureMode }: {
               width:        6,
               height:       6,
               borderRadius: '50%',
-              background:   '#161E27',
+              background:   'var(--color-bg-surface)',
               border:       `1.5px solid ${color}`,
               transform:    'translate(-50%, -50%)',
             }} />
@@ -304,7 +304,7 @@ export function SparkChart({ points, onHover, gestureMode }: {
             <p className="text-[11px] font-semibold font-mono text-emerald">Inc {$fc(hovered.inc)}</p>
             <p className="text-[11px] font-semibold font-mono text-gold">Exp {$fc(hovered.exp)}</p>
             {totalSub > 0 && (
-              <p className="text-[11px] font-semibold font-mono" style={{ color: 'rgba(226,234,240,0.7)' }}>
+              <p className="text-[11px] font-semibold font-mono" style={{ color: 'var(--sem-sub)' }}>
                 Sub {$fc(hovered.sub)}
               </p>
             )}

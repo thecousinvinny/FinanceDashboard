@@ -4,7 +4,7 @@ import {
   ArrowLeftRight, RotateCcw, Palette, RefreshCw,
   type LucideIcon,
 } from 'lucide-react'
-import { categoryMeta, ICON_REGISTRY, getIconColorMode } from '@/lib/category-meta'
+import { categoryMeta, ICON_REGISTRY } from '@/lib/category-meta'
 
 const EXPENSE_DEFAULTS: Record<string, LucideIcon> = {
   'Food':          Utensils,
@@ -49,17 +49,15 @@ interface Props {
   strokeWidth?: number
 }
 
-export function CategoryIcon({ category, type, isSub = false, size = 16, className = 'text-ink-muted', strokeWidth = 1.75 }: Props) {
+/**
+ * One minimal look everywhere (the Hoard style): the category's own glyph,
+ * colored by meaning — gold expense, emerald income, muted subscription.
+ * Per-category DB colors are no longer used for icons; they only loaded after
+ * visiting Settings → Categories, so tabs rendered earlier looked different.
+ * `className` is accepted for call-site compatibility but the semantic color wins.
+ */
+export function CategoryIcon({ category, type, isSub = false, size = 16, strokeWidth = 1.75 }: Props) {
   const Icon = getCategoryIcon(category, type)
-
-  if (getIconColorMode() === 'semantic') {
-    const semClass = isSub ? 'sem-sub' : type === 'Income' ? 'text-emerald' : 'text-gold'
-    return <Icon size={size} className={semClass} strokeWidth={strokeWidth} />
-  }
-
-  // Category mode: use DB-stored color via inline style; drop the className when
-  // a custom color exists so CSS !important on text-emerald/text-gold doesn't override it.
-  const color = categoryMeta[category]?.color
-  if (color) return <Icon size={size} strokeWidth={strokeWidth} style={{ color }} />
-  return <Icon size={size} className={className} strokeWidth={strokeWidth} />
+  const semClass = isSub ? 'sem-sub' : type === 'Income' ? 'text-emerald' : 'text-gold'
+  return <Icon size={size} className={semClass} strokeWidth={strokeWidth} />
 }

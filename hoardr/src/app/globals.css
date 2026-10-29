@@ -76,24 +76,40 @@ html.charcoal-slate {
 html.slate-mist {
   color-scheme: light;
 
-  --rgb-bg-base:     216 220 226;   /* #D8DCE2 */
-  --rgb-bg-surface:  228 232 238;   /* #E4E8EE */
-  --rgb-bg-elevated: 235 238 243;   /* #EBEEf3 */
-  --rgb-bg-overlay:  208 213 220;   /* #D0D5DC */
+  /* Light, iOS-style: slate-tinted page, white cards, crisp ink. The old
+     grey-on-grey (#D8DCE2 / #E4E8EE) gave surfaces no separation and washed
+     out the gold and green. */
+  --rgb-bg-base:     239 241 244;   /* #EFF1F4 */
+  --rgb-bg-surface:  255 255 255;   /* #FFFFFF */
+  --rgb-bg-elevated: 255 255 255;   /* #FFFFFF */
+  --rgb-bg-overlay:  232 235 240;   /* #E8EBF0 */
 
-  --rgb-ink:         26 29 34;      /* #1A1D22 */
-  --rgb-ink-muted:   107 114 128;   /* #6B7280 */
-  --rgb-ink-faint:   156 163 175;   /* #9CA3AF */
+  --rgb-ink:         20 23 28;      /* #14171C */
+  --rgb-ink-muted:   99 106 118;    /* #636A76 */
+  --rgb-ink-faint:   150 157 168;   /* #969DA8 */
 
-  --nav-bg:          rgba(216,220,226,0.92);
-  --card-border:     rgba(192,198,206,0.8);
-  --card-divider:    rgba(192,198,206,0.4);
+  --nav-bg:          rgba(248,249,251,0.88);
+  --card-border:     rgba(20,23,28,0.08);
+  --card-divider:    rgba(20,23,28,0.05);
 
-  --color-bg-base:     rgb(216, 220, 226);
-  --color-bg-surface:  rgb(228, 232, 238);
-  --color-bg-elevated: rgb(235, 238, 243);
-  --color-ink:         rgb(26, 29, 34);
-  --color-grid-border: rgb(192, 198, 206);
+  --color-bg-base:     rgb(239, 241, 244);
+  --color-bg-surface:  rgb(255, 255, 255);
+  --color-bg-elevated: rgb(255, 255, 255);
+  --color-ink:         rgb(20, 23, 28);
+  --color-grid-border: rgb(222, 226, 232);
+
+  /* Deeper accents that read on white (users' custom accents still override) */
+  --sem-income:        #15803D;
+  --sem-income-rgb:    21,128,61;
+  --sem-income-from:   #15803D;
+  --sem-income-to:     #15803D;
+  --sem-expense:       #A67C14;
+  --sem-expense-rgb:   166,124,20;
+  --sem-expense-from:  #A67C14;
+  --sem-expense-to:    #A67C14;
+  --sem-sub:           rgba(20,23,28,0.5);
+  --sem-sub-from:      rgba(20,23,28,0.5);
+  --sem-sub-to:        rgba(20,23,28,0.5);
 
   --color-cal-bg:         #d8dce2;
   --color-cal-cell:       #e0e4ea;
@@ -387,10 +403,10 @@ html.charcoal-slate .pac-item-selected { background-color: #323640 !important; }
 html.charcoal-slate .pac-item-query { color: #E8ECF0 !important; }
 
 /* ── Slate Mist border overrides ─────────────────────────────────────────── */
-html.slate-mist .border-ink\/\[0\.06\]  { border-color: rgba(192,198,206,0.8) !important; }
-html.slate-mist .border-ink\/\[0\.04\]  { border-color: rgba(192,198,206,0.4) !important; }
-html.slate-mist .ring-ink\/\[0\.06\]    { --tw-ring-color: rgba(192,198,206,0.8) !important; }
-html.slate-mist .divide-ink\/\[0\.04\] > * + * { border-color: rgba(192,198,206,0.4) !important; }
+html.slate-mist .border-ink\/\[0\.06\]  { border-color: rgba(20,23,28,0.08) !important; }
+html.slate-mist .border-ink\/\[0\.04\]  { border-color: rgba(20,23,28,0.05) !important; }
+html.slate-mist .ring-ink\/\[0\.06\]    { --tw-ring-color: rgba(20,23,28,0.08) !important; }
+html.slate-mist .divide-ink\/\[0\.04\] > * + * { border-color: rgba(20,23,28,0.05) !important; }
 
 /* Drag handles and overlays — invert white-opacity to dark-opacity in light mode */
 html.slate-mist .bg-ink\/20 { background-color: rgba(26,29,34,0.12) !important; }
@@ -404,8 +420,8 @@ html.slate-mist nav[class*="fixed bottom-0"] {
 html.slate-mist .cal-pill-title { color: #1A1D22 !important; }
 
 /* ── Slate Mist — Google Places Autocomplete ──────────────────────────────── */
-html.slate-mist .pac-container { background-color: #EBEEf3 !important; border-color: rgba(192,198,206,0.8) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.08) !important; }
-html.slate-mist .pac-item      { background-color: #EBEEf3 !important; border-color: rgba(192,198,206,0.4) !important; color: #1A1D22 !important; }
+html.slate-mist .pac-container { background-color: #EBEEf3 !important; border-color: rgba(20,23,28,0.08) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.08) !important; }
+html.slate-mist .pac-item      { background-color: #EBEEf3 !important; border-color: rgba(20,23,28,0.05) !important; color: #1A1D22 !important; }
 html.slate-mist .pac-item:hover,
 html.slate-mist .pac-item-selected { background-color: #E4E8EE !important; }
 html.slate-mist .pac-item-query { color: #1A1D22 !important; }
@@ -611,3 +627,5 @@ html.slate-mist { --seg-thumb: #ffffff; }
 .cal-tb-primary:active { transform: scale(0.97); }
 .cal-agenda-ev { cursor: pointer; transition: background 0.12s ease; outline: none; }
 .cal-agenda-ev:hover, .cal-agenda-ev:focus-visible { background: rgb(var(--rgb-ink) / 0.05); }
+.cal-agenda-empty { cursor: pointer; transition: background 0.12s ease; }
+.cal-agenda-empty:hover { background: rgb(var(--rgb-ink) / 0.04); }

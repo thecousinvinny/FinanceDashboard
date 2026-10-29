@@ -106,7 +106,7 @@ Google OAuth via Supabase. Login (`(auth)/login`) calls `signInWithOAuth` with `
 
 ## Greeting (daily brief)
 
-`components/home/GreetingOverlay.tsx` shows on every app launch and doubles as the warm-up screen while `ScreenKeepAlive` mounts the other tabs. It shows today's Google events (via `calFetch`), month-to-date spend with pace vs the same point last month, income/net, bills and paydays in the next 7 days (subscriptions + `revenue_streams`, advanced past stale dates), net worth and en-route orders. Theme colors only.
+`components/home/GreetingOverlay.tsx` shows once per browser session and never twice within 30 minutes (`shouldShow()` — it lives in the layout, so remounts used to re-show it) and doubles as the warm-up screen while `ScreenKeepAlive` mounts the other tabs. It shows today's Google events (via `calFetch`), month-to-date spend with pace vs the same point last month, income/net, bills and paydays in the next 7 days (subscriptions + `revenue_streams`, advanced past stale dates), net worth and en-route orders. Theme colors only.
 
 ## Async safety pattern (required on every `'use client'` page)
 
@@ -151,7 +151,7 @@ Module-level emitter — call from anywhere. `<ToastContainer />` mounted in `(d
 - `nav/BottomNav.tsx` — 4-tab fixed nav, 72px tall. Tab order: Hoard/Out/In/Calendar. All `<Link>` use `replace`. Active = 2px gold bar at **top** of nav, slid with `transform` (not `left`).
 - `nav/TabSwipeNavigator.tsx` — **not mounted anywhere**; file exists but is unused. Inter-tab swipe was removed in favour of `replace` navigation.
 - `hooks/usePillSwipe.ts` — used by `/money` and `/in`. Handles **intra-tab pill switching only** — cross-route navigation was removed. Args: `(tab, setTab, options)`.
-- `ui/CategoryIcon.tsx` — checks `categoryMeta[name]` first (DB icon/color), then hardcoded defaults. `text-gold` expenses, `text-emerald` income. DB color applied via inline `style={{ color }}`, overriding Tailwind.
+- `ui/CategoryIcon.tsx` — glyph from `categoryMeta[name]` (DB icon) or defaults; color is **always semantic** (gold expense, emerald income, `sem-sub` subscription). Per-category DB colors are not used for icons — they loaded late and made tabs inconsistent. `CategoryPicker` and `FormRow` icons follow the same neutral style (no colored tiles).
 - `ui/SwipeToDelete.tsx` — swipe-left-to-delete; `onTap` fires on clean tap only; `actionBg` default `bg-ruby`. `onRight`/`rightLabel`/`rightBg` for right-swipe confirm. Press-scale + haptic built in.
 - `ui/Sheet.tsx` + `ui/Form.tsx` — the iOS sheet and form kit (see Bottom sheet rules). `money/AddTransactionSheet.tsx` is the reference sheet built on them; exports `CardOption`, `BankOption`
 - `wallet/RevenueStreamSheet.tsx` — `RevenueStreamConfig: { id, name, amount, freq, bankId, nextPayDate }`. **No DB ops** — calls `onDone(config)` synchronously.
@@ -243,10 +243,10 @@ Hardcoded gold hex: always `#D4AF37`, never `#f59e0b`.
 
 Three-way semantic rule (Home, Money, `/in`):
 - Income → `text-emerald`
-- Sub payment (name matches active sub, case-insensitive) → `text-white/60`
+- Sub payment (name matches active sub, case-insensitive) → `sem-sub`
 - Regular expense → `text-gold`
 
-When `IconColorMode = 'category'`, use DB-stored color via `categoryMeta` instead. Toggle on Settings page. Use `getIconColorMode()` / `setIconColorMode()`.
+This applies everywhere — the per-category color mode (and its Settings toggle) was removed so every tab matches Home's minimal look.
 
 ## Touch gesture coordination (`gestureMode` ref)
 
@@ -348,7 +348,7 @@ Single client component (`calendar/page.tsx`), two panels on a horizontal rail: 
 
 **`months`** — drives infinite day list. `topSentRef`/`botSentRef` IntersectionObservers skip on large-screen month mode.
 
-**Desktop shell (≥768px)** — one layout for both views: sidebar (mini month that follows the grid, calendar list with color/visibility) + a toolbar (`**Month** Year` title from `deskTitle`, ‹ Today › via `deskNav`, Month/Agenda `Segmented`, filters, New). Month = the Notion grid; Agenda (`calView === 'list'`) = a day-grouped event list on the same `months` / `scrollRef` / `dayRefs` machinery as the phone list (every day keeps a zero-height ref'd anchor so `jumpToMonth` and scroll-to-today work). Agenda events open the desktop popover, not the phone sheet. Single-click an empty day creates (`dismissingRef` makes a click that only closes a popover/selection do nothing else). The grid title samples the **middle** of the visible grid. Calendar colors come from the theme (`--color-cal-*` are mapped to theme surfaces in `globals.css`). `CalendarPopover` registers its outside-click listener once and reads `onClose` via a ref — re-registering on every parent render (cell hovers re-render the page) left it detached.
+**Desktop shell (≥768px)** — one layout for both views: sidebar (mini month that follows the grid, calendar list with color/visibility) + a toolbar (`**Month** Year` title from `deskTitle`, ‹ Today › via `deskNav`, Month/Agenda `Segmented`, filters, New). Month = the Notion grid; Agenda (`calView === 'list'`) = a day-grouped event list on the same `months` / `scrollRef` / `dayRefs` machinery as the phone list (every day keeps a zero-height ref'd anchor so `jumpToMonth` and scroll-to-today work). Agenda events open the desktop popover, not the phone sheet. Double-click a day (grid cell or agenda day) to create; a single click only clears the selection — single-click create made every click between days open the creator. The grid title samples the **middle** of the visible grid. Calendar colors come from the theme (`--color-cal-*` are mapped to theme surfaces in `globals.css`). `CalendarPopover` registers its outside-click listener once and reads `onClose` via a ref — re-registering on every parent render (cell hovers re-render the page) left it detached.
 
 **`notionWeeks`** — large-screen month grid only. 48 weeks centered on today's Sunday. `addWeeks()` uses local `new Date(y, m-1, d + n*7)` (never UTC).
 
@@ -358,7 +358,7 @@ Single client component (`calendar/page.tsx`), two panels on a horizontal rail: 
 
 **Saves are optimistic** — `handlePopoverSave` / `handleCreateEvent` / `handleEditEvent` close the UI, insert a local copy via `putLocalEvent(localGoogleEvent(...))` (creates get a `tmp-` id, which edit entry points ignore), toast, then write to Google in the background and bump `gRefreshKey`. On failure they reopen the popover/sheet with the user's edits. `'following'` scope skips the local copy and waits for the refetch.
 
-**Location favorites/recents** — `src/lib/location-prefs.ts` (localStorage), shared by `LocationPickerSheet` (phone / list view) and `CalendarPopover` (PC month view). Rows containing a star toggle must be `div role="button"`, never a `<button>` — nested buttons swallow the star click on desktop.
+**Location favorites/recents** — `src/lib/location-prefs.ts` (localStorage). Every location an event is saved with is pushed to recents (typed text too); while typing, saved places containing the text are listed above Google's results. Shared shared by `LocationPickerSheet` (phone / list view) and `CalendarPopover` (PC month view). Rows containing a star toggle must be `div role="button"`, never a `<button>` — nested buttons swallow the star click on desktop.
 
 **Finance events** — `CalEvent` type: `type: 'income'|'sub'|'google'`. Custom events carry `recurrenceRule?` and `instanceDate?`.
 

@@ -221,8 +221,13 @@ export function CalendarPopover({
   // moment it matters — on save or delete, and only for a recurring event.
   const [scopeAsk, setScopeAsk] = useState<null | 'save' | 'delete'>(null)
 
+  // Every saved location is remembered, typed free text included, so it comes
+  // back as a suggestion next time without having to star it.
+  function remember() { if (form.location.trim()) setLocRecents(pushLocRecent(form.location)) }
+
   function attemptSave() {
     if (!canSave || saving) return
+    remember()
     const rule = customOpen ? recToRule(rec) : form.recurrenceRule
     if (!isRecurring)      { onSave(formForSave('this')); return }
     // Rewriting the rule can't apply to one instance — skip the prompt.
@@ -239,7 +244,7 @@ export function CalendarPopover({
     const kind = scopeAsk
     setScopeAsk(null)
     if (kind === 'delete') onDelete?.(scope)
-    else                   onSave(formForSave(scope))
+    else                   { remember(); onSave(formForSave(scope)) }
   }
   const [repeatOpen, setRepeatOpen]   = useState(false)
   const [startOpen, setStartOpen]     = useState(false)
@@ -474,10 +479,27 @@ export function CalendarPopover({
     el.style.height = `${el.scrollHeight}px`
   }, [locValue])
 
+  // Favorites + recents containing what's typed — shown above Google's results
+  function savedMatches(q: string): string[] {
+    const ql = q.trim().toLowerCase()
+    if (!ql) return []
+    return [...new Set([...locFavs, ...locRecents])].filter(t => t.toLowerCase().includes(ql)).slice(0, 4)
+  }
+
+  function openLocDrop() {
+    if (locRowRef.current) {
+      const r = locRowRef.current.getBoundingClientRect()
+      setLocDropRect({ top: r.bottom, left: r.left, width: r.width })
+    }
+    setLocOpen(true)
+  }
+
   function handleLocChange(val: string) {
     setLocValue(val)
     setField('location', val)
     if (locTimerRef.current) clearTimeout(locTimerRef.current)
+    // Saved matches show immediately — no waiting on (or needing) Google
+    if (val.trim() && savedMatches(val).length > 0) openLocDrop()
     if (!val.trim()) {
       setLocSuggestions([])
       if (locFavs.length > 0 || locRecents.length > 0) {
@@ -521,7 +543,7 @@ export function CalendarPopover({
             setLocOpen(true)
           } else {
             setLocSuggestions([])
-            setLocOpen(false)
+            setLocOpen(savedMatches(val).length > 0)
           }
         }
       )
@@ -535,6 +557,7 @@ export function CalendarPopover({
     }
     if (locSuggestions.length > 0) setLocOpen(true)
     else if (!locValue && (locFavs.length > 0 || locRecents.length > 0)) setLocOpen(true)
+    else if (savedMatches(locValue).length > 0) setLocOpen(true)
   }
 
   function selectLoc(text: string) {
@@ -737,14 +760,22 @@ export function CalendarPopover({
         >
           {(() => {
             // Empty field → favorites, then recents (minus anything already starred)
-            const showSaved = !locValue.trim() && locSuggestions.length === 0
+            // Empty field → all favorites + recents. Typing → saved matches first, then Google.
+            const typing    = !!locValue.trim()
+            const showSaved = !typing && locSuggestions.length === 0
             const recents   = locRecents.filter(r => !locFavs.includes(r)).slice(0, 5)
-            const rows: Array<{ key: string; text: string; kind: 'fav' | 'recent' | 'place'; main?: string; sec?: string }> = showSaved
+            type Row = { key: string; text: string; kind: 'fav' | 'recent' | 'place'; main?: string; sec?: string }
+            const matches   = typing ? savedMatches(locValue) : []
+            const rows: Row[] = showSaved
               ? [
                   ...locFavs.map(t => ({ key: `f:${t}`, text: t, kind: 'fav' as const })),
                   ...recents.map(t => ({ key: `r:${t}`, text: t, kind: 'recent' as const })),
                 ]
-              : locSuggestions.map(sug => ({ key: sug.placeId, text: sug.description, kind: 'place' as const, main: sug.mainText, sec: sug.secText }))
+              : [
+                  ...matches.map(t => ({ key: `m:${t}`, text: t, kind: locFavs.includes(t) ? 'fav' as const : 'recent' as const })),
+                  ...locSuggestions.filter(sug => !matches.includes(sug.description))
+                    .map(sug => ({ key: sug.placeId, text: sug.description, kind: 'place' as const, main: sug.mainText, sec: sug.secText })),
+                ]
             const labelStyle: React.CSSProperties = { fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: MUTED, padding: '9px 14px 3px' }
             return rows.map((row, i) => {
               const fav     = locFavs.includes(row.text)
@@ -752,7 +783,7 @@ export function CalendarPopover({
               const sameNext = i < rows.length - 1 && rows[i + 1].kind === row.kind
               return (
                 <div key={row.key}>
-                  {showSaved && newKind && <div style={labelStyle}>{row.kind === 'fav' ? 'Favorites' : 'Recent'}</div>}
+                  {newKind && (showSaved || matches.length > 0) && <div style={labelStyle}>{row.kind === 'fav' ? 'Favorites' : row.kind === 'recent' ? 'Recent' : 'Suggestions'}</div>}
                   {/* Row is a div so the star can be a real button inside it */}
                   <div
                     role="button"
@@ -767,7 +798,7 @@ export function CalendarPopover({
                     {row.kind === 'place'  && <MapPin size={14} color={MUTED} style={{ flexShrink: 0, marginTop: 2 }} />}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: row.kind === 'place' ? 14 : 13, color: 'var(--color-ink)', fontWeight: 400, lineHeight: 1.4 }}>
-                        {row.kind === 'place' ? highlightMatch(row.main ?? row.text, locValue) : row.text}
+                        {highlightMatch(row.kind === 'place' ? (row.main ?? row.text) : row.text, locValue)}
                       </div>
                       {row.sec && (
                         <div style={{ fontSize: 12, color: MUTED, fontWeight: 300, lineHeight: 1.4, marginTop: 2 }}>

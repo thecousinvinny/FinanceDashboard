@@ -288,8 +288,6 @@ export default function CalendarPage() {
   // Month-grid weeks whose "+N more" was clicked open. Session-only on purpose:
   // a refresh collapses every row back to the normal height.
   const [expandedWeeks,  setExpandedWeeks]  = useState<Set<string>>(() => new Set())
-  // Set on mousedown when the click only dismisses a popover/selection, so it doesn't also create
-  const dismissingRef = useRef(false)
 
   // Infinite scroll
   const [months, setMonths] = useState<MonthKey[]>(() =>
@@ -1939,8 +1937,9 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                                 key={ds}
                                 data-caldate={ds}
                                 ref={el => { if (el) monthCellRefs.current.set(ds, el); else monthCellRefs.current.delete(ds) }}
-                                onClick={e => {
-                                  if (dismissingRef.current) { dismissingRef.current = false; return }
+                                // Single click only clears a selection; double-click creates on that day
+                                onClick={() => setSelectedEvId(null)}
+                                onDoubleClick={e => {
                                   if ((e.target as HTMLElement).closest('[data-cal-event]')) return
                                   openCreatePopover(e.currentTarget.getBoundingClientRect(), ds)
                                 }}
@@ -1957,9 +1956,6 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                                   handleEventDrop(ev, ds, originDate)
                                 }}
                                 onMouseDown={e => {
-                                  // Remember whether this click is just dismissing something
-                                  dismissingRef.current = !!popover || !!selectedEvId || !!evCtxMenu
-                                  if (dismissingRef.current) setSelectedEvId(null)
                                   if (e.button !== 0 || dragState) return
                                   if ((e.target as HTMLElement).closest('[data-cal-event]')) return
                                   startCreateDrag(ds)
@@ -2119,81 +2115,92 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                     <div style={{ height: 88 }} />
                   </div>
                 </>) : (<>
-                {/* ── Agenda (desktop list) ── days with events, Notion/Fantastical style.
-                    Every day keeps a ref'd anchor (even empty ones) so jump-to-month,
+                {/* ── Agenda (desktop list) ── roomy day-grouped list. Every day keeps a
+                    zero-height ref'd anchor (even empty ones) so jump-to-month,
                     scroll-to-today and the infinite-scroll sentinels keep working. */}
                 <div ref={scrollRef} onScroll={handleDetailScroll} style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', position: 'relative', background: 'var(--color-cal-bg)' }}>
                   <div ref={topSentRef} style={{ height: 1 }} />
-                  <div style={{ maxWidth: 880, margin: '0 auto', padding: '4px 32px 0' }}>
+                  <div style={{ maxWidth: 1080, padding: '8px 48px 0 40px' }}>
                     {months.map(({ year: y, month: m }) => {
                       const dim = getDaysInMonth(y, m)
+                      const days = Array.from({ length: dim }, (_, i) => toDateStr(y, m, i + 1))
+                      const hasAny = days.some(ds => (visibleMap[ds] ?? []).length > 0 || ds === todayStr)
                       return (
                         <section key={`${y}-${m}`}>
-                          <h2 style={{ position: 'sticky', top: 0, zIndex: 2, margin: 0, padding: '18px 0 8px', fontSize: 13, fontWeight: 600, color: 'rgb(var(--rgb-ink-muted))', fontFamily: 'var(--font-montserrat)', background: 'var(--color-cal-bg)', borderBottom: '0.5px solid var(--color-cal-grid-line)' }}>
-                            {new Date(y, m, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                          </h2>
-                          {Array.from({ length: dim }, (_, i) => {
-                            const day    = i + 1
-                            const ds     = toDateStr(y, m, day)
+                          {hasAny && (
+                            <h2 style={{ margin: 0, padding: '28px 0 6px', fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)' }}>
+                              {new Date(y, m, 1).toLocaleDateString('en-US', { month: 'long' })}{' '}
+                              <span style={{ fontWeight: 400, color: 'rgb(var(--rgb-ink-muted))' }}>{y}</span>
+                            </h2>
+                          )}
+                          {days.map((ds, i) => {
                             const isTod  = ds === todayStr
                             const isPast = ds < todayStr
                             const events = visibleMap[ds] ?? []
                             const setRef = (el: HTMLDivElement | null) => { if (el) dayRefs.current.set(ds, el); else dayRefs.current.delete(ds) }
                             if (events.length === 0 && !isTod) return <div key={ds} ref={setRef} style={{ height: 0 }} />
-                            const dt = new Date(y, m, day)
+                            const dt = new Date(y, m, i + 1)
                             return (
                               <div
                                 key={ds}
                                 ref={setRef}
-                                className="cal-agenda-day"
-                                onClick={e => { if ((e.target as HTMLElement).closest('[data-cal-event]')) return; openCreatePopover(e.currentTarget.getBoundingClientRect(), ds) }}
-                                style={{ display: 'flex', gap: 24, padding: '14px 0', borderBottom: '0.5px solid var(--color-cal-grid-line)', cursor: 'default' }}
+                                onDoubleClick={e => { if ((e.target as HTMLElement).closest('[data-cal-event]')) return; openCreatePopover(e.currentTarget.getBoundingClientRect(), ds) }}
+                                style={{ paddingTop: 18 }}
                               >
-                                <div style={{ width: 92, flexShrink: 0, display: 'flex', alignItems: 'baseline', gap: 8, paddingTop: 2 }}>
-                                  <span style={{
-                                    fontSize: 22, fontWeight: 600, lineHeight: 1, fontFamily: 'var(--font-montserrat)', fontVariantNumeric: 'tabular-nums',
-                                    color: isTod ? '#1a1200' : isPast ? 'rgb(var(--rgb-ink-muted))' : 'var(--color-ink)',
-                                    ...(isTod ? { background: '#D4AF37', borderRadius: 999, minWidth: 34, height: 34, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 17 } : {}),
-                                  }}>{day}</span>
-                                  <span style={{ fontSize: 12, fontWeight: 500, color: isTod ? '#D4AF37' : 'rgb(var(--rgb-ink-muted))', fontFamily: 'var(--font-montserrat)' }}>
-                                    {dt.toLocaleDateString('en-US', { weekday: 'short' })}
+                                {/* Day header */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 0 8px', borderBottom: '0.5px solid var(--color-cal-grid-line)', marginBottom: 6 }}>
+                                  <span style={{ fontSize: 15, fontWeight: 600, color: isPast ? 'rgb(var(--rgb-ink-muted))' : 'var(--color-ink)', fontFamily: 'var(--font-montserrat)' }}>
+                                    {dt.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                                   </span>
-                                </div>
-                                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                  {events.length === 0 && (
-                                    <p style={{ fontSize: 13, color: 'rgb(var(--rgb-ink-faint))', fontFamily: 'var(--font-montserrat)', padding: '8px 10px', margin: 0 }}>No events — click to add one</p>
+                                  {isTod && (
+                                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: '#1a1200', background: '#D4AF37', borderRadius: 999, padding: '3px 9px', fontFamily: 'var(--font-montserrat)' }}>TODAY</span>
                                   )}
-                                  {events.map((ev, idx) => {
-                                    const color   = notionColor(ev)
-                                    const timed   = ev.type === 'google' && !!ev.amount
-                                    const editable = ev.type === 'google' && !!ev.id && !ev.id.startsWith('tmp-')
-                                    const sel     = selectedEvId === ev.id && !!ev.id
-                                    return (
-                                      <div
-                                        key={ev.id ?? idx}
-                                        data-cal-event
-                                        role={editable ? 'button' : undefined}
-                                        tabIndex={editable ? 0 : undefined}
-                                        className={editable ? 'cal-agenda-ev' : undefined}
-                                        onClick={editable ? e => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), ev, ds) } : undefined}
-                                        onKeyDown={editable ? e => { if (e.key === 'Enter') openEditPopover(e.currentTarget.getBoundingClientRect(), ev, ds) } : undefined}
-                                        onContextMenu={e => openEvCtx(e, ev, ds)}
-                                        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 10px', borderRadius: 8, opacity: isPast ? 0.6 : 1, background: sel ? 'rgb(var(--rgb-ink) / 0.06)' : undefined }}
-                                      >
-                                        <span style={{ width: 104, flexShrink: 0, fontSize: 13, color: 'rgb(var(--rgb-ink-muted))', fontFamily: 'var(--font-montserrat)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                                          {timed ? getTimeRange(ev) : ev.type === 'google' ? 'All day' : ev.amount}
-                                        </span>
-                                        <span style={{ width: 4, alignSelf: 'stretch', minHeight: 18, borderRadius: 2, background: color, flexShrink: 0 }} />
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                          <p style={{ margin: 0, fontSize: 14.5, fontWeight: 500, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</p>
-                                          {ev.location && (
-                                            <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgb(var(--rgb-ink-muted))', fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.location}</p>
-                                          )}
-                                        </div>
-                                      </div>
-                                    )
-                                  })}
                                 </div>
+                                {events.length === 0 && (
+                                  <p className="cal-agenda-empty" style={{ margin: 0, padding: '12px 14px', fontSize: 14, color: 'rgb(var(--rgb-ink-faint))', fontFamily: 'var(--font-montserrat)', borderRadius: 10 }}>
+                                    Nothing scheduled — double-click to add an event
+                                  </p>
+                                )}
+                                {events.map((ev, idx) => {
+                                  const color    = notionColor(ev)
+                                  const timed    = ev.type === 'google' && !!ev.amount
+                                  const [st, et] = timed ? (getTimeRange(ev) ?? '').split(' – ') : ['', '']
+                                  const editable = ev.type === 'google' && !!ev.id && !ev.id.startsWith('tmp-')
+                                  const sel      = selectedEvId === ev.id && !!ev.id
+                                  return (
+                                    <div
+                                      key={ev.id ?? idx}
+                                      data-cal-event
+                                      role={editable ? 'button' : undefined}
+                                      tabIndex={editable ? 0 : undefined}
+                                      className={editable ? 'cal-agenda-ev' : undefined}
+                                      onClick={editable ? e => { e.stopPropagation(); openEditPopover(e.currentTarget.getBoundingClientRect(), ev, ds) } : undefined}
+                                      onKeyDown={editable ? e => { if (e.key === 'Enter') openEditPopover(e.currentTarget.getBoundingClientRect(), ev, ds) } : undefined}
+                                      onContextMenu={e => openEvCtx(e, ev, ds)}
+                                      style={{ display: 'flex', alignItems: 'stretch', gap: 16, padding: '12px 14px', borderRadius: 10, opacity: isPast ? 0.62 : 1, background: sel ? 'rgb(var(--rgb-ink) / 0.06)' : undefined }}
+                                    >
+                                      <div style={{ width: 92, flexShrink: 0, paddingTop: 1, fontFamily: 'var(--font-montserrat)', fontVariantNumeric: 'tabular-nums' }}>
+                                        {timed ? (
+                                          <>
+                                            <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: 'var(--color-ink)' }}>{st}</p>
+                                            {et && <p style={{ margin: '2px 0 0', fontSize: 12.5, color: 'rgb(var(--rgb-ink-muted))' }}>{et}</p>}
+                                          </>
+                                        ) : (
+                                          <p style={{ margin: 0, fontSize: 13.5, color: 'rgb(var(--rgb-ink-muted))' }}>{ev.type === 'google' ? 'All day' : ev.amount}</p>
+                                        )}
+                                      </div>
+                                      <span style={{ width: 4, borderRadius: 2, background: color, flexShrink: 0 }} />
+                                      <div style={{ flex: 1, minWidth: 0, paddingTop: 1 }}>
+                                        <p style={{ margin: 0, fontSize: 16, fontWeight: 500, lineHeight: 1.35, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</p>
+                                        {(ev.location || ev.notes) && (
+                                          <p style={{ margin: '3px 0 0', fontSize: 13, color: 'rgb(var(--rgb-ink-muted))', fontFamily: 'var(--font-montserrat)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {ev.location || ev.notes}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )
+                                })}
                               </div>
                             )
                           })}
@@ -2202,7 +2209,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                     })}
                   </div>
                   <div ref={botSentRef} style={{ height: 1 }} />
-                  <div style={{ height: 96 }} />
+                  <div style={{ height: 120 }} />
                 </div>
                 </>)}
               </div>

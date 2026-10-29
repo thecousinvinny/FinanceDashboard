@@ -131,7 +131,8 @@ export function HomeHero({ spent, points, annualPoints }: Props) {
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: 'linear-gradient(90deg, rgba(22,30,39,0.85) 0%, rgba(22,30,39,0.5) 45%, rgba(22,30,39,0.0) 70%)',
+          // Fades the chart behind the hero number into the card — theme surface, not a hard-coded dark navy
+          background: 'linear-gradient(90deg, rgb(var(--rgb-bg-surface) / 0.85) 0%, rgb(var(--rgb-bg-surface) / 0.5) 45%, rgb(var(--rgb-bg-surface) / 0) 70%)',
           zIndex: 1,
         }}
       />
@@ -193,8 +194,8 @@ export function HomeHero({ spent, points, annualPoints }: Props) {
             {hoveredPoint ? $fc(legendExp) : $fk(legendExp)}
           </span>
           {hasSub && (
-            <span className="flex items-center gap-1 text-[10px] font-medium" style={{ fontFamily: 'var(--font-big-shoulders)', color: 'rgba(180,185,200,0.8)' }}>
-              <span className="w-2 h-2 rounded-[2px] inline-block flex-shrink-0" style={{ background: 'rgba(180,185,200,0.7)' }}/>
+            <span className="flex items-center gap-1 text-[10px] font-medium" style={{ fontFamily: 'var(--font-big-shoulders)', color: 'var(--sem-sub)' }}>
+              <span className="w-2 h-2 rounded-[2px] inline-block flex-shrink-0" style={{ background: 'var(--sem-sub)' }}/>
               {hoveredPoint ? $fc(legendSub) : $fk(legendSub)}
             </span>
           )}
