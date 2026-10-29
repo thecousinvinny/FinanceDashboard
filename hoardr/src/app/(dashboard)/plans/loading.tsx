@@ -7,7 +7,7 @@ export default function Loading() {
       </div>
 
       {/* Renewal strip */}
-      <div className="mx-4 mt-5 bg-bg-surface border border-white/[0.06] rounded-card p-5">
+      <div className="mx-4 mt-5 bg-bg-surface border border-ink/[0.06] rounded-card p-5">
         <div className="skeleton h-2.5 w-28 mb-4" />
         <div className="flex gap-2 overflow-hidden">
           {Array.from({ length: 10 }).map((_, i) => (
@@ -24,7 +24,7 @@ export default function Loading() {
 
       {/* List rows */}
       <div className="mx-4 mt-5">
-        <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
+        <div className="bg-bg-surface border border-ink/[0.06] rounded-card overflow-hidden divide-y divide-ink/[0.04]">
           {[1, 2, 3, 4].map(i => (
             <div key={i} className="flex items-center gap-3 px-4 py-3.5">
               <div className="skeleton w-10 h-10 rounded-[12px] flex-shrink-0" />

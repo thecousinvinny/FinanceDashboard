@@ -163,7 +163,7 @@ export function PaycheckSheet({ open, onClose, banks, onDone }: Props) {
         {/* Handle */}
         <div onTouchStart={onDragStart} onTouchMove={onDragMove} onTouchEnd={onDragEnd}
           className="flex justify-center pt-3 pb-3" style={{ touchAction: 'none' }}>
-          <div className="w-9 h-1 rounded-full bg-white/20" />
+          <div className="w-9 h-1 rounded-full bg-ink/20" />
         </div>
 
         {/* Header */}
@@ -187,14 +187,14 @@ export function PaycheckSheet({ open, onClose, banks, onDone }: Props) {
               placeholder="Paycheck"
               enterKeyHint="next"
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); advanceTo(amountSecRef.current, amountInputRef.current) } }}
-              className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40"
+              className="w-full bg-bg-overlay border border-ink/[0.08] rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40"
             />
           </div>
 
           {/* Amount */}
           <div ref={amountSecRef}>
             <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Amount per paycheck</p>
-            <div className="flex items-center gap-1.5 bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 focus-within:border-gold/40">
+            <div className="flex items-center gap-1.5 bg-bg-overlay border border-ink/[0.08] rounded-[14px] px-4 py-3 focus-within:border-gold/40">
               <span className="text-[22px] font-light text-ink-muted font-mono">$</span>
               <input
                 ref={amountInputRef}
@@ -217,7 +217,7 @@ export function PaycheckSheet({ open, onClose, banks, onDone }: Props) {
               {FREQUENCIES.map(f => (
                 <button key={f.id} onClick={() => { setFreq(f.id); advanceTo(bankSecRef.current ?? dateSecRef.current) }}
                   className={cn('rounded-[14px] p-3 text-left border transition-colors',
-                    freq === f.id ? 'border-gold/50 bg-bg-overlay' : 'border-white/[0.06] bg-bg-overlay')}>
+                    freq === f.id ? 'border-gold/50 bg-bg-overlay' : 'border-ink/[0.06] bg-bg-overlay')}>
                   <p className={cn('text-[13px] font-semibold leading-tight', freq === f.id ? 'text-gold' : 'text-ink')}>{f.label}</p>
                   <p className="text-[10px] text-ink-muted leading-tight mt-0.5">{f.sub}</p>
                 </button>
@@ -254,7 +254,7 @@ export function PaycheckSheet({ open, onClose, banks, onDone }: Props) {
                 value={startDate}
                 max={localToday()}
                 onChange={d => { setStartDate(d); advanceTo(genBtnRef.current) }}
-                className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3 text-[15px] text-ink outline-none focus:border-gold/40"
+                className="w-full bg-bg-overlay border border-ink/[0.08] rounded-[14px] px-4 py-3 text-[15px] text-ink outline-none focus:border-gold/40"
               />
             </div>
           </div>

@@ -13,7 +13,7 @@ export function Card({ children, className, elevated, onClick }: CardProps) {
     <Tag
       onClick={onClick}
       className={cn(
-        'rounded-card border border-white/[0.06] overflow-hidden',
+        'rounded-card border border-ink/[0.06] overflow-hidden',
         elevated ? 'bg-bg-elevated' : 'bg-bg-surface',
         onClick  ? 'w-full text-left active:scale-[0.98] transition-transform' : '',
         className,

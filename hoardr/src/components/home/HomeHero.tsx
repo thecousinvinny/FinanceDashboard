@@ -96,7 +96,7 @@ export function HomeHero({ spent, points, annualPoints }: Props) {
 
   return (
     <div
-      className="mx-4 mt-5 bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden"
+      className="mx-4 mt-5 bg-bg-surface border border-ink/[0.06] rounded-card overflow-hidden"
       style={{ position: 'relative', height: 240 }}
       onTouchStartCapture={onTouchStartCapture}
       onTouchMoveCapture={onTouchMoveCapture}
@@ -159,7 +159,7 @@ export function HomeHero({ spent, points, annualPoints }: Props) {
                 style={{
                   width:      view === 'month' ? 10 : 4,
                   height:     4,
-                  background: view === 'month' ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.18)',
+                  background: view === 'month' ? 'rgb(var(--rgb-ink) / 0.45)' : 'rgb(var(--rgb-ink) / 0.18)',
                 }}
               />
             </button>
@@ -175,7 +175,7 @@ export function HomeHero({ spent, points, annualPoints }: Props) {
                 style={{
                   width:      view === 'year' ? 10 : 4,
                   height:     4,
-                  background: view === 'year' ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.18)',
+                  background: view === 'year' ? 'rgb(var(--rgb-ink) / 0.45)' : 'rgb(var(--rgb-ink) / 0.18)',
                 }}
               />
             </button>

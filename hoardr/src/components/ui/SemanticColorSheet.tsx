@@ -60,10 +60,10 @@ function ColorPicker({ value, onChange, onApply, onReset }: PickerProps) {
   return (
     <div className="space-y-4">
       {/* Preview bar */}
-      <div className="h-12 rounded-[14px] ring-1 ring-white/[0.08]" style={{ background: previewBg }} />
+      <div className="h-12 rounded-[14px] ring-1 ring-ink/[0.08]" style={{ background: previewBg }} />
 
       {/* Flat / Gradient toggle */}
-      <div className="flex rounded-[10px] overflow-hidden border border-white/[0.08]">
+      <div className="flex rounded-[10px] overflow-hidden border border-ink/[0.08]">
         {(['flat', 'gradient'] as const).map(mode => (
           <button
             key={mode}
@@ -89,11 +89,11 @@ function ColorPicker({ value, onChange, onApply, onReset }: PickerProps) {
               onClick={() => setGradTarget(target)}
               className={cn(
                 'flex-1 flex items-center gap-2.5 px-3 py-2.5 rounded-[12px] border transition-colors',
-                gradTarget === target ? 'border-gold/50 bg-bg-overlay' : 'border-white/[0.06] bg-bg-overlay',
+                gradTarget === target ? 'border-gold/50 bg-bg-overlay' : 'border-ink/[0.06] bg-bg-overlay',
               )}
             >
               <div
-                className="w-5 h-5 rounded-full ring-1 ring-white/[0.12] flex-shrink-0"
+                className="w-5 h-5 rounded-full ring-1 ring-ink/[0.12] flex-shrink-0"
                 style={{ background: target === 'from' ? fromHex : toHex }}
               />
               <p className="text-[13px] font-medium text-ink">{target === 'from' ? 'From' : 'To'}</p>
@@ -106,7 +106,7 @@ function ColorPicker({ value, onChange, onApply, onReset }: PickerProps) {
       <HexColorPicker color={activeHex} onChange={setActiveHex} />
 
       {/* Hex input */}
-      <div className="flex items-center gap-2 bg-bg-overlay border border-white/[0.08] rounded-[12px] px-3 py-2.5">
+      <div className="flex items-center gap-2 bg-bg-overlay border border-ink/[0.08] rounded-[12px] px-3 py-2.5">
         <span className="text-ink-muted text-[14px] font-mono select-none">#</span>
         <HexColorInput
           color={activeHex}
@@ -114,7 +114,7 @@ function ColorPicker({ value, onChange, onApply, onReset }: PickerProps) {
           className="flex-1 bg-transparent text-[14px] font-mono text-ink outline-none uppercase tracking-wider"
           style={{ colorScheme: 'dark' }}
         />
-        <div className="w-6 h-6 rounded-full ring-1 ring-white/[0.12] flex-shrink-0" style={{ background: activeHex }} />
+        <div className="w-6 h-6 rounded-full ring-1 ring-ink/[0.12] flex-shrink-0" style={{ background: activeHex }} />
       </div>
 
       {/* Quick-select palette */}
@@ -132,7 +132,7 @@ function ColorPicker({ value, onChange, onApply, onReset }: PickerProps) {
                   background: hex,
                   boxShadow:  selected
                     ? `0 0 0 2px #fff, 0 0 0 4px ${hex}`
-                    : '0 0 0 1px rgba(255,255,255,0.08)',
+                    : '0 0 0 1px rgb(var(--rgb-ink) / 0.08)',
                 }}
               />
             )
@@ -153,7 +153,7 @@ function ColorPicker({ value, onChange, onApply, onReset }: PickerProps) {
                   'flex-1 py-2 rounded-[10px] text-[12px] font-semibold border transition-colors',
                   angle === a
                     ? 'border-gold/50 text-gold bg-bg-overlay'
-                    : 'border-white/[0.06] text-ink-muted bg-bg-overlay',
+                    : 'border-ink/[0.06] text-ink-muted bg-bg-overlay',
                 )}
               >
                 {a}°
@@ -168,7 +168,7 @@ function ColorPicker({ value, onChange, onApply, onReset }: PickerProps) {
         {onReset && (
           <button
             onClick={onReset}
-            className="flex-1 py-3 rounded-[14px] border border-white/[0.08] text-[14px] font-semibold text-ink-muted"
+            className="flex-1 py-3 rounded-[14px] border border-ink/[0.08] text-[14px] font-semibold text-ink-muted"
           >
             Reset
           </button>
@@ -301,7 +301,7 @@ export function SemanticColorSheet({ open, onClose }: Props) {
 
   function getCurrentSwatch(key: keyof SemanticColors): string {
     const c = colors[key]
-    if (!c) return key === 'sub' ? 'rgba(255,255,255,0.5)' : TYPES.find(t => t.key === key)!.defaultHex
+    if (!c) return key === 'sub' ? 'rgb(var(--rgb-ink) / 0.5)' : TYPES.find(t => t.key === key)!.defaultHex
     if (c.type === 'flat') return c.hex
     return `linear-gradient(${c.angle}deg, ${c.from}, ${c.to})`
   }
@@ -364,7 +364,7 @@ export function SemanticColorSheet({ open, onClose }: Props) {
           className="flex justify-center pt-3 pb-3"
           style={{ touchAction: 'none' }}
         >
-          <div className="w-9 h-1 rounded-full bg-white/20" />
+          <div className="w-9 h-1 rounded-full bg-ink/20" />
         </div>
 
         {/* Header */}
@@ -397,15 +397,15 @@ export function SemanticColorSheet({ open, onClose }: Props) {
           }}
         >
           {!editing ? (
-            <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] overflow-hidden divide-y divide-white/[0.04]">
+            <div className="bg-bg-overlay border border-ink/[0.06] rounded-[18px] overflow-hidden divide-y divide-ink/[0.04]">
               {TYPES.map(({ key, label }) => (
                 <button
                   key={key}
                   onClick={() => openEditor(key)}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]"
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-ink/[0.03]"
                 >
                   <div
-                    className="w-7 h-7 rounded-full flex-shrink-0 ring-1 ring-white/[0.12]"
+                    className="w-7 h-7 rounded-full flex-shrink-0 ring-1 ring-ink/[0.12]"
                     style={{ background: getCurrentSwatch(key) }}
                   />
                   <p className="flex-1 text-[14px] font-medium text-ink">{label}</p>

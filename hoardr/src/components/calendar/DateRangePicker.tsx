@@ -25,13 +25,13 @@ interface Props {
 }
 
 // ── Palette (spec) ──────────────────────────────────────────────────────────
-const BG        = '#1C1F22'
-const FIELD_BG  = '#141414'
-const CHIP_BG   = '#21242A'
-const DIV       = '#2A2D35'
-const INK       = '#E2EAF0'
-const MUTED     = '#556070'
-const OUT_MONTH = '#3A3D42'
+const BG        = 'var(--color-bg-elevated)'
+const FIELD_BG  = 'var(--color-bg-base)'
+const CHIP_BG   = 'rgb(var(--rgb-ink) / 0.08)'
+const DIV       = 'rgb(var(--rgb-ink) / 0.1)'
+const INK       = 'rgb(var(--rgb-ink))'
+const MUTED     = 'rgb(var(--rgb-ink-muted))'
+const OUT_MONTH = 'rgb(var(--rgb-ink-faint))'
 const GOLD      = '#C9A84C'
 const GOLD_DARK = '#A8873C'
 const GOLD_INK  = '#1a1200'
@@ -309,7 +309,7 @@ export function DateRangePicker({ anchorRect, startDate, endDate, mode = 'range'
                   outline: c.iso === focus && !isEndpoint ? `1px solid ${GOLD}` : 'none',
                   transition: 'background 0.1s',
                 }}
-                onMouseOver={e => { if (bg === 'transparent') e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
+                onMouseOver={e => { if (bg === 'transparent') e.currentTarget.style.background = 'rgb(var(--rgb-ink) / 0.06)' }}
                 onMouseOut={e =>  { if (bg === 'transparent') e.currentTarget.style.background = 'transparent' }}
               >
                 {c.day}

@@ -59,7 +59,7 @@ export function MonthYearPicker({ open, year, month, onClose, onSelect }: Props)
         role="dialog"
         aria-modal="true"
         className={cn(
-          'fixed left-1/2 top-1/2 z-[65] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-[20px] bg-bg-surface border border-white/[0.08] transition-all duration-200',
+          'fixed left-1/2 top-1/2 z-[65] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-[20px] bg-bg-surface border border-ink/[0.08] transition-all duration-200',
           open ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none',
         )}
         style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.5)', fontFamily: 'var(--font-montserrat)' }}
@@ -68,21 +68,21 @@ export function MonthYearPicker({ open, year, month, onClose, onSelect }: Props)
         <div className="flex items-center justify-between px-3 pt-3 pb-2">
           <button
             onClick={() => mode === 'month' ? setViewYear(y => y - 1) : setYearPage(p => p - 12)}
-            className="w-8 h-8 flex items-center justify-center rounded-full active:bg-white/[0.06]"
+            className="w-8 h-8 flex items-center justify-center rounded-full active:bg-ink/[0.06]"
             style={{ color: GOLD }}
             aria-label={mode === 'month' ? 'Previous year' : 'Previous years'}
           ><ChevronLeft size={18} /></button>
 
           <button
             onClick={() => setMode(m => (m === 'month' ? 'year' : 'month'))}
-            className="text-[15px] font-bold tracking-tight text-ink px-3 py-1 rounded-lg active:bg-white/[0.06]"
+            className="text-[15px] font-bold tracking-tight text-ink px-3 py-1 rounded-lg active:bg-ink/[0.06]"
           >
             {mode === 'month' ? viewYear : `${years[0]} – ${years[years.length - 1]}`}
           </button>
 
           <button
             onClick={() => mode === 'month' ? setViewYear(y => y + 1) : setYearPage(p => p + 12)}
-            className="w-8 h-8 flex items-center justify-center rounded-full active:bg-white/[0.06]"
+            className="w-8 h-8 flex items-center justify-center rounded-full active:bg-ink/[0.06]"
             style={{ color: GOLD }}
             aria-label={mode === 'month' ? 'Next year' : 'Next years'}
           ><ChevronRight size={18} /></button>

@@ -18,6 +18,16 @@ Next.js 15 App Router, two route groups:
 
 `src/middleware.ts` guards every route (unauthenticated → `/login`; logged-in on `/login` → `/home`; `/` → one or the other). It **must** live in `src/` — at the project root Next silently ignores it (it did, for months; the build output's `ƒ Middleware` line confirms it's registered).
 
+## Keep-alive screens
+
+Home, Out, In, Calendar, Profile and Settings live in `<route>/screen.tsx`; their `page.tsx` renders `null`. `components/nav/ScreenKeepAlive.tsx` (mounted in `(dashboard)/layout.tsx`) renders the screens itself and **keeps each one mounted** after its first render — the active one in normal flow, the rest in a fixed, `visibility:hidden`, `inert` layer (`.screen-hidden`) so they stay laid out but don't paint, take input or add page height. After the first screen paints, the others mount one per idle slot, so the whole app is warm shortly after sign-in (behind the greeting). Each screen's window scroll position is saved and restored.
+
+- Navigation is optimistic: `BottomNav` / `ProfileDrawer` / Profile's settings button call `setPendingPath(href)` so the screen and the nav highlight switch on tap; `useActivePath()` (`src/lib/tab-nav.ts`) is the path to render against, not `usePathname()`.
+- A kept-alive screen doesn't refetch by remounting. Every screen calls `useOnScreenReturn(reload)` to refresh in the background each time it's shown again — new screens must too.
+- Hidden screens are still mounted, so **document/window listeners must be gated**: `useScreenActive()` is false while hidden. `usePullToRefresh` and `usePillSwipe` already check it; the calendar also clears selection / copied event / popovers when it deactivates (its ⌘V/Backspace shortcuts are document-level).
+- The screen wrapper animates opacity only — a transform would re-anchor the screen's `position: fixed` FAB and sheets.
+- These routes have no `loading.tsx`; `settings/categories` and `settings/defaults` are ordinary routes rendered through `{children}`.
+
 ## Navigation — four tabs
 
 `BottomNav` has four tabs. All `<Link>` use the `replace` prop so tab-switching does **not** build browser history — this prevents the iOS back-swipe gesture from navigating between tabs.
@@ -92,6 +102,10 @@ Google OAuth via Supabase. Login (`(auth)/login`) calls `signInWithOAuth` with `
 **Write safety (`src/lib/db-error.ts`)** — user-initiated RLS writes must surface failure, never `console.error`-and-continue:
 - `requireUser(supabase, action)` — resolves the user via `getSession()`; toasts "Session expired" and returns `null` when the session is truly gone.
 - `reportDbError(error, action)` — toasts on a rejected write (session-expired copy for auth-like codes `PGRST301` / `42501` / JWT messages); returns `true` so the caller can bail.
+
+## Greeting (daily brief)
+
+`components/home/GreetingOverlay.tsx` shows on every app launch and doubles as the warm-up screen while `ScreenKeepAlive` mounts the other tabs. It shows today's Google events (via `calFetch`), month-to-date spend with pace vs the same point last month, income/net, bills and paydays in the next 7 days (subscriptions + `revenue_streams`, advanced past stale dates), net worth and en-route orders. Theme colors only.
 
 ## Async safety pattern (required on every `'use client'` page)
 
@@ -200,6 +214,12 @@ Hardcoded gold hex: always `#D4AF37`, never `#f59e0b`.
 
 **Inline styles** — use CSS variables (`var(--color-bg-base)`, `rgb(var(--rgb-X) / alpha)`), never hardcode dark hex — breaks light themes.
 
+**Theme-safe color rules** (Slate Mist is light; it showed black panels and invisible borders until these were applied app-wide):
+- Subtle lines/fills: `border-ink/[0.06]`, `bg-ink/[0.04]`, `rgb(var(--rgb-ink) / 0.1)` — never `*-white/…` or `rgba(255,255,255,…)`. Ink is near-white in dark themes and dark slate in Slate Mist. White is only for content on a colored/gold surface (button text, calendar pill overlays, card art).
+- Panels/popovers: `var(--color-bg-elevated)` / `var(--color-bg-surface)`, not `#21242A`-style hexes. `<body>` must not carry an inline background.
+- Per-theme border tuning lives in the `html.charcoal-slate|slate-mist .border-ink\/…` override blocks in `globals.css`. `html.slate-mist` forces `color-scheme: light` on inputs (many set `colorScheme: 'dark'` inline) and sets `--seg-thumb`.
+- The theme script in `app/layout.tsx` also sets `<meta name="theme-color">` so the status bar matches after a reload.
+
 ## Typography conventions
 
 | Element | Classes |
@@ -260,7 +280,7 @@ Still on the legacy hand-rolled chrome (migrate when touched): the Edit* sheets,
 - `usePullToRefresh` skips when `body.style.position === 'fixed'` — do not remove this guard
 - `z-[60]` for sheets; `z-[70]` for RecurrencePicker above sheets; `z-[55]` for ProfileDrawer (below sheets)
 
-Every page root `<div>` includes `tab-enter`. Each route has a `loading.tsx` skeleton.
+Every page root `<div>` includes `tab-enter`. Routes that aren't keep-alive screens have a `loading.tsx` skeleton.
 
 ## Key utilities (`src/lib/utils.ts`)
 

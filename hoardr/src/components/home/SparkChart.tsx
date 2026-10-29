@@ -253,7 +253,7 @@ export function SparkChart({ points, onHover, gestureMode }: {
           {hoverIdx !== null && (
             <line
               x1={toX(hoverIdx)} y1={0} x2={toX(hoverIdx)} y2={H}
-              stroke="rgba(255,255,255,0.15)" strokeWidth="1" vectorEffect="non-scaling-stroke"
+              stroke="rgb(var(--rgb-ink) / 0.15)" strokeWidth="1" vectorEffect="non-scaling-stroke"
             />
           )}
         </svg>
@@ -287,7 +287,7 @@ export function SparkChart({ points, onHover, gestureMode }: {
       {/* Tooltip — fixed position so it escapes overflow:hidden on the card */}
       {hoverIdx !== null && tooltipFixed && hovered && (
         <div
-          className="pointer-events-none bg-bg-surface/90 border border-white/[0.10] rounded-[10px] px-3 py-2"
+          className="pointer-events-none bg-bg-surface/90 border border-ink/[0.10] rounded-[10px] px-3 py-2"
           style={{
             position: 'fixed',
             zIndex:   100,

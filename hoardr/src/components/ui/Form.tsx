@@ -132,7 +132,7 @@ export function Segmented<T extends string>({ options, value, onChange, labels }
         style={{
           width: `calc((100% - 4px) / ${n})`,
           transform: `translateX(${idx * 100}%)`,
-          background: 'rgb(var(--rgb-ink) / 0.16)',
+          background: 'var(--seg-thumb, rgb(var(--rgb-ink) / 0.16))',   // white in light themes, like iOS
           boxShadow: '0 3px 8px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.04)',
           transition: 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)',
         }}

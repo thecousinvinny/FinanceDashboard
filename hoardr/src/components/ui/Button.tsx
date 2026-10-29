@@ -4,11 +4,11 @@ type Variant = 'default' | 'gold' | 'emerald' | 'ruby' | 'ghost'
 type Size    = 'sm' | 'md' | 'lg'
 
 const VARIANTS: Record<Variant, string> = {
-  default: 'bg-bg-surface border border-white/[0.10] text-ink hover:border-white/20',
+  default: 'bg-bg-surface border border-ink/[0.10] text-ink hover:border-ink/20',
   gold:    'gradient-gold text-white hover:opacity-90',
   emerald: 'bg-emerald/10 border border-emerald/30 text-emerald hover:bg-emerald/20',
   ruby:    'bg-ruby/10 border border-ruby/30 text-ruby hover:bg-ruby/20',
-  ghost:   'text-ink-muted hover:text-ink hover:bg-white/[0.04]',
+  ghost:   'text-ink-muted hover:text-ink hover:bg-ink/[0.04]',
 }
 
 const SIZES: Record<Size, string> = {

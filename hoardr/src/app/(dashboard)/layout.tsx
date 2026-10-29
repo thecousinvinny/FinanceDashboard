@@ -3,6 +3,7 @@ import { ToastContainer } from '@/components/ui/ToastContainer'
 import { ProfileDrawer } from '@/components/profile/ProfileDrawer'
 import { GreetingOverlay } from '@/components/home/GreetingOverlay'
 import { AuthWatcher } from '@/components/auth/AuthWatcher'
+import { ScreenKeepAlive } from '@/components/nav/ScreenKeepAlive'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -12,6 +13,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <ProfileDrawer />
       <GreetingOverlay />
       <main className="flex-1 pb-[72px]">
+        <ScreenKeepAlive />
         {children}
       </main>
       <BottomNav />

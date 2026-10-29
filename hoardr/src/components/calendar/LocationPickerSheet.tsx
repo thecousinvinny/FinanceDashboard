@@ -21,7 +21,7 @@ interface Props {
 const M    = 'var(--font-montserrat)'
 const GOLD = '#C9A84C'
 const MUTED = 'rgb(var(--rgb-ink-muted))'
-const SEP   = 'rgba(255,255,255,0.06)'
+const SEP   = 'rgb(var(--rgb-ink) / 0.06)'
 
 function highlightMatch(text: string, query: string) {
   if (!query.trim()) return <>{text}</>
@@ -183,7 +183,7 @@ export function LocationPickerSheet({ open, initial, onClose, onSelect }: Props)
           className="flex-shrink-0" style={{ touchAction: 'none' }}
         >
           <div className="flex justify-center pt-3 pb-1">
-            <div className="w-9 h-1 rounded-full bg-white/20" />
+            <div className="w-9 h-1 rounded-full bg-ink/20" />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', padding: '8px 16px 10px' }}>
             <button
@@ -203,7 +203,7 @@ export function LocationPickerSheet({ open, initial, onClose, onSelect }: Props)
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10,
           margin: '0 16px 12px',
-          background: 'rgba(255,255,255,0.06)',
+          background: 'rgb(var(--rgb-ink) / 0.06)',
           borderRadius: 12, padding: '10px 14px',
           flexShrink: 0,
         }}>

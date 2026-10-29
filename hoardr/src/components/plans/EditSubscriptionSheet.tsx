@@ -201,7 +201,7 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave, cards = [], 
           className="flex justify-center pt-3 pb-3"
           style={{ touchAction: 'none' }}
         >
-          <div className="w-9 h-1 rounded-full bg-white/20" />
+          <div className="w-9 h-1 rounded-full bg-ink/20" />
         </div>
 
         <div className="flex items-center justify-between px-5 mb-4">
@@ -286,7 +286,7 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave, cards = [], 
                 onClick={() => setDirect(v => !v)}
                 className={cn(
                   'flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-semibold transition-all select-none',
-                  direct ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted ring-1 ring-white/[0.08]',
+                  direct ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted ring-1 ring-ink/[0.08]',
                 )}
               >
                 Direct

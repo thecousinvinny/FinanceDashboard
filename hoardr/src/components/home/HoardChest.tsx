@@ -65,7 +65,7 @@ export function HoardChest({ hoardTotal, thisMonthNet }: Props) {
 
   return (
     <div className="mx-4 mt-3">
-      <div className="bg-bg-surface border border-white/[0.06] rounded-card px-4 pt-4 pb-5 relative">
+      <div className="bg-bg-surface border border-ink/[0.06] rounded-card px-4 pt-4 pb-5 relative">
 
         <div className="flex items-center justify-between mb-1">
           <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint">Your Hoard · Total Saved</p>
@@ -198,12 +198,12 @@ export function HoardChest({ hoardTotal, thisMonthNet }: Props) {
             style={{ background: 'rgba(0,0,0,0.72)' }}
           />
           <div
-            className="fixed inset-x-6 z-[60] bg-bg-surface rounded-[20px] p-5 border border-white/[0.08]"
+            className="fixed inset-x-6 z-[60] bg-bg-surface rounded-[20px] p-5 border border-ink/[0.08]"
             style={{ top: '50%', transform: 'translateY(-50%)' }}
           >
             <p className="text-[15px] font-semibold text-ink mb-1">Savings Goal</p>
             <p className="text-[12px] text-ink-muted mb-4">How much do you want in your hoard?</p>
-            <div className="flex items-center gap-2 bg-bg-overlay rounded-[12px] px-4 py-3 mb-4 border border-white/[0.08] focus-within:border-gold/40">
+            <div className="flex items-center gap-2 bg-bg-overlay rounded-[12px] px-4 py-3 mb-4 border border-ink/[0.08] focus-within:border-gold/40">
               <span className="text-[20px] font-mono text-ink-muted">$</span>
               <input
                 autoFocus

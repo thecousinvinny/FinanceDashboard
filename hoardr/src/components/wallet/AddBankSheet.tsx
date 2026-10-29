@@ -52,7 +52,7 @@ export function AddBankSheet({ open, onClose, onAdd }: Props) {
       <div className="flex flex-col items-center pt-4 pb-2">
         <span
           className="flex items-center justify-center w-[64px] h-[64px] rounded-[18px]"
-          style={{ background: 'linear-gradient(160deg, #E9CD7A, #B08A2A)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4), 0 8px 20px rgba(212,175,55,0.25)' }}
+          style={{ background: 'linear-gradient(160deg, #E9CD7A, #B08A2A)', boxShadow: 'inset 0 1px 0 rgb(var(--rgb-ink) / 0.4), 0 8px 20px rgba(212,175,55,0.25)' }}
         >
           <Landmark size={30} strokeWidth={1.9} color="#1a1200" />
         </span>

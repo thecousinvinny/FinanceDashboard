@@ -1,5 +1,6 @@
 'use client'
 import { useEffect } from 'react'
+import { useScreenActive } from '@/lib/tab-nav'
 
 const EDGE_PX = 35
 const MIN_DX  = 60
@@ -10,7 +11,10 @@ export function usePillSwipe<T extends string>(
   setTab:  (v: T) => void,
   options: readonly T[],
 ) {
+  // Screens stay mounted when hidden — only the visible one may listen
+  const active = useScreenActive()
   useEffect(() => {
+    if (!active) return
     let start: { x: number; y: number } | null = null
     function onStart(e: TouchEvent) {
       if (document.body.style.position === 'fixed') return
@@ -37,5 +41,5 @@ export function usePillSwipe<T extends string>(
       document.removeEventListener('touchstart', onStart)
       document.removeEventListener('touchend',   onEnd)
     }
-  }, [tab, setTab, options])
+  }, [tab, setTab, options, active])
 }

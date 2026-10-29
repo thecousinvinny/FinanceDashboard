@@ -129,7 +129,7 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
           className="flex justify-center pt-3 pb-3"
           style={{ touchAction: 'none' }}
         >
-          <div className="w-9 h-1 rounded-full bg-white/20" />
+          <div className="w-9 h-1 rounded-full bg-ink/20" />
         </div>
 
         {/* Header */}
@@ -149,7 +149,7 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
           <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">
             Show on Calendar
           </p>
-          <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] overflow-hidden divide-y divide-white/[0.04] mb-5">
+          <div className="bg-bg-overlay border border-ink/[0.06] rounded-[18px] overflow-hidden divide-y divide-ink/[0.04] mb-5">
             {/* Income & Subscriptions */}
             {TYPE_META.map(({ type, label, color: defaultColor }) => {
               const on          = local.visibleTypes.includes(type)
@@ -172,7 +172,7 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
                   <button onClick={() => toggleType(type)} className="flex-1 text-left min-w-0">
                     <span className="text-[14px] font-medium text-ink truncate block">{label}</span>
                   </button>
-                  <span onClick={() => toggleType(type)} className={`w-11 h-6 rounded-full relative transition-colors flex-shrink-0 cursor-pointer ${on ? 'gradient-gold' : 'bg-bg-base border border-white/10'}`}>
+                  <span onClick={() => toggleType(type)} className={`w-11 h-6 rounded-full relative transition-colors flex-shrink-0 cursor-pointer ${on ? 'gradient-gold' : 'bg-bg-base border border-ink/10'}`}>
                     <span className={`absolute top-0.5 left-0 w-5 h-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
                   </span>
                 </div>
@@ -212,7 +212,7 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
                       {cal.summary}{cal.primary ? ' (primary)' : ''}
                     </span>
                   </button>
-                  <span onClick={() => toggleCal(cal.id)} className={`w-11 h-6 rounded-full relative transition-colors flex-shrink-0 cursor-pointer ${on ? 'gradient-gold' : 'bg-bg-base border border-white/10'}`}>
+                  <span onClick={() => toggleCal(cal.id)} className={`w-11 h-6 rounded-full relative transition-colors flex-shrink-0 cursor-pointer ${on ? 'gradient-gold' : 'bg-bg-base border border-ink/10'}`}>
                     <span className={`absolute top-0.5 left-0 w-5 h-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
                   </span>
                 </div>
@@ -229,7 +229,7 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
                 <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3 mt-5">
                   Default Calendar
                 </p>
-                <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] overflow-hidden divide-y divide-white/[0.04]">
+                <div className="bg-bg-overlay border border-ink/[0.06] rounded-[18px] overflow-hidden divide-y divide-ink/[0.04]">
                   {enabledCals.map(cal => {
                     const calKey   = cal.primary ? 'primary' : cal.id
                     const isActive = (local.defaultCalendarId ?? 'primary') === calKey
@@ -243,7 +243,7 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
                         <span className="text-[14px] font-medium text-ink flex-1 truncate">
                           {cal.summary}{cal.primary ? ' (primary)' : ''}
                         </span>
-                        <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${isActive ? 'border-gold' : 'border-white/20'}`}>
+                        <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${isActive ? 'border-gold' : 'border-ink/20'}`}>
                           {isActive && <span className="w-2.5 h-2.5 rounded-full bg-gold" />}
                         </span>
                       </button>
@@ -276,8 +276,8 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
             top: Math.min(swatchFor.top, window.innerHeight - 180),
             left: Math.max(8, Math.min(swatchFor.left, window.innerWidth - popW - 8)),
             zIndex: 80,
-            background: '#21242A',
-            border: '0.5px solid rgba(255,255,255,0.12)',
+            background: 'var(--color-bg-elevated)',
+            border: '0.5px solid rgb(var(--rgb-ink) / 0.12)',
             borderRadius: 10,
             padding: 10,
             display: 'grid',
@@ -300,7 +300,7 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
                   }}
                   style={{
                     width: 22, height: 22, borderRadius: 4, background: color, padding: 0,
-                    border: isSel ? '2px solid rgba(255,255,255,0.9)' : '2px solid transparent',
+                    border: isSel ? '2px solid rgb(var(--rgb-ink) / 0.9)' : '2px solid transparent',
                     cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
                     boxSizing: 'border-box',
                   }}

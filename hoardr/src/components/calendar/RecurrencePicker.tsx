@@ -79,10 +79,10 @@ export function RecurrencePicker({ open, date, value, elevated, onClose, onChang
   return (
     <>
       <div data-recur-picker className={`fixed inset-0 ${elevated ? 'z-[205]' : 'z-[60]'}`} style={{ background: 'rgba(0,0,0,0.55)' }} onClick={onClose} />
-      <div data-recur-picker className={`fixed inset-x-0 bottom-0 ${elevated ? 'z-[210]' : 'z-[70]'} rounded-t-[24px]`} style={{ background: '#1a1a1a', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      <div data-recur-picker className={`fixed inset-x-0 bottom-0 ${elevated ? 'z-[210]' : 'z-[70]'} rounded-t-[24px]`} style={{ background: 'var(--color-bg-elevated)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         {/* Handle */}
         <div className="flex justify-center pt-3 pb-2">
-          <div className="w-9 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.2)' }} />
+          <div className="w-9 h-1 rounded-full" style={{ background: 'rgb(var(--rgb-ink) / 0.2)' }} />
         </div>
 
         {view === 'presets' ? (
@@ -95,14 +95,14 @@ export function RecurrencePicker({ open, date, value, elevated, onClose, onChang
             <div>
               {/* Never */}
               <button onClick={() => selectPreset('')} className="w-full flex items-center justify-between px-5 py-[14px]"
-                style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'none', cursor: 'pointer' }}>
+                style={{ borderBottom: '1px solid rgb(var(--rgb-ink) / 0.07)', background: 'none', cursor: 'pointer' }}>
                 <span style={{ fontFamily: M, fontSize: 15, color: '#fff' }}>Never</span>
                 {!value && <Check size={16} color={GOLD} strokeWidth={2.5} />}
               </button>
 
               {presets.map(({ label, rule }) => (
                 <button key={rule} onClick={() => selectPreset(rule)} className="w-full flex items-center justify-between px-5 py-[14px]"
-                  style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'none', cursor: 'pointer' }}>
+                  style={{ borderBottom: '1px solid rgb(var(--rgb-ink) / 0.07)', background: 'none', cursor: 'pointer' }}>
                   <span style={{ fontFamily: M, fontSize: 15, color: '#fff' }}>{label}</span>
                   {value === rule && <Check size={16} color={GOLD} strokeWidth={2.5} />}
                 </button>
@@ -128,13 +128,13 @@ export function RecurrencePicker({ open, date, value, elevated, onClose, onChang
             <div style={{ maxHeight: '62vh', overflowY: 'auto', padding: '0 20px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)', overscrollBehavior: 'contain' }}>
 
               {/* Frequency */}
-              <p style={{ fontFamily: M, fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 8 }}>Frequency</p>
+              <p style={{ fontFamily: M, fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgb(var(--rgb-ink) / 0.3)', marginBottom: 8 }}>Frequency</p>
               <div style={{ display: 'flex', gap: 7, marginBottom: 20 }}>
                 {(['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'] as Freq[]).map(f => (
                   <button key={f} onClick={() => setCustom(c => ({ ...c, freq: f }))} style={{
                     flex: 1, padding: '9px 4px', borderRadius: 10, fontFamily: M, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none',
-                    background: custom.freq === f ? 'linear-gradient(135deg,#F6DF9E,#D4AF37,#A47F23)' : 'rgba(255,255,255,0.07)',
-                    color: custom.freq === f ? '#1a1a1a' : 'rgba(255,255,255,0.55)',
+                    background: custom.freq === f ? 'linear-gradient(135deg,#F6DF9E,#D4AF37,#A47F23)' : 'rgb(var(--rgb-ink) / 0.07)',
+                    color: custom.freq === f ? '#1a1a1a' : 'rgb(var(--rgb-ink) / 0.55)',
                   }}>
                     {f === 'DAILY' ? 'Day' : f === 'WEEKLY' ? 'Week' : f === 'MONTHLY' ? 'Month' : 'Year'}
                   </button>
@@ -142,12 +142,12 @@ export function RecurrencePicker({ open, date, value, elevated, onClose, onChang
               </div>
 
               {/* Interval */}
-              <p style={{ fontFamily: M, fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 8 }}>Every</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '10px 14px', marginBottom: 20 }}>
-                <button onClick={() => setCustom(c => ({ ...c, interval: Math.max(1, c.interval - 1) }))} style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 20, fontWeight: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>−</button>
+              <p style={{ fontFamily: M, fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgb(var(--rgb-ink) / 0.3)', marginBottom: 8 }}>Every</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgb(var(--rgb-ink) / 0.06)', borderRadius: 12, padding: '10px 14px', marginBottom: 20 }}>
+                <button onClick={() => setCustom(c => ({ ...c, interval: Math.max(1, c.interval - 1) }))} style={{ width: 30, height: 30, borderRadius: 8, background: 'rgb(var(--rgb-ink) / 0.1)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 20, fontWeight: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>−</button>
                 <span style={{ fontFamily: M, fontSize: 22, fontWeight: 700, color: '#fff', flex: 1, textAlign: 'center' }}>{custom.interval}</span>
-                <button onClick={() => setCustom(c => ({ ...c, interval: Math.min(99, c.interval + 1) }))} style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 20, fontWeight: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>+</button>
-                <span style={{ fontFamily: M, fontSize: 14, color: 'rgba(255,255,255,0.45)', minWidth: 50 }}>
+                <button onClick={() => setCustom(c => ({ ...c, interval: Math.min(99, c.interval + 1) }))} style={{ width: 30, height: 30, borderRadius: 8, background: 'rgb(var(--rgb-ink) / 0.1)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 20, fontWeight: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>+</button>
+                <span style={{ fontFamily: M, fontSize: 14, color: 'rgb(var(--rgb-ink) / 0.45)', minWidth: 50 }}>
                   {custom.freq === 'DAILY'   ? (custom.interval === 1 ? 'day'   : 'days')   :
                    custom.freq === 'WEEKLY'  ? (custom.interval === 1 ? 'week'  : 'weeks')  :
                    custom.freq === 'MONTHLY' ? (custom.interval === 1 ? 'month' : 'months') :
@@ -158,7 +158,7 @@ export function RecurrencePicker({ open, date, value, elevated, onClose, onChang
               {/* Day picker — WEEKLY only */}
               {custom.freq === 'WEEKLY' && (
                 <>
-                  <p style={{ fontFamily: M, fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 8 }}>On</p>
+                  <p style={{ fontFamily: M, fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgb(var(--rgb-ink) / 0.3)', marginBottom: 8 }}>On</p>
                   <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
                     {DOW_LABELS.map((lbl, i) => {
                       const code   = DOW_RRULE[i]
@@ -166,8 +166,8 @@ export function RecurrencePicker({ open, date, value, elevated, onClose, onChang
                       return (
                         <button key={i} onClick={() => setCustom(c => ({ ...c, byDays: active ? c.byDays.filter(d => d !== code) : [...c.byDays, code] }))} style={{
                           flex: 1, height: 36, borderRadius: 8, fontFamily: M, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none',
-                          background: active ? 'linear-gradient(135deg,#F6DF9E,#D4AF37,#A47F23)' : 'rgba(255,255,255,0.07)',
-                          color: active ? '#1a1a1a' : 'rgba(255,255,255,0.45)',
+                          background: active ? 'linear-gradient(135deg,#F6DF9E,#D4AF37,#A47F23)' : 'rgb(var(--rgb-ink) / 0.07)',
+                          color: active ? '#1a1a1a' : 'rgb(var(--rgb-ink) / 0.45)',
                         }}>{lbl}</button>
                       )
                     })}
@@ -178,7 +178,7 @@ export function RecurrencePicker({ open, date, value, elevated, onClose, onChang
               {/* Month picker — YEARLY only */}
               {custom.freq === 'YEARLY' && (
                 <>
-                  <p style={{ fontFamily: M, fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 8 }}>In</p>
+                  <p style={{ fontFamily: M, fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgb(var(--rgb-ink) / 0.3)', marginBottom: 8 }}>In</p>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6, marginBottom: 20 }}>
                     {MON_SHORT.map((lbl, i) => {
                       const mo     = i + 1
@@ -186,20 +186,20 @@ export function RecurrencePicker({ open, date, value, elevated, onClose, onChang
                       return (
                         <button key={mo} onClick={() => setCustom(c => ({ ...c, byMonths: active ? c.byMonths.filter(x => x !== mo) : [...c.byMonths, mo] }))} style={{
                           height: 34, borderRadius: 8, fontFamily: M, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
-                          background: active ? 'linear-gradient(135deg,#F6DF9E,#D4AF37,#A47F23)' : 'rgba(255,255,255,0.07)',
-                          color: active ? '#1a1a1a' : 'rgba(255,255,255,0.45)',
+                          background: active ? 'linear-gradient(135deg,#F6DF9E,#D4AF37,#A47F23)' : 'rgb(var(--rgb-ink) / 0.07)',
+                          color: active ? '#1a1a1a' : 'rgb(var(--rgb-ink) / 0.45)',
                         }}>{lbl}</button>
                       )
                     })}
                   </div>
-                  <p style={{ fontFamily: M, fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: -12, marginBottom: 20 }}>
+                  <p style={{ fontFamily: M, fontSize: 11, color: 'rgb(var(--rgb-ink) / 0.35)', marginTop: -12, marginBottom: 20 }}>
                     Repeats on day {date && date.length >= 10 ? Number(date.split('-')[2]) : ''} of each selected month.
                   </p>
                 </>
               )}
 
               {/* End condition */}
-              <p style={{ fontFamily: M, fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 8 }}>End</p>
+              <p style={{ fontFamily: M, fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgb(var(--rgb-ink) / 0.3)', marginBottom: 8 }}>End</p>
               <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 8 }}>
                 {([
                   { type: 'never' as const, label: 'Never' },
@@ -208,15 +208,15 @@ export function RecurrencePicker({ open, date, value, elevated, onClose, onChang
                 ] as const).map(({ type, label }, i, arr) => (
                   /* div, not button — the row hosts nested buttons (date picker / stepper) */
                   <div key={type} role="button" tabIndex={0} onClick={() => setCustom(c => ({ ...c, endType: type }))} className="w-full flex items-center justify-between px-4 py-[14px]"
-                    style={{ background: 'rgba(255,255,255,0.06)', borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none', cursor: 'pointer' }}>
+                    style={{ background: 'rgb(var(--rgb-ink) / 0.06)', borderBottom: i < arr.length - 1 ? '1px solid rgb(var(--rgb-ink) / 0.06)' : 'none', cursor: 'pointer' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${custom.endType === type ? GOLD : 'rgba(255,255,255,0.2)'}`, background: custom.endType === type ? GOLD : 'transparent', flexShrink: 0, transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {custom.endType === type && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#1a1a1a', display: 'block' }} />}
+                      <span style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${custom.endType === type ? GOLD : 'rgb(var(--rgb-ink) / 0.2)'}`, background: custom.endType === type ? GOLD : 'transparent', flexShrink: 0, transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {custom.endType === type && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--color-bg-elevated)', display: 'block' }} />}
                       </span>
                       <span style={{ fontFamily: M, fontSize: 15, color: '#fff' }}>{label}</span>
                     </div>
                     {type === 'date' && custom.endType === 'date' && (
-                      <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 8 }} onClick={e => e.stopPropagation()}>
+                      <div style={{ background: 'rgb(var(--rgb-ink) / 0.08)', borderRadius: 8 }} onClick={e => e.stopPropagation()}>
                         <CustomDateInput value={custom.endDate} min={date}
                           onChange={v => setCustom(c => ({ ...c, endDate: v }))}
                           placeholder="Pick a date"
@@ -225,10 +225,10 @@ export function RecurrencePicker({ open, date, value, elevated, onClose, onChang
                     )}
                     {type === 'count' && custom.endType === 'count' && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }} onClick={e => e.stopPropagation()}>
-                        <button onClick={() => setCustom(c => ({ ...c, endCount: Math.max(1, c.endCount - 1) }))} style={{ width: 26, height: 26, borderRadius: 6, background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                        <button onClick={() => setCustom(c => ({ ...c, endCount: Math.max(1, c.endCount - 1) }))} style={{ width: 26, height: 26, borderRadius: 6, background: 'rgb(var(--rgb-ink) / 0.1)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
                         <span style={{ fontFamily: M, fontSize: 15, color: GOLD, minWidth: 24, textAlign: 'center' }}>{custom.endCount}</span>
-                        <button onClick={() => setCustom(c => ({ ...c, endCount: Math.min(999, c.endCount + 1) }))} style={{ width: 26, height: 26, borderRadius: 6, background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
-                        <span style={{ fontFamily: M, fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>times</span>
+                        <button onClick={() => setCustom(c => ({ ...c, endCount: Math.min(999, c.endCount + 1) }))} style={{ width: 26, height: 26, borderRadius: 6, background: 'rgb(var(--rgb-ink) / 0.1)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                        <span style={{ fontFamily: M, fontSize: 12, color: 'rgb(var(--rgb-ink) / 0.4)' }}>times</span>
                       </div>
                     )}
                   </div>

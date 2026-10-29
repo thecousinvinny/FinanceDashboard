@@ -38,7 +38,7 @@ function IconPicker({ value, onChange }: { value: string; onChange: (name: strin
       <div className="flex gap-1.5 overflow-x-auto pb-2 mb-3" style={{ scrollbarWidth: 'none' }}>
         <button
           onClick={() => setGroup(null)}
-          className={cn('flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-medium transition-colors', !group ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted border border-white/[0.06]')}
+          className={cn('flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-medium transition-colors', !group ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted border border-ink/[0.06]')}
         >
           All
         </button>
@@ -46,7 +46,7 @@ function IconPicker({ value, onChange }: { value: string; onChange: (name: strin
           <button
             key={g}
             onClick={() => setGroup(g === group ? null : g)}
-            className={cn('flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-medium transition-colors', group === g ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted border border-white/[0.06]')}
+            className={cn('flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-medium transition-colors', group === g ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted border border-ink/[0.06]')}
           >
             {g}
           </button>
@@ -171,7 +171,7 @@ function CategorySheet({
           onTouchStart={onDragStart} onTouchMove={onDragMove} onTouchEnd={onDragEnd}
           className="flex justify-center pt-3 pb-3" style={{ touchAction: 'none' }}
         >
-          <div className="w-9 h-1 rounded-full bg-white/20" />
+          <div className="w-9 h-1 rounded-full bg-ink/20" />
         </div>
 
         {/* Header */}
@@ -187,7 +187,7 @@ function CategorySheet({
           style={{ maxHeight: '72vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}
         >
           {/* Preview */}
-          <div className="flex items-center gap-4 bg-bg-overlay border border-white/[0.06] rounded-[16px] px-4 py-3.5">
+          <div className="flex items-center gap-4 bg-bg-overlay border border-ink/[0.06] rounded-[16px] px-4 py-3.5">
             <div className="w-10 h-10 rounded-[12px] flex items-center justify-center flex-shrink-0" style={{ backgroundColor: color + '22' }}>
               <PreviewIcon size={18} strokeWidth={1.75} style={{ color }} />
             </div>
@@ -204,7 +204,7 @@ function CategorySheet({
                 value={name}
                 onChange={e => setName(e.target.value)}
                 maxLength={24}
-                className="w-full bg-bg-overlay border border-white/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40"
+                className="w-full bg-bg-overlay border border-ink/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-faint outline-none focus:border-gold/40"
               />
             </div>
           )}
@@ -220,7 +220,7 @@ function CategorySheet({
                     onClick={() => setTxType(t)}
                     className={cn(
                       'flex-1 py-2.5 rounded-[12px] text-[13px] font-semibold border transition-colors',
-                      txType === t ? 'gradient-gold text-white border-transparent' : 'bg-bg-overlay text-ink-muted border-white/[0.06]'
+                      txType === t ? 'gradient-gold text-white border-transparent' : 'bg-bg-overlay text-ink-muted border-ink/[0.06]'
                     )}
                   >
                     {t}
@@ -369,7 +369,7 @@ export default function CategoriesPage() {
     return (
       <div className="px-5 mb-6">
         <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">{title}</p>
-        <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
+        <div className="bg-bg-surface border border-ink/[0.06] rounded-card overflow-hidden divide-y divide-ink/[0.04]">
           {cats.map(cat => {
             const Icon = ICON_REGISTRY[cat.icon] ?? ICON_REGISTRY.LayoutGrid
             return (
@@ -409,7 +409,7 @@ export default function CategoriesPage() {
           </div>
         ) : needsMigration ? (
           <div className="px-5 mt-4">
-            <div className="bg-bg-surface border border-white/[0.06] rounded-card p-5">
+            <div className="bg-bg-surface border border-ink/[0.06] rounded-card p-5">
               <p className="text-[14px] font-semibold text-ink mb-2">Database migration required</p>
               <p className="text-[13px] text-ink-muted mb-4 leading-relaxed">
                 Run this SQL in your Supabase dashboard (SQL Editor) to enable category icons and colors:

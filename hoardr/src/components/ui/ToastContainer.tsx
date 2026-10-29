@@ -43,14 +43,14 @@ function Toast({ item }: { item: ToastItem }) {
       background:           'rgba(18,18,30,0.97)',
       backdropFilter:       'blur(24px)',
       WebkitBackdropFilter: 'blur(24px)',
-      border:               '1px solid rgba(255,255,255,0.1)',
+      border:               '1px solid rgb(var(--rgb-ink) / 0.1)',
       borderRadius:         100,
       padding:              '11px 14px 11px 16px',
       display:              'flex',
       alignItems:           'center',
       gap:                  9,
       maxWidth:             360,
-      boxShadow:            '0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)',
+      boxShadow:            '0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgb(var(--rgb-ink) / 0.04)',
       pointerEvents:        'auto',
     }}>
       <span style={{
@@ -71,7 +71,7 @@ function Toast({ item }: { item: ToastItem }) {
       )}
       <button
         onClick={() => dismiss('commit')}
-        style={{ fontSize: 19, color: 'rgba(255,255,255,0.22)', background: 'none', border: 'none',
+        style={{ fontSize: 19, color: 'rgb(var(--rgb-ink) / 0.22)', background: 'none', border: 'none',
                  padding: '0 2px', cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}
       >
         ×

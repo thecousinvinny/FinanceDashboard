@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation'
+import { useActivePath, setPendingPath } from '@/lib/tab-nav'
 import { createClient } from '@/lib/supabase/client'
 
 // Hide on pages that have their own back/settings header
@@ -18,7 +19,7 @@ let _cachedAvatar:   string | null = null
 let _cachedInitials: string        = '?'
 
 export function ProfileDrawer() {
-  const pathname = usePathname()
+  const pathname = useActivePath()
   const router   = useRouter()
   const supabase = useMemo(() => createClient(), [])
 
@@ -78,7 +79,7 @@ export function ProfileDrawer() {
 
   return (
     <button
-      onClick={() => router.push('/profile')}
+      onClick={() => { setPendingPath('/profile'); router.push('/profile') }}
       aria-label="Profile"
       className="fixed overflow-hidden rounded-full select-none active:scale-95 transition-transform"
       style={{

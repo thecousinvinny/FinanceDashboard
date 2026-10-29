@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import { useScreenActive } from '@/lib/tab-nav'
 
 const THRESHOLD = 72
 
@@ -10,8 +11,11 @@ export function usePullToRefresh(onRefresh: () => void) {
   const startY       = useRef<number | null>(null)
   const distanceRef  = useRef(0)
   const refreshingRef = useRef(false)
+  // Screens stay mounted when hidden — only the visible one may listen
+  const active = useScreenActive()
 
   useEffect(() => {
+    if (!active) return
     const onTouchStart = (e: TouchEvent) => {
       if (document.body.style.position === 'fixed') return
       if (window.scrollY === 0 && !refreshingRef.current) {
@@ -59,7 +63,7 @@ export function usePullToRefresh(onRefresh: () => void) {
       document.removeEventListener('touchmove',  onTouchMove)
       document.removeEventListener('touchend',   onTouchEnd)
     }
-  }, [onRefresh])
+  }, [onRefresh, active])
 
   return { distance, refreshing, threshold: THRESHOLD }
 }

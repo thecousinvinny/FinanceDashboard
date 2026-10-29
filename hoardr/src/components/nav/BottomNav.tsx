@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { useActivePath, setPendingPath } from '@/lib/tab-nav'
+import { haptic } from '@/lib/utils'
 import { Coins, TrendingDown, TrendingUp, CalendarDays } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -25,7 +26,8 @@ const BAR_W = `calc((100% - 16px) / ${N} - 24px)`
 const barX  = (i: number) => `translateX(calc(${i} * (100% + 24px)))`
 
 export default function BottomNav() {
-  const pathname  = usePathname()
+  // Optimistic: highlights (and the keep-alive screen) switch on tap, not on route commit
+  const pathname  = useActivePath()
   const activeIdx = tabs.findIndex(t => pathname === t.href || pathname.startsWith(t.href + '/'))
 
   return (
@@ -42,7 +44,7 @@ export default function BottomNav() {
         aria-hidden
         className="absolute top-0 inset-x-[8%] h-px pointer-events-none"
         style={{
-          background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.18) 30%, rgba(255,255,255,0.18) 70%, transparent)',
+          background: 'linear-gradient(to right, transparent, rgb(var(--rgb-ink) / 0.18) 30%, rgb(var(--rgb-ink) / 0.18) 70%, transparent)',
         }}
       />
 
@@ -68,6 +70,7 @@ export default function BottomNav() {
             key={href}
             href={href}
             replace
+            onClick={() => { if (!active) { haptic('tap'); setPendingPath(href) } }}
             className={cn(
               'flex flex-col items-center justify-center gap-[3px] flex-1 min-w-0 transition-colors duration-200 select-none',
               active ? 'text-gold' : 'text-ink-faint',

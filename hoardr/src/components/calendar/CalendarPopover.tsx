@@ -74,9 +74,9 @@ function calcPlacement(rect: DOMRect): { side: Side; top: number; left: number; 
   return { side, top, left, arrowAt }
 }
 
-const BG    = '#21242A'
-const DIV   = '#2E3240'
-const MUTED = '#6B7280'
+const BG    = 'var(--color-bg-elevated)'
+const DIV   = 'rgb(var(--rgb-ink) / 0.1)'
+const MUTED = 'rgb(var(--rgb-ink-muted))'
 const GOLD  = '#C9A84C'
 
 const REPEAT_OPTIONS = [
@@ -577,7 +577,7 @@ export function CalendarPopover({
   }
 
   const timeBtnStyle = (active: boolean): React.CSSProperties => ({
-    background: active ? 'rgba(201,168,76,0.12)' : 'rgba(255,255,255,0.06)',
+    background: active ? 'rgba(201,168,76,0.12)' : 'rgb(var(--rgb-ink) / 0.06)',
     border: 'none', cursor: 'pointer', borderRadius: 6,
     fontSize: 13, color: active ? GOLD : 'var(--color-ink)',
     fontFamily: 'var(--font-montserrat)', padding: '4px 10px',
@@ -585,7 +585,7 @@ export function CalendarPopover({
   })
 
   const nativeTimeStyle: React.CSSProperties = {
-    flex: 1, background: 'rgba(255,255,255,0.06)', border: 'none', outline: 'none',
+    flex: 1, background: 'rgb(var(--rgb-ink) / 0.06)', border: 'none', outline: 'none',
     borderRadius: 6, padding: '4px 8px', fontSize: 13,
     color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)',
     colorScheme: 'dark', minWidth: 0,
@@ -619,7 +619,7 @@ export function CalendarPopover({
     width: W, maxHeight: MAX_H,
     background: BG,
     borderRadius: 14,
-    boxShadow: '0 8px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06)',
+    boxShadow: '0 8px 40px rgba(0,0,0,0.55), 0 0 0 1px rgb(var(--rgb-ink) / 0.06)',
     zIndex: 200,
     display: 'flex', flexDirection: 'column', overflow: 'hidden',
     opacity: visible ? 1 : 0,
@@ -719,7 +719,7 @@ export function CalendarPopover({
             top: locDropRect.top + 2,
             left: locDropRect.left,
             width: locDropRect.width,
-            background: '#1D2026',
+            background: 'var(--color-bg-elevated)',
             border: `0.5px solid ${DIV}`,
             borderRadius: 8,
             zIndex: 203,
@@ -753,7 +753,7 @@ export function CalendarPopover({
                     tabIndex={0}
                     onClick={() => selectLoc(row.text)}
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); selectLoc(row.text) } }}
-                    className="hover:bg-white/[0.04]"
+                    className="hover:bg-ink/[0.04]"
                     style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 8px 10px 14px', cursor: 'pointer', borderBottom: sameNext ? `0.5px solid ${DIV}` : 'none' }}
                   >
                     {row.kind === 'fav'    && <Star   size={14} color={GOLD}  fill={GOLD} style={{ flexShrink: 0, marginTop: 2 }} />}
@@ -906,7 +906,7 @@ export function CalendarPopover({
             <span style={{ flex: 1, fontSize: 13, color: 'var(--color-ink)' }}>All day</span>
             <button
               onClick={() => { setField('allDay', !form.allDay); setStartOpen(false); setEndOpen(false) }}
-              style={{ width: 44, height: 24, borderRadius: 12, padding: '2px', background: form.allDay ? GOLD : 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', transition: 'background 0.15s', display: 'flex', alignItems: 'center', justifyContent: form.allDay ? 'flex-end' : 'flex-start', flexShrink: 0 }}>
+              style={{ width: 44, height: 24, borderRadius: 12, padding: '2px', background: form.allDay ? GOLD : 'rgb(var(--rgb-ink) / 0.1)', border: 'none', cursor: 'pointer', transition: 'background 0.15s', display: 'flex', alignItems: 'center', justifyContent: form.allDay ? 'flex-end' : 'flex-start', flexShrink: 0 }}>
               <span style={{ width: 20, height: 20, borderRadius: 10, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
             </button>
           </div>
@@ -937,9 +937,9 @@ export function CalendarPopover({
                 )}
 
                 {customOpen && (() => {
-                  const seg = (active: boolean): React.CSSProperties => ({ flex: 1, padding: '6px 4px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'var(--font-montserrat)', background: active ? GOLD : 'rgba(255,255,255,0.06)', color: active ? '#1a1200' : 'var(--color-ink)' })
-                  const chip = (active: boolean): React.CSSProperties => ({ borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, fontFamily: 'var(--font-montserrat)', background: active ? GOLD : 'rgba(255,255,255,0.06)', color: active ? '#1a1200' : 'var(--color-ink)' })
-                  const step: React.CSSProperties = { width: 26, height: 26, borderRadius: 7, background: 'rgba(255,255,255,0.08)', border: 'none', color: 'var(--color-ink)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }
+                  const seg = (active: boolean): React.CSSProperties => ({ flex: 1, padding: '6px 4px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'var(--font-montserrat)', background: active ? GOLD : 'rgb(var(--rgb-ink) / 0.06)', color: active ? '#1a1200' : 'var(--color-ink)' })
+                  const chip = (active: boolean): React.CSSProperties => ({ borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, fontFamily: 'var(--font-montserrat)', background: active ? GOLD : 'rgb(var(--rgb-ink) / 0.06)', color: active ? '#1a1200' : 'var(--color-ink)' })
+                  const step: React.CSSProperties = { width: 26, height: 26, borderRadius: 7, background: 'rgb(var(--rgb-ink) / 0.08)', border: 'none', color: 'var(--color-ink)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }
                   const unit = rec.freq === 'DAILY' ? 'day' : rec.freq === 'WEEKLY' ? 'week' : rec.freq === 'MONTHLY' ? 'month' : 'year'
                   const L = (t: string) => <p style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTED, margin: '0 0 6px' }}>{t}</p>
                   return (
@@ -988,7 +988,7 @@ export function CalendarPopover({
                         ))}
                       </div>
                       {rec.endType === 'date' && (() => {
-                        const fieldStyle: React.CSSProperties = { width: '100%', background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 8, padding: '7px 10px', fontSize: 13, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', outline: 'none', marginBottom: 10, boxSizing: 'border-box', textAlign: 'left' }
+                        const fieldStyle: React.CSSProperties = { width: '100%', background: 'rgb(var(--rgb-ink) / 0.06)', border: 'none', borderRadius: 8, padding: '7px 10px', fontSize: 13, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', outline: 'none', marginBottom: 10, boxSizing: 'border-box', textAlign: 'left' }
                         return isModal ? (
                           <input type="date" value={rec.endDate} min={form.date} onChange={e => setRec(c => ({ ...c, endDate: e.target.value }))}
                             style={{ ...fieldStyle, colorScheme: 'dark' }} />
@@ -1010,7 +1010,7 @@ export function CalendarPopover({
                       )}
 
                       <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                        <button onClick={() => setCustomOpen(false)} style={{ flex: 1, padding: '8px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: 'none', color: 'var(--color-ink)', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-montserrat)' }}>Back</button>
+                        <button onClick={() => setCustomOpen(false)} style={{ flex: 1, padding: '8px', borderRadius: 8, background: 'rgb(var(--rgb-ink) / 0.06)', border: 'none', color: 'var(--color-ink)', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-montserrat)' }}>Back</button>
                         <button onClick={() => { chooseRule(recToRule(rec)); setCustomOpen(false); setRepeatOpen(false) }} style={{ flex: 1, padding: '8px', borderRadius: 8, background: GOLD, border: 'none', color: '#1a1200', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-montserrat)' }}>Set repeat</button>
                       </div>
                     </div>
@@ -1076,12 +1076,12 @@ export function CalendarPopover({
             </button>
           )}
           {mode === 'edit' && onDuplicate && (
-            <button onClick={() => onDuplicate(form)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--color-ink)', fontWeight: 500, fontFamily: 'var(--font-montserrat)', padding: '6px 12px', borderRadius: 8 }}>
+            <button onClick={() => onDuplicate(form)} style={{ background: 'rgb(var(--rgb-ink) / 0.08)', border: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--color-ink)', fontWeight: 500, fontFamily: 'var(--font-montserrat)', padding: '6px 12px', borderRadius: 8 }}>
               Duplicate
             </button>
           )}
           <button onClick={attemptSave} disabled={!canSave || saving}
-            style={{ background: canSave ? GOLD : 'rgba(255,255,255,0.08)', border: 'none', cursor: canSave ? 'pointer' : 'default', color: canSave ? '#fff' : MUTED, fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-montserrat)', padding: '6px 18px', borderRadius: 8, transition: 'all 0.12s' }}>
+            style={{ background: canSave ? GOLD : 'rgb(var(--rgb-ink) / 0.08)', border: 'none', cursor: canSave ? 'pointer' : 'default', color: canSave ? '#fff' : MUTED, fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-montserrat)', padding: '6px 18px', borderRadius: 8, transition: 'all 0.12s' }}>
             {saving ? 'Saving…' : mode === 'create' ? 'Create' : 'Save'}
           </button>
         </div>
@@ -1105,7 +1105,7 @@ export function CalendarPopover({
                 ['following', 'This and following',    'This occurrence and every one after it'],
               ] as const).map(([val, label, hint]) => (
                 <button key={val} onClick={() => resolveScope(val)}
-                  style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 11px', marginBottom: 6, borderRadius: 9, border: `0.5px solid ${DIV}`, background: 'rgba(255,255,255,0.04)', cursor: 'pointer', fontFamily: 'var(--font-montserrat)' }}>
+                  style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 11px', marginBottom: 6, borderRadius: 9, border: `0.5px solid ${DIV}`, background: 'rgb(var(--rgb-ink) / 0.04)', cursor: 'pointer', fontFamily: 'var(--font-montserrat)' }}>
                   <div style={{ fontSize: 12.5, fontWeight: 600, color: scopeAsk === 'delete' && val === 'following' ? '#ef4444' : 'var(--color-ink)' }}>{label}</div>
                   <div style={{ fontSize: 10.5, color: MUTED, marginTop: 1 }}>{hint}</div>
                 </button>

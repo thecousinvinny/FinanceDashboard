@@ -1,14 +1,22 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { $fk, localToday } from '@/lib/utils'
-import { SparkChart, type DayPoint } from './SparkChart'
+import { CalendarDays, Receipt, ArrowDownLeft, Package, Landmark, TrendingDown, TrendingUp } from 'lucide-react'
+import { $fd, $fk, localToday, nextRenewalDate } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
+import { calFetch } from '@/lib/calendar'
+import type { BillingCycle } from '@/types'
 import type { Session } from '@supabase/supabase-js'
 
-const LS_SHOWN  = 'hoardr-greeting-shown'
+/**
+ * Daily brief shown when the app opens. Doubles as the warm-up screen: while
+ * it's up, ScreenKeepAlive mounts and loads every tab behind it, so the app is
+ * instant once it's dismissed.
+ */
+
 const LS_AVATAR = 'hoardr-avatar-url'
 const LS_NAME   = 'hoardr-greeting-name'
+const M = 'var(--font-montserrat)'
 
 function timeGreeting(): string {
   const h = new Date().getHours()
@@ -18,29 +26,50 @@ function timeGreeting(): string {
   return 'Good night'
 }
 
-function fmtInt(n: number)   { return Math.floor(n).toLocaleString('en-US') }
-function fmtCents(n: number) { return String(Math.round((Math.abs(n) % 1) * 100)).padStart(2, '0') }
+const pad = (n: number) => String(n).padStart(2, '0')
+const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+function addDays(ds: string, n: number) { const [y, m, d] = ds.split('-').map(Number); return ymd(new Date(y, m - 1, d + n)) }
+function dayLabel(ds: string, today: string) {
+  if (ds === today) return 'Today'
+  if (ds === addDays(today, 1)) return 'Tomorrow'
+  const [y, m, d] = ds.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short' })
+}
+function fmtTime(hhmm: string) {
+  const [h, m] = hhmm.split(':').map(Number)
+  return `${h % 12 || 12}${m ? `:${pad(m)}` : ''}${h >= 12 ? 'pm' : 'am'}`
+}
+function advancePay(ds: string, freq: string) {
+  const [y, m, d] = ds.split('-').map(Number)
+  const dt = freq === 'Weekly' ? new Date(y, m - 1, d + 7) : freq === 'Biweekly' ? new Date(y, m - 1, d + 14)
+           : freq === 'Semimonthly' ? new Date(y, m - 1, d + 15) : new Date(y, m, d)
+  return ymd(dt)
+}
 
-interface Stats { income: number; spent: number; subs: number; saved: number }
+interface UpItem { date: string; title: string; amount: number; kind: 'bill' | 'pay' }
+interface TodayEv { title: string; time: string | null }
+interface Brief {
+  spent: number; income: number; lastMonthToDate: number
+  upcoming: UpItem[]; today: TodayEv[] | null
+  netWorth: number; enRoute: number
+}
 
 export function GreetingOverlay() {
-  const [show,        setShow]        = useState(false)
-  const [mounted,     setMounted]     = useState(false)
-  const [exiting,     setExiting]     = useState(false)
-  const [name,        setName]        = useState('')
-  const [avatar,      setAvatar]      = useState<string | null>(null)
-  const [stats,       setStats]       = useState<Stats | null>(null)
-  const [sparkPoints, setSparkPoints] = useState<DayPoint[]>([])
-  const [greeting,    setGreeting]    = useState('')
+  const [show,     setShow]     = useState(false)
+  const [mounted,  setMounted]  = useState(false)
+  const [exiting,  setExiting]  = useState(false)
+  const [name,     setName]     = useState('')
+  const [avatar,   setAvatar]   = useState<string | null>(null)
+  const [brief,    setBrief]    = useState<Brief | null>(null)
+  const [greeting, setGreeting] = useState('')
+  const [todayStr, setTodayStr] = useState('')
   const genRef = useRef(0)
   const authSubRef = useRef<{ unsubscribe: () => void } | null>(null)
 
   useEffect(() => {
     const today = localToday()
-    if (false && localStorage.getItem(LS_SHOWN) === today) return // DEV: always show
-
+    setTodayStr(today)
     setGreeting(timeGreeting())
-
     const cachedName = localStorage.getItem(LS_NAME)
     if (cachedName) setName(cachedName)
     const cachedAvatar = localStorage.getItem(LS_AVATAR)
@@ -48,341 +77,258 @@ export function GreetingOverlay() {
 
     setShow(true)
     requestAnimationFrame(() => requestAnimationFrame(() => setMounted(true)))
-
     const gen = ++genRef.current
 
     async function loadData() {
       const supabase = createClient()
 
-      // Wait for session — check immediately, then listen for state change
+      // Wait for the session — check now, then listen briefly for it
       let resolved = false
       const session = await new Promise<Session | null>((resolve) => {
-        const done = (sess: Session | null) => {
-          if (resolved) return
-          resolved = true
-          resolve(sess)
-        }
-
-        supabase.auth.getSession().then(({ data }) => {
-          if (data.session) done(data.session)
-        })
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
-          if (sess) {
-            authSubRef.current = null
-            subscription.unsubscribe()
-            done(sess)
-          }
+        const done = (sess: Session | null) => { if (!resolved) { resolved = true; resolve(sess) } }
+        supabase.auth.getSession().then(({ data }) => { if (data.session) done(data.session) })
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, sess) => {
+          if (sess) { authSubRef.current = null; subscription.unsubscribe(); done(sess) }
         })
         authSubRef.current = subscription
-
-        setTimeout(() => {
-          authSubRef.current = null
-          subscription.unsubscribe()
-          done(null)
-        }, 5000)
+        setTimeout(() => { authSubRef.current = null; subscription.unsubscribe(); done(null) }, 5000)
       })
-
       if (gen !== genRef.current || !session) return
 
-      const userId = session.user.id
       const monthStart = `${today.slice(0, 7)}-01`
-      const chartStart = (() => {
-        const d = new Date(today + 'T12:00:00')
-        d.setDate(d.getDate() - 13)
-        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
-      })()
-      const chart14Days = Array.from({ length: 14 }, (_, i) => {
-        const d = new Date(today + 'T12:00:00')
-        d.setDate(d.getDate() - 13 + i)
-        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
-      })
+      const [ty, tm, td] = today.split('-').map(Number)
+      const lmStart = ymd(new Date(ty, tm - 2, 1))
+      // Same day-of-month last month, clamped to that month's length
+      const lmSameDay = ymd(new Date(ty, tm - 2, Math.min(td, new Date(ty, tm - 1, 0).getDate())))
+      const weekEnd = addDays(today, 7)
 
       const [
-        { data: incData },
-        { data: expData },
-        { data: chartExpData },
-        { data: chartIncData },
-        { data: activeSubsData },
-        { data: profile },
+        { data: expData }, { data: incData }, { data: subs }, { data: streams },
+        { data: banks }, { data: wish }, { data: profile },
       ] = await Promise.all([
+        supabase.from('expenses').select('cost, date').gte('date', lmStart).lte('date', today),
         supabase.from('income').select('amount').gte('date', monthStart).lte('date', today),
-        supabase.from('expenses').select('cost, savings, name').gte('date', monthStart).lte('date', today),
-        supabase.from('expenses').select('cost, date, name').gte('date', chartStart).lte('date', today),
-        supabase.from('income').select('amount, date').gte('date', chartStart).lte('date', today),
-        supabase.from('subscriptions').select('name').eq('status', 'Active'),
-        supabase.from('profiles').select('display_name, avatar_url').eq('id', userId).single(),
+        supabase.from('subscriptions').select('name, cost, billing, next_renewal').eq('status', 'Active'),
+        supabase.from('revenue_streams').select('name, amount, freq, next_pay_date'),
+        supabase.from('banks').select('balance'),
+        supabase.from('wishlist').select('id').eq('status', 'Ordered'),
+        supabase.from('profiles').select('display_name, avatar_url, calendar_prefs').eq('id', session.user.id).single(),
       ])
-
       if (gen !== genRef.current) return
 
-      const subNameSet = new Set((activeSubsData ?? []).map(s => String(s.name).toLowerCase()))
-
-      type ExpRow = { cost: unknown; savings: unknown; name: unknown }
-      const expArr = (expData ?? []) as ExpRow[]
+      const exp = (expData ?? []) as { cost: number; date: string }[]
+      const spent = exp.filter(e => e.date >= monthStart).reduce((s, e) => s + Number(e.cost), 0)
+      const lastMonthToDate = exp.filter(e => e.date < monthStart && e.date <= lmSameDay).reduce((s, e) => s + Number(e.cost), 0)
       const income = (incData ?? []).reduce((s, r) => s + Number(r.amount), 0)
-      const subs   = expArr.reduce((s, r) => subNameSet.has(String(r.name ?? '').toLowerCase()) ? s + Number(r.cost) : s, 0)
-      const spent  = expArr.reduce((s, r) => subNameSet.has(String(r.name ?? '').toLowerCase()) ? s : s + Number(r.cost), 0)
-      const saved  = expArr.reduce((s, r) => s + Number(r.savings ?? 0), 0)
 
-      type ChartExpRow = { cost: unknown; date: unknown; name: unknown }
-      const chartExpArr = (chartExpData ?? []) as ChartExpRow[]
-      const dailyExp: Record<string, number> = {}
-      const dailyInc: Record<string, number> = {}
-      const dailySub: Record<string, number> = {}
-      for (const e of chartExpArr) {
-        const k = String(e.date)
-        if (subNameSet.has(String(e.name ?? '').toLowerCase())) {
-          dailySub[k] = (dailySub[k] ?? 0) + Number(e.cost)
-        } else {
-          dailyExp[k] = (dailyExp[k] ?? 0) + Number(e.cost)
-        }
+      const upcoming: UpItem[] = []
+      for (const s of subs ?? []) {
+        if (!s.next_renewal || !s.billing) continue
+        let d = String(s.next_renewal)
+        while (d < today) d = nextRenewalDate(d, s.billing as BillingCycle)
+        if (d <= weekEnd) upcoming.push({ date: d, title: String(s.name), amount: Number(s.cost), kind: 'bill' })
       }
-      for (const i of (chartIncData ?? [])) {
-        const k = String(i.date)
-        dailyInc[k] = (dailyInc[k] ?? 0) + Number(i.amount)
+      for (const r of streams ?? []) {
+        if (!r.next_pay_date || !r.freq) continue
+        let d = String(r.next_pay_date)
+        while (d < today) d = advancePay(d, String(r.freq))
+        if (d <= weekEnd) upcoming.push({ date: d, title: String(r.name), amount: Number(r.amount), kind: 'pay' })
       }
+      upcoming.sort((a, b) => a.date.localeCompare(b.date) || (a.kind === 'pay' ? -1 : 1))
 
-      const points = chart14Days.map(d => ({
-        day:   String(Number(d.split('-')[2])),
-        label: new Date(d + 'T12:00:00').toLocaleString('en-US', { month: 'short', day: 'numeric' }),
-        exp:   dailyExp[d] ?? 0,
-        inc:   dailyInc[d] ?? 0,
-        sub:   dailySub[d] ?? 0,
-      }))
-
-      const fullName = (profile?.display_name as string | null)
-        ?? (session.user.user_metadata?.full_name as string | null)
-        ?? ''
+      const fullName = (profile?.display_name as string | null) ?? (session.user.user_metadata?.full_name as string | null) ?? ''
       const firstName = fullName.split(' ')[0]
-
-      // avatar_url is stored as a full public URL by the profile page — use directly.
-      // Google OAuth avatar falls back to user_metadata.picture when avatar_url is absent.
-      let avatarUrl: string | null = null
-      if (profile?.avatar_url) {
-        avatarUrl = profile.avatar_url as string
-      } else {
-        avatarUrl = (session.user.user_metadata?.avatar_url as string | null)
-          ?? (session.user.user_metadata?.picture as string | null)
-          ?? null
-      }
-
+      const avatarUrl = (profile?.avatar_url as string | null)
+        ?? (session.user.user_metadata?.avatar_url as string | null)
+        ?? (session.user.user_metadata?.picture as string | null) ?? null
       if (firstName) { setName(firstName); localStorage.setItem(LS_NAME, firstName) }
       if (avatarUrl) { setAvatar(avatarUrl); localStorage.setItem(LS_AVATAR, avatarUrl) }
-      setStats({ income, spent, subs, saved })
-      setSparkPoints(points)
+
+      const base: Brief = {
+        spent, income, lastMonthToDate, upcoming, today: null,
+        netWorth: (banks ?? []).reduce((s, b) => s + Number(b.balance ?? 0), 0),
+        enRoute: (wish ?? []).length,
+      }
+      setBrief(base)
+
+      // Today's calendar — after the money numbers, it's a slower round trip
+      const calIds = ((profile?.calendar_prefs as { googleCalendarIds?: string[] } | null)?.googleCalendarIds) ?? []
+      if (calIds.length === 0) { setBrief({ ...base, today: [] }); return }
+      const tMin = new Date(ty, tm - 1, td).toISOString()
+      const tMax = new Date(ty, tm - 1, td, 23, 59, 59).toISOString()
+      const lists = await Promise.all(calIds.map(id =>
+        calFetch(`/api/calendar?action=events&calendarId=${encodeURIComponent(id)}&timeMin=${encodeURIComponent(tMin)}&timeMax=${encodeURIComponent(tMax)}`)
+          .then(r => r.ok ? r.json() : { items: [] })
+          .then((d: { items?: Array<{ summary?: string; start: { date?: string; dateTime?: string } }> }) => d.items ?? [])
+          .catch(() => [])
+      ))
+      if (gen !== genRef.current) return
+      const evs: TodayEv[] = lists.flat().map(e => ({
+        title: e.summary ?? '(no title)',
+        time:  e.start.dateTime ? e.start.dateTime.slice(11, 16) : null,
+      })).sort((a, b) => (a.time ?? '').localeCompare(b.time ?? ''))
+      setBrief({ ...base, today: evs })
     }
 
     loadData().catch(console.error)
-
-    return () => {
-      genRef.current++
-      authSubRef.current?.unsubscribe()
-      authSubRef.current = null
-    }
+    return () => { genRef.current++; authSubRef.current?.unsubscribe(); authSubRef.current = null }
   }, [])
 
   function dismiss() {
     setExiting(true)
     setMounted(false)
-    localStorage.setItem(LS_SHOWN, localToday())
     setTimeout(() => setShow(false), 360)
   }
 
   if (!show) return null
 
-  const net       = (stats?.income ?? 0) - (stats?.spent ?? 0) - (stats?.subs ?? 0)
-  const heroVal   = (stats?.spent ?? 0) + (stats?.subs ?? 0)
-  const legendInc = sparkPoints.reduce((s, p) => s + p.inc, 0)
-  const legendExp = sparkPoints.reduce((s, p) => s + p.exp, 0)
-  const legendSub = sparkPoints.reduce((s, p) => s + p.sub, 0)
-  const hasSub    = legendSub > 0
+  const net  = (brief?.income ?? 0) - (brief?.spent ?? 0)
+  const pace = brief && brief.lastMonthToDate > 0 ? ((brief.spent - brief.lastMonthToDate) / brief.lastMonthToDate) * 100 : null
+  const dateLine = todayStr
+    ? new Date(todayStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+    : ''
+  const upShown = brief?.upcoming.slice(0, 4) ?? []
+  const upMore  = (brief?.upcoming.length ?? 0) - upShown.length
+  const evShown = brief?.today?.slice(0, 3) ?? []
+  const evMore  = (brief?.today?.length ?? 0) - evShown.length
 
-  const STATS: { label: string; value: number; color: string; prefix: string }[] = [
-    { label: 'Income', value: stats?.income ?? 0, color: 'var(--sem-income)',  prefix: '+' },
-    { label: 'Spent',  value: stats?.spent  ?? 0, color: 'var(--sem-expense)', prefix: ''  },
-    { label: 'Subs',   value: stats?.subs   ?? 0, color: 'rgba(180,185,200,0.8)', prefix: '' },
-    { label: 'Net',    value: net,                color: net >= 0 ? 'var(--sem-income)' : '#ef4444', prefix: net >= 0 ? '+' : '−' },
-    { label: 'Saved',  value: stats?.saved  ?? 0, color: 'rgb(var(--rgb-ink))', prefix: '' },
-  ]
+  const label: React.CSSProperties = { fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgb(var(--rgb-ink-muted))', fontFamily: M }
+  const skeleton = (w: number) => <span style={{ display: 'inline-block', height: 12, width: w, borderRadius: 4, background: 'rgb(var(--rgb-ink) / 0.08)' }} />
 
   return (
     <div
       onClick={dismiss}
       style={{
-        position:             'fixed',
-        inset:                0,
-        zIndex:               80,
-        display:              'flex',
-        flexDirection:        'column',
-        alignItems:           'center',
-        justifyContent:       'center',
-        paddingTop:           'env(safe-area-inset-top, 44px)',
-        paddingBottom:        'env(safe-area-inset-bottom, 34px)',
-        boxSizing:            'border-box',
-        background:           'rgba(8,8,16,0.50)',
-        backdropFilter:       'blur(6px)',
-        WebkitBackdropFilter: 'blur(6px)',
-        opacity:              mounted && !exiting ? 1 : 0,
-        transition:           mounted ? 'opacity 360ms ease' : 'none',
-        userSelect:           'none',
-        WebkitUserSelect:     'none',
+        position: 'fixed', inset: 0, zIndex: 80,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        padding: 'env(safe-area-inset-top, 44px) 0 env(safe-area-inset-bottom, 34px)',
+        boxSizing: 'border-box',
+        background: 'rgb(0 0 0 / 0.45)',
+        backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+        opacity: mounted && !exiting ? 1 : 0,
+        transition: mounted ? 'opacity 360ms ease' : 'none',
+        userSelect: 'none', WebkitUserSelect: 'none',
       }}
     >
-      {/* ── Portrait card ───────────────────────────────────────────────── */}
       <div style={{
-        position:      'relative',
-        width:         'min(88vw, 360px)',
-        height:        'min(87vh, 740px)',
-        borderRadius:  28,
-        overflow:      'hidden',
-        background:    '#080810',
-        boxShadow:     '0 48px 120px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(255,255,255,0.10)',
-        display:       'flex',
-        flexDirection: 'column',
-        transform:     mounted && !exiting
-          ? 'scale(1) translateY(0)'
-          : exiting
-            ? 'scale(0.94) translateY(10px)'
-            : 'scale(0.92) translateY(28px)',
-        transition:    mounted
-          ? exiting
-            ? 'transform 320ms cubic-bezier(0.4,0,1,1)'
-            : 'transform 520ms cubic-bezier(0.34,1.56,0.64,1)'
+        position: 'relative',
+        width: 'min(90vw, 380px)', maxHeight: 'min(86vh, 760px)',
+        borderRadius: 28, overflow: 'hidden',
+        background: 'var(--color-bg-surface)',
+        boxShadow: '0 40px 100px rgba(0,0,0,0.45), 0 0 0 0.5px rgb(var(--rgb-ink) / 0.10)',
+        display: 'flex', flexDirection: 'column',
+        transform: mounted && !exiting ? 'none' : exiting ? 'scale(0.95) translateY(8px)' : 'scale(0.92) translateY(24px)',
+        transition: mounted
+          ? exiting ? 'transform 320ms cubic-bezier(0.4,0,1,1)' : 'transform 520ms cubic-bezier(0.34,1.56,0.64,1)'
           : 'none',
       }}>
-
-        {/* ── Photo ────────────────────────────────────────────────────── */}
-        <div style={{ position: 'relative', height: '22%', flexShrink: 0 }}>
-          {avatar ? (
-            <img
-              src={avatar}
-              alt=""
-              draggable={false}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 18%', display: 'block' }}
-            />
-          ) : (
-            <div style={{
-              width: '100%', height: '100%',
-              background: 'var(--color-bg-overlay)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <span style={{ fontSize: 64, fontWeight: 700, color: 'rgb(var(--rgb-ink-muted))', fontFamily: 'var(--font-montserrat)' }}>
-                {name ? name[0].toUpperCase() : '?'}
-              </span>
-            </div>
-          )}
-          <div style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%',
-            background: 'linear-gradient(to bottom, transparent, #080810)',
-            pointerEvents: 'none',
-          }} />
-        </div>
-
-        {/* ── Content ──────────────────────────────────────────────────── */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '4px 0 12px', overflow: 'hidden' }}>
-
-          {/* Greeting */}
-          <div style={{ padding: '0 18px', marginBottom: 8 }}>
-            <p style={{
-              fontSize: 9, fontWeight: 600, letterSpacing: '0.18em',
-              textTransform: 'uppercase', color: '#D4AF37',
-              marginBottom: 2, fontFamily: 'var(--font-montserrat)',
-            }}>
-              {greeting}
-            </p>
-            <h1 style={{
-              fontSize: name.length > 10 ? 26 : 30,
-              fontWeight: 800, letterSpacing: '-0.03em',
-              color: 'rgb(var(--rgb-ink))', lineHeight: 1,
-              fontFamily: 'var(--font-montserrat)',
-            }}>
-              {name || '—'}
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '22px 22px 18px' }}>
+          <div style={{ width: 52, height: 52, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, boxShadow: '0 0 0 2px rgba(212,175,55,0.55)' }}>
+            {avatar
+              ? <img src={avatar} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(160deg,#E9CD7A,#B08A2A)', color: '#1a1200', fontWeight: 700, fontSize: 22, fontFamily: M }}>{name ? name[0].toUpperCase() : ''}</div>}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <p style={{ fontSize: 13, color: 'rgb(var(--rgb-ink-muted))', fontFamily: M }}>{greeting}</p>
+            <h1 style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', color: 'rgb(var(--rgb-ink))', lineHeight: 1.1, fontFamily: M, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {name || ' '}
             </h1>
           </div>
+        </div>
 
-          {/* ── Sparkline ─────────────────────────────────────────────── */}
-          <div style={{ position: 'relative', height: 240, flexShrink: 0 }}>
-            {sparkPoints.length > 0 && <SparkChart points={sparkPoints} />}
-
-            {/* Left gradient */}
-            <div style={{
-              position: 'absolute', inset: 0, pointerEvents: 'none',
-              background: 'linear-gradient(90deg, rgba(22,30,39,0.85) 0%, rgba(22,30,39,0.50) 45%, rgba(22,30,39,0.0) 70%)',
-              zIndex: 1,
-            }} />
-
-            {/* Legend + hero number */}
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '14px 16px', zIndex: 2, pointerEvents: 'none' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 500, color: 'var(--sem-income, #4ADE80)', fontFamily: 'var(--font-big-shoulders)' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: 2, flexShrink: 0, background: 'var(--sem-income, #4ADE80)', display: 'inline-block' }} />
-                  {$fk(legendInc)}
-                </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 500, color: 'var(--sem-expense, #D4AF37)', fontFamily: 'var(--font-big-shoulders)' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: 2, flexShrink: 0, background: 'var(--sem-expense, #D4AF37)', display: 'inline-block' }} />
-                  {$fk(legendExp)}
-                </span>
-                {hasSub && (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 500, color: 'rgba(180,185,200,0.8)', fontFamily: 'var(--font-big-shoulders)' }}>
-                    <span style={{ width: 8, height: 8, borderRadius: 2, flexShrink: 0, background: 'rgba(180,185,200,0.7)', display: 'inline-block' }} />
-                    {$fk(legendSub)}
-                  </span>
-                )}
+        <div style={{ overflowY: 'auto', padding: '0 16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* Today */}
+          <section style={{ background: 'rgb(var(--rgb-ink) / 0.05)', borderRadius: 18, padding: '14px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <CalendarDays size={15} color="#FF453A" strokeWidth={2} />
+              <span style={{ ...label, color: 'rgb(var(--rgb-ink))', letterSpacing: 0, textTransform: 'none', fontSize: 14 }}>{dateLine}</span>
+            </div>
+            {brief?.today == null ? skeleton(140) : evShown.length === 0 ? (
+              <p style={{ fontSize: 14, color: 'rgb(var(--rgb-ink-muted))', fontFamily: M }}>Nothing on the calendar today</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                {evShown.map((e, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 10, fontFamily: M }}>
+                    <span style={{ width: 54, flexShrink: 0, fontSize: 12.5, color: 'rgb(var(--rgb-ink-muted))', fontVariantNumeric: 'tabular-nums' }}>{e.time ? fmtTime(e.time) : 'All day'}</span>
+                    <span style={{ fontSize: 14.5, color: 'rgb(var(--rgb-ink))', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title}</span>
+                  </div>
+                ))}
+                {evMore > 0 && <p style={{ fontSize: 12.5, color: 'rgb(var(--rgb-ink-muted))', fontFamily: M, paddingLeft: 64 }}>+{evMore} more</p>}
               </div>
+            )}
+          </section>
 
-              {/* Hero number — identical to HomeHero */}
-              <div style={{ display: 'flex', alignItems: 'flex-start', fontFamily: 'var(--font-big-shoulders)' }}>
-                <span style={{ fontSize: 22, fontWeight: 300, color: 'rgb(var(--rgb-ink-muted))', marginTop: 7, marginRight: 1 }}>$</span>
-                <span style={{ fontSize: 52, fontWeight: 700, lineHeight: 1, letterSpacing: '-0.04em', color: 'rgb(var(--rgb-ink))' }}>
-                  {fmtInt(heroVal)}
-                  <span style={{ fontSize: 32, fontWeight: 300, color: 'rgb(var(--rgb-ink-muted))' }}>
-                    .{fmtCents(heroVal)}
-                  </span>
+          {/* Month so far */}
+          <section style={{ background: 'rgb(var(--rgb-ink) / 0.05)', borderRadius: 18, padding: '14px 16px' }}>
+            <p style={label}>Spent this month</p>
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10, marginTop: 4 }}>
+              <span style={{ fontSize: 38, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1, color: 'rgb(var(--rgb-ink))', fontFamily: 'var(--font-big-shoulders)' }}>
+                {brief ? $fd(brief.spent) : skeleton(110)}
+              </span>
+              {pace !== null && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 999,
+                  fontSize: 12, fontWeight: 600, fontFamily: M, whiteSpace: 'nowrap',
+                  color: pace <= 0 ? '#22c55e' : '#ef4444',
+                  background: pace <= 0 ? 'rgba(34,197,94,0.14)' : 'rgba(239,68,68,0.14)',
+                }}>
+                  {pace <= 0 ? <TrendingDown size={13} strokeWidth={2.25} /> : <TrendingUp size={13} strokeWidth={2.25} />}
+                  {Math.abs(pace).toFixed(0)}% vs last month
                 </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 18, marginTop: 10, fontFamily: M, fontSize: 13 }}>
+              <span style={{ color: 'rgb(var(--rgb-ink-muted))' }}>Income <b style={{ color: 'var(--sem-income)', fontWeight: 600 }}>{brief ? `+${$fk(brief.income)}` : '—'}</b></span>
+              <span style={{ color: 'rgb(var(--rgb-ink-muted))' }}>Net <b style={{ color: net >= 0 ? 'var(--sem-income)' : '#ef4444', fontWeight: 600 }}>{brief ? `${net >= 0 ? '+' : '−'}${$fk(Math.abs(net))}` : '—'}</b></span>
+            </div>
+          </section>
+
+          {/* Next 7 days */}
+          <section style={{ background: 'rgb(var(--rgb-ink) / 0.05)', borderRadius: 18, padding: '14px 16px' }}>
+            <p style={{ ...label, marginBottom: 10 }}>Next 7 days</p>
+            {!brief ? skeleton(160) : upShown.length === 0 ? (
+              <p style={{ fontSize: 14, color: 'rgb(var(--rgb-ink-muted))', fontFamily: M }}>No bills or paydays coming up</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                {upShown.map((u, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: M }}>
+                    <span style={{ width: 26, height: 26, borderRadius: 8, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: u.kind === 'pay' ? 'rgba(34,197,94,0.15)' : 'rgba(212,175,55,0.15)' }}>
+                      {u.kind === 'pay' ? <ArrowDownLeft size={14} color="#22c55e" strokeWidth={2.25} /> : <Receipt size={14} color="#D4AF37" strokeWidth={2} />}
+                    </span>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, color: 'rgb(var(--rgb-ink))', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.title}</span>
+                    <span style={{ fontSize: 12.5, color: 'rgb(var(--rgb-ink-muted))' }}>{dayLabel(u.date, todayStr)}</span>
+                    <span style={{ width: 68, textAlign: 'right', fontSize: 14, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: u.kind === 'pay' ? 'var(--sem-income)' : 'rgb(var(--rgb-ink))' }}>
+                      {u.kind === 'pay' ? '+' : ''}{$fk(u.amount)}
+                    </span>
+                  </div>
+                ))}
+                {upMore > 0 && <p style={{ fontSize: 12.5, color: 'rgb(var(--rgb-ink-muted))', fontFamily: M, paddingLeft: 36 }}>+{upMore} more</p>}
+              </div>
+            )}
+          </section>
+
+          {/* Footnotes */}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, background: 'rgb(var(--rgb-ink) / 0.05)', borderRadius: 14, padding: '10px 12px', fontFamily: M }}>
+              <Landmark size={15} color="#D4AF37" strokeWidth={2} />
+              <div style={{ minWidth: 0 }}>
+                <p style={{ fontSize: 11, color: 'rgb(var(--rgb-ink-muted))' }}>Net worth</p>
+                <p style={{ fontSize: 14.5, fontWeight: 600, color: 'rgb(var(--rgb-ink))' }}>{brief ? $fk(brief.netWorth) : '—'}</p>
               </div>
             </div>
-          </div>
-
-          {/* Divider */}
-          <div style={{ height: 0.5, background: 'rgba(255,255,255,0.08)', margin: '8px 18px' }} />
-
-          {/* Stats label */}
-          <p style={{
-            fontSize: 8, fontWeight: 500, letterSpacing: '0.16em',
-            textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)',
-            padding: '0 18px', marginBottom: 6, fontFamily: 'var(--font-montserrat)',
-          }}>
-            Your Month So Far
-          </p>
-
-          {/* Stat rows */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '0 12px' }}>
-            {STATS.map(({ label, value, color, prefix }) => (
-              <div key={label} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '8px 14px',
-                background: 'rgba(255,255,255,0.05)',
-                border: '0.5px solid rgba(255,255,255,0.08)',
-                borderRadius: 12,
-              }}>
-                <p style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.01em' }}>
-                  {label}
-                </p>
-                {stats === null ? (
-                  <div style={{ height: 15, width: 56, borderRadius: 4, background: 'rgba(255,255,255,0.07)' }} />
-                ) : (
-                  <p style={{ fontSize: 15, fontWeight: 700, fontFamily: 'var(--font-big-shoulders)', letterSpacing: '-0.01em', color, lineHeight: 1 }}>
-                    {prefix}${fmtInt(Math.abs(value))}.{fmtCents(value)}
-                  </p>
-                )}
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, background: 'rgb(var(--rgb-ink) / 0.05)', borderRadius: 14, padding: '10px 12px', fontFamily: M }}>
+              <Package size={15} color="#0A84FF" strokeWidth={2} />
+              <div style={{ minWidth: 0 }}>
+                <p style={{ fontSize: 11, color: 'rgb(var(--rgb-ink-muted))' }}>On the way</p>
+                <p style={{ fontSize: 14.5, fontWeight: 600, color: 'rgb(var(--rgb-ink))' }}>{brief ? `${brief.enRoute} ${brief.enRoute === 1 ? 'order' : 'orders'}` : '—'}</p>
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </div>
 
-      <p style={{ marginTop: 10, fontSize: 11, color: 'rgba(255,255,255,0.25)', fontFamily: 'var(--font-montserrat)', letterSpacing: '0.04em' }}>
+      <p style={{ marginTop: 12, fontSize: 12, color: 'rgba(255,255,255,0.6)', fontFamily: M, letterSpacing: '0.02em' }}>
         Tap anywhere to continue
       </p>
     </div>

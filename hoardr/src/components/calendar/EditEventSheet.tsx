@@ -476,7 +476,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
   const pillStyle = (active?: boolean): React.CSSProperties => ({
     position: 'relative',
     display: 'inline-flex', alignItems: 'center',
-    background: active ? 'rgba(201,168,76,0.12)' : 'rgba(255,255,255,0.06)',
+    background: active ? 'rgba(201,168,76,0.12)' : 'rgb(var(--rgb-ink) / 0.06)',
     borderRadius: 8, padding: '5px 10px',
     fontSize: 13, fontWeight: 500, fontFamily: M,
     color: active ? GOLD : 'var(--color-ink)',
@@ -532,7 +532,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
               className="flex-shrink-0" style={{ touchAction: 'none' }}
             >
               <div className="flex justify-center pt-3 pb-1">
-                <div className="w-9 h-1 rounded-full bg-white/20" />
+                <div className="w-9 h-1 rounded-full bg-ink/20" />
               </div>
               <div className="flex items-center justify-end px-4 pb-2">
                 <button onTouchStart={e => e.stopPropagation()} onClick={onClose} className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center">
@@ -574,7 +574,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
                 <span style={{ flex: 1, fontSize: 14, color: 'var(--color-ink)', fontFamily: M }}>All day</span>
                 <span style={{
                   width: 44, height: 24, borderRadius: 12, padding: 2,
-                  background: form.allDay ? GOLD : 'rgba(255,255,255,0.1)',
+                  background: form.allDay ? GOLD : 'rgb(var(--rgb-ink) / 0.1)',
                   display: 'inline-flex', alignItems: 'center',
                   justifyContent: form.allDay ? 'flex-end' : 'flex-start',
                   flexShrink: 0, transition: 'background 0.15s',
@@ -724,7 +724,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
                   <button
                     type="button"
                     onClick={() => { if (form) onDuplicate(form) }}
-                    style={{ width: '100%', height: 44, background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 12, cursor: 'pointer', fontSize: 14, fontWeight: 500, fontFamily: M, color: 'var(--color-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                    style={{ width: '100%', height: 44, background: 'rgb(var(--rgb-ink) / 0.06)', border: '0.5px solid rgb(var(--rgb-ink) / 0.1)', borderRadius: 12, cursor: 'pointer', fontSize: 14, fontWeight: 500, fontFamily: M, color: 'var(--color-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                   >
                     <Copy size={15} /> Duplicate
                   </button>
@@ -781,7 +781,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
           <div className="fixed inset-0 z-[60]" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={() => setConfirmScope(false)} />
           <div className="fixed inset-x-0 bottom-0 z-[70] rounded-t-[24px]" style={{ background: 'var(--color-bg-elevated)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
             <div className="flex justify-center pt-3 pb-2">
-              <div className="w-9 h-1 rounded-full bg-white/20" />
+              <div className="w-9 h-1 rounded-full bg-ink/20" />
             </div>
             <div className="px-4 pb-4">
               <h2 style={{ fontFamily: M, fontSize: 17, fontWeight: 700, color: 'var(--color-ink)' }}>Edit Recurring Event</h2>
@@ -802,7 +802,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
             </div>
             <div className="px-4 py-4">
               <button onClick={() => setConfirmScope(false)}
-                className="w-full py-3.5 rounded-[14px] bg-white/[0.06] text-[15px] font-medium text-ink-muted">
+                className="w-full py-3.5 rounded-[14px] bg-ink/[0.06] text-[15px] font-medium text-ink-muted">
                 Cancel
               </button>
             </div>
@@ -816,7 +816,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
           <div className="fixed inset-0 z-[60]" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={() => setConfirmDelete(false)} />
           <div className="fixed inset-x-0 bottom-0 z-[70] rounded-t-[24px]" style={{ background: 'var(--color-bg-elevated)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
             <div className="flex justify-center pt-3 pb-2">
-              <div className="w-9 h-1 rounded-full bg-white/20" />
+              <div className="w-9 h-1 rounded-full bg-ink/20" />
             </div>
             <div className="px-4 pb-4">
               <h2 style={{ fontFamily: M, fontSize: 17, fontWeight: 700, color: 'var(--color-ink)' }}>Delete Recurring Event</h2>
@@ -836,7 +836,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
             </div>
             <div className="px-4 py-4">
               <button onClick={() => setConfirmDelete(false)}
-                className="w-full py-3.5 rounded-[14px] bg-white/[0.06] text-[15px] font-medium text-ink-muted">
+                className="w-full py-3.5 rounded-[14px] bg-ink/[0.06] text-[15px] font-medium text-ink-muted">
                 Cancel
               </button>
             </div>

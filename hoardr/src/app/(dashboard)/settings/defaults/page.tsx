@@ -113,7 +113,7 @@ export default function DefaultsPage() {
       <div className="px-5 pt-14 pb-6 flex items-center gap-3">
         <button
           onClick={() => router.back()}
-          className="w-9 h-9 rounded-full bg-bg-overlay flex items-center justify-center flex-shrink-0 active:bg-white/[0.03]"
+          className="w-9 h-9 rounded-full bg-bg-overlay flex items-center justify-center flex-shrink-0 active:bg-ink/[0.03]"
         >
           <ArrowLeft size={17} className="text-ink" strokeWidth={1.75} />
         </button>
@@ -130,12 +130,12 @@ export default function DefaultsPage() {
       {/* ── Expense defaults ─────────────────────────────────────────────── */}
       <div className="px-5 mb-6">
         <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Expenses</p>
-        <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
+        <div className="bg-bg-surface border border-ink/[0.06] rounded-card overflow-hidden divide-y divide-ink/[0.04]">
           <button
             onClick={() => setCardOpen(true)}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]"
+            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-ink/[0.03]"
           >
-            <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-ink/[0.06] flex items-center justify-center flex-shrink-0">
               <CreditCard size={15} className="text-gold" strokeWidth={1.75} />
             </div>
             <div className="flex-1 min-w-0">
@@ -147,9 +147,9 @@ export default function DefaultsPage() {
 
           <button
             onClick={() => setCatOpen(true)}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]"
+            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-ink/[0.03]"
           >
-            <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-ink/[0.06] flex items-center justify-center flex-shrink-0">
               {defaultExpCat
                 ? <CategoryIcon category={defaultExpCat} type="Expense" size={15} className="text-gold" />
                 : <LayoutGrid size={15} className="text-gold" strokeWidth={1.75} />}
@@ -166,12 +166,12 @@ export default function DefaultsPage() {
       {/* ── Subscription defaults ─────────────────────────────────────────── */}
       <div className="px-5 mb-6">
         <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Subscriptions</p>
-        <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
+        <div className="bg-bg-surface border border-ink/[0.06] rounded-card overflow-hidden divide-y divide-ink/[0.04]">
           <button
             onClick={() => setBillingOpen(true)}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]"
+            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-ink/[0.03]"
           >
-            <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-ink/[0.06] flex items-center justify-center flex-shrink-0">
               <CalendarDays size={15} className="text-gold" strokeWidth={1.75} />
             </div>
             <div className="flex-1 min-w-0">
@@ -186,12 +186,12 @@ export default function DefaultsPage() {
       {/* ── Income defaults ───────────────────────────────────────────────── */}
       <div className="px-5 mb-6">
         <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Income</p>
-        <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
+        <div className="bg-bg-surface border border-ink/[0.06] rounded-card overflow-hidden divide-y divide-ink/[0.04]">
           <button
             onClick={() => setBankOpen(true)}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]"
+            className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-ink/[0.03]"
           >
-            <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 rounded-[10px] bg-bg-overlay ring-1 ring-ink/[0.06] flex items-center justify-center flex-shrink-0">
               <Landmark size={15} className="text-gold" strokeWidth={1.75} />
             </div>
             <div className="flex-1 min-w-0">
@@ -215,7 +215,7 @@ export default function DefaultsPage() {
         className={cn('fixed inset-x-0 bottom-0 z-[60] rounded-t-[24px] bg-bg-surface transition-transform duration-300', cardOpen ? 'translate-y-0' : 'translate-y-full')}
         style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
-        <div className="flex justify-center pt-3 pb-1"><div className="w-9 h-1 rounded-full bg-white/20" /></div>
+        <div className="flex justify-center pt-3 pb-1"><div className="w-9 h-1 rounded-full bg-ink/20" /></div>
         <div className="flex items-center justify-between px-5 mb-4">
           <h2 className="text-[18px] font-bold text-ink">Default Card</h2>
           <button onClick={() => setCardOpen(false)} className="w-8 h-8 flex items-center justify-center text-[22px] text-ink-muted">×</button>
@@ -226,11 +226,11 @@ export default function DefaultsPage() {
           ) : settingsCards.length === 0 ? (
             <div className="py-10 text-center text-ink-faint text-[13px]">No cards yet.</div>
           ) : (
-            <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] overflow-hidden divide-y divide-white/[0.04]">
+            <div className="bg-bg-overlay border border-ink/[0.06] rounded-[18px] overflow-hidden divide-y divide-ink/[0.04]">
               {settingsCards.map(card => (
                 <button key={card.id} onClick={() => handleSetDefaultCard(card.id)}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]">
-                  <div className="w-8 h-8 rounded-[10px] bg-bg-surface ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-ink/[0.03]">
+                  <div className="w-8 h-8 rounded-[10px] bg-bg-surface ring-1 ring-ink/[0.06] flex items-center justify-center flex-shrink-0">
                     <CreditCard size={14} className="text-gold" strokeWidth={1.75} />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -255,16 +255,16 @@ export default function DefaultsPage() {
         className={cn('fixed inset-x-0 bottom-0 z-[60] rounded-t-[24px] bg-bg-surface transition-transform duration-300', catOpen ? 'translate-y-0' : 'translate-y-full')}
         style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
-        <div className="flex justify-center pt-3 pb-1"><div className="w-9 h-1 rounded-full bg-white/20" /></div>
+        <div className="flex justify-center pt-3 pb-1"><div className="w-9 h-1 rounded-full bg-ink/20" /></div>
         <div className="flex items-center justify-between px-5 mb-4">
           <h2 className="text-[18px] font-bold text-ink">Default Category</h2>
           <button onClick={() => setCatOpen(false)} className="w-8 h-8 flex items-center justify-center text-[22px] text-ink-muted">×</button>
         </div>
         <div className="px-5 overflow-y-auto" style={{ maxHeight: '65vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 32px)' }}>
-          <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] overflow-hidden divide-y divide-white/[0.04]">
+          <div className="bg-bg-overlay border border-ink/[0.06] rounded-[18px] overflow-hidden divide-y divide-ink/[0.04]">
             <button onClick={() => handleSetDefaultCat('')}
-              className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]">
-              <div className="w-8 h-8 rounded-[10px] bg-bg-surface ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+              className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-ink/[0.03]">
+              <div className="w-8 h-8 rounded-[10px] bg-bg-surface ring-1 ring-ink/[0.06] flex items-center justify-center flex-shrink-0">
                 <LayoutGrid size={14} className="text-ink-faint" strokeWidth={1.75} />
               </div>
               <div className="flex-1"><p className="text-[14px] font-medium text-ink-muted">None</p></div>
@@ -272,8 +272,8 @@ export default function DefaultsPage() {
             </button>
             {EXPENSE_CATEGORIES.map(cat => (
               <button key={cat.name} onClick={() => handleSetDefaultCat(cat.name)}
-                className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]">
-                <div className="w-8 h-8 rounded-[10px] bg-bg-surface ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0">
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-ink/[0.03]">
+                <div className="w-8 h-8 rounded-[10px] bg-bg-surface ring-1 ring-ink/[0.06] flex items-center justify-center flex-shrink-0">
                   <CategoryIcon category={cat.name} type="Expense" size={14} className="text-gold" />
                 </div>
                 <div className="flex-1 min-w-0"><p className="text-[14px] font-medium text-ink truncate">{cat.name}</p></div>
@@ -294,16 +294,16 @@ export default function DefaultsPage() {
         className={cn('fixed inset-x-0 bottom-0 z-[60] rounded-t-[24px] bg-bg-surface transition-transform duration-300', billingOpen ? 'translate-y-0' : 'translate-y-full')}
         style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
-        <div className="flex justify-center pt-3 pb-1"><div className="w-9 h-1 rounded-full bg-white/20" /></div>
+        <div className="flex justify-center pt-3 pb-1"><div className="w-9 h-1 rounded-full bg-ink/20" /></div>
         <div className="flex items-center justify-between px-5 mb-4">
           <h2 className="text-[18px] font-bold text-ink">Default Billing</h2>
           <button onClick={() => setBillingOpen(false)} className="w-8 h-8 flex items-center justify-center text-[22px] text-ink-muted">×</button>
         </div>
         <div className="px-5" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 32px)' }}>
-          <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] overflow-hidden divide-y divide-white/[0.04]">
+          <div className="bg-bg-overlay border border-ink/[0.06] rounded-[18px] overflow-hidden divide-y divide-ink/[0.04]">
             {BILLING_OPTIONS.map(opt => (
               <button key={opt} onClick={() => handleSetDefaultBilling(opt)}
-                className="w-full flex items-center justify-between px-4 py-3.5 text-left active:bg-white/[0.03]">
+                className="w-full flex items-center justify-between px-4 py-3.5 text-left active:bg-ink/[0.03]">
                 <p className="text-[14px] font-medium text-ink">{BILLING_LABELS[opt]}</p>
                 {opt === defaultBilling && <div className="w-5 h-5 rounded-full gradient-gold flex items-center justify-center"><Check size={9} className="text-white" strokeWidth={2.5} /></div>}
               </button>
@@ -322,7 +322,7 @@ export default function DefaultsPage() {
         className={cn('fixed inset-x-0 bottom-0 z-[60] rounded-t-[24px] bg-bg-surface transition-transform duration-300', bankOpen ? 'translate-y-0' : 'translate-y-full')}
         style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
-        <div className="flex justify-center pt-3 pb-1"><div className="w-9 h-1 rounded-full bg-white/20" /></div>
+        <div className="flex justify-center pt-3 pb-1"><div className="w-9 h-1 rounded-full bg-ink/20" /></div>
         <div className="flex items-center justify-between px-5 mb-4">
           <h2 className="text-[18px] font-bold text-ink">Default Bank</h2>
           <button onClick={() => setBankOpen(false)} className="w-8 h-8 flex items-center justify-center text-[22px] text-ink-muted">×</button>
@@ -333,18 +333,18 @@ export default function DefaultsPage() {
           ) : settingsBanks.length === 0 ? (
             <div className="py-10 text-center text-ink-faint text-[13px]">No banks yet — add one in the In tab.</div>
           ) : (
-            <div className="bg-bg-overlay border border-white/[0.06] rounded-[18px] overflow-hidden divide-y divide-white/[0.04]">
+            <div className="bg-bg-overlay border border-ink/[0.06] rounded-[18px] overflow-hidden divide-y divide-ink/[0.04]">
               <button
                 onClick={() => { setDefaultBankId(null); setDefaultBankName(null); setBankOpen(false); setAppPrefs({ defaultBankId: null, defaultBankName: null }) }}
-                className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]"
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-ink/[0.03]"
               >
                 <div className="flex-1"><p className="text-[14px] font-medium text-ink-muted">None</p></div>
                 {defaultBankId === null && <div className="w-5 h-5 rounded-full gradient-gold flex items-center justify-center"><Check size={9} className="text-white" strokeWidth={2.5} /></div>}
               </button>
               {settingsBanks.map(bank => (
                 <button key={bank.id} onClick={() => handleSetDefaultBank(bank.id)}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]">
-                  <div className="w-8 h-8 rounded-[10px] bg-bg-surface ring-1 ring-white/[0.06] flex items-center justify-center flex-shrink-0"><Landmark size={15} className="text-ink-muted" strokeWidth={1.75} /></div>
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-ink/[0.03]">
+                  <div className="w-8 h-8 rounded-[10px] bg-bg-surface ring-1 ring-ink/[0.06] flex items-center justify-center flex-shrink-0"><Landmark size={15} className="text-ink-muted" strokeWidth={1.75} /></div>
                   <div className="flex-1 min-w-0"><p className="text-[14px] font-medium text-ink truncate">{bank.name}</p></div>
                   {bank.id === defaultBankId && <div className="w-5 h-5 rounded-full gradient-gold flex items-center justify-center"><Check size={9} className="text-white" strokeWidth={2.5} /></div>}
                 </button>

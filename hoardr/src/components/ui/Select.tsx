@@ -31,7 +31,7 @@ interface Props {
 
 interface Opt { value: string; label: string; disabled?: boolean }
 
-const FIELD = 'w-full bg-bg-overlay border border-white/[0.06] rounded-[14px] px-4 py-3 pr-10 text-[15px] text-ink text-left outline-none focus-visible:border-gold/40'
+const FIELD = 'w-full bg-bg-overlay border border-ink/[0.06] rounded-[14px] px-4 py-3 pr-10 text-[15px] text-ink text-left outline-none focus-visible:border-gold/40'
 
 function textOf(node: React.ReactNode): string {
   return Children.toArray(node).map(n => (typeof n === 'string' || typeof n === 'number') ? String(n) : '').join('')

@@ -19,7 +19,7 @@ export default function Loading() {
 
       {/* Card / bank rows */}
       <div className="mx-4 mt-4">
-        <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
+        <div className="bg-bg-surface border border-ink/[0.06] rounded-card overflow-hidden divide-y divide-ink/[0.04]">
           {[1, 2, 3].map(i => (
             <div key={i} className="flex items-center gap-3 px-4 py-3.5">
               <div className="skeleton w-10 h-10 rounded-[12px] flex-shrink-0" />

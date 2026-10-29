@@ -16,7 +16,7 @@ export function Pill({ label, active, onClick, className }: PillProps) {
         'px-4 py-2 rounded-pill text-[12px] font-semibold transition-all select-none',
         active
           ? 'gradient-gold text-white'
-          : 'bg-bg-surface border border-white/[0.06] text-ink-muted hover:text-ink',
+          : 'bg-bg-surface border border-ink/[0.06] text-ink-muted hover:text-ink',
         className,
       )}
     >
@@ -49,7 +49,7 @@ export function PillGroup<T extends string>({ options, value, onChange }: PillGr
   const dir = dirRef.current
 
   return (
-    <div className="relative flex bg-bg-surface border border-white/[0.06] rounded-pill p-1">
+    <div className="relative flex bg-bg-surface border border-ink/[0.06] rounded-pill p-1">
       {/*
         Liquid bubble indicator.
         Uses left + right (not width) with offset transition durations:

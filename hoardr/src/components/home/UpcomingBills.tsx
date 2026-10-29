@@ -99,7 +99,7 @@ export function UpcomingBills({ initial, onPaid }: { initial: UpcomingSub[]; onP
         <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint">Upcoming</p>
         <Link href="/plans" className="text-[11px] font-medium text-gold">All →</Link>
       </div>
-      <div className="bg-bg-surface border border-white/[0.06] rounded-card overflow-hidden divide-y divide-white/[0.04]">
+      <div className="bg-bg-surface border border-ink/[0.06] rounded-card overflow-hidden divide-y divide-ink/[0.04]">
         {items.map(sub => {
           const Icon     = sub.category ? getCategoryIcon(sub.category, 'Expense') : RefreshCw
           const overdue  = (sub.next_renewal ?? '') < localToday()
@@ -114,7 +114,7 @@ export function UpcomingBills({ initial, onPaid }: { initial: UpcomingSub[]; onP
               rightBg="bg-emerald-600"
             >
               <div className="flex items-center gap-3 px-4 py-3.5">
-                <div className={`w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 flex items-center justify-center flex-shrink-0 ${overdue ? 'ring-ruby/40' : 'ring-white/[0.06]'}`}>
+                <div className={`w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 flex items-center justify-center flex-shrink-0 ${overdue ? 'ring-ruby/40' : 'ring-ink/[0.06]'}`}>
                   <Icon size={15} strokeWidth={1.75} className={overdue ? 'text-ruby' : 'text-gold'} />
                 </div>
                 <div className="flex-1 min-w-0">

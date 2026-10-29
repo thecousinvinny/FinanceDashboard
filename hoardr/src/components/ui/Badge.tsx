@@ -12,7 +12,7 @@ const STYLE: Record<string, string> = {
   Paid:          'bg-emerald/10 text-emerald',
   // Subscription / expense
   Active:        'bg-emerald/10 text-emerald',
-  Cancelled:     'bg-white/[0.06] text-ink-faint',
+  Cancelled:     'bg-ink/[0.06] text-ink-faint',
   Ordered:       'bg-gold/10    text-gold',
   Procured:      'bg-emerald/10 text-emerald',
   // Wishlist
@@ -26,7 +26,7 @@ export function Badge({ status, className }: { status: AnyStatus; className?: st
     <span
       className={cn(
         'inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide whitespace-nowrap',
-        STYLE[status] ?? 'bg-white/[0.06] text-ink-muted',
+        STYLE[status] ?? 'bg-ink/[0.06] text-ink-muted',
         className,
       )}
     >

@@ -32,7 +32,7 @@ export default function LoginPage() {
         </div>
 
         {/* Card */}
-        <div className="bg-bg-surface border border-white/[0.06] rounded-card p-6">
+        <div className="bg-bg-surface border border-ink/[0.06] rounded-card p-6">
 
           <button
             onClick={signInWithGoogle}
