@@ -15,7 +15,7 @@ import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { CustomDateInput } from '@/components/ui/CustomDateInput'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import type { Card, Bank, IncomeSource } from '@/types'
-import { Banknote, X, ArrowUpCircle, ArrowLeftRight, PlusCircle, Search, Landmark } from 'lucide-react'
+import { Banknote, X, ArrowUpCircle, ArrowLeftRight, PlusCircle, Search, Landmark , CreditCard} from 'lucide-react'
 import { GlobalFAB } from '@/components/ui/GlobalFAB'
 import { cn, $f, $fd, $fk, fmtDate, haptic, groupByMonth, localToday, daysUntilLabel } from '@/lib/utils'
 import type { Frequency } from '@/components/wallet/RevenueStreamSheet'
@@ -1361,6 +1361,7 @@ export default function InPage() {
       {/* ── FAB ──────────────────────────────────────────────────────────── */}
       <GlobalFAB key={tab} actions={[
         { Icon: ArrowLeftRight, label: 'New Transfer', onTap: () => setTransferSheetOpen(true) },
+        { Icon: CreditCard,     label: 'Add Card',     onTap: () => setCardSheetOpen(true) },
         { Icon: PlusCircle,     label: 'Add Account',  onTap: () => setBankSheetOpen(true) },
         { Icon: ArrowUpCircle,  label: 'New Income',   onTap: () => setIncomeOpen(true)    },
       ]} />

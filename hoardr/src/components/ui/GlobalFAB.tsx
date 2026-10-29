@@ -92,18 +92,17 @@ export function GlobalFAB({ actions }: { actions: FABAction[] }) {
       <div
         ref={menuRef}
         role="menu"
-        className="fixed overflow-hidden"
+        className="frost-strong fixed overflow-hidden"
         style={{
           zIndex: 46,
           right: 16,
           bottom: 'calc(env(safe-area-inset-bottom, 0px) + 158px)',
           minWidth: 230,
           borderRadius: 14,
-          // Opaque surface: a blurred panel has to re-blur on every frame it scales
-          background: 'var(--color-bg-elevated)',
-          boxShadow: '0 16px 40px rgba(0,0,0,0.35), 0 0 0 0.5px rgb(var(--rgb-ink) / 0.12)',
+          // Frosted glass. Kept smooth by animating only a small translate +
+          // opacity (no scale) and not blurring the page behind it.
           transformOrigin: 'bottom right',
-          transform: shown ? 'scale(1)' : 'scale(0.88)',
+          transform: shown ? 'none' : 'translateY(8px)',
           opacity: shown ? 1 : 0,
           transition: `transform ${MENU_MS}ms ${EASE}, opacity ${shown ? 160 : 200}ms ease`,
           willChange: 'transform, opacity',

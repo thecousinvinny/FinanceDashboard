@@ -40,24 +40,25 @@ function Toast({ item }: { item: ToastItem }) {
       transition:           visible
         ? 'transform 0.42s cubic-bezier(0.34,1.56,0.64,1), opacity 0.22s ease'
         : 'transform 0.2s cubic-bezier(0.4,0,1,1), opacity 0.18s ease',
-      background:           'rgba(18,18,30,0.97)',
-      backdropFilter:       'blur(24px)',
-      WebkitBackdropFilter: 'blur(24px)',
-      border:               '1px solid rgb(var(--rgb-ink) / 0.1)',
+      // Frosted glass (theme-aware) — was a hard-coded near-black pill
+      background:           'var(--glass-strong)',
+      backdropFilter:       'blur(28px) saturate(190%)',
+      WebkitBackdropFilter: 'blur(28px) saturate(190%)',
+      border:               '0.5px solid var(--glass-edge)',
       borderRadius:         100,
       padding:              '11px 14px 11px 16px',
       display:              'flex',
       alignItems:           'center',
       gap:                  9,
       maxWidth:             360,
-      boxShadow:            '0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgb(var(--rgb-ink) / 0.04)',
+      boxShadow:            'var(--glass-shadow), inset 0 0.5px 0 var(--glass-hi)',
       pointerEvents:        'auto',
     }}>
       <span style={{
         width: 7, height: 7, borderRadius: '50%', background: DOT[item.type], flexShrink: 0,
         boxShadow: `0 0 8px ${DOT[item.type]}80`,
       }} />
-      <span style={{ fontSize: 13, fontWeight: 500, color: 'rgba(240,240,248,0.9)', fontFamily: M, whiteSpace: 'nowrap', flex: 1 }}>
+      <span style={{ fontSize: 13, fontWeight: 500, color: 'rgb(var(--rgb-ink) / 0.92)', fontFamily: M, whiteSpace: 'nowrap', flex: 1 }}>
         {item.message}
       </span>
       {item.undo && (

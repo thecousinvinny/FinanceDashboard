@@ -75,6 +75,14 @@ function calcPlacement(rect: DOMRect): { side: Side; top: number; left: number; 
 }
 
 const BG    = 'var(--color-bg-elevated)'
+// Frosted glass for the floating surfaces (popover + its dropdowns)
+const GLASS: React.CSSProperties = {
+  background: 'var(--glass-strong)',
+  backdropFilter: 'blur(32px) saturate(190%)',
+  WebkitBackdropFilter: 'blur(32px) saturate(190%)',
+  border: '0.5px solid var(--glass-edge)',
+  boxShadow: 'var(--glass-shadow), inset 0 0.5px 0 var(--glass-hi)',
+}
 const DIV   = 'rgb(var(--rgb-ink) / 0.1)'
 const MUTED = 'rgb(var(--rgb-ink-muted))'
 const GOLD  = '#C9A84C'
@@ -636,19 +644,16 @@ export function CalendarPopover({
     minWidth: Math.max(rect.width, 130),
     maxHeight: 200,
     overflowY: 'auto',
-    background: BG,
-    border: `1px solid ${DIV}`,
+    ...GLASS,
     borderRadius: 10,
     zIndex: 202,
-    boxShadow: '0 4px 20px rgba(0,0,0,0.55)',
   })
 
   const popoverStyle: React.CSSProperties = {
     position: 'fixed',
     width: W, maxHeight: MAX_H,
-    background: BG,
+    ...GLASS,
     borderRadius: 14,
-    boxShadow: '0 8px 40px rgba(0,0,0,0.55), 0 0 0 1px rgb(var(--rgb-ink) / 0.06)',
     zIndex: 200,
     display: 'flex', flexDirection: 'column', overflow: 'hidden',
     opacity: visible ? 1 : 0,
@@ -672,14 +677,6 @@ export function CalendarPopover({
           onMouseDown={onClose} />
       )}
 
-      {/* Arrow (anchored) */}
-      {!isModal && placement && (() => {
-        const a = placement.arrowAt, s = placement.side
-        const base: React.CSSProperties = { position: 'fixed', zIndex: 199, width: 0, height: 0 }
-        if (s === 'right') return <div style={{ ...base, top: placement.top + a - ARROW, left: placement.left - ARROW*2, borderTop: `${ARROW}px solid transparent`, borderBottom: `${ARROW}px solid transparent`, borderRight: `${ARROW*2}px solid ${BG}` }} />
-        if (s === 'left')  return <div style={{ ...base, top: placement.top + a - ARROW, left: placement.left + W, borderTop: `${ARROW}px solid transparent`, borderBottom: `${ARROW}px solid transparent`, borderLeft: `${ARROW*2}px solid ${BG}` }} />
-        return <div style={{ ...base, top: placement.top - ARROW*2, left: placement.left + a - ARROW, borderLeft: `${ARROW}px solid transparent`, borderRight: `${ARROW}px solid transparent`, borderBottom: `${ARROW*2}px solid ${BG}` }} />
-      })()}
 
       {/* Start time dropdown — fixed, doesn't disturb popover layout */}
       {startOpen && startDropRect && (
@@ -748,11 +745,9 @@ export function CalendarPopover({
             top: locDropRect.top + 2,
             left: locDropRect.left,
             width: locDropRect.width,
-            background: 'var(--color-bg-elevated)',
-            border: `0.5px solid ${DIV}`,
-            borderRadius: 8,
+            ...GLASS,
+            borderRadius: 10,
             zIndex: 203,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.55)',
             maxHeight: 320,
             overflowY: 'auto',
             fontFamily: 'var(--font-montserrat)',

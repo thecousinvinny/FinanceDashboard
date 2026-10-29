@@ -248,10 +248,10 @@ export function SparkChart({ points, onHover, gestureMode }: {
             </linearGradient>
           </defs>
 
-          <path d={buildArea(expVals)} fill="url(#exp-grad)" stroke="none" style={{ mixBlendMode: 'screen' }}/>
-          <path d={buildArea(incVals)} fill="url(#inc-grad)" stroke="none" style={{ mixBlendMode: 'screen' }}/>
+          <path d={buildArea(expVals)} fill="url(#exp-grad)" stroke="none" className="spark-area"/>
+          <path d={buildArea(incVals)} fill="url(#inc-grad)" stroke="none" className="spark-area"/>
           {totalSub > 0 && (
-            <path d={buildArea(subVals)} fill="url(#sub-grad)" stroke="none" style={{ mixBlendMode: 'screen' }}/>
+            <path d={buildArea(subVals)} fill="url(#sub-grad)" stroke="none" className="spark-area"/>
           )}
 
           {hoverIdx !== null && (

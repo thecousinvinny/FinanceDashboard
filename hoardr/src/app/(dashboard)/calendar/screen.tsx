@@ -2545,7 +2545,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       ]
       const menuW = 168, menuH = items.length * 34 + 8
       return (
-        <div ref={evCtxRef} style={{ position: 'fixed', top: Math.min(y, window.innerHeight - menuH - 8), left: Math.min(x, window.innerWidth - menuW - 8), width: menuW, background: 'var(--color-bg-elevated)', border: '0.5px solid rgb(var(--rgb-ink) / 0.1)', borderRadius: 10, zIndex: 300, boxShadow: '0 4px 24px rgba(0,0,0,0.55)', overflow: 'hidden', fontFamily: 'var(--font-montserrat)', padding: '4px 0' }}>
+        <div ref={evCtxRef} style={{ position: 'fixed', top: Math.min(y, window.innerHeight - menuH - 8), left: Math.min(x, window.innerWidth - menuW - 8), width: menuW, background: 'var(--glass-strong)', backdropFilter: 'blur(32px) saturate(190%)', WebkitBackdropFilter: 'blur(32px) saturate(190%)', border: '0.5px solid var(--glass-edge)', borderRadius: 10, zIndex: 300, boxShadow: 'var(--glass-shadow), inset 0 0.5px 0 var(--glass-hi)', overflow: 'hidden', fontFamily: 'var(--font-montserrat)', padding: '4px 0' }}>
           {items.map(item => (
             <button key={item.label} onClick={() => { item.action(); setEvCtxMenu(null) }}
               onMouseEnter={e => { e.currentTarget.style.background = 'rgb(var(--rgb-ink) / 0.06)' }}

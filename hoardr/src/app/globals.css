@@ -629,3 +629,43 @@ html.slate-mist { --seg-thumb: #ffffff; }
 .cal-agenda-ev:hover, .cal-agenda-ev:focus-visible { background: rgb(var(--rgb-ink) / 0.05); }
 .cal-agenda-empty { cursor: pointer; transition: background 0.12s ease; }
 .cal-agenda-empty:hover { background: rgb(var(--rgb-ink) / 0.04); }
+
+/* Sparkline areas: 'screen' brightens overlaps on dark cards but turns to
+   white on a light one — the colors showed during the reveal animation (the
+   blend isn't applied while it runs) and then vanished. Light themes multiply. */
+.spark-area { mix-blend-mode: screen; }
+html.slate-mist .spark-area, html.light .spark-area { mix-blend-mode: multiply; }
+
+/* ── Frosted glass ───────────────────────────────────────────────────────────
+   One recipe for floating chrome over content (bottom nav, toasts, menus,
+   popovers): translucent theme tint + heavy blur/saturation, a hairline edge
+   and a soft top highlight. Light themes use bright white glass. */
+:root {
+  --glass-tint:   rgb(var(--rgb-bg-elevated) / 0.62);
+  --glass-strong: rgb(var(--rgb-bg-elevated) / 0.82);
+  --glass-edge:   rgb(255 255 255 / 0.10);
+  --glass-hi:     rgb(255 255 255 / 0.08);
+  --glass-shadow: 0 12px 36px rgba(0, 0, 0, 0.42), 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+html.slate-mist, html.light {
+  --glass-tint:   rgb(255 255 255 / 0.66);
+  --glass-strong: rgb(255 255 255 / 0.86);
+  --glass-edge:   rgb(20 23 28 / 0.08);
+  --glass-hi:     rgb(255 255 255 / 0.95);
+  --glass-shadow: 0 12px 32px rgba(20, 23, 28, 0.12), 0 2px 6px rgba(20, 23, 28, 0.06);
+}
+.frost {
+  background: var(--glass-tint);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  backdrop-filter: blur(28px) saturate(190%);
+  border: 0.5px solid var(--glass-edge);
+  box-shadow: var(--glass-shadow), inset 0 0.5px 0 var(--glass-hi);
+}
+/* Menus/popovers hold text — a denser tint keeps it crisp over busy content */
+.frost-strong {
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: blur(32px) saturate(190%);
+  backdrop-filter: blur(32px) saturate(190%);
+  border: 0.5px solid var(--glass-edge);
+  box-shadow: var(--glass-shadow), inset 0 0.5px 0 var(--glass-hi);
+}

@@ -148,7 +148,9 @@ Module-level emitter — call from anywhere. `<ToastContainer />` mounted in `(d
 
 ## UI components (`src/components/`)
 
-- `nav/BottomNav.tsx` — 4-tab fixed nav, 72px tall. Tab order: Hoard/Out/In/Calendar. All `<Link>` use `replace`. Active = 2px gold bar at **top** of nav, slid with `transform` (not `left`).
+- `nav/BottomNav.tsx` — floating frosted-glass capsule (62px, 10px above the safe area, max 420px wide). Tab order: Hoard/Out/In/Calendar. All `<Link>` use `replace`. Active = a glass pill behind the tab, slid with `transform`. `(dashboard)/layout.tsx`'s `<main>` pads `safe-area + 84px` to clear it.
+- **Frosted glass** — `.frost` / `.frost-strong` (globals.css) and the `--glass-*` tokens (dark tint in dark themes, white glass in Slate Mist) for floating chrome over content: bottom nav, toasts, FAB menu, `Select` menus, the calendar popover + its dropdowns and context menus. Never blur a full-screen backdrop or a panel while it scales — that's what made the FAB stutter.
+- `.spark-area` — sparkline areas blend with `screen` on dark themes and `multiply` on light ones (`screen` on white is invisible).
 - `nav/TabSwipeNavigator.tsx` — **not mounted anywhere**; file exists but is unused. Inter-tab swipe was removed in favour of `replace` navigation.
 - `hooks/usePillSwipe.ts` — used by `/money` and `/in`. Handles **intra-tab pill switching only** — cross-route navigation was removed. Args: `(tab, setTab, options)`.
 - `ui/CategoryIcon.tsx` — glyph from `categoryMeta[name]` (DB icon) or defaults; color is **always semantic** (gold expense, emerald income, `sem-sub` subscription). Per-category DB colors are not used for icons — they loaded late and made tabs inconsistent. `CategoryPicker` and `FormRow` icons follow the same neutral style (no colored tiles).

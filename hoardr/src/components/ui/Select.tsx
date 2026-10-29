@@ -168,7 +168,7 @@ export function Select({ value, onChange, children, className, style, trigger, .
           ref={menuRef}
           role="listbox"
           onMouseDown={e => e.preventDefault()}   // keep focus on the trigger
-          className="select-menu"
+          className="select-menu frost-strong"
           style={{
             position: 'fixed', zIndex: 220,
             left: Math.min(pos.left, window.innerWidth - pos.width - 8),
@@ -176,10 +176,7 @@ export function Select({ value, onChange, children, className, style, trigger, .
             maxHeight: pos.maxH,
             ...(pos.up ? { bottom: window.innerHeight - pos.top } : { top: pos.top }),
             overflowY: 'auto', overscrollBehavior: 'contain',
-            background: 'var(--color-bg-elevated, #1D2026)',
-            border: '0.5px solid rgb(var(--rgb-ink) / 0.1)',
             borderRadius: 12, padding: 4,
-            boxShadow: '0 10px 32px rgba(0,0,0,0.5)',
             fontFamily: 'var(--font-montserrat)',
             transformOrigin: pos.up ? 'bottom' : 'top',
           }}

@@ -1,9 +1,9 @@
 'use client'
 
 import Link from 'next/link'
+import { Coins, TrendingDown, TrendingUp, CalendarDays } from 'lucide-react'
 import { useActivePath, setPendingPath } from '@/lib/tab-nav'
 import { haptic } from '@/lib/utils'
-import { Coins, TrendingDown, TrendingUp, CalendarDays } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const tabs = [
@@ -13,18 +13,17 @@ const tabs = [
   { href: '/calendar', label: 'Calendar', Icon: CalendarDays },
 ]
 
-const N       = tabs.length
-// nav has px-2 (8px each side = 16px total). Each tab is (100% - 16px) / N wide.
-// Bar inset within each tab: 12px each side (Tailwind inset-x-3).
-// bar left  = 8px nav-pad + activeIdx * tabWidth + 12px inset
-//           = 20px + activeIdx * (100% - 16px) / N
-// bar width = tabWidth - 24px
-//           = (100% - 16px) / N - 24px
-const BAR_W = `calc((100% - 16px) / ${N} - 24px)`
-// Slide with transform, not `left` — `left` re-lays-out every frame. A tab is
-// the bar's own width + 24px, and translate percentages are of the bar itself.
-const barX  = (i: number) => `translateX(calc(${i} * (100% + 24px)))`
+const N    = tabs.length
+const PAD  = 6   // inner padding of the capsule
+// Spring that settles quickly — the pill should feel attached to the finger
+const SLIDE = 'transform 420ms cubic-bezier(0.32, 0.72, 0, 1)'
 
+/**
+ * Floating frosted-glass tab bar (iOS-style capsule). Content scrolls
+ * underneath and shows through the blur. A glass pill slides behind the
+ * active tab. Height + bottom offset are mirrored by the layout's bottom
+ * padding (`--tabbar-space`).
+ */
 export default function BottomNav() {
   // Optimistic: highlights (and the keep-alive screen) switch on tap, not on route commit
   const pathname  = useActivePath()
@@ -32,33 +31,30 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 inset-x-0 h-[72px] z-50 flex items-stretch justify-around px-2"
+      className="frost fixed z-50 left-1/2 flex items-stretch"
       style={{
-        background:           'var(--nav-bg)',
-        backdropFilter:       'blur(32px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+        bottom:       'calc(env(safe-area-inset-bottom, 0px) + 10px)',
+        width:        'min(calc(100% - 24px), 420px)',
+        height:       62,
+        padding:      PAD,
+        borderRadius: 26,
+        transform:    'translateX(-50%)',
       }}
     >
-      {/* Subtle separator line */}
-      <div
-        aria-hidden
-        className="absolute top-0 inset-x-[8%] h-px pointer-events-none"
-        style={{
-          background: 'linear-gradient(to right, transparent, rgb(var(--rgb-ink) / 0.18) 30%, rgb(var(--rgb-ink) / 0.18) 70%, transparent)',
-        }}
-      />
-
-      {/* Single sliding gold bar */}
+      {/* Sliding glass pill behind the active tab */}
       {activeIdx >= 0 && (
         <div
           aria-hidden
-          className="absolute top-0 h-[2px] rounded-full bg-gold pointer-events-none"
+          className="absolute pointer-events-none"
           style={{
-            width:      BAR_W,
-            left:       20,
-            transform:  barX(activeIdx),
-            transition: 'transform 340ms cubic-bezier(0.34,1.56,0.64,1)',
-            willChange: 'transform',
+            top: PAD, bottom: PAD, left: PAD,
+            width:        `calc((100% - ${PAD * 2}px) / ${N})`,
+            borderRadius: 20,
+            background:   'rgb(var(--rgb-ink) / 0.08)',
+            boxShadow:    'inset 0 0.5px 0 var(--glass-hi), 0 0 0 0.5px rgb(var(--rgb-ink) / 0.05)',
+            transform:    `translateX(${activeIdx * 100}%)`,
+            transition:   SLIDE,
+            willChange:   'transform',
           }}
         />
       )}
@@ -72,18 +68,19 @@ export default function BottomNav() {
             replace
             onClick={() => { if (!active) { haptic('tap'); setPendingPath(href) } }}
             className={cn(
-              'flex flex-col items-center justify-center gap-[3px] flex-1 min-w-0 transition-colors duration-200 select-none',
-              active ? 'text-gold' : 'text-ink-faint',
+              'relative flex flex-col items-center justify-center gap-[3px] flex-1 min-w-0 select-none transition-colors duration-200',
+              active ? 'text-gold' : 'text-ink-muted',
             )}
+            style={{ WebkitTapHighlightColor: 'transparent' }}
           >
             <span style={{
               display:    'block',
-              transform:  active ? 'scale(1.12)' : 'scale(1)',
-              transition: 'transform 340ms cubic-bezier(0.34,1.56,0.64,1)',
+              transform:  active ? 'scale(1.06)' : 'scale(1)',
+              transition: 'transform 300ms cubic-bezier(0.34,1.56,0.64,1)',
             }}>
-              <Icon size={22} strokeWidth={active ? 2 : 1.5} />
+              <Icon size={21} strokeWidth={active ? 2.1 : 1.7} />
             </span>
-            <span className="text-[9px] font-medium tracking-[0.07em] uppercase leading-none">
+            <span className={cn('text-[10px] leading-none tracking-[0.01em]', active ? 'font-semibold' : 'font-medium')}>
               {label}
             </span>
           </Link>

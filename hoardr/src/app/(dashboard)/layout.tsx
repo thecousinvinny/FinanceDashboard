@@ -12,7 +12,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <ToastContainer />
       <ProfileDrawer />
       <GreetingOverlay />
-      <main className="flex-1 pb-[72px]">
+      {/* Clears the floating tab bar: 62px capsule + 10px gap + safe area */}
+      <main className="flex-1" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 84px)' }}>
         <ScreenKeepAlive />
         {children}
       </main>
