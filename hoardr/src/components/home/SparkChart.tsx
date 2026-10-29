@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, type MutableRefObject } from 'react'
 import { $fc, haptic } from '@/lib/utils'
+import { useScreenVisit } from '@/lib/tab-nav'
 
 export interface DayPoint {
   day:   string  // "1", "12", "31"
@@ -166,7 +167,10 @@ export function SparkChart({ points, onHover, gestureMode }: {
   }
   const ig = gf(incPeakY), eg = gf(expPeakY), sg = gf(subPeakY)
 
-  const animKey = `${n}-${Math.round(totalExp + totalInc)}-${colorRev}`
+  // Replays on new data and each time the screen is shown (kept-alive screens
+  // mount hidden, so the first draw would otherwise happen unseen)
+  const visit   = useScreenVisit()
+  const animKey = `${n}-${Math.round(totalExp + totalInc)}-${colorRev}-${visit}`
   const hovered = hoverIdx !== null ? points[hoverIdx] : null
 
   function handleMouseMove(e: React.MouseEvent) {

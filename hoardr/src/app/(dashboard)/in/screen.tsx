@@ -27,6 +27,7 @@ import { pageCache } from '@/lib/page-cache'
 import { PullIndicator } from '@/components/ui/PullIndicator'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { useOnScreenReturn } from '@/lib/tab-nav'
+import { useScreenVisit } from '@/lib/tab-nav'
 
 interface CardExpense {
   id: string; name: string; cost: number; date: string; categories: { name: string } | null
@@ -96,6 +97,7 @@ function IncomeBarChart({ incomeList }: { incomeList: IncomeRow[] }) {
 
   const CHART_H = 100
   const BAR_W   = 28
+  const visit   = useScreenVisit()
 
   useEffect(() => {
     const handler = () => setColorRev(r => r + 1)
@@ -127,9 +129,10 @@ function IncomeBarChart({ incomeList }: { incomeList: IncomeRow[] }) {
 
   useEffect(() => {
     setAnimated(false)
+    if (visit === 0) return   // grow the bars when shown, every time it's shown
     const t = setTimeout(() => setAnimated(true), 30)
     return () => clearTimeout(t)
-  }, [incomeList])
+  }, [incomeList, visit])
 
   const hoveredMonth = hoverIdx !== null ? months[hoverIdx] : null
 

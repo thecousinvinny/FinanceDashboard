@@ -27,6 +27,7 @@ import { usePillSwipe } from '@/hooks/usePillSwipe'
 import { getAppPrefs } from '@/lib/app-prefs'
 import { GlobalFAB } from '@/components/ui/GlobalFAB'
 import { useOnScreenReturn } from '@/lib/tab-nav'
+import { useScreenVisit } from '@/lib/tab-nav'
 
 type Tab = 'Expenses' | 'Subs' | 'Wishlist'
 
@@ -39,12 +40,14 @@ function CategoryPillBar({ cat, index, isSub = false, onClick, isExpanded = fals
   variant?: 'gold' | 'emerald'
 }) {
   const [animPct, setAnimPct] = useState(0)
+  const visit = useScreenVisit()   // fill when shown, every time it's shown
 
   useEffect(() => {
     setAnimPct(0)
+    if (visit === 0) return
     const t = setTimeout(() => setAnimPct(cat.pct), 50 + index * 80)
     return () => clearTimeout(t)
-  }, [cat.pct, index])
+  }, [cat.pct, index, visit])
 
   const fillGradient = variant === 'emerald'
     ? 'linear-gradient(90deg, rgba(34,197,94,0.40), rgba(34,197,94,0.12))'

@@ -8,7 +8,7 @@ import InScreen from '@/app/(dashboard)/in/screen'
 import CalendarScreen from '@/app/(dashboard)/calendar/screen'
 import ProfileScreen from '@/app/(dashboard)/profile/screen'
 import SettingsScreen from '@/app/(dashboard)/settings/screen'
-import { ScreenActiveContext, clearPendingPath, useActivePath } from '@/lib/tab-nav'
+import { ScreenActiveContext, ScreenVisitContext, clearPendingPath, useActivePath } from '@/lib/tab-nav'
 
 /**
  * Keeps every main screen mounted once it has rendered, so switching tabs is
@@ -44,6 +44,14 @@ export function ScreenKeepAlive() {
   const [mounted, setMounted] = useState<Set<string>>(() => new Set(SCREEN_PATHS.includes(active) ? [active] : []))
   const scrollPos = useRef<Record<string, number>>({})
   const activeRef = useRef(active)
+  // How many times each screen has been shown — drives entrance animations
+  const [visits, setVisits] = useState<Record<string, number>>(() => ({ [active]: 1 }))
+  const lastShown = useRef(active)
+  useEffect(() => {
+    if (lastShown.current === active) return
+    lastShown.current = active
+    setVisits(v => ({ ...v, [active]: (v[active] ?? 0) + 1 }))
+  }, [active])
 
   // The router caught up with an optimistic tap
   useEffect(() => { clearPendingPath() }, [pathname])
@@ -82,6 +90,7 @@ export function ScreenKeepAlive() {
         const isActive = path === active
         return (
           <ScreenActiveContext.Provider key={path} value={isActive}>
+            <ScreenVisitContext.Provider value={visits[path] ?? 0}>
             <div
               data-screen={path}
               inert={!isActive}
@@ -90,6 +99,7 @@ export function ScreenKeepAlive() {
             >
               <Screen />
             </div>
+            </ScreenVisitContext.Provider>
           </ScreenActiveContext.Provider>
         )
       })}

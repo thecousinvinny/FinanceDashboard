@@ -38,10 +38,22 @@ export function useActivePath(): string {
 
 // ── Per-screen visibility ────────────────────────────────────────────────────
 export const ScreenActiveContext = createContext(true)
+/** Increments each time the screen is shown (starts at 1 when first shown). */
+export const ScreenVisitContext = createContext(1)
 
 /** True while this screen is the visible one (always true outside keep-alive). */
 export function useScreenActive(): boolean {
   return useContext(ScreenActiveContext)
+}
+
+/**
+ * Changes every time this screen is shown. Entrance animations (number drums,
+ * chart draw-ins) key off it: screens now mount hidden in the background, so
+ * a mount-time animation would play unseen — and never replay on return.
+ * 0 while the screen hasn't been shown yet.
+ */
+export function useScreenVisit(): number {
+  return useContext(ScreenVisitContext)
 }
 
 /**

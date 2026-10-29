@@ -25,6 +25,7 @@ Home, Out, In, Calendar, Profile and Settings live in `<route>/screen.tsx`; thei
 - Navigation is optimistic: `BottomNav` / `ProfileDrawer` / Profile's settings button call `setPendingPath(href)` so the screen and the nav highlight switch on tap; `useActivePath()` (`src/lib/tab-nav.ts`) is the path to render against, not `usePathname()`.
 - A kept-alive screen doesn't refetch by remounting. Every screen calls `useOnScreenReturn(reload)` to refresh in the background each time it's shown again — new screens must too.
 - Hidden screens are still mounted, so **document/window listeners must be gated**: `useScreenActive()` is false while hidden. `usePullToRefresh` and `usePillSwipe` already check it; the calendar also clears selection / copied event / popovers when it deactivates (its ⌘V/Backspace shortcuts are document-level).
+- Entrance animations must key off `useScreenVisit()` (0 until first shown, +1 on every show), not mount: screens mount hidden, so a mount-time animation plays unseen and never replays. `SlotNumber`, `SparkChart`'s reveal, Out's `CategoryPillBar` and In's `IncomeBarChart` do this.
 - The screen wrapper animates opacity only — a transform would re-anchor the screen's `position: fixed` FAB and sheets.
 - These routes have no `loading.tsx`; `settings/categories` and `settings/defaults` are ordinary routes rendered through `{children}`.
 

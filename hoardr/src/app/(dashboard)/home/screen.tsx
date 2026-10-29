@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { localToday, $fd, fmtDate } from '@/lib/utils'
+import { localToday, $fd, fmtDate, haptic } from '@/lib/utils'
 import Link from 'next/link'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import { HomeHero } from '@/components/home/HomeHero'
@@ -22,6 +22,7 @@ import { Truck, PlusCircle, Star } from 'lucide-react'
 import { HoardChest } from '@/components/home/HoardChest'
 import { GlobalFAB } from '@/components/ui/GlobalFAB'
 import { useOnScreenReturn } from '@/lib/tab-nav'
+import { ActivityDetailSheet, type ActivityRef } from '@/components/home/ActivityDetailSheet'
 
 interface EnRouteItem {
   id:          string
@@ -66,6 +67,7 @@ export default function HomePage() {
   const [annualSparkPoints,  setAnnualSparkPoints]  = useState<DayPoint[]>(cached?.annualSparkPoints ?? [])
   const [loading,            setLoading]            = useState(!cached)
   const [expenseOpen,   setExpenseOpen]   = useState(false)
+  const [detailItem,    setDetailItem]    = useState<ActivityRef | null>(null)
   const [wishlistOpen,  setWishlistOpen]  = useState(false)
   const [cards,         setCards]         = useState<CardOption[]>([])
   const [banks,         setBanks]         = useState<BankOption[]>([])
@@ -196,7 +198,7 @@ export default function HomePage() {
         })),
       ]
         .sort((a, b) => b.date.localeCompare(a.date))
-        .slice(0, 3)
+        .slice(0, 5)
 
       // Daily 14-day chart — each DayPoint is that day's amounts, not cumulative
       const chartDailyExp: Record<string, number> = {}
@@ -446,7 +448,12 @@ export default function HomePage() {
             {activity.length > 0 ? (
               <div className="bg-bg-surface border border-ink/[0.06] rounded-card overflow-hidden divide-y divide-ink/[0.04]">
                 {activity.map(row => (
-                  <div key={row.id} className="flex items-center gap-3 px-4 py-3.5">
+                  <button
+                    key={row.id}
+                    type="button"
+                    onClick={() => { haptic('tap'); setDetailItem(row) }}
+                    className="w-full text-left flex items-center gap-3 px-4 py-3.5 active:bg-ink/[0.04] transition-colors select-none"
+                  >
                     <div className="w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-ink/[0.06] flex items-center justify-center flex-shrink-0">
                       <CategoryIcon
                         category={row.category}
@@ -463,7 +470,7 @@ export default function HomePage() {
                     <p className={`text-[15px] font-semibold font-mono flex-shrink-0 ${row.amount > 0 ? 'text-emerald' : 'text-ink'}`}>
                       {row.amount > 0 ? '+' : '−'}{$fd(Math.abs(row.amount))}
                     </p>
-                  </div>
+                  </button>
                 ))}
               </div>
             ) : (
@@ -499,6 +506,7 @@ export default function HomePage() {
       onClose={() => setWishlistOpen(false)}
       onAdd={handleAddWish}
     />
+    <ActivityDetailSheet item={detailItem} onClose={() => setDetailItem(null)} />
     </>
   )
 }

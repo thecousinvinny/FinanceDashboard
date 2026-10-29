@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Camera, Check, Settings2, Pencil, Gauge, CalendarClock, Trophy, Store, CircleSlash, Tag, Repeat, Scale } from 'lucide-react'
-import { FormGroup, FormRow } from '@/components/ui/Form'
+import { ArrowLeft, Camera, Check, Settings2, Pencil } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { cn, $f, $fk, $fd, haptic } from '@/lib/utils'
 import { getCategoryIcon } from '@/components/ui/CategoryIcon'
@@ -804,22 +803,12 @@ export default function ProfilePage() {
   // ── This-month insights ────────────────────────────────────────────────────
   const insights = useMemo(() => {
     const day         = now.getDate()
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
     const lmToDate    = lmExp.filter(e => Number(e.date.slice(8, 10)) <= day).reduce((s, e) => s + e.cost, 0)
-    const merchants   = new Map<string, { total: number; count: number }>()
-    for (const e of moExp) {
-      const k = e.name?.trim() || 'Unknown'
-      const m = merchants.get(k) ?? { total: 0, count: 0 }
-      m.total += e.cost; m.count++
-      merchants.set(k, m)
-    }
-    const spendDays = new Set(moExp.map(e => e.date))
+    const spendDays   = new Set(moExp.map(e => e.date))
     return {
-      projected:  day > 0 ? (moSpend / day) * daysInMonth : 0,
       dailyAvg:   day > 0 ? moSpend / day : 0,
       pace:       lmToDate > 0 ? ((moSpend - lmToDate) / lmToDate) * 100 : null,
       biggest:    moExp.reduce<ExpRow | null>((b, e) => (!b || e.cost > b.cost ? e : b), null),
-      topMerchant: [...merchants.entries()].sort((a, b) => b[1].total - a[1].total)[0] ?? null,
       noSpendDays: day - spendDays.size,
       day,
       saved:      moExp.reduce((s, e) => s + (e.savings ?? 0), 0),
@@ -978,54 +967,27 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* ── This month: the "how am I doing" answers ──────────────────────────── */}
+      {/* ── This month ───────────────────────────────────────────────────────── */}
       {!loading && (
-        <div className="px-5 mb-5 -mt-1">
-          <FormGroup header="This month">
-            <FormRow icon={Gauge} iconColor="#FF9F0A" label="On pace for">
-              <span className="text-ink font-medium tabular-nums">{$f(insights.projected)}</span>
-            </FormRow>
+        <div className="px-5 mb-5">
+          <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">This Month</p>
+          <div className="bg-bg-surface border border-ink/[0.06] rounded-card px-4">
             {insights.pace !== null && (
-              <FormRow icon={Scale} iconColor={insights.pace <= 0 ? '#30D158' : '#FF453A'} label="Vs. last month">
-                <span className={cn('font-medium tabular-nums', insights.pace <= 0 ? 'text-emerald' : 'text-ruby')}>
-                  {insights.pace <= 0 ? '−' : '+'}{Math.abs(insights.pace).toFixed(0)}%
-                </span>
-              </FormRow>
+              <Row label="Vs. Last Month"
+                value={`${insights.pace <= 0 ? '−' : '+'}${Math.abs(insights.pace).toFixed(0)}%`}
+                sub="Spent so far vs. the same point last month"
+                accent={insights.pace <= 0} />
             )}
-            <FormRow icon={CalendarClock} iconColor="#0A84FF" label="Daily average">
-              <span className="tabular-nums">{$fd(insights.dailyAvg)}</span>
-            </FormRow>
+            <Row label="Daily Average" value={$fd(insights.dailyAvg)} />
             {insights.biggest && (
-              <FormRow icon={Trophy} iconColor="#D4AF37" label="Biggest purchase">
-                <span className="flex flex-col items-end leading-tight min-w-0">
-                  <span className="text-ink tabular-nums">{$fd(insights.biggest.cost)}</span>
-                  <span className="text-[12px] truncate max-w-[150px]">{insights.biggest.name}</span>
-                </span>
-              </FormRow>
+              <Row label="Biggest Purchase" value={$fd(insights.biggest.cost)} sub={insights.biggest.name} />
             )}
-            {insights.topMerchant && (
-              <FormRow icon={Store} iconColor="#BF5AF2" label="Top merchant">
-                <span className="flex flex-col items-end leading-tight min-w-0">
-                  <span className="text-ink truncate max-w-[150px]">{insights.topMerchant[0]}</span>
-                  <span className="text-[12px] tabular-nums">{$fd(insights.topMerchant[1].total)} · {insights.topMerchant[1].count}×</span>
-                </span>
-              </FormRow>
-            )}
-            <FormRow icon={CircleSlash} iconColor="#64D2FF" label="No-spend days">
-              <span className="tabular-nums">{insights.noSpendDays} of {insights.day}</span>
-            </FormRow>
+            <Row label="No-Spend Days" value={`${insights.noSpendDays} of ${insights.day}`} />
             {insights.saved > 0 && (
-              <FormRow icon={Tag} iconColor="#30D158" label="Saved with discounts">
-                <span className="text-emerald tabular-nums">{$fd(insights.saved)}</span>
-              </FormRow>
+              <Row label="Saved with Discounts" value={$fd(insights.saved)} accent />
             )}
-            <FormRow icon={Repeat} iconColor="#5E5CE6" label="Subscriptions">
-              <span className="flex flex-col items-end leading-tight">
-                <span className="text-ink tabular-nums">{$fd(totalSubMo)}/mo</span>
-                <span className="text-[12px] tabular-nums">{subs.length} active · {$f(totalSubAnn)}/yr</span>
-              </span>
-            </FormRow>
-          </FormGroup>
+            <Row label="Subscriptions" value={`${$fd(totalSubMo)}/mo`} sub={`${subs.length} active · ${$f(totalSubAnn)}/yr`} />
+          </div>
         </div>
       )}
 

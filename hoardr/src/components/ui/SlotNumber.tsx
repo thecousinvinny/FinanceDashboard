@@ -1,6 +1,7 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useRef } from 'react'
+import { useScreenVisit } from '@/lib/tab-nav'
 
 // ── Single drum column for one digit ─────────────────────────────────────────
 interface DrumProps {
@@ -12,6 +13,9 @@ interface DrumProps {
 function Drum({ digit, placeFromRight, totalDigits }: DrumProps) {
   const trackRef = useRef<HTMLSpanElement>(null)
   const cellRef  = useRef<HTMLSpanElement>(null)
+  // Spin when the screen is shown, every time it's shown — not on a hidden
+  // background mount (kept-alive screens), where nobody would see it
+  const visit    = useScreenVisit()
 
   // Higher-place digits get 2 extra full rotations each so they settle last
   const totalRotations = 2 + placeFromRight * 2
@@ -21,7 +25,7 @@ function Drum({ digit, placeFromRight, totalDigits }: DrumProps) {
   useEffect(() => {
     const track = trackRef.current
     const cell  = cellRef.current
-    if (!track || !cell) return
+    if (!track || !cell || visit === 0) return
 
     // Measure actual rendered pixel height of one cell (handles any font-size)
     const h = cell.getBoundingClientRect().height
@@ -41,7 +45,7 @@ function Drum({ digit, placeFromRight, totalDigits }: DrumProps) {
     void track.offsetHeight
     track.style.transition = `transform ${dur}ms cubic-bezier(0.22,1,0.36,1) ${del}ms`
     track.style.transform  = `translateY(${targetY}px)`
-  }, [digit, placeFromRight, totalDigits, totalRotations])
+  }, [digit, placeFromRight, totalDigits, totalRotations, visit])
 
   return (
     <span style={{ display: 'inline-block', overflow: 'hidden', height: '1em', fontFamily: "var(--font-big-shoulders)", WebkitTextFillColor: 'currentColor' }}>
