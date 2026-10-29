@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { ArrowLeft, MapPin, Clock, Star, Search } from 'lucide-react'
+import { getLocFavorites, getLocRecents, toggleLocFavorite, pushLocRecent } from '@/lib/location-prefs'
 
 interface LocSuggestion {
   placeId:  string
@@ -21,17 +22,6 @@ const M    = 'var(--font-montserrat)'
 const GOLD = '#C9A84C'
 const MUTED = 'rgb(var(--rgb-ink-muted))'
 const SEP   = 'rgba(255,255,255,0.06)'
-
-const HISTORY_KEY   = 'cal-location-history'
-const FAVORITES_KEY = 'cal-location-favorites'
-const MAX_HISTORY   = 10
-
-function loadArr(key: string): string[] {
-  try { return JSON.parse(localStorage.getItem(key) ?? '[]') } catch { return [] }
-}
-function saveArr(key: string, arr: string[]) {
-  localStorage.setItem(key, JSON.stringify(arr))
-}
 
 function highlightMatch(text: string, query: string) {
   if (!query.trim()) return <>{text}</>
@@ -85,8 +75,8 @@ export function LocationPickerSheet({ open, initial, onClose, onSelect }: Props)
     if (open) {
       setQuery('')
       setSuggestions([])
-      setRecents(loadArr(HISTORY_KEY))
-      setFavorites(loadArr(FAVORITES_KEY))
+      setRecents(getLocRecents())
+      setFavorites(getLocFavorites())
       setTimeout(() => inputRef.current?.focus(), 350)
     } else {
       setTimeout(() => { setQuery(''); setSuggestions([]) }, 300)
@@ -110,22 +100,26 @@ export function LocationPickerSheet({ open, initial, onClose, onSelect }: Props)
   }
 
   function selectLocation(text: string) {
-    const updated = [text, ...recents.filter(r => r !== text)].slice(0, MAX_HISTORY)
-    setRecents(updated)
-    saveArr(HISTORY_KEY, updated)
-    localStorage.setItem('cal-recent-location', text)  // backward compat
+    setRecents(pushLocRecent(text))
     onSelect(text)
     onClose()
   }
 
   function toggleFavorite(e: React.MouseEvent, text: string) {
     e.stopPropagation()
-    const updated = favorites.includes(text)
-      ? favorites.filter(f => f !== text)
-      : [text, ...favorites]
-    setFavorites(updated)
-    saveArr(FAVORITES_KEY, updated)
+    setFavorites(toggleLocFavorite(text))
   }
+
+  // Rows are divs, not buttons: the star toggle inside them is a real button,
+  // and a <button> nested in a <button> is invalid — desktop browsers route the
+  // click to the outer row, so starring never registered on PC.
+  const rowProps = (text: string) => ({
+    role: 'button' as const,
+    tabIndex: 0,
+    style: rowStyle,
+    onClick: () => selectLocation(text),
+    onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectLocation(text) } },
+  })
 
   function onDragStart(e: React.TouchEvent) { dragStartY.current = e.touches[0].clientY }
   function onDragMove(e: React.TouchEvent) {
@@ -241,14 +235,14 @@ export function LocationPickerSheet({ open, initial, onClose, onSelect }: Props)
             <>
               <p style={sectionLabel}>Favorites</p>
               {favorites.map(loc => (
-                <button key={loc} style={rowStyle} onClick={() => selectLocation(loc)}>
+                <div key={loc} {...rowProps(loc)}>
                   <Star size={15} color={GOLD} fill={GOLD} style={{ flexShrink: 0 }} />
                   <span style={{ flex: 1, fontSize: 14, color: 'var(--color-ink)', fontFamily: M, lineHeight: 1.4, textAlign: 'left' }}>{loc}</span>
-                  <button onClick={e => toggleFavorite(e, loc)}
+                  <button onClick={e => toggleFavorite(e, loc)} aria-label={isFav(loc) ? 'Remove favorite' : 'Add favorite'}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0 }}>
                     <Star size={14} color={GOLD} fill={GOLD} />
                   </button>
-                </button>
+                </div>
               ))}
             </>
           )}
@@ -258,14 +252,14 @@ export function LocationPickerSheet({ open, initial, onClose, onSelect }: Props)
             <>
               <p style={sectionLabel}>Recents</p>
               {recents.map(loc => (
-                <button key={loc} style={rowStyle} onClick={() => selectLocation(loc)}>
+                <div key={loc} {...rowProps(loc)}>
                   <Clock size={15} color={MUTED} style={{ flexShrink: 0 }} />
                   <span style={{ flex: 1, fontSize: 14, color: 'var(--color-ink)', fontFamily: M, lineHeight: 1.4, textAlign: 'left' }}>{loc}</span>
-                  <button onClick={e => toggleFavorite(e, loc)}
+                  <button onClick={e => toggleFavorite(e, loc)} aria-label={isFav(loc) ? 'Remove favorite' : 'Add favorite'}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0 }}>
                     <Star size={14} color={isFav(loc) ? GOLD : MUTED} fill={isFav(loc) ? GOLD : 'none'} />
                   </button>
-                </button>
+                </div>
               ))}
             </>
           )}
@@ -279,7 +273,7 @@ export function LocationPickerSheet({ open, initial, onClose, onSelect }: Props)
                 </p>
               )}
               {suggestions.map(sug => (
-                <button key={sug.placeId} style={rowStyle} onClick={() => selectLocation(sug.description)}>
+                <div key={sug.placeId} {...rowProps(sug.description)}>
                   <MapPin size={15} color={MUTED} style={{ flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
                     <div style={{ fontSize: 14, color: 'var(--color-ink)', fontFamily: M, lineHeight: 1.4 }}>
@@ -289,11 +283,11 @@ export function LocationPickerSheet({ open, initial, onClose, onSelect }: Props)
                       <div style={{ fontSize: 12, color: MUTED, fontFamily: M, lineHeight: 1.4, marginTop: 2 }}>{sug.secText}</div>
                     )}
                   </div>
-                  <button onClick={e => toggleFavorite(e, sug.description)}
+                  <button onClick={e => toggleFavorite(e, sug.description)} aria-label={isFav(sug.description) ? 'Remove favorite' : 'Add favorite'}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0 }}>
                     <Star size={14} color={isFav(sug.description) ? GOLD : MUTED} fill={isFav(sug.description) ? GOLD : 'none'} />
                   </button>
-                </button>
+                </div>
               ))}
             </>
           )}

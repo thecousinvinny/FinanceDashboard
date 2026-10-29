@@ -321,6 +321,12 @@ Single client component (`calendar/page.tsx`), two panels on a horizontal rail: 
 
 **Notion grid**: `MAX_VIS_EVENTS=6`, `EV_ROW_H=20`, `CELL_MIN_H=163`. Drag-and-drop: `isBeingDragged = !!dragState && !!ev.id && dragState.ev.id === ev.id` — the `!!ev.id` guard is critical; `undefined === undefined` would fade all finance pills.
 
+**"+N more"** in a Notion-grid cell toggles that whole week row open (`expandedWeeks`, session-only state — a refresh collapses it).
+
+**Saves are optimistic** — `handlePopoverSave` / `handleCreateEvent` / `handleEditEvent` close the UI, insert a local copy via `putLocalEvent(localGoogleEvent(...))` (creates get a `tmp-` id, which edit entry points ignore), toast, then write to Google in the background and bump `gRefreshKey`. On failure they reopen the popover/sheet with the user's edits. `'following'` scope skips the local copy and waits for the refetch.
+
+**Location favorites/recents** — `src/lib/location-prefs.ts` (localStorage), shared by `LocationPickerSheet` (phone / list view) and `CalendarPopover` (PC month view). Rows containing a star toggle must be `div role="button"`, never a `<button>` — nested buttons swallow the star click on desktop.
+
 **Finance events** — `CalEvent` type: `type: 'income'|'sub'|'google'`. Custom events carry `recurrenceRule?` and `instanceDate?`.
 
 **Recurring scopes** — `RecurScope = 'this' | 'following'`, defined once in `src/lib/calendar.ts` and re-exported by `CalendarPopover`/`EditEventSheet`. There is deliberately no `'all'`: choosing `'following'` on the first occurrence already means "all events", and the save/delete paths special-case that (they patch or delete the master directly instead of splitting).

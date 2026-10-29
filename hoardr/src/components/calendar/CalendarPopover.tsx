@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { X, MapPin, AlignLeft, RefreshCw, Clock, ChevronDown, Calendar } from 'lucide-react'
+import { X, MapPin, AlignLeft, RefreshCw, Clock, ChevronDown, Calendar, Star } from 'lucide-react'
 import type { GCalendar } from './CalendarSettingsSheet'
 import { DateRangePicker } from './DateRangePicker'
 import { rruleLabel } from '@/lib/rrule'
 import { localToday } from '@/lib/utils'
 import type { RecurScope } from '@/lib/calendar'
+import { getLocFavorites, getLocRecents, toggleLocFavorite, pushLocRecent } from '@/lib/location-prefs'
 
 export type { RecurScope }
 
@@ -257,7 +258,8 @@ export function CalendarPopover({
   const [locValue,       setLocValue]       = useState(initial.location)
   const [locSuggestions, setLocSuggestions] = useState<LocSuggestion[]>([])
   const [locOpen,        setLocOpen]        = useState(false)
-  const [recentLoc,      setRecentLoc]      = useState('')
+  const [locFavs,        setLocFavs]        = useState<string[]>([])
+  const [locRecents,     setLocRecents]     = useState<string[]>([])
   const [locDropRect,    setLocDropRect]    = useState<DropRect | null>(null)
 
   const titleRef     = useRef<HTMLInputElement>(null)
@@ -291,10 +293,10 @@ export function CalendarPopover({
 
   // Google Places AutocompleteService — raw predictions, no pac-container appended to body
   useEffect(() => {
+    setLocFavs(getLocFavorites())
+    setLocRecents(getLocRecents())
     const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
     if (!key) return
-    const saved = localStorage.getItem('cal-recent-location')
-    if (saved) setRecentLoc(saved)
 
     function init() {
       const g = (window as unknown as Record<string, unknown>).google as {
@@ -472,7 +474,7 @@ export function CalendarPopover({
     if (locTimerRef.current) clearTimeout(locTimerRef.current)
     if (!val.trim()) {
       setLocSuggestions([])
-      if (recentLoc) {
+      if (locFavs.length > 0 || locRecents.length > 0) {
         if (locRowRef.current) {
           const r = locRowRef.current.getBoundingClientRect()
           setLocDropRect({ top: r.bottom, left: r.left, width: r.width })
@@ -526,7 +528,7 @@ export function CalendarPopover({
       setLocDropRect({ top: r.bottom, left: r.left, width: r.width })
     }
     if (locSuggestions.length > 0) setLocOpen(true)
-    else if (!locValue && recentLoc) setLocOpen(true)
+    else if (!locValue && (locFavs.length > 0 || locRecents.length > 0)) setLocOpen(true)
   }
 
   function selectLoc(text: string) {
@@ -534,8 +536,12 @@ export function CalendarPopover({
     setField('location', text)
     setLocOpen(false)
     setLocSuggestions([])
-    localStorage.setItem('cal-recent-location', text)
-    setRecentLoc(text)
+    setLocRecents(pushLocRecent(text))
+  }
+
+  function toggleFav(e: React.MouseEvent, text: string) {
+    e.stopPropagation()
+    setLocFavs(toggleLocFavorite(text))
   }
 
   function highlightMatch(text: string, query: string) {
@@ -723,34 +729,60 @@ export function CalendarPopover({
             fontFamily: 'var(--font-montserrat)',
           }}
         >
-          {!locValue && recentLoc && (
-            <button
-              onClick={() => selectLoc(recentLoc)}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', width: '100%', background: 'none', border: 'none', cursor: 'pointer', borderBottom: locSuggestions.length > 0 ? `0.5px solid ${DIV}` : 'none', textAlign: 'left' }}
-            >
-              <Clock size={14} color={MUTED} style={{ flexShrink: 0 }} />
-              <span style={{ fontSize: 13, color: 'var(--color-ink)' }}>{recentLoc}</span>
-            </button>
-          )}
-          {locSuggestions.map((sug, i) => (
-            <button
-              key={sug.placeId}
-              onClick={() => selectLoc(sug.description)}
-              style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', width: '100%', background: 'none', border: 'none', cursor: 'pointer', borderBottom: i < locSuggestions.length - 1 ? `0.5px solid ${DIV}` : 'none', textAlign: 'left' }}
-            >
-              <MapPin size={14} color={MUTED} style={{ flexShrink: 0, marginTop: 2 }} />
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 14, color: 'var(--color-ink)', fontWeight: 400, lineHeight: 1.4 }}>
-                  {highlightMatch(sug.mainText, locValue)}
-                </div>
-                {sug.secText && (
-                  <div style={{ fontSize: 12, color: MUTED, fontWeight: 300, lineHeight: 1.4, marginTop: 2 }}>
-                    {sug.secText}
+          {(() => {
+            // Empty field → favorites, then recents (minus anything already starred)
+            const showSaved = !locValue.trim() && locSuggestions.length === 0
+            const recents   = locRecents.filter(r => !locFavs.includes(r)).slice(0, 5)
+            const rows: Array<{ key: string; text: string; kind: 'fav' | 'recent' | 'place'; main?: string; sec?: string }> = showSaved
+              ? [
+                  ...locFavs.map(t => ({ key: `f:${t}`, text: t, kind: 'fav' as const })),
+                  ...recents.map(t => ({ key: `r:${t}`, text: t, kind: 'recent' as const })),
+                ]
+              : locSuggestions.map(sug => ({ key: sug.placeId, text: sug.description, kind: 'place' as const, main: sug.mainText, sec: sug.secText }))
+            const labelStyle: React.CSSProperties = { fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: MUTED, padding: '9px 14px 3px' }
+            return rows.map((row, i) => {
+              const fav     = locFavs.includes(row.text)
+              const newKind = i === 0 || rows[i - 1].kind !== row.kind
+              const sameNext = i < rows.length - 1 && rows[i + 1].kind === row.kind
+              return (
+                <div key={row.key}>
+                  {showSaved && newKind && <div style={labelStyle}>{row.kind === 'fav' ? 'Favorites' : 'Recent'}</div>}
+                  {/* Row is a div so the star can be a real button inside it */}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => selectLoc(row.text)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); selectLoc(row.text) } }}
+                    className="hover:bg-white/[0.04]"
+                    style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 8px 10px 14px', cursor: 'pointer', borderBottom: sameNext ? `0.5px solid ${DIV}` : 'none' }}
+                  >
+                    {row.kind === 'fav'    && <Star   size={14} color={GOLD}  fill={GOLD} style={{ flexShrink: 0, marginTop: 2 }} />}
+                    {row.kind === 'recent' && <Clock  size={14} color={MUTED} style={{ flexShrink: 0, marginTop: 2 }} />}
+                    {row.kind === 'place'  && <MapPin size={14} color={MUTED} style={{ flexShrink: 0, marginTop: 2 }} />}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: row.kind === 'place' ? 14 : 13, color: 'var(--color-ink)', fontWeight: 400, lineHeight: 1.4 }}>
+                        {row.kind === 'place' ? highlightMatch(row.main ?? row.text, locValue) : row.text}
+                      </div>
+                      {row.sec && (
+                        <div style={{ fontSize: 12, color: MUTED, fontWeight: 300, lineHeight: 1.4, marginTop: 2 }}>
+                          {row.sec}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={e => toggleFav(e, row.text)}
+                      aria-label={fav ? 'Remove favorite' : 'Add favorite'}
+                      title={fav ? 'Remove favorite' : 'Add favorite'}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', flexShrink: 0, display: 'flex' }}
+                    >
+                      <Star size={13} color={fav ? GOLD : MUTED} fill={fav ? GOLD : 'none'} />
+                    </button>
                   </div>
-                )}
-              </div>
-            </button>
-          ))}
+                </div>
+              )
+            })
+          })()}
         </div>
       )}
 
@@ -1000,6 +1032,20 @@ export function CalendarPopover({
               rows={1}
               style={{ ...inputStyle, flex: 1, resize: 'none', lineHeight: 1.5, overflow: 'hidden', minHeight: 22, display: 'block' }}
             />
+            {locValue.trim() && (() => {
+              const fav = locFavs.includes(locValue.trim())
+              return (
+                <button
+                  type="button"
+                  onClick={e => toggleFav(e, locValue)}
+                  aria-label={fav ? 'Remove favorite' : 'Save as favorite'}
+                  title={fav ? 'Remove favorite' : 'Save as favorite'}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '1px 0 0', flexShrink: 0, display: 'flex' }}
+                >
+                  <Star size={15} color={fav ? GOLD : MUTED} fill={fav ? GOLD : 'none'} />
+                </button>
+              )
+            })()}
           </div>
 
           {/* Description */}

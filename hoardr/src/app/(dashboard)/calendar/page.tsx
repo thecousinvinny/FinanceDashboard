@@ -223,9 +223,11 @@ export default function CalendarPage() {
   const [editEvent,      setEditEvent]      = useState<EditableEvent | null>(null)
   const [createEvent,    setCreateEvent]    = useState<EditableEvent | null>(null)
   const [popover,        setPopover]        = useState<{ anchorRect: DOMRect | null; mode: 'create' | 'edit'; data: PopoverFormData } | null>(null)
-  const [popoverSaving,  setPopoverSaving]  = useState(false)
   const [dataLoaded,     setDataLoaded]     = useState(false)
   const [gRefreshKey,    setGRefreshKey]    = useState(0)
+  // Month-grid weeks whose "+N more" was clicked open. Session-only on purpose:
+  // a refresh collapses every row back to the normal height.
+  const [expandedWeeks,  setExpandedWeeks]  = useState<Set<string>>(() => new Set())
 
   // Infinite scroll
   const [months, setMonths] = useState<MonthKey[]>(() =>
@@ -884,7 +886,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
   }
 
   function handleOpenEdit(ev: CalEvent) {
-    if (!ev.id) return
+    if (!ev.id || ev.id.startsWith('tmp-')) return  // optimistic copy, still syncing
     const parts = ev.amount?.split(' – ').map(t => t.trim()) ?? []
     const allDay = !ev.amount?.trim()
     setEditEvent({
@@ -924,27 +926,28 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     setCreateEvent({ title: '', date, endDate: date, allDay: false, startTime, endTime, location: '', notes: '', recurrenceRule: '', calendarId: calId })
   }
 
+  // Saves are optimistic: the sheet closes and the event lands on the grid at
+  // once, and Google syncs in the background. The refetch (gRefreshKey) then
+  // swaps the local copy for the real event. A failed write reopens the sheet
+  // with the user's edits so nothing is lost.
   async function handleCreateEvent(edits: EventEdits, _scope: RecurrenceScope): Promise<boolean> {
-    const gcalEndDate = (() => {
-      const d = new Date((edits.endDate || edits.date) + 'T00:00:00'); d.setDate(d.getDate() + 1)
-      return d.toISOString().slice(0, 10)
-    })()
-    const body: GCalEvent = edits.allDay
-      ? { summary: edits.title, description: edits.notes || undefined, location: edits.location || undefined, start: { date: edits.date }, end: { date: gcalEndDate } }
-      : { summary: edits.title, description: edits.notes || undefined, location: edits.location || undefined, start: { dateTime: `${edits.date}T${edits.startTime}:00`, timeZone: 'America/Los_Angeles' }, end: { dateTime: `${edits.endDate || edits.date}T${edits.endTime}:00`, timeZone: 'America/Los_Angeles' } }
-    if (edits.recurrenceRule) body.recurrence = [`RRULE:${edits.recurrenceRule}`]
     const blocked = blockedCalendarMsg(edits.calendarId ?? 'primary')
     if (blocked) { showToast(blocked, { type: 'delete' }); return false }
-    const id = await createCalEvent(body, edits.calendarId)
-    if (!id) return false   // createCalEvent toasted the reason; keep the sheet open so the edit isn't lost
-    showToast('Event created', { type: 'add' })
+    const body = gcalBody(edits)
+    if (edits.recurrenceRule) body.recurrence = [`RRULE:${edits.recurrenceRule}`]
+    putLocalEvent(localGoogleEvent(`tmp-${Date.now()}`, edits))
     setCreateEvent(null)
-    setGRefreshKey(k => k + 1)
+    showToast('Event created', { type: 'add' })
+    void createCalEvent(body, edits.calendarId).then(id => {
+      setGRefreshKey(k => k + 1)
+      // createCalEvent already toasted the reason
+      if (!id) setCreateEvent(c => c ?? { ...edits })
+    })
     return true
   }
 
   function openEditPopover(anchorRect: DOMRect | null, ev: CalEvent, date: string) {
-    if (!ev.id) return
+    if (!ev.id || ev.id.startsWith('tmp-')) return  // optimistic copy, still syncing
     const parts = ev.amount?.split(' – ').map(t => t.trim()) ?? []
     const allDay = !ev.amount?.trim()
     setSelectedEvId(ev.id)
@@ -993,62 +996,102 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     return 'This and following events updated'
   }
 
-  async function handlePopoverSave(data: PopoverFormData) {
-    setPopoverSaving(true)
-    try {
-      // Google all-day end dates are EXCLUSIVE — without the +1 a single-day
-      // event has end === start, which Google rejects as an empty range.
-      const gcalEndDate = (() => {
-        const d = new Date((data.endDate || data.date) + 'T00:00:00')
-        d.setDate(d.getDate() + 1)
-        return d.toISOString().slice(0, 10)
-      })()
-      const body: GCalEvent = data.allDay
-        ? { summary: data.title, description: data.notes || undefined, location: data.location || undefined, start: { date: data.date }, end: { date: gcalEndDate } }
-        : { summary: data.title, description: data.notes || undefined, location: data.location || undefined, start: { dateTime: `${data.date}T${data.startTime}:00`, timeZone: 'America/Los_Angeles' }, end: { dateTime: `${data.endDate || data.date}T${data.endTime}:00`, timeZone: 'America/Los_Angeles' } }
-      // `body` stays recurrence-free: Google rejects a recurrence array on a
-      // single expanded instance. Series-level writes attach the rule themselves.
-      const blocked = blockedCalendarMsg(data.calendarId ?? 'primary')
-      if (blocked) { showToast(blocked, { type: 'delete' }); setPopoverSaving(false); return }
+  // Google all-day end dates are EXCLUSIVE — without the +1 a single-day event
+  // has end === start, which Google rejects as an empty range. The body stays
+  // recurrence-free: Google rejects a recurrence array on a single expanded
+  // instance, so series-level writes attach the rule themselves.
+  function gcalBody(f: EventEdits): GCalEvent {
+    const gcalEndDate = (() => {
+      const d = new Date((f.endDate || f.date) + 'T00:00:00')
+      d.setDate(d.getDate() + 1)
+      return d.toISOString().slice(0, 10)
+    })()
+    return f.allDay
+      ? { summary: f.title, description: f.notes || undefined, location: f.location || undefined, start: { date: f.date }, end: { date: gcalEndDate } }
+      : { summary: f.title, description: f.notes || undefined, location: f.location || undefined, start: { dateTime: `${f.date}T${f.startTime}:00`, timeZone: 'America/Los_Angeles' }, end: { dateTime: `${f.endDate || f.date}T${f.endTime}:00`, timeZone: 'America/Los_Angeles' } }
+  }
 
-      if (popover?.mode === 'create') {
-        const id = await createCalEvent(
+  // Local stand-in for a just-saved Google event, shaped like the fetch builds them.
+  function localGoogleEvent(id: string, f: EventEdits, recurringEventId?: string): CalEvent {
+    const calId   = f.calendarId || 'primary'
+    const endDay  = f.endDate || f.date
+    return {
+      id, title: f.title || '(no title)', type: 'google',
+      amount: f.allDay ? '' : `${f.startTime} – ${f.endTime}`,
+      location: f.location || undefined, notes: f.notes || undefined,
+      color: prefs.googleCalendarColors?.[calId] ?? googleCals.find(c => c.id === calId)?.backgroundColor ?? '#4285F4',
+      endDate: endDay !== f.date ? endDay : undefined,
+      calendarId: calId, instanceDate: f.date, recurringEventId,
+    }
+  }
+
+  // Insert `ev` on its date, first dropping any copy with id `replaceId`.
+  function putLocalEvent(ev: CalEvent, replaceId?: string) {
+    setGoogleEvMap(prev => {
+      const m = { ...prev }
+      if (replaceId) {
+        for (const key of Object.keys(m)) {
+          if (!m[key].some(e => e.id === replaceId)) continue
+          m[key] = m[key].filter(e => e.id !== replaceId)
+          if (!m[key].length) delete m[key]
+        }
+      }
+      const date = ev.instanceDate!
+      m[date] = [...(m[date] ?? []), ev]
+      return m
+    })
+  }
+
+  async function handlePopoverSave(data: PopoverFormData) {
+    const snap = popover
+    if (!snap) return
+    const blocked = blockedCalendarMsg(data.calendarId ?? 'primary')
+    if (blocked) { showToast(blocked, { type: 'delete' }); return }
+
+    const body        = gcalBody(data)
+    const isCreate    = snap.mode === 'create'
+    const isRecurring = !!data.recurringEventId
+    const scope       = isRecurring ? (data.recurScope ?? 'this') : 'this'
+    const fromCal     = snap.data.calendarId ?? 'primary'
+    const toCal       = data.calendarId ?? 'primary'
+    const calChanged  = toCal !== fromCal
+
+    // Close and show the result now; Google catches up in the background.
+    // 'following' rewrites a whole series, so it waits for the refetch instead.
+    setPopover(null)
+    setSelectedEvId(null)
+    if (isCreate) {
+      putLocalEvent(localGoogleEvent(`tmp-${Date.now()}`, data))
+      showToast('Event created', { type: 'add' })
+    } else if (data.eventId && scope === 'this') {
+      putLocalEvent(localGoogleEvent(data.eventId, data, data.recurringEventId), data.eventId)
+      showToast(calChanged && isRecurring ? 'Updated · calendar changed for the series' : 'Event updated', { type: 'payment' })
+    }
+
+    let ok = true
+    try {
+      if (isCreate) {
+        // createCalEvent toasts the reason on failure
+        ok = !!await createCalEvent(
           data.recurrenceRule ? { ...body, recurrence: [`RRULE:${data.recurrenceRule}`] } : body,
           data.calendarId,
         )
-        // createCalEvent already toasted the reason on failure — don't claim success over it.
-        if (!id) { setPopoverSaving(false); return }
-        showToast('Event created', { type: 'add' })
       } else if (data.eventId) {
-        const isRecurring = !!data.recurringEventId
-        const scope       = isRecurring ? (data.recurScope ?? 'this') : 'this'
-        const fromCal     = popover?.data.calendarId ?? 'primary'
-        const toCal       = data.calendarId ?? 'primary'
-        const calChanged  = toCal !== fromCal
-
         if (scope === 'following') {
-          const msg = await applyFollowingEdit(
-            data.recurringEventId!, popover?.data.date ?? data.date,
-            body, data.recurrenceRule, fromCal, toCal,
-          )
+          const msg = await applyFollowingEdit(data.recurringEventId!, snap.data.date, body, data.recurrenceRule, fromCal, toCal)
           showToast(msg, { type: 'payment' })
         } else if (calChanged && isRecurring) {
           // Google can't move a single recurring instance — a calendar change
           // applies to the whole series; the other field edits stay on this instance.
-          await moveCalEvent(data.recurringEventId!, fromCal, toCal)
-          await updateCalEvent(data.eventId, body, toCal)
-          showToast('Updated · calendar changed for the series', { type: 'payment' })
+          ok = await moveCalEvent(data.recurringEventId!, fromCal, toCal) && await updateCalEvent(data.eventId, body, toCal)
         } else {
-          if (calChanged) await moveCalEvent(data.eventId, fromCal, toCal)
-          await updateCalEvent(data.eventId, body, toCal)
-          showToast('Event updated', { type: 'payment' })
+          ok = (!calChanged || await moveCalEvent(data.eventId, fromCal, toCal)) && await updateCalEvent(data.eventId, body, toCal)
         }
       }
-      setPopover(null)
-      setSelectedEvId(null)
-      setGRefreshKey(k => k + 1)
-    } catch { showToast('Failed to save', { type: 'delete' }) }
-    finally { setPopoverSaving(false) }
+    } catch { ok = false; showToast('Failed to save', { type: 'delete' }) }
+    setGRefreshKey(k => k + 1)
+    // Reopen with the user's edits — unless another popover has opened since
+    if (!ok) setPopover(p => p ?? { ...snap, data })
   }
 
   function handlePopoverDelete(scope?: RecurScope) {
@@ -1092,36 +1135,37 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     // read-only one), so a move to an unwritable target has to be caught here.
     const blockedEdit = blockedCalendarMsg(edits.calendarId ?? 'primary')
     if (blockedEdit) { showToast(blockedEdit, { type: 'delete' }); return false }
-    // Google all-day end dates are exclusive — add 1 day to the inclusive endDate
-    const gcalEndDate = (() => {
-      const d = new Date((edits.endDate || edits.date) + 'T00:00:00')
-      d.setDate(d.getDate() + 1)
-      return d.toISOString().slice(0, 10)
-    })()
-    const body: GCalEvent = edits.allDay
-      ? { summary: edits.title, description: edits.notes || undefined, location: edits.location || undefined, start: { date: edits.date }, end: { date: gcalEndDate } }
-      : { summary: edits.title, description: edits.notes || undefined, location: edits.location || undefined, start: { dateTime: `${edits.date}T${edits.startTime}:00`, timeZone: 'America/Los_Angeles' }, end: { dateTime: `${edits.endDate || edits.date}T${edits.endTime}:00`, timeZone: 'America/Los_Angeles' } }
+    const body    = gcalBody(edits)
     const fromCal = ev.calendarId ?? 'primary'
     const toCal   = edits.calendarId ?? 'primary'
+    const evId    = ev.id
+    const isFollowing = scope === 'following' && !!ev.recurringEventId
 
-    if (scope === 'following' && ev.recurringEventId) {
-      const msg = await applyFollowingEdit(
-        ev.recurringEventId, ev.instanceDate ?? ev.date,
-        body, edits.recurrenceRule, fromCal, toCal,
-      )
-      showToast(msg, { type: 'payment' })
-    } else {
-      // 'this' — patch the single instance. `body` carries no recurrence:
-      // Google rejects a recurrence array on an expanded instance.
-      if (toCal !== fromCal) {
-        // A recurring instance can't be moved on its own; the move applies to the series.
-        if (!await moveCalEvent(ev.recurringEventId ?? ev.id, fromCal, toCal)) return false
-      }
-      if (!await updateCalEvent(ev.id, body, toCal)) return false
+    // Optimistic, like handleCreateEvent: close now, sync in the background,
+    // reopen with the edits if Google rejects the write.
+    setEditEvent(null)
+    if (!isFollowing) {
+      putLocalEvent(localGoogleEvent(evId, edits, ev.recurringEventId), evId)
       showToast('Event updated', { type: 'payment' })
     }
-    setEditEvent(null)
-    setGRefreshKey(k => k + 1)
+    void (async () => {
+      let ok = true
+      if (isFollowing) {
+        const msg = await applyFollowingEdit(
+          ev.recurringEventId!, ev.instanceDate ?? ev.date,
+          body, edits.recurrenceRule, fromCal, toCal,
+        )
+        showToast(msg, { type: 'payment' })
+      } else {
+        // 'this' — patch the single instance. `body` carries no recurrence:
+        // Google rejects a recurrence array on an expanded instance.
+        // A recurring instance can't be moved on its own; the move applies to the series.
+        ok = (toCal === fromCal || await moveCalEvent(ev.recurringEventId ?? evId, fromCal, toCal))
+          && await updateCalEvent(evId, body, toCal)
+      }
+      setGRefreshKey(k => k + 1)
+      if (!ok) setEditEvent(e => e ?? { ...ev, ...edits })
+    })()
     return true
   }
 
@@ -1771,6 +1815,15 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                       const SPAN_H = 18, SPAN_GAP = EV_ROW_H - SPAN_H
                       const maxLanes  = spanLanes.length
                       const singleSlots = Math.max(0, MAX_VIS_EVENTS - maxLanes)
+                      const weekExpanded = expandedWeeks.has(weekStart)
+                      const toggleWeek = (e: React.MouseEvent) => {
+                        e.stopPropagation()
+                        setExpandedWeeks(prev => {
+                          const next = new Set(prev)
+                          if (next.has(weekStart)) next.delete(weekStart); else next.add(weekStart)
+                          return next
+                        })
+                      }
                       return (
                         <div key={weekStart} style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0,1fr))', borderBottom: '0.5px solid var(--color-cal-grid-line)' }}>
                           {days.map((ds, ci) => {
@@ -1783,9 +1836,12 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                             const singleEvs    = allEvs.filter(ev => !ev.endDate)
                             const allDayEvs    = singleEvs.filter(ev => ev.type !== 'google' || !ev.amount)
                             const timedEvs     = singleEvs.filter(ev => ev.type === 'google' && !!ev.amount)
-                            const shownAllDay  = Math.min(allDayEvs.length, singleSlots)
-                            const shownTimed   = Math.min(timedEvs.length, singleSlots - shownAllDay)
+                            const cellSlots    = weekExpanded ? singleEvs.length : singleSlots
+                            const shownAllDay  = Math.min(allDayEvs.length, cellSlots)
+                            const shownTimed   = Math.min(timedEvs.length, cellSlots - shownAllDay)
                             const overflow     = singleEvs.length - shownAllDay - shownTimed
+                            // Cells that would overflow when collapsed get the "Show less" toggle
+                            const wouldOverflow = singleEvs.length > singleSlots
                             return (
                               <div
                                 key={ds}
@@ -1950,8 +2006,17 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                                         </div>
                                       )
                                     })}
-                                    {overflow > 0 && (
-                                      <div style={{ fontSize: 9, color: 'rgb(var(--rgb-ink) / 0.35)', fontFamily: 'var(--font-montserrat)', paddingLeft: 2 }}>+{overflow} more</div>
+                                    {(overflow > 0 || (weekExpanded && wouldOverflow)) && (
+                                      <button
+                                        type="button"
+                                        data-cal-event
+                                        onClick={toggleWeek}
+                                        onDoubleClick={e => e.stopPropagation()}
+                                        className="hover:text-ink"
+                                        style={{ alignSelf: 'flex-start', background: 'none', border: 'none', padding: '0 2px', cursor: 'pointer', fontSize: 9, lineHeight: `${OVERFLOW_H}px`, color: 'rgb(var(--rgb-ink) / 0.45)', fontFamily: 'var(--font-montserrat)' }}
+                                      >
+                                        {overflow > 0 ? `+${overflow} more` : 'Show less'}
+                                      </button>
                                     )}
                                     {copiedEvent && pasteDate === ds && (
                                       <div style={{ padding: '0 5px', marginBottom: 2, height: 18, display: 'flex', alignItems: 'center', borderRadius: 4, border: '1.5px dashed rgba(212,175,55,0.45)', flexShrink: 0 }}>
@@ -2566,7 +2631,6 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
         onSave={handlePopoverSave}
         onDelete={popover.mode === 'edit' ? handlePopoverDelete : undefined}
         onDuplicate={data => setPopover(p => p ? { ...p, mode: 'create', data: { ...data, eventId: undefined, title: `${data.title} (copy)` } } : p)}
-        saving={popoverSaving}
       />
     )}
 
