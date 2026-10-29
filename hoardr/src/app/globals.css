@@ -526,3 +526,24 @@ html.midnight-teal .pac-matched       { color: #2DD4BF !important; font-weight: 
     scroll-behavior: auto !important;
   }
 }
+
+/* ── iOS form + sheet chrome (components/ui/Form.tsx, Sheet.tsx) ── */
+/* Hairline separators between rows, inset to the text like UITableView */
+.form-group > * + * { position: relative; }
+.form-group > * + *::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  left: var(--sep-inset, 16px);
+  height: 0.5px;
+  background: rgb(var(--rgb-ink) / 0.12);
+  pointer-events: none;
+}
+.sheet-nav-btn { transition: opacity 0.15s ease; -webkit-tap-highlight-color: transparent; }
+.sheet-nav-btn:active:not(:disabled) { opacity: 0.4; }
+.fab-menu-item { -webkit-tap-highlight-color: transparent; }
+.fab-menu-item:active, .fab-menu-item:hover, .fab-menu-item:focus-visible { background: rgb(var(--rgb-ink) / 0.08); }
+/* Native date input inside a form row (iPhone): right-aligned like a value */
+.sheet-date-input { -webkit-appearance: none; appearance: none; min-height: 0; color-scheme: dark; }
+.sheet-date-input::-webkit-date-and-time-value { text-align: right; }
+.amount-hero::placeholder { color: rgb(var(--rgb-ink) / 0.22); }

@@ -1,19 +1,19 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { PillGroup } from '@/components/ui/Pill'
-import { getCategoryIcon } from '@/components/ui/CategoryIcon'
+import { CreditCard, Landmark, CalendarDays } from 'lucide-react'
 import {
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,
   type SeedTx,
 } from '@/lib/data/transactions'
-import { localToday, cn, $fd } from '@/lib/utils'
+import { localToday, $fd } from '@/lib/utils'
 import { resolveDefaultBankId } from '@/lib/app-prefs'
-import { ChevronDown } from 'lucide-react'
 import { CustomDateInput } from '@/components/ui/CustomDateInput'
 import { advanceToField } from '@/lib/field-advance'
 import { Select } from '@/components/ui/Select'
+import { Sheet } from '@/components/ui/Sheet'
+import { FormGroup, FormRow, Toggle, Segmented, AmountHero, CategoryPicker, rowInput } from '@/components/ui/Form'
 
 type TxType = 'Expense' | 'Income'
 
@@ -30,6 +30,8 @@ interface Props {
   defaultBankId?:    string | null
   defaultCategory?:  string | null
 }
+
+const TYPES = ['Expense', 'Income'] as const
 
 export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = [], defaultCardId, defaultBankId, defaultCategory }: Props) {
   const [type,          setType]          = useState<TxType>('Expense')
@@ -53,106 +55,12 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type])
 
-  const backdropRef = useRef<HTMLDivElement>(null)
-  const sheetRef    = useRef<HTMLDivElement>(null)
-  const dragStartY    = useRef<number | null>(null)
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
-
-  // Auto-advance: refs to each field so completing one scrolls/focuses the next
+  // Auto-advance: completing one field scrolls/focuses the next
+  const scrollRef      = useRef<HTMLDivElement>(null)
   const nameInputRef   = useRef<HTMLInputElement>(null)
-  const amountSecRef   = useRef<HTMLDivElement>(null)
-  const amountInputRef = useRef<HTMLInputElement>(null)
-  const categorySecRef = useRef<HTMLDivElement>(null)
   const pickerSecRef   = useRef<HTMLDivElement>(null)  // Card (expense) or Bank (income)
-  const dateSecRef     = useRef<HTMLDivElement>(null)
-  const addBtnRef      = useRef<HTMLButtonElement>(null)
-
   const advanceTo = (sec: HTMLElement | null, focusEl?: HTMLElement | null) =>
-    advanceToField(scrollAreaRef.current, sec, focusEl)
-
-  useEffect(() => {
-    if (!open) return
-    const scrollY = window.scrollY
-    document.body.style.position = 'fixed'
-    document.body.style.top = `-${scrollY}px`
-    document.body.style.width = '100%'
-    document.documentElement.style.overscrollBehavior = 'none'
-    let lastY = 0
-    const onStart = (e: TouchEvent) => { lastY = e.touches[0].clientY }
-    const onMove = (e: TouchEvent) => {
-      const el = scrollAreaRef.current
-      if (!el?.contains(e.target as Node)) { e.preventDefault(); return }
-      const dy = e.touches[0].clientY - lastY
-      lastY = e.touches[0].clientY
-      const { scrollTop, scrollHeight, clientHeight } = el
-      if ((scrollTop <= 0 && dy > 0) || (scrollTop + clientHeight >= scrollHeight - 1 && dy < 0)) e.preventDefault()
-    }
-    document.addEventListener('touchstart', onStart, { passive: true })
-    document.addEventListener('touchmove', onMove, { passive: false })
-    return () => {
-      document.body.style.position = ''
-      document.body.style.top = ''
-      document.body.style.width = ''
-      document.documentElement.style.overscrollBehavior = ''
-      document.removeEventListener('touchstart', onStart)
-      document.removeEventListener('touchmove', onMove)
-      window.scrollTo(0, scrollY)
-    }
-  }, [open])
-
-  // Keyboard-aware scroll: scroll focused field above keyboard
-  useEffect(() => {
-    if (!open) return
-    const vv = window.visualViewport
-    if (!vv) return
-    const onResize = () => {
-      const sc = scrollAreaRef.current
-      if (!sc) return
-      const kbH = Math.max(0, window.innerHeight - vv.height)
-      if (kbH > 50) {
-        sc.style.paddingBottom = `${kbH + 24}px`
-        requestAnimationFrame(() => {
-          const focused = document.activeElement as HTMLElement | null
-          if (!focused || !sc.contains(focused)) return
-          const clearance = vv.height - 16
-          if (focused.getBoundingClientRect().bottom > clearance) {
-            sc.scrollTop += focused.getBoundingClientRect().bottom - clearance
-          }
-        })
-      } else {
-        sc.style.paddingBottom = ''
-      }
-    }
-    vv.addEventListener('resize', onResize)
-    return () => {
-      vv.removeEventListener('resize', onResize)
-      if (scrollAreaRef.current) scrollAreaRef.current.style.paddingBottom = ''
-    }
-  }, [open])
-
-  function onDragStart(e: React.TouchEvent) { dragStartY.current = e.touches[0].clientY }
-  function onDragMove(e: React.TouchEvent) {
-    if (dragStartY.current === null || !sheetRef.current) return
-    const dy = Math.max(0, e.touches[0].clientY - dragStartY.current)
-    sheetRef.current.style.transform = `translateY(${dy}px)`
-    sheetRef.current.style.transition = 'none'
-  }
-  function onDragEnd(e: React.TouchEvent) {
-    if (!sheetRef.current) return
-    const dy = dragStartY.current !== null ? Math.max(0, e.changedTouches[0].clientY - dragStartY.current) : 0
-    dragStartY.current = null
-    if (dy > 80) {
-      sheetRef.current.style.transition = 'transform 0.28s cubic-bezier(0.4,0,0.2,1)'
-      sheetRef.current.style.transform  = 'translateY(100%)'
-      setTimeout(() => {
-        if (sheetRef.current) { sheetRef.current.style.transform = ''; sheetRef.current.style.transition = '' }
-        onClose()
-      }, 280)
-    } else {
-      sheetRef.current.style.transform = ''
-      sheetRef.current.style.transition = ''
-    }
-  }
+    advanceToField(scrollRef.current, sec, focusEl)
 
   useEffect(() => {
     if (open) {
@@ -173,26 +81,22 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
         setDate(localToday())
         setCardId(defaultCardId ?? null)
         setBankId(defaultBankId ?? null)
-      }, 300)
+      }, 360)
       return () => clearTimeout(t)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
-
-  function handleAmountChange(raw: string) {
-    if (raw === '' || /^\d*\.?\d{0,2}$/.test(raw)) setAmount(raw)
-  }
-  function handleOriginalChange(raw: string) {
-    if (raw === '' || /^\d*\.?\d{0,2}$/.test(raw)) setOriginalPrice(raw)
-  }
 
   const parsedPaid     = parseFloat(amount)     || 0
   const parsedOriginal = parseFloat(originalPrice) || 0
   const savings        = hasDiscount && parsedOriginal > parsedPaid && parsedOriginal > 0 && parsedPaid > 0
                            ? parsedOriginal - parsedPaid : 0
 
+  const canAdd = !!parsedPaid && !!name.trim() && !!category &&
+                 (!hasDiscount || !!parsedOriginal)
+
   function handleAdd() {
-    if (!parsedPaid || !name.trim() || !category) return
+    if (!canAdd || !category) return
     onAdd({
       id:            `t${Date.now()}`,
       type,
@@ -208,229 +112,142 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
     onClose()
   }
 
-  const canAdd = !!parsedPaid && !!name.trim() && !!category &&
-                 (!hasDiscount || !!parsedOriginal)
+  const sortedCards = [...cards].sort((a, b) => (a.id === defaultCardId ? -1 : b.id === defaultCardId ? 1 : 0))
+  const sortedBanks = [...banks].sort((a, b) => (a.id === defaultBankId ? -1 : b.id === defaultBankId ? 1 : 0))
+  const card = cards.find(c => c.id === cardId)
+  const bank = banks.find(b => b.id === bankId)
 
   return (
-    <>
-      <div
-        ref={backdropRef}
-        onClick={onClose}
-        className={cn(
-          'fixed inset-0 z-[59] transition-opacity duration-300',
-          open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
-        )}
-        style={{ background: 'rgba(0,0,0,0.72)' }}
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title={type === 'Income' ? 'New Income' : 'New Expense'}
+      action={{ label: 'Add', onClick: handleAdd, disabled: !canAdd }}
+      scrollRef={scrollRef}
+    >
+      <div className="pt-1">
+        <Segmented options={TYPES} value={type} onChange={setType} />
+      </div>
+
+      <AmountHero
+        value={amount}
+        onChange={setAmount}
+        onEnter={() => nameInputRef.current?.focus()}
+        caption={savings > 0
+          ? <span className="text-emerald font-medium">You save {$fd(savings)}</span>
+          : hasDiscount ? 'Amount paid' : undefined}
       />
 
-      <div
-        ref={sheetRef}
-        className={cn(
-          'fixed inset-x-0 bottom-0 z-[60] rounded-t-[24px] bg-bg-surface transition-transform duration-300',
-          open ? 'translate-y-0' : 'translate-y-full',
-        )}
-        style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)', height: 'calc(100dvh - env(safe-area-inset-top, 44px) - 8px)', display: 'flex', flexDirection: 'column' }}
-      >
-        <div
-          onTouchStart={onDragStart}
-          onTouchMove={onDragMove}
-          onTouchEnd={onDragEnd}
-          className="flex justify-center pt-3 pb-3"
-          style={{ touchAction: 'none' }}
-        >
-          <div className="w-9 h-1 rounded-full bg-white/20" />
-        </div>
+      <FormGroup>
+        <FormRow label={type === 'Expense' ? 'Merchant' : 'Source'}>
+          <input
+            ref={nameInputRef}
+            type="text"
+            placeholder={type === 'Expense' ? 'Blue Bottle' : 'Paycheck'}
+            value={name}
+            onChange={e => setName(e.target.value)}
+            enterKeyHint="done"
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } }}
+            className={rowInput}
+          />
+        </FormRow>
+        <FormRow label="Note">
+          <input
+            type="text"
+            placeholder="Optional"
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            enterKeyHint="done"
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } }}
+            className={rowInput}
+          />
+        </FormRow>
+      </FormGroup>
 
-        <div className="flex items-center justify-between px-5 mb-4">
-          <h2 className="text-[18px] font-bold tracking-tight text-ink">{type === 'Income' ? 'New Income' : 'New Expense'}</h2>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-[22px] text-ink-muted">×</button>
-        </div>
-
-        <div ref={scrollAreaRef} className="px-5 space-y-4 overflow-y-auto" style={{ flex: 1, paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
-
-          <PillGroup options={['Expense', 'Income'] as TxType[]} value={type} onChange={setType} />
-
-          <div>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
-              {type === 'Expense' ? 'Merchant' : 'Source'}
-            </p>
-            <input
-              ref={nameInputRef}
-              type="text" placeholder={type === 'Expense' ? 'e.g. Blue Bottle' : 'e.g. Paycheck'}
-              value={name} onChange={e => setName(e.target.value)}
-              enterKeyHint="next"
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); advanceTo(amountSecRef.current, amountInputRef.current) } }}
-              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none"
-            />
-          </div>
-
-          <div ref={amountSecRef}>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint">Amount</p>
-              {type === 'Expense' && (
-                <button
-                  onClick={() => { setHasDiscount(v => !v); setOriginalPrice('') }}
-                  className={cn(
-                    'text-[9px] font-semibold tracking-[0.08em] uppercase px-2.5 py-1 rounded-full transition-all select-none',
-                    hasDiscount ? 'bg-emerald/15 text-emerald' : 'bg-bg-overlay text-ink-faint',
-                  )}
-                >
-                  Discount
-                </button>
-              )}
-            </div>
-
-            {hasDiscount ? (
-              <div className="space-y-2">
-                <div className="flex items-center gap-1.5 bg-bg-overlay rounded-[14px] px-4 py-2.5">
-                  <span className="text-[16px] font-light text-ink-faint font-mono">$</span>
-                  <input
-                    type="text" inputMode="decimal" placeholder="0.00"
-                    value={originalPrice}
-                    onChange={e => handleOriginalChange(e.target.value)}
-                    className="flex-1 bg-transparent text-[18px] font-semibold font-mono text-ink-muted outline-none placeholder:text-ink-faint"
-                  />
-                  <span className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint">original</span>
-                </div>
-                <div className="flex items-center gap-1.5 bg-bg-overlay rounded-[14px] px-4 py-2.5">
-                  <span className="text-[20px] font-light text-ink-muted font-mono">$</span>
-                  <input
-                    ref={amountInputRef}
-                    type="text" inputMode="decimal" placeholder="0.00"
-                    value={amount}
-                    onChange={e => handleAmountChange(e.target.value)}
-                    enterKeyHint="next"
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); advanceTo(categorySecRef.current) } }}
-                    className="flex-1 bg-transparent text-[22px] font-bold font-mono text-ink outline-none placeholder:text-ink-faint"
-                  />
-                  <span className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint">paid</span>
-                </div>
-                {savings > 0 && (
-                  <p className="text-[11px] font-semibold text-emerald font-mono text-right pr-1">
-                    You save {$fd(savings)}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5 bg-bg-overlay rounded-[14px] px-4 py-2.5">
-                <span className="text-[20px] font-light text-ink-muted font-mono">$</span>
-                <input
-                  ref={amountInputRef}
-                  type="text" inputMode="decimal" placeholder="0.00" value={amount}
-                  onChange={e => handleAmountChange(e.target.value)}
-                  enterKeyHint="next"
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); advanceTo(categorySecRef.current) } }}
-                  className="flex-1 bg-transparent text-[22px] font-bold font-mono text-ink outline-none placeholder:text-ink-faint"
-                />
-              </div>
-            )}
-          </div>
-
-          <div>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Description</p>
-            <textarea
-              placeholder="Optional note"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              rows={2}
-              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none resize-none"
-            />
-          </div>
-
-          <div ref={categorySecRef}>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Category</p>
-            <div className="grid grid-cols-4 gap-2">
-              {categories.map(cat => {
-                const Icon = getCategoryIcon(cat.name, type)
-                const active = category === cat.name
-                return (
-                  <button
-                    key={cat.name} onClick={() => { setCategory(cat.name); advanceTo(pickerSecRef.current ?? dateSecRef.current) }}
-                    className={cn(
-                      'flex flex-col items-center gap-1 py-2.5 rounded-[14px] text-[10px] font-semibold transition-all select-none',
-                      active ? 'bg-gold/15 text-gold ring-1 ring-gold/40' : 'bg-bg-overlay text-ink-muted',
-                    )}
-                  >
-                    <Icon size={16} strokeWidth={1.75} />
-                    {cat.name}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Card picker (expenses) */}
-          {type === 'Expense' && (
-            <div ref={pickerSecRef}>
-              <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Card</p>
-              {cards.length === 0 ? (
-                <p className="text-[12px] text-ink-faint py-2">No cards yet — add one in Wallet</p>
-              ) : (
-                <div className="relative">
-                  <Select
-                    value={cardId ?? ''}
-                    onChange={e => { setCardId(e.target.value || null); advanceTo(dateSecRef.current) }}
-                  >
-                    <option value="">None</option>
-                    {[...cards]
-                      .sort((a, b) => (a.id === defaultCardId ? -1 : b.id === defaultCardId ? 1 : 0))
-                      .map(c => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}{c.last4 ? ` ••••${c.last4}` : ''}
-                        </option>
-                      ))}
-                  </Select>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Bank picker (income) */}
-          {type === 'Income' && (
-            <div ref={pickerSecRef}>
-              <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Bank</p>
-              {banks.length === 0 ? (
-                <p className="text-[12px] text-ink-faint py-2">No banks yet — add one in Wallet</p>
-              ) : (
-                <div className="relative">
-                  <Select
-                    value={bankId ?? ''}
-                    onChange={e => { setBankId(e.target.value || null); advanceTo(dateSecRef.current) }}
-                  >
-                    <option value="">None</option>
-                    {[...banks]
-                      .sort((a, b) => (a.id === defaultBankId ? -1 : b.id === defaultBankId ? 1 : 0))
-                      .map(b => (
-                        <option key={b.id} value={b.id}>{b.name}</option>
-                      ))}
-                  </Select>
-                </div>
-              )}
-            </div>
-          )}
-
-          <div ref={dateSecRef}>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Date</p>
-            <div className="overflow-hidden rounded-[14px] bg-bg-overlay">
-              <CustomDateInput
-                value={date} onChange={d => { setDate(d); advanceTo(addBtnRef.current) }}
-                className="w-full bg-transparent px-4 py-3 text-[15px] text-ink outline-none"
+      {type === 'Expense' && (
+        <FormGroup footer={hasDiscount ? 'The amount above is what you paid.' : undefined}>
+          <FormRow label="Discount">
+            <Toggle label="Discount" checked={hasDiscount} onChange={v => { setHasDiscount(v); setOriginalPrice('') }} />
+          </FormRow>
+          {hasDiscount && (
+            <FormRow label="Original price">
+              <span className={originalPrice ? 'text-ink' : 'text-ink-faint'}>$</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                placeholder="0.00"
+                value={originalPrice}
+                onChange={e => { const v = e.target.value; if (v === '' || /^\d*\.?\d{0,2}$/.test(v)) setOriginalPrice(v) }}
+                className={`${rowInput} flex-none tabular-nums`}
+                style={{ width: `${Math.max(4, originalPrice.length) + 0.5}ch` }}
+                autoFocus
               />
-            </div>
-          </div>
+            </FormRow>
+          )}
+        </FormGroup>
+      )}
 
-          <button
-            ref={addBtnRef}
-            onClick={handleAdd} disabled={!canAdd}
-            className={cn(
-              'w-full py-3.5 rounded-[14px] text-[15px] font-semibold transition-all select-none',
-              canAdd ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-faint',
-            )}
-          >
-            Add Transaction
-          </button>
-        </div>
+      <FormGroup header="Category">
+        <CategoryPicker
+          categories={categories}
+          value={category}
+          type={type}
+          onChange={c => { setCategory(c); advanceTo(pickerSecRef.current) }}
+        />
+      </FormGroup>
+
+      <div ref={pickerSecRef}>
+        <FormGroup>
+          {type === 'Expense' ? (
+            cards.length === 0 ? (
+              <FormRow icon={CreditCard} iconColor="#8E8E93" label="Card">No cards yet</FormRow>
+            ) : (
+              <Select
+                value={cardId ?? ''}
+                onChange={e => setCardId(e.target.value || null)}
+                aria-label="Card"
+                className="w-full text-left"
+                trigger={
+                  <FormRow icon={CreditCard} iconColor="#5E5CE6" label="Card" chevron>
+                    <span className="truncate">{card ? `${card.name}${card.last4 ? ` •${card.last4}` : ''}` : 'None'}</span>
+                  </FormRow>
+                }
+              >
+                <option value="">None</option>
+                {sortedCards.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}{c.last4 ? ` ••••${c.last4}` : ''}</option>
+                ))}
+              </Select>
+            )
+          ) : (
+            banks.length === 0 ? (
+              <FormRow icon={Landmark} iconColor="#8E8E93" label="Bank">No banks yet</FormRow>
+            ) : (
+              <Select
+                value={bankId ?? ''}
+                onChange={e => setBankId(e.target.value || null)}
+                aria-label="Bank"
+                className="w-full text-left"
+                trigger={
+                  <FormRow icon={Landmark} iconColor="#30B0C7" label="Bank" chevron>
+                    <span className="truncate">{bank?.name ?? 'None'}</span>
+                  </FormRow>
+                }
+              >
+                <option value="">None</option>
+                {sortedBanks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </Select>
+            )
+          )}
+          <FormRow icon={CalendarDays} iconColor="#FF453A" label="Date">
+            <CustomDateInput
+              value={date}
+              onChange={setDate}
+              className="sheet-date-input bg-transparent text-right text-[16px] text-ink-muted outline-none"
+            />
+          </FormRow>
+        </FormGroup>
       </div>
-    </>
+    </Sheet>
   )
 }

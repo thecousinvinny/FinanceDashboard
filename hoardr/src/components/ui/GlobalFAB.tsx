@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Plus, type LucideIcon } from 'lucide-react'
+import { haptic } from '@/lib/utils'
 
 export interface FABAction {
   Icon:  LucideIcon
@@ -9,110 +11,167 @@ export interface FABAction {
   onTap: () => void
 }
 
-const FAB_BG  = 'linear-gradient(135deg, #C9A84C, #A8873C)'
-const FAB_INK = '#1a1200'
-const SPRING  = '220ms cubic-bezier(0.34,1.56,0.64,1)'
+// Spring for the button; UIKit's curve for the menu
+const SPRING = 'cubic-bezier(0.34, 1.56, 0.64, 1)'
+const EASE   = 'cubic-bezier(0.32, 0.72, 0, 1)'
+const MENU_MS = 320
 
+/**
+ * Floating add button. One action → tapping runs it directly (no menu for a
+ * single choice). Several → an iOS context-menu style frosted panel springs
+ * out of the button, actions listed top-to-bottom with the primary one
+ * closest to the thumb.
+ */
 export function GlobalFAB({ actions }: { actions: FABAction[] }) {
   const [open,    setOpen]    = useState(false)
-  const [visible, setVisible] = useState(false)
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const N = actions.length
+  const [present, setPresent] = useState(false)
+  const [shown,   setShown]   = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const [pressed, setPressed] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const viaKeyboard = useRef(false)
+
+  useEffect(() => setMounted(true), [])
 
   useEffect(() => {
     if (open) {
-      if (closeTimer.current) clearTimeout(closeTimer.current)
-      setVisible(true)
-    } else if (visible) {
-      // Keep rendered until the last close animation finishes
-      const ms = (N > 0 ? (N - 1) * 60 : 0) + 220 + 80
-      closeTimer.current = setTimeout(() => setVisible(false), ms)
+      setPresent(true)
+      // Two frames so the off-screen state paints first; the timer covers
+      // throttled rAF (background tabs, low-power mode)
+      const r = requestAnimationFrame(() => requestAnimationFrame(() => setShown(true)))
+      const t = setTimeout(() => setShown(true), 60)
+      return () => { cancelAnimationFrame(r); clearTimeout(t) }
     }
-    return () => { if (closeTimer.current) clearTimeout(closeTimer.current) }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    setShown(false)
+    const t = setTimeout(() => setPresent(false), MENU_MS)
+    return () => clearTimeout(t)
   }, [open])
 
-  function toggle() { setOpen(v => !v) }
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('keydown', onKey)
+    // Move focus into the menu for keyboard users only — on touch it would
+    // paint the first row as highlighted
+    if (viaKeyboard.current) requestAnimationFrame(() => menuRef.current?.querySelector<HTMLButtonElement>('button')?.focus())
+    return () => document.removeEventListener('keydown', onKey)
+  }, [open])
 
-  function handleAction(onTap: () => void) {
-    setOpen(false)
-    onTap()
+  function onMain(e: React.MouseEvent) {
+    viaKeyboard.current = e.detail === 0   // keyboard-activated clicks have no click count
+    haptic('tap')
+    if (actions.length === 1) { actions[0].onTap(); return }
+    setOpen(v => !v)
   }
+
+  function run(onTap: () => void) {
+    haptic('tap')
+    setOpen(false)
+    // Let the menu start collapsing before the sheet rises over it
+    setTimeout(onTap, 90)
+  }
+
+  const single = actions.length === 1
+  const Icon   = single ? actions[0].Icon : Plus
+
+  const menu = present && (
+    <>
+      {/* Dim + soften the page behind, like a long-press menu */}
+      <div
+        onClick={() => setOpen(false)}
+        className="fixed inset-0"
+        style={{
+          zIndex: 45,
+          background: 'rgba(0,0,0,0.28)',
+          backdropFilter: 'blur(6px)',
+          WebkitBackdropFilter: 'blur(6px)',
+          opacity: shown ? 1 : 0,
+          transition: `opacity ${MENU_MS}ms ${EASE}`,
+        }}
+      />
+      <div
+        ref={menuRef}
+        role="menu"
+        className="fixed overflow-hidden"
+        style={{
+          zIndex: 46,
+          right: 16,
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 158px)',
+          minWidth: 230,
+          borderRadius: 14,
+          background: 'rgb(var(--rgb-bg-elevated) / 0.78)',
+          backdropFilter: 'blur(40px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+          boxShadow: '0 18px 50px rgba(0,0,0,0.45), 0 0 0 0.5px rgb(var(--rgb-ink) / 0.12)',
+          transformOrigin: 'bottom right',
+          transform: shown ? 'scale(1)' : 'scale(0.4)',
+          opacity: shown ? 1 : 0,
+          transition: shown
+            ? `transform 420ms ${SPRING}, opacity 180ms ease`
+            : `transform ${MENU_MS}ms ${EASE}, opacity ${MENU_MS - 80}ms ease`,
+        }}
+      >
+        {actions.map((a, i) => (
+          <button
+            key={a.label}
+            role="menuitem"
+            type="button"
+            onClick={() => run(a.onTap)}
+            className="fab-menu-item relative flex items-center justify-between w-full h-[48px] pl-4 pr-4 gap-6 text-left outline-none"
+            style={{
+              borderTop: i > 0 ? '0.5px solid rgb(var(--rgb-ink) / 0.12)' : undefined,
+              opacity: shown ? 1 : 0,
+              transform: shown ? 'none' : 'translateY(6px)',
+              transition: `opacity 220ms ease ${shown ? 60 + (actions.length - 1 - i) * 30 : 0}ms, transform 320ms ${EASE} ${shown ? 60 + (actions.length - 1 - i) * 30 : 0}ms`,
+            }}
+          >
+            <span className="text-[16px] text-ink whitespace-nowrap">{a.label}</span>
+            <a.Icon size={19} strokeWidth={1.9} className="text-ink flex-shrink-0" />
+          </button>
+        ))}
+      </div>
+    </>
+  )
 
   return (
     <>
-      {/* Backdrop */}
-      {visible && (
-        <div
-          className="fixed inset-0"
-          style={{
-            zIndex:    45,
-            background: 'rgba(0,0,0,0.45)',
-            animation:  `${open ? 'fab-bd-in' : 'fab-bd-out'} 150ms ease forwards`,
-          }}
-          onClick={() => setOpen(false)}
-        />
-      )}
+      {mounted && menu && createPortal(menu, document.body)}
 
-      {/* Pill stack — right-aligned, grows upward above FAB */}
-      {visible && (
-        <div
-          className="fixed flex flex-col items-end"
-          style={{ right: 20, bottom: 158, zIndex: 46, gap: 8 }}
-        >
-          {actions.map((action, i) => {
-            const delay = open ? `${(N - 1 - i) * 60}ms` : `${i * 60}ms`
-            return (
-              <button
-                key={action.label}
-                onClick={() => handleAction(action.onTap)}
-                className="flex items-center h-[38px] rounded-[20px] select-none whitespace-nowrap"
-                style={{
-                  background:   FAB_BG,
-                  paddingLeft:  4,
-                  paddingRight: 10,
-                  gap:          8,
-                  boxShadow:    '0 2px 10px rgba(201,168,76,0.28)',
-                  animation:    `${open ? 'fab-pill-in' : 'fab-pill-out'} ${SPRING} ${delay} both`,
-                }}
-              >
-                <div
-                  className="flex items-center justify-center flex-shrink-0 rounded-full"
-                  style={{ width: 30, height: 30, background: 'rgba(0,0,0,0.14)' }}
-                >
-                  <action.Icon size={16} color={FAB_INK} strokeWidth={2} />
-                </div>
-                <span className="text-[13px] font-medium" style={{ color: FAB_INK }}>
-                  {action.label}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Main FAB button */}
       <button
-        onClick={toggle}
-        className="fixed rounded-full flex items-center justify-center select-none"
+        onClick={onMain}
+        onPointerDown={() => setPressed(true)}
+        onPointerUp={() => setPressed(false)}
+        onPointerLeave={() => setPressed(false)}
+        onPointerCancel={() => setPressed(false)}
+        aria-label={single ? actions[0].label : open ? 'Close' : 'Add'}
+        aria-haspopup={single ? undefined : 'menu'}
+        aria-expanded={single ? undefined : open}
+        className="fixed rounded-full flex items-center justify-center select-none outline-none"
         style={{
-          right:      20,
-          bottom:     90,
-          width:      56,
-          height:     56,
-          zIndex:     47,
-          background: FAB_BG,
-          boxShadow:  '0 4px 16px rgba(201,168,76,0.35)',
+          right:  16,
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 88px)',
+          width:  56,
+          height: 56,
+          zIndex: 47,
+          background: 'linear-gradient(160deg, #E9CD7A 0%, #D4AF37 45%, #B08A2A 100%)',
+          boxShadow: [
+            'inset 0 1px 0 rgba(255,255,255,0.45)',      // top highlight
+            'inset 0 -1px 0 rgba(0,0,0,0.12)',
+            '0 8px 24px rgba(212,175,55,0.30)',
+            '0 2px 6px rgba(0,0,0,0.30)',
+          ].join(', '),
+          transform: pressed ? 'scale(0.9)' : 'scale(1)',
+          transition: `transform ${pressed ? '120ms ease-out' : `420ms ${SPRING}`}`,
+          WebkitTapHighlightColor: 'transparent',
         }}
-        aria-label={open ? 'Close' : 'Add'}
       >
-        <Plus
-          size={24}
-          color={FAB_INK}
-          strokeWidth={2.5}
+        <Icon
+          size={single ? 23 : 26}
+          color="#1a1200"
+          strokeWidth={single ? 2.1 : 2.4}
           style={{
-            transform:  open ? 'rotate(45deg)' : 'rotate(0deg)',
-            transition: `transform ${SPRING}`,
+            transform:  open ? 'rotate(135deg)' : 'rotate(0deg)',
+            transition: `transform 420ms ${SPRING}`,
           }}
         />
       </button>

@@ -1,10 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { cn } from '@/lib/utils'
 import { EXPENSE_CATEGORIES } from '@/lib/data/transactions'
-import { getCategoryIcon } from '@/components/ui/CategoryIcon'
-import { advanceToField } from '@/lib/field-advance'
+import { Sheet } from '@/components/ui/Sheet'
+import { FormGroup, FormRow, AmountHero, CategoryPicker, rowInput } from '@/components/ui/Form'
 
 export interface NewWishItem {
   name:          string
@@ -27,92 +26,25 @@ export function AddWishlistSheet({ open, onClose, onAdd }: Props) {
   const [url,         setUrl]         = useState('')
   const [description, setDescription] = useState('')
 
-  const backdropRef = useRef<HTMLDivElement>(null)
-  const sheetRef    = useRef<HTMLDivElement>(null)
-  const dragStartY    = useRef<number | null>(null)
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
-
-  // Auto-advance: refs so completing a field scrolls/focuses the next one
-  const priceSecRef    = useRef<HTMLDivElement>(null)
-  const priceInputRef  = useRef<HTMLInputElement>(null)
-  const descSecRef     = useRef<HTMLDivElement>(null)
-  const descInputRef   = useRef<HTMLInputElement>(null)
-  const categorySecRef = useRef<HTMLDivElement>(null)
-  const urlSecRef      = useRef<HTMLDivElement>(null)
-  const urlInputRef    = useRef<HTMLInputElement>(null)
-  const addBtnRef      = useRef<HTMLButtonElement>(null)
-  const advanceTo = (sec: HTMLElement | null, focusEl?: HTMLElement | null) =>
-    advanceToField(scrollAreaRef.current, sec, focusEl)
-
-  useEffect(() => {
-    if (!open) return
-    const scrollY = window.scrollY
-    document.body.style.position = 'fixed'
-    document.body.style.top = `-${scrollY}px`
-    document.body.style.width = '100%'
-    document.documentElement.style.overscrollBehavior = 'none'
-    let lastY = 0
-    const onStart = (e: TouchEvent) => { lastY = e.touches[0].clientY }
-    const onMove = (e: TouchEvent) => {
-      const el = scrollAreaRef.current
-      if (!el?.contains(e.target as Node)) { e.preventDefault(); return }
-      const dy = e.touches[0].clientY - lastY
-      lastY = e.touches[0].clientY
-      const { scrollTop, scrollHeight, clientHeight } = el
-      if ((scrollTop <= 0 && dy > 0) || (scrollTop + clientHeight >= scrollHeight - 1 && dy < 0)) e.preventDefault()
-    }
-    document.addEventListener('touchstart', onStart, { passive: true })
-    document.addEventListener('touchmove', onMove, { passive: false })
-    return () => {
-      document.body.style.position = ''
-      document.body.style.top = ''
-      document.body.style.width = ''
-      document.documentElement.style.overscrollBehavior = ''
-      document.removeEventListener('touchstart', onStart)
-      document.removeEventListener('touchmove', onMove)
-      window.scrollTo(0, scrollY)
-    }
-  }, [open])
-
-  function onDragStart(e: React.TouchEvent) { dragStartY.current = e.touches[0].clientY }
-  function onDragMove(e: React.TouchEvent) {
-    if (dragStartY.current === null || !sheetRef.current) return
-    const dy = Math.max(0, e.touches[0].clientY - dragStartY.current)
-    sheetRef.current.style.transform = `translateY(${dy}px)`
-    sheetRef.current.style.transition = 'none'
-  }
-  function onDragEnd(e: React.TouchEvent) {
-    if (!sheetRef.current) return
-    const dy = dragStartY.current !== null ? Math.max(0, e.changedTouches[0].clientY - dragStartY.current) : 0
-    dragStartY.current = null
-    if (dy > 80) {
-      sheetRef.current.style.transition = 'transform 0.28s cubic-bezier(0.4,0,0.2,1)'
-      sheetRef.current.style.transform  = 'translateY(100%)'
-      setTimeout(() => {
-        if (sheetRef.current) { sheetRef.current.style.transform = ''; sheetRef.current.style.transition = '' }
-        onClose()
-      }, 280)
-    } else {
-      sheetRef.current.style.transform = ''
-      sheetRef.current.style.transition = ''
-    }
-  }
+  // Auto-advance: refs so completing a field focuses the next one
+  const scrollRef    = useRef<HTMLDivElement>(null)
+  const nameRef      = useRef<HTMLInputElement>(null)
+  const descRef      = useRef<HTMLInputElement>(null)
+  const urlRef       = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!open) {
       const t = setTimeout(() => {
         setName(''); setAmount(''); setCategory(''); setUrl(''); setDescription('')
-      }, 300)
+      }, 360)
       return () => clearTimeout(t)
     }
   }, [open])
 
-  function handleAmountChange(raw: string) {
-    if (raw === '' || /^\d*\.?\d{0,2}$/.test(raw)) setAmount(raw)
-  }
+  const canAdd = !!name.trim()
 
   function handleAdd() {
-    if (!name.trim()) return
+    if (!canAdd) return
     const parsed = parseFloat(amount)
     onAdd({
       name:          name.trim(),
@@ -124,138 +56,70 @@ export function AddWishlistSheet({ open, onClose, onAdd }: Props) {
     onClose()
   }
 
-  const canAdd = !!name.trim()
+  const next = (e: React.KeyboardEvent<HTMLInputElement>, to?: HTMLInputElement | null) => {
+    if (e.key !== 'Enter') return
+    e.preventDefault()
+    if (to) to.focus(); else e.currentTarget.blur()
+  }
 
   return (
-    <>
-      <div
-        ref={backdropRef}
-        onClick={onClose}
-        className={cn(
-          'fixed inset-0 z-[59] transition-opacity duration-300',
-          open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
-        )}
-        style={{ background: 'rgba(0,0,0,0.72)' }}
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title="Wishlist Item"
+      action={{ label: 'Add', onClick: handleAdd, disabled: !canAdd }}
+      scrollRef={scrollRef}
+    >
+      <AmountHero
+        value={amount}
+        onChange={setAmount}
+        onEnter={() => nameRef.current?.focus()}
+        caption="List price · optional"
       />
 
-      <div
-        ref={sheetRef}
-        className={cn(
-          'fixed inset-x-0 bottom-0 z-[60] rounded-t-[24px] bg-bg-surface transition-transform duration-300',
-          open ? 'translate-y-0' : 'translate-y-full',
-        )}
-        style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-      >
-        <div
-          onTouchStart={onDragStart}
-          onTouchMove={onDragMove}
-          onTouchEnd={onDragEnd}
-          className="flex justify-center pt-3 pb-3"
-          style={{ touchAction: 'none' }}
-        >
-          <div className="w-9 h-1 rounded-full bg-white/20" />
-        </div>
+      <FormGroup>
+        <FormRow label="Item">
+          <input
+            ref={nameRef}
+            type="text" placeholder="iPhone" value={name}
+            onChange={e => setName(e.target.value)}
+            enterKeyHint="next"
+            onKeyDown={e => next(e, descRef.current)}
+            className={rowInput}
+          />
+        </FormRow>
+        <FormRow label="Details">
+          <input
+            ref={descRef}
+            type="text" placeholder="Optional" value={description}
+            onChange={e => setDescription(e.target.value)}
+            enterKeyHint="next"
+            onKeyDown={e => next(e, urlRef.current)}
+            className={rowInput}
+          />
+        </FormRow>
+        <FormRow label="Link">
+          <input
+            ref={urlRef}
+            type="url" inputMode="url" autoCapitalize="none" autoCorrect="off"
+            placeholder="https://" value={url}
+            onChange={e => setUrl(e.target.value)}
+            enterKeyHint="done"
+            onKeyDown={e => next(e)}
+            className={rowInput}
+          />
+        </FormRow>
+      </FormGroup>
 
-        <div className="flex items-center justify-between px-5 mb-4">
-          <h2 className="text-[18px] font-bold tracking-tight text-ink">New Wishlist Item</h2>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-[22px] text-ink-muted">×</button>
-        </div>
-
-        <div ref={scrollAreaRef} className="px-5 space-y-4 overflow-y-auto" style={{ maxHeight: '70vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}>
-
-          <div>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Item Name</p>
-            <input
-              type="text" placeholder="e.g. iPhone" value={name}
-              onChange={e => setName(e.target.value)}
-              enterKeyHint="next"
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); advanceTo(priceSecRef.current, priceInputRef.current) } }}
-              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none"
-            />
-          </div>
-
-          <div ref={priceSecRef}>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
-              List Price <span className="normal-case text-ink-faint/60">(optional)</span>
-            </p>
-            <div className="flex items-center gap-1.5 bg-bg-overlay rounded-[14px] px-4 py-2.5">
-              <span className="text-[20px] font-light text-ink-muted font-mono">$</span>
-              <input
-                ref={priceInputRef}
-                type="text" inputMode="decimal" placeholder="0.00" value={amount}
-                onChange={e => handleAmountChange(e.target.value)}
-                enterKeyHint="next"
-                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); advanceTo(descSecRef.current, descInputRef.current) } }}
-                className="flex-1 bg-transparent text-[22px] font-bold font-mono text-ink outline-none placeholder:text-ink-faint"
-              />
-            </div>
-          </div>
-
-          <div ref={descSecRef}>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
-              Description <span className="normal-case text-ink-faint/60">(optional)</span>
-            </p>
-            <input
-              ref={descInputRef}
-              type="text" placeholder="e.g. iPhone 17 Pro Max 256GB" value={description}
-              onChange={e => setDescription(e.target.value)}
-              enterKeyHint="next"
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); advanceTo(categorySecRef.current) } }}
-              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none"
-            />
-          </div>
-
-          <div ref={categorySecRef}>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
-              Category <span className="normal-case text-ink-faint/60">(optional)</span>
-            </p>
-            <div className="grid grid-cols-4 gap-2">
-              {EXPENSE_CATEGORIES.map(cat => {
-                const Icon = getCategoryIcon(cat.name, 'Expense')
-                const active = category === cat.name
-                return (
-                  <button
-                    key={cat.name}
-                    onClick={() => { const next = active ? '' : cat.name; setCategory(next); if (next) advanceTo(urlSecRef.current, urlInputRef.current) }}
-                    className={cn(
-                      'flex flex-col items-center gap-1 py-2.5 rounded-[14px] text-[10px] font-semibold transition-all select-none',
-                      active ? 'bg-gold/15 text-gold ring-1 ring-gold/40' : 'bg-bg-overlay text-ink-muted',
-                    )}
-                  >
-                    <Icon size={16} strokeWidth={1.75} />
-                    {cat.name}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          <div ref={urlSecRef}>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">
-              Buy Link <span className="normal-case text-ink-faint/60">(optional)</span>
-            </p>
-            <input
-              ref={urlInputRef}
-              type="url" placeholder="https://..." value={url}
-              onChange={e => setUrl(e.target.value)}
-              enterKeyHint="done"
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); advanceTo(addBtnRef.current) } }}
-              className="w-full bg-bg-overlay rounded-[14px] px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none"
-            />
-          </div>
-
-          <button
-            ref={addBtnRef}
-            onClick={handleAdd} disabled={!canAdd}
-            className={cn(
-              'w-full py-3.5 rounded-[14px] text-[15px] font-semibold transition-all select-none',
-              canAdd ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-faint',
-            )}
-          >
-            Add to Wishlist
-          </button>
-        </div>
-      </div>
-    </>
+      <FormGroup header="Category" footer="Optional — tap again to clear.">
+        <CategoryPicker
+          categories={EXPENSE_CATEGORIES}
+          value={category || null}
+          type="Expense"
+          optional
+          onChange={c => setCategory(c ?? '')}
+        />
+      </FormGroup>
+    </Sheet>
   )
 }

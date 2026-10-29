@@ -138,7 +138,7 @@ Module-level emitter — call from anywhere. `<ToastContainer />` mounted in `(d
 - `hooks/usePillSwipe.ts` — used by `/money` and `/in`. Handles **intra-tab pill switching only** — cross-route navigation was removed. Args: `(tab, setTab, options)`.
 - `ui/CategoryIcon.tsx` — checks `categoryMeta[name]` first (DB icon/color), then hardcoded defaults. `text-gold` expenses, `text-emerald` income. DB color applied via inline `style={{ color }}`, overriding Tailwind.
 - `ui/SwipeToDelete.tsx` — swipe-left-to-delete; `onTap` fires on clean tap only; `actionBg` default `bg-ruby`. `onRight`/`rightLabel`/`rightBg` for right-swipe confirm. Press-scale + haptic built in.
-- `money/AddTransactionSheet.tsx` — canonical bottom sheet; exports `CardOption`, `BankOption`
+- `ui/Sheet.tsx` + `ui/Form.tsx` — the iOS sheet and form kit (see Bottom sheet rules). `money/AddTransactionSheet.tsx` is the reference sheet built on them; exports `CardOption`, `BankOption`
 - `wallet/RevenueStreamSheet.tsx` — `RevenueStreamConfig: { id, name, amount, freq, bankId, nextPayDate }`. **No DB ops** — calls `onDone(config)` synchronously.
 - `wallet/AddTransferSheet.tsx` — `TransferPayload: { from_bank_id, to_bank_id, amount, date, note }`. Swap button swaps from/to. Calls `onAdd(payload)` then closes; caller handles DB + balance updates.
 - `wallet/CardVisual.tsx` — renders card from `Card` prop using `CARD_STYLE_DEFS`. `getTexturePattern` inline (JSX). Accepts `expenseCount?`, `subCount?`.
@@ -245,7 +245,11 @@ Icon cell (rounded square): `w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-
 
 ## Bottom sheet rules
 
-Canonical implementation: `money/AddTransactionSheet.tsx`.
+**New and reworked sheets use `ui/Sheet.tsx`** — never hand-roll sheet chrome again. It renders an iOS nav bar (`Cancel` · centered title · bold gold action via `action={{ label, onClick, disabled }}`), rises with UIKit's curve (`SHEET_EASE`), drag-to-dismisses from the grabber/nav bar with flick velocity and an upward rubber band, and on ≥768px becomes a centered 540px form sheet. It portals to `<body>`, owns the body scroll lock + keyboard avoidance below, and handles Esc / ⌘Enter. Pass `scrollRef` if you need `advanceToField`. The action lives in the nav bar — no big bottom submit buttons.
+
+Fill it with `ui/Form.tsx`: `FormGroup` (inset-grouped card; `header`/`footer`; `plain` for a control with its own surface), `FormRow` (label left, value right; `icon` + `iconColor` for a Settings-style tinted square; `chevron`), `rowInput` (class for right-aligned inputs in a row), `Toggle`, `Segmented`, `AmountHero` (big centered amount at the top of money sheets), `CategoryPicker` (tinted icon circles; `optional` lets a second tap clear), `ChoiceChips`. Pickers in rows are `<Select trigger={<FormRow … chevron>…</FormRow>}>`; dates are `CustomDateInput` with `className="sheet-date-input …"`. Colors come from `rgb(var(--rgb-ink) / α)` so every theme works.
+
+Still on the legacy hand-rolled chrome (migrate when touched): the Edit* sheets, `AddCardSheet`/`EditCardSheet`, `PaycheckSheet`, `RevenueStreamSheet`, and the calendar sheets. The rules below describe what `Sheet` implements and what those legacy sheets must keep doing.
 
 - `height: calc(100dvh - env(safe-area-inset-top, 44px) - 8px)` (not `maxHeight`) with `flex flex-col`
 - Scroll area: **inline** `style={{ flex: 1, paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)', overflowX: 'hidden', overscrollBehavior: 'contain' }}`
@@ -313,7 +317,7 @@ Import from here, never re-define:
 
 ## FAB pattern
 
-Circular gold FAB: `fixed`, `right: 16, bottom: 80`, `width: 56, height: 56`, `zIndex: 40`, `className="gradient-gold rounded-full"`. All tabs except Settings. Never use a header button for add actions.
+`ui/GlobalFAB.tsx` — 56px gold button (`right: 16`, above the nav + safe area), spring press. One action → tapping runs it directly. Several → an iOS context-menu style frosted panel (portaled) springs from the button; list actions top-to-bottom with the primary one last (closest to the thumb). All tabs except Settings. Never use a header button for add actions.
 
 ## Calendar page architecture
 
