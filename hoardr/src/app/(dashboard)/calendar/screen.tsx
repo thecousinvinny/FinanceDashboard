@@ -184,7 +184,8 @@ function layoutCell(lanes: SpanBar[][], col: number, singles: Array<{ ev: CalEve
 const DESK_VIEWS = ['month', 'list'] as const
 const SAFE_TOP = 'calc(max(env(safe-area-inset-top, 0px), 44px) + 12px)'
 const GRID_EXPANDED = 280  // px — compact month grid height in split view
-const SNAP = 'height 0.3s cubic-bezier(0.4,0,0.2,1)'
+const SNAP_MS = 320
+const SNAP = `height ${SNAP_MS}ms cubic-bezier(0.32, 0.72, 0, 1)`   // UIKit-like settle
 
 // ── Notion month grid sizing constants (single source of truth) ──────────────
 const MAX_VIS_EVENTS = 6   // max event rows per cell — governs both height and overflow cutoff
@@ -259,7 +260,6 @@ export default function CalendarPage() {
   const [viewIndex,         setViewIndex]         = useState<0 | 1>(0)
   const [selectedDay,       setSelectedDay]       = useState<string | null>(null)
   const [gridH,             setGridH]             = useState(GRID_EXPANDED)
-  const [isDraggingHandle,  setIsDraggingHandle]  = useState(false)
   const [monthPickerOpen,   setMonthPickerOpen]   = useState(false)
 
   // Grid state
@@ -451,7 +451,22 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     }
   }, [])
 
-  // ── Data loading ──────────────────────────────────────────────────────────
+  // Snap the split-view grid open/closed. Only the grid's height animates,
+  // written straight to the DOM; React learns the new height (and the list
+  // rows switch to/from agenda spacing) once the motion is over. Committing
+  // gridH at the start re-rendered the whole calendar — thousands of rows —
+  // just as the snap began, and the rows' padding/width transitions re-laid
+  // out every row each frame: "goes up, stutters, then all the way up".
+  const snapTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const snapGrid = useCallback((target: number) => {
+    const w = gridWrapRef.current
+    clearTimeout(snapTimer.current)
+    if (!w) { setGridH(target); return }
+    w.style.transition = SNAP
+    w.style.height = `${target}px`
+    snapTimer.current = setTimeout(() => setGridH(target), SNAP_MS + 30)
+  }, [])
+
   // Drag the split-view handle to resize the month grid; flick or pass halfway
   // to snap open/closed; tap toggles. Native listeners with touch-action:none
   // so iOS never claims the swipe as a page scroll (it cancelled the drag
@@ -466,7 +481,12 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     const clampH = (h: number) => Math.max(0, Math.min(GRID_EXPANDED, h))
     const onStart = (e: TouchEvent) => {
       const y = e.touches[0].clientY
-      startY = lastY = y; lastT = e.timeStamp; startH = gridHRef.current
+      // Grab mid-snap: start from where the grid really is, and don't let the
+      // pending commit yank it back
+      clearTimeout(snapTimer.current)
+      const w = gridWrapRef.current
+      startH = w ? w.getBoundingClientRect().height : gridHRef.current
+      startY = lastY = y; lastT = e.timeStamp
       v = 0; active = true; moved = false
       e.stopPropagation()
     }
@@ -475,7 +495,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       e.preventDefault(); e.stopPropagation()
       const y = e.touches[0].clientY
       if (!moved && Math.abs(y - startY) < 4) return
-      if (!moved) { moved = true; setIsDraggingHandle(true) }
+      moved = true
       const dt = Math.max(1, e.timeStamp - lastT)
       v = v * 0.6 + ((y - lastY) / dt) * 0.4          // px/ms, smoothed
       lastY = y; lastT = e.timeStamp
@@ -489,15 +509,12 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       let target: number
       if (!moved) {
         e.preventDefault()                            // no synthetic click: this was the tap
-        target = gridHRef.current > 0 ? 0 : GRID_EXPANDED
+        target = startH > 0 ? 0 : GRID_EXPANDED
       } else {
         const h = clampH(startH + lastY - startY)
         target = Math.abs(v) > 0.3 ? (v > 0 ? GRID_EXPANDED : 0) : (h > GRID_EXPANDED / 2 ? GRID_EXPANDED : 0)
       }
-      const w = gridWrapRef.current
-      if (w) { w.style.transition = SNAP; w.style.height = `${target}px` }
-      setIsDraggingHandle(false)
-      setGridH(target)
+      snapGrid(target)
     }
     el.addEventListener('touchstart',  onStart, { passive: true })
     el.addEventListener('touchmove',   onMove,  { passive: false })
@@ -509,7 +526,9 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       el.removeEventListener('touchend',    onEnd)
       el.removeEventListener('touchcancel', onEnd)
     }
-  }, [handleEl])
+  }, [handleEl, snapGrid])
+
+  // ── Data loading ──────────────────────────────────────────────────────────
 
   const loadData = useCallback(async () => {
     abortRef.current?.abort()
@@ -2296,7 +2315,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
           <div style={{ width: '100vw', height: '100%', flex: 'none', display: 'flex', flexDirection: 'column', background: 'var(--color-bg-base)', userSelect: 'none', paddingTop: SAFE_TOP, boxSizing: 'border-box' }}>
 
             {/* Compact month grid — collapsible */}
-            <div ref={gridWrapRef} style={{ height: gridH, overflow: 'hidden', flexShrink: 0, transition: isDraggingHandle ? 'none' : SNAP, background: 'var(--color-bg-surface)' }}>
+            <div ref={gridWrapRef} style={{ height: gridH, overflow: 'hidden', flexShrink: 0, background: 'var(--color-bg-surface)' }}>
               <div style={{ height: GRID_EXPANDED, display: 'flex', flexDirection: 'column' }}>
                 {/* Month header */}
                 <div style={{ display: 'flex', alignItems: 'center', paddingLeft: 16, paddingRight: 56, paddingTop: 12, paddingBottom: 6, flexShrink: 0 }}>
@@ -2369,7 +2388,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
             <div
               ref={setHandleEl}
               style={{ position: 'relative', zIndex: 6, height: 22, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'row-resize', background: 'var(--color-bg-base)', borderTop: '1px solid rgb(var(--rgb-ink) / 0.05)', touchAction: 'none' }}
-              onClick={() => setGridH(g => g > 0 ? 0 : GRID_EXPANDED)}
+              onClick={() => snapGrid(gridHRef.current > 0 ? 0 : GRID_EXPANDED)}
             >
               {/* Taller invisible hit area, so the thin handle is easy to grab */}
               <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, top: -12, bottom: -12, touchAction: 'none' }} />
@@ -2384,7 +2403,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
                          opacity: gridH === 0 ? 1 : 0,
                          pointerEvents: gridH === 0 ? 'auto' : 'none', touchAction: 'manipulation',
-                         transition: isDraggingHandle ? 'none' : 'opacity 0.3s cubic-bezier(0.4,0,0.2,1)' }}
+                         transition: 'opacity 0.25s ease' }}
                 onClick={handleMonthLabelTap}
               >
                 <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 8, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 800, color: 'rgba(212,175,55,0.65)', userSelect: 'none', whiteSpace: 'nowrap' }}>
@@ -2415,12 +2434,12 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                         onMouseDown={e => rowMouseDown(e, ds)}
                         onMouseUp={rowMouseUp}
                         onMouseLeave={() => { rowSwipe.current = null }}
-                        style={{ display: 'flex', alignItems: 'stretch', paddingLeft: gridH === 0 ? 20 : 6, background: 'var(--color-bg-surface)', cursor: 'grab',
-                                 transition: isDraggingHandle ? 'none' : 'padding-left 0.3s cubic-bezier(0.4,0,0.2,1)' }}
+                        // No transition: animating padding on every row re-laid out the
+                        // whole list each frame of the grid snap
+                        style={{ display: 'flex', alignItems: 'stretch', paddingLeft: gridH === 0 ? 20 : 6, background: 'var(--color-bg-surface)', cursor: 'grab' }}
                       >
                         {/* Day label — width matches one grid column when split is open, original 44px in full-list mode */}
-                        <div style={{ width: gridH === 0 ? 44 : 'calc((100vw - 12px) / 7)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-surface)',
-                                      transition: isDraggingHandle ? 'none' : 'width 0.3s cubic-bezier(0.4,0,0.2,1)' }}>
+                        <div style={{ width: gridH === 0 ? 44 : 'calc((100vw - 12px) / 7)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-surface)' }}>
                           <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 9, letterSpacing: '0.09em', textTransform: 'uppercase', lineHeight: 1.2, userSelect: 'none', whiteSpace: 'nowrap' }}>
                             <span style={{ color: isTod ? '#D4AF37' : 'rgb(var(--rgb-ink) / 0.75)', fontWeight: 700 }}>{abbr}</span>
                             <span style={{ color: isTod ? '#c9a84c' : 'rgb(var(--rgb-ink) / 0.25)', fontWeight: 500 }}>{' '}{day}</span>
