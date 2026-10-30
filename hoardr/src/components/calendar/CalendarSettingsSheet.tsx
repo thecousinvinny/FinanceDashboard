@@ -106,6 +106,7 @@ export function CalendarSettingsSheet({ open, onClose, prefs, googleCals, calsLo
         onClose={onClose}
         title="Calendars"
         action={{ label: 'Done', onClick: () => { onSave(local); onClose() } }}
+        actionPlacement="nav"
       >
         <FormGroup header="Finance" footer="Tap a color to change it.">
           {TYPE_META.map(({ type, label, color: defaultColor }) => (

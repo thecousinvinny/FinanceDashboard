@@ -31,6 +31,12 @@ interface Props {
   action?:   SheetAction
   /** Left button label. Defaults to "Cancel". */
   cancelLabel?: string
+  /**
+   * Where the action lives. 'bottom' (default, forms): a big button pinned to
+   * the bottom of the sheet, in thumb reach after filling the form top-down.
+   * 'nav': the iOS nav-bar slot, for non-form sheets like a settings "Done".
+   */
+  actionPlacement?: 'bottom' | 'nav'
   /** Scroll container ref, for field auto-advance. */
   scrollRef?: React.RefObject<HTMLDivElement | null>
   children:  React.ReactNode
@@ -41,7 +47,28 @@ export const SHEET_EASE = 'cubic-bezier(0.32, 0.72, 0, 1)'
 const OPEN_MS  = 480
 const CLOSE_MS = 340
 
-export function Sheet({ open, onClose, title, action, cancelLabel = 'Cancel', scrollRef, children }: Props) {
+// Typed-into fields that Enter steps through, in DOM order. Dates, toggles and
+// pickers are left out: they open their own UI.
+const FIELD_SEL = [
+  'input:not([type=hidden]):not([type=date]):not([type=time]):not([type=checkbox]):not([type=radio])' +
+    ':not([type=range]):not([type=color]):not([type=file]):not([disabled]):not([readonly])',
+  'textarea:not([disabled]):not([readonly])',
+].join(',')
+
+function fieldsIn(root: HTMLElement): HTMLElement[] {
+  return Array.from(root.querySelectorAll<HTMLElement>(FIELD_SEL)).filter(el => el.getClientRects().length > 0)
+}
+
+/** Scroll `el` into the visible part of the sheet (above the keyboard) if it isn't. */
+function revealField(sc: HTMLElement, el: HTMLElement) {
+  const r = el.getBoundingClientRect()
+  const box = sc.getBoundingClientRect()
+  const bottom = Math.min(box.bottom, (window.visualViewport?.height ?? window.innerHeight) - 16)
+  if (r.top >= box.top + 12 && r.bottom <= bottom) return
+  sc.scrollTo({ top: sc.scrollTop + r.top - box.top - Math.max(12, (bottom - box.top) / 3), behavior: 'smooth' })
+}
+
+export function Sheet({ open, onClose, title, action, cancelLabel = 'Cancel', actionPlacement = 'bottom', scrollRef, children }: Props) {
   const large = useIsLargeScreen()
   const [mounted, setMounted] = useState(false)
   // Kept rendered through the close animation
@@ -130,6 +157,44 @@ export function Sheet({ open, onClose, title, action, cancelLabel = 'Cancel', sc
     }
   }, [open, scrollEl])
 
+  // Enter moves to the next field (like Tab). The last field closes the
+  // keyboard on phone and performs the action on PC. Native listener on the
+  // scroll area, so it runs before any per-input React onKeyDown (those only
+  // blur, which is then a no-op). The return key reads "next" while there is
+  // a field after the focused one.
+  useEffect(() => {
+    if (!open || !present) return
+    const sc = scrollEl.current
+    if (!sc) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' || e.shiftKey || e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return
+      const t = e.target as HTMLElement
+      if (t.tagName !== 'INPUT' || !t.matches(FIELD_SEL)) return
+      const list = fieldsIn(sc)
+      const i = list.indexOf(t)
+      if (i < 0) return
+      e.preventDefault()
+      const next = list[i + 1]
+      if (next) {
+        next.focus({ preventScroll: true })
+        revealField(sc, next)
+      } else if (large && action && !action.disabled) {
+        action.onClick()
+      } else {
+        t.blur()
+      }
+    }
+    const onFocusIn = (e: FocusEvent) => {
+      const t = e.target as HTMLElement
+      if (t.tagName !== 'INPUT' || !t.matches(FIELD_SEL)) return
+      const list = fieldsIn(sc)
+      t.setAttribute('enterkeyhint', list.indexOf(t) < list.length - 1 ? 'next' : 'done')
+    }
+    sc.addEventListener('keydown', onKeyDown)
+    sc.addEventListener('focusin', onFocusIn)
+    return () => { sc.removeEventListener('keydown', onKeyDown); sc.removeEventListener('focusin', onFocusIn) }
+  }, [open, present, scrollEl, large, action])
+
   // Esc closes; ⌘/Ctrl+Enter performs the action (PC)
   useEffect(() => {
     if (!open) return
@@ -174,6 +239,7 @@ export function Sheet({ open, onClose, title, action, cancelLabel = 'Cancel', sc
   if (!mounted || !present) return null
 
   const dur = shown ? OPEN_MS : CLOSE_MS
+  const bottomAction = !!action && actionPlacement === 'bottom'
 
   const navBar = (
     <div
@@ -200,7 +266,7 @@ export function Sheet({ open, onClose, title, action, cancelLabel = 'Cancel', sc
         <h2 className="absolute left-1/2 -translate-x-1/2 max-w-[55%] truncate text-[17px] font-semibold text-ink pointer-events-none tracking-[-0.01em]">
           {title}
         </h2>
-        {action ? (
+        {action && actionPlacement === 'nav' ? (
           <button
             type="button"
             onClick={() => { if (!action.disabled) { haptic('confirm'); action.onClick() } }}
@@ -220,10 +286,37 @@ export function Sheet({ open, onClose, title, action, cancelLabel = 'Cancel', sc
       className="flex-1 overflow-y-auto overflow-x-hidden px-4"
       style={{
         overscrollBehavior: 'contain',
-        paddingBottom: large ? 24 : 'calc(env(safe-area-inset-bottom, 0px) + 40px)',
+        paddingBottom: bottomAction ? 20 : large ? 24 : 'calc(env(safe-area-inset-bottom, 0px) + 40px)',
       }}
     >
       {children}
+    </div>
+  )
+
+  // Primary action pinned under the scroll area, always in thumb reach
+  const footer = bottomAction && action && (
+    <div
+      className="flex-shrink-0 px-4 pt-3"
+      style={{
+        paddingBottom: large ? 16 : 'calc(env(safe-area-inset-bottom, 0px) + 12px)',
+        borderTop: '0.5px solid rgb(var(--rgb-ink) / 0.08)',
+        background: 'var(--color-bg-surface)',
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => { if (!action.disabled) { haptic('confirm'); action.onClick() } }}
+        disabled={action.disabled}
+        className="sheet-primary-btn w-full h-[52px] rounded-[14px] text-[17px] font-semibold select-none transition-[transform,opacity] duration-150 active:scale-[0.98] disabled:opacity-35 disabled:active:scale-100"
+        style={{
+          background: 'linear-gradient(160deg, #E9CD7A 0%, #D4AF37 45%, #B08A2A 100%)',
+          color: '#1a1200',
+          boxShadow: action.disabled ? 'none' : 'inset 0 1px 0 rgba(255,255,255,0.4), 0 6px 18px rgba(212,175,55,0.22)',
+          WebkitTapHighlightColor: 'transparent',
+        }}
+      >
+        {action.label}
+      </button>
     </div>
   )
 
@@ -257,6 +350,7 @@ export function Sheet({ open, onClose, title, action, cancelLabel = 'Cancel', sc
           >
             {navBar}
             {body}
+            {footer}
           </div>
         </div>
       ) : (
@@ -277,6 +371,7 @@ export function Sheet({ open, onClose, title, action, cancelLabel = 'Cancel', sc
         >
           {navBar}
           {body}
+          {footer}
         </div>
       )}
     </>,
