@@ -8,7 +8,7 @@ import InScreen from '@/app/(dashboard)/in/screen'
 import CalendarScreen from '@/app/(dashboard)/calendar/screen'
 import ProfileScreen from '@/app/(dashboard)/profile/screen'
 import SettingsScreen from '@/app/(dashboard)/settings/screen'
-import { ScreenActiveContext, ScreenVisitContext, clearPendingPath, useActivePath } from '@/lib/tab-nav'
+import { ScreenActiveContext, ScreenVisitContext, ScreenPathContext, clearPendingPath, useActivePath } from '@/lib/tab-nav'
 
 /**
  * Keeps every main screen mounted once it has rendered, so switching tabs is
@@ -91,6 +91,7 @@ export function ScreenKeepAlive() {
         return (
           <ScreenActiveContext.Provider key={path} value={isActive}>
             <ScreenVisitContext.Provider value={visits[path] ?? 0}>
+            <ScreenPathContext.Provider value={path}>
             <div
               data-screen={path}
               inert={!isActive}
@@ -99,6 +100,7 @@ export function ScreenKeepAlive() {
             >
               <Screen />
             </div>
+            </ScreenPathContext.Provider>
             </ScreenVisitContext.Provider>
           </ScreenActiveContext.Provider>
         )
