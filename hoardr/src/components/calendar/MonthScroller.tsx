@@ -56,6 +56,7 @@ export function MonthScroller({ year, month, selected, todayStr, wsMon, visibleM
   const blockRefs  = useRef(new Map<string, HTMLDivElement>())
   const visibleKey = useRef(key(year, month))
   const userAt     = useRef(0)                  // last time the user touched/scrolled the grid
+  const userDriven = useRef(false)              // this scroll came from the user's finger/wheel
   const settleT    = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const raf        = useRef(0)
   const onSettleRef = useRef(onSettle)
@@ -111,13 +112,14 @@ export function MonthScroller({ year, month, selected, todayStr, wsMon, visibleM
     }
     if (target === null || Math.abs(target - sc.scrollTop) < 2) return
     visibleKey.current = k
+    userDriven.current = false
     sc.scrollTo({ top: target, behavior: 'smooth' })
   }, [year, month, selected])  // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const sc = scRef.current
     if (!sc) return
-    const mark = () => { userAt.current = performance.now() }
+    const mark = () => { userAt.current = performance.now(); userDriven.current = true }
     const onScroll = () => {
       cancelAnimationFrame(raf.current)
       raf.current = requestAnimationFrame(() => {
@@ -136,7 +138,11 @@ export function MonthScroller({ year, month, selected, todayStr, wsMon, visibleM
       clearTimeout(settleT.current)
       settleT.current = setTimeout(() => {
         const [y, m] = visibleKey.current.split('-').map(Number)
-        onSettleRef.current(y, m)
+        // Only a scroll the user made moves the list. Reporting our own
+        // follow-the-list glides too fed back into the list (which rebuilds
+        // around the month) while it was prepending months on an upward
+        // scroll — each round stepped further back: Dec → … → Oct 2024.
+        if (userDriven.current) { userDriven.current = false; onSettleRef.current(y, m) }
         // Near either end of the window: re-centre so scrolling never runs out
         if (!inWindow(y, m)) setCentre({ y, m })
       }, SETTLE_MS)
