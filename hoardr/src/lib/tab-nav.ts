@@ -71,12 +71,13 @@ export function useActivePath(): string {
 export const ScreenActiveContext = createContext(true)
 /** Increments each time the screen is shown (starts at 1 when first shown). */
 export const ScreenVisitContext = createContext(1)
-/** The screen's route ('' outside keep-alive). */
-export const ScreenPathContext = createContext('')
 
-export function useScreenPath(): string {
-  return useContext(ScreenPathContext)
-}
+// ── Replay ───────────────────────────────────────────────────────────────────
+// Counts as a fresh visit to the visible screen, so its entrance animations
+// play again — used when the greeting, which covered them, goes away.
+const replayListeners = new Set<() => void>()
+export function replayActiveScreen() { replayListeners.forEach(l => l()) }
+export function onReplayActiveScreen(l: () => void) { replayListeners.add(l); return () => { replayListeners.delete(l) } }
 
 /** True while this screen is the visible one (always true outside keep-alive). */
 export function useScreenActive(): boolean {

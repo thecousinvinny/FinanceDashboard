@@ -8,7 +8,7 @@ import InScreen from '@/app/(dashboard)/in/screen'
 import CalendarScreen from '@/app/(dashboard)/calendar/screen'
 import ProfileScreen from '@/app/(dashboard)/profile/screen'
 import SettingsScreen from '@/app/(dashboard)/settings/screen'
-import { ScreenActiveContext, ScreenVisitContext, ScreenPathContext, clearPendingPath, useActivePath } from '@/lib/tab-nav'
+import { ScreenActiveContext, ScreenVisitContext, clearPendingPath, onReplayActiveScreen, useActivePath } from '@/lib/tab-nav'
 
 /**
  * Keeps every main screen mounted once it has rendered, so switching tabs is
@@ -53,6 +53,12 @@ export function ScreenKeepAlive() {
     setVisits(v => ({ ...v, [active]: (v[active] ?? 0) + 1 }))
   }, [active])
 
+  // Replay the visible screen's entrance (see replayActiveScreen)
+  useEffect(() => onReplayActiveScreen(() => {
+    const p = activeRef.current
+    setVisits(v => ({ ...v, [p]: (v[p] ?? 0) + 1 }))
+  }), [])
+
   // The router caught up with an optimistic tap
   useEffect(() => { clearPendingPath() }, [pathname])
 
@@ -91,7 +97,6 @@ export function ScreenKeepAlive() {
         return (
           <ScreenActiveContext.Provider key={path} value={isActive}>
             <ScreenVisitContext.Provider value={visits[path] ?? 0}>
-            <ScreenPathContext.Provider value={path}>
             <div
               data-screen={path}
               inert={!isActive}
@@ -100,7 +105,6 @@ export function ScreenKeepAlive() {
             >
               <Screen />
             </div>
-            </ScreenPathContext.Provider>
             </ScreenVisitContext.Provider>
           </ScreenActiveContext.Provider>
         )

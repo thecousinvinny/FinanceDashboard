@@ -701,6 +701,16 @@ html.slate-mist, html.light {
   box-shadow: var(--glass-shadow), inset 0 0.5px 0 var(--glass-hi);
 }
 
+/* Daily brief due: a solid cover from the very first paint until the
+   greeting's own backdrop is up (lib/greeting-boot.ts). */
+html.greet-boot body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 79;
+  background: var(--color-bg-base);
+}
+
 /* ── Greeting (daily brief) entrance ──────────────────────────────────────
    Transform + opacity only, easeOutQuint, no overshoot. The card enters once,
    with everything already loaded, so nothing pops in afterwards. */

@@ -7,6 +7,8 @@ import { createClient } from '@/lib/supabase/client'
 import { calFetch } from '@/lib/calendar'
 import type { BillingCycle } from '@/types'
 import type { Session } from '@supabase/supabase-js'
+import { GREET_BOOT_CLASS } from '@/lib/greeting-boot'
+import { replayActiveScreen } from '@/lib/tab-nav'
 
 /**
  * Daily brief shown when the app opens. Doubles as the warm-up screen: while
@@ -16,9 +18,6 @@ import type { Session } from '@supabase/supabase-js'
 
 const LS_AVATAR = 'hoardr-avatar-url'
 const LS_NAME   = 'hoardr-greeting-name'
-const LS_LAST   = 'hoardr-greeting-at'      // ms timestamp of the last showing
-const SS_SHOWN  = 'hoardr-greeting-session'
-const COOLDOWN  = 30 * 60_000
 const SHOW_EVENT = 'hoardr-show-greeting'
 
 /** Open the brief now, skipping the once-per-launch rule (Settings → Preview). */
@@ -26,22 +25,6 @@ export function showGreeting() {
   window.dispatchEvent(new Event(SHOW_EVENT))
 }
 
-/**
- * Once per app launch (browser session), and never twice within 30 minutes.
- * The overlay lives in the dashboard layout, so anything that remounts it —
- * a reload, a deploy refreshing the page, a bounce through /login — used to
- * bring it back, which on desktop looked random.
- */
-function shouldShow(): boolean {
-  try {
-    if (sessionStorage.getItem(SS_SHOWN)) return false
-    const last = Number(localStorage.getItem(LS_LAST) ?? 0)
-    if (Date.now() - last < COOLDOWN) return false
-    sessionStorage.setItem(SS_SHOWN, '1')
-    localStorage.setItem(LS_LAST, String(Date.now()))
-    return true
-  } catch { return true }
-}
 const M = 'var(--font-montserrat)'
 
 /** Google avatar URLs carry a size suffix (=s96-c); ask for a banner-sized one. */
@@ -115,7 +98,8 @@ export function GreetingOverlay() {
   // Layout effect: the scrim is up before the first paint after hydration, so
   // the page never flashes underneath before the brief appears.
   useLayoutEffect(() => {
-    if (runKey === 0 && !shouldShow()) return
+    // At launch the <head> script has already decided (lib/greeting-boot.ts)
+    if (runKey === 0 && !document.documentElement.classList.contains(GREET_BOOT_CLASS)) return
     setReady(false); setWaiting(false); setExiting(false); setBrief(null)
     const today = localToday()
     setTodayStr(today)
@@ -245,7 +229,15 @@ export function GreetingOverlay() {
     return () => window.removeEventListener(SHOW_EVENT, onShow)
   }, [])
 
+  // Our backdrop is up: drop the boot cover that hid the page until now
+  useLayoutEffect(() => {
+    if (show) document.documentElement.classList.remove(GREET_BOOT_CLASS)
+  }, [show])
+
   function dismiss() {
+    // The screen's entrance animations ran unseen behind the backdrop; replay
+    // them as it fades away
+    replayActiveScreen()
     setExiting(true)
     setTimeout(() => setShow(false), 340)
   }
@@ -275,9 +267,10 @@ export function GreetingOverlay() {
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         padding: 'env(safe-area-inset-top, 44px) 16px env(safe-area-inset-bottom, 34px)',
         boxSizing: 'border-box',
-        // Near-solid theme scrim, no backdrop blur: re-blurring the page while
-        // every tab mounts behind it is what made the entrance stutter.
-        background: 'radial-gradient(120% 80% at 50% 40%, rgb(var(--rgb-bg-base) / 0.9), rgb(var(--rgb-bg-base) / 0.97))',
+        // No backdrop blur: re-blurring the page while every tab mounts behind
+        // it is what made the entrance stutter.
+        // Opaque: nothing of the app (still mounting and animating) shows through
+        background: 'radial-gradient(110% 70% at 50% 30%, rgb(var(--rgb-bg-surface) / 0.7), transparent 70%), var(--color-bg-base)',
         opacity: exiting ? 0 : 1,
         transition: 'opacity 340ms ease',
         userSelect: 'none', WebkitUserSelect: 'none',

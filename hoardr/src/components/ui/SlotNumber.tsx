@@ -1,30 +1,19 @@
 'use client'
 
 import { useLayoutEffect, useRef } from 'react'
-import { useScreenPath, useScreenVisit } from '@/lib/tab-nav'
-
-/**
- * When each screen visit's spin started, keyed `${screen}:${visit}`. Shared by
- * every drum on the screen, so the spin happens once per visit: a drum that
- * remounts mid-spin (a reload swapping in a skeleton, a digit-count change)
- * picks up where the others are instead of starting over.
- */
-const spinStart = new Map<string, number>()
+import { useScreenVisit } from '@/lib/tab-nav'
 
 // ── Single drum column for one digit ─────────────────────────────────────────
 interface DrumProps {
   digit:          number  // 0-9, the target digit to land on
   placeFromRight: number  // 0 = ones, 1 = tens, 2 = hundreds, …
   totalDigits:    number  // total digit count in the formatted number
+  spinAt:         number  // when this number's spin started (0 = not yet shown)
 }
 
-function Drum({ digit, placeFromRight, totalDigits }: DrumProps) {
+function Drum({ digit, placeFromRight, totalDigits, spinAt }: DrumProps) {
   const trackRef = useRef<HTMLSpanElement>(null)
   const cellRef  = useRef<HTMLSpanElement>(null)
-  // Spin when the screen is shown, every time it's shown — not on a hidden
-  // background mount (kept-alive screens), where nobody would see it
-  const visit    = useScreenVisit()
-  const screen   = useScreenPath()
   const prevDigit = useRef(digit)
 
   // Higher-place digits get 2 extra full rotations each so they settle last
@@ -36,23 +25,20 @@ function Drum({ digit, placeFromRight, totalDigits }: DrumProps) {
   const dur = 900 + placeFromRight * 120
   // Stagger start: left-to-right, 60ms per digit from left
   const del = (totalDigits - 1 - placeFromRight) * 60
-  const key = `${screen}:${visit}`
 
-  // The visit's spin. Layout effect so a drum that mounts after the spin is
-  // over shows its final digit on the first paint, not a flash of "0".
+  // The spin. Layout effect so a drum that mounts after the spin is over
+  // shows its final digit on the first paint, not a flash of "0".
   useLayoutEffect(() => {
     const track = trackRef.current
     const cell  = cellRef.current
-    if (!track || !cell || visit === 0) return
+    if (!track || !cell || !spinAt) return
 
     // Measure actual rendered pixel height of one cell (handles any font-size)
     const h = cell.getBoundingClientRect().height
     if (!h) return
     const targetY = -totalRotations * 10 * h
 
-    const now = performance.now()
-    if (!spinStart.has(key)) spinStart.set(key, now)
-    const elapsed = now - spinStart.get(key)!
+    const elapsed = performance.now() - spinAt
 
     track.style.transition = 'none'
     track.style.transform  = 'translateY(0)'
@@ -64,7 +50,7 @@ function Drum({ digit, placeFromRight, totalDigits }: DrumProps) {
     // A negative delay joins the spin already under way
     track.style.transition = `transform ${dur}ms cubic-bezier(0.22,1,0.36,1) ${del - elapsed}ms`
     track.style.transform  = `translateY(${targetY}px)`
-  }, [key, visit, totalRotations, dur, del])
+  }, [spinAt, totalRotations, dur, del])
 
   // A value change. Mid-spin there's nothing to do: the last cell now holds
   // the new digit and the spin lands on it. Once settled, roll a short way
@@ -74,9 +60,8 @@ function Drum({ digit, placeFromRight, totalDigits }: DrumProps) {
     prevDigit.current = digit
     const track = trackRef.current
     const cell  = cellRef.current
-    const start = spinStart.get(key)
-    if (from === digit || !track || !cell || visit === 0 || start === undefined) return
-    if (performance.now() - start < del + dur) return
+    if (from === digit || !track || !cell || !spinAt) return
+    if (performance.now() - spinAt < del + dur) return
     const h = cell.getBoundingClientRect().height
     if (!h) return
     // Same face as before, one rotation back from the end, then roll forward
@@ -85,7 +70,7 @@ function Drum({ digit, placeFromRight, totalDigits }: DrumProps) {
     void track.offsetHeight
     track.style.transition = 'transform 650ms cubic-bezier(0.22,1,0.36,1)'
     track.style.transform  = `translateY(${-totalRotations * 10 * h}px)`
-  }, [digit, key, visit, totalRotations, dur, del])
+  }, [digit, spinAt, totalRotations, dur, del])
 
   return (
     <span style={{ display: 'inline-block', overflow: 'hidden', height: '1em', fontFamily: "var(--font-big-shoulders)", WebkitTextFillColor: 'currentColor' }}>
@@ -112,6 +97,17 @@ interface Props {
 }
 
 export function SlotNumber({ value, format, className }: Props) {
+  // One spin per screen visit, timed per number. Its digits share the start
+  // time, so a value that settles in stages (a reload's lists arriving one by
+  // one) lands mid-spin instead of restarting it, and a drum remounted by a
+  // digit-count change joins in. A number that first appears later in the
+  // visit (another pill, data arriving) gets its own spin. Not while the
+  // screen is hidden (kept-alive), where nobody would see it.
+  const visit = useScreenVisit()
+  const spin  = useRef<{ visit: number; at: number } | null>(null)
+  if (visit > 0 && spin.current?.visit !== visit) spin.current = { visit, at: performance.now() }
+  const spinAt = visit > 0 ? spin.current!.at : 0
+
   const str    = format(value)
   const tokens = str.split('').map(c => ({ char: c, isDigit: /\d/.test(c) }))
   const total  = tokens.filter(t => t.isDigit).length
@@ -129,6 +125,7 @@ export function SlotNumber({ value, format, className }: Props) {
             digit={parseInt(tok.char)}
             placeFromRight={placeFromRight}
             totalDigits={total}
+            spinAt={spinAt}
           />
         )
       })}
