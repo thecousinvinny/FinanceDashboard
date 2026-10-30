@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
+import { useState, useMemo, useEffect, useLayoutEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getWeekStartsMonday } from '@/lib/week-start'
@@ -184,7 +184,7 @@ function layoutCell(lanes: SpanBar[][], col: number, singles: Array<{ ev: CalEve
 
 const DESK_VIEWS = ['month', 'list'] as const
 const SAFE_TOP = 'calc(max(env(safe-area-inset-top, 0px), 44px) + 12px)'
-const GRID_EXPANDED = 280  // px — compact month grid height in split view
+const GRID_EXPANDED = 322  // px — split-view grid: header + weekdays + a full 6-week month
 const SNAP_MS = 320
 const SNAP = `height ${SNAP_MS}ms cubic-bezier(0.32, 0.72, 0, 1)`   // UIKit-like settle
 
@@ -1409,6 +1409,13 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
   }, [isLargeScreen, calView])
 
   // ── Infinite scroll: prepend ───────────────────────────────────────────────
+  // Months inserted above push the content down; the scroll position is
+  // compensated in a layout effect in the same commit, before paint. It used to
+  // happen two frames later from a saved position: during a fast upward flick
+  // on iPhone the months often weren't rendered yet, so nothing was added, the
+  // view jumped four months back, the top sentinel was in view again, and it
+  // cascaded (Aug → Jan). Restoring the saved position also killed momentum.
+  const prependFromH = useRef<number | null>(null)
   useEffect(() => {
     if (isLargeScreen && calView !== 'list') return
     const sc = scrollRef.current, top = topSentRef.current
@@ -1416,19 +1423,24 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     const obs = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting || loadingMore.current || suppressPrepend.current) return
       loadingMore.current = true
-      const prevH = sc.scrollHeight, prevTop = sc.scrollTop
+      prependFromH.current = sc.scrollHeight
       setMonths(prev => {
         const first = prev[0]
-        return [[4, 3, 2, 1].map(i => addMonths(first.year, first.month, -i)), prev].flat()
+        return [[6, 5, 4, 3, 2, 1].map(i => addMonths(first.year, first.month, -i)), prev].flat()
       })
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        sc.scrollTop = prevTop + (sc.scrollHeight - prevH)
-        loadingMore.current = false
-      }))
-    }, { root: sc, rootMargin: '400px 0px 0px 0px', threshold: 0 })
+    }, { root: sc, rootMargin: '1200px 0px 0px 0px', threshold: 0 })
     obs.observe(top)
     return () => obs.disconnect()
   }, [isLargeScreen, calView])
+  useLayoutEffect(() => {
+    const fromH = prependFromH.current
+    if (fromH === null) return
+    prependFromH.current = null
+    const sc = scrollRef.current
+    // Relative (+=): keeps whatever the flick has scrolled since
+    if (sc) sc.scrollTop += sc.scrollHeight - fromH
+    loadingMore.current = false
+  }, [months])
 
   // ── Month grid infinite scroll: append ────────────────────────────────────
   useEffect(() => {
