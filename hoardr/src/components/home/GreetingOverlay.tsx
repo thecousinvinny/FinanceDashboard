@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useLayoutEffect, useRef } from 'react'
 import { CalendarDays, Receipt, ArrowDownLeft, Package, Landmark, TrendingDown, TrendingUp } from 'lucide-react'
 import { $fd, $fk, localToday, nextRenewalDate } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -76,7 +76,7 @@ interface Brief {
 
 export function GreetingOverlay() {
   const [show,     setShow]     = useState(false)
-  const [mounted,  setMounted]  = useState(false)
+  const [ready,    setReady]    = useState(false)   // card may enter
   const [exiting,  setExiting]  = useState(false)
   const [name,     setName]     = useState('')
   const [avatar,   setAvatar]   = useState<string | null>(null)
@@ -86,7 +86,9 @@ export function GreetingOverlay() {
   const genRef = useRef(0)
   const authSubRef = useRef<{ unsubscribe: () => void } | null>(null)
 
-  useEffect(() => {
+  // Layout effect: the scrim is up before the first paint after hydration, so
+  // the page never flashes underneath before the brief appears.
+  useLayoutEffect(() => {
     if (!shouldShow()) return
     const today = localToday()
     setTodayStr(today)
@@ -97,7 +99,9 @@ export function GreetingOverlay() {
     if (cachedAvatar) setAvatar(cachedAvatar)
 
     setShow(true)
-    requestAnimationFrame(() => requestAnimationFrame(() => setMounted(true)))
+    // The card waits for its numbers so nothing pops in after it lands, but
+    // never longer than this.
+    const readyTimer = setTimeout(() => setReady(true), 600)
     const gen = ++genRef.current
 
     async function loadData() {
@@ -171,6 +175,7 @@ export function GreetingOverlay() {
         enRoute: (wish ?? []).length,
       }
       setBrief(base)
+      setReady(true)
 
       // Today's calendar — after the money numbers, it's a slower round trip
       const calIds = ((profile?.calendar_prefs as { googleCalendarIds?: string[] } | null)?.googleCalendarIds) ?? []
@@ -192,13 +197,12 @@ export function GreetingOverlay() {
     }
 
     loadData().catch(console.error)
-    return () => { genRef.current++; authSubRef.current?.unsubscribe(); authSubRef.current = null }
+    return () => { genRef.current++; clearTimeout(readyTimer); authSubRef.current?.unsubscribe(); authSubRef.current = null }
   }, [])
 
   function dismiss() {
     setExiting(true)
-    setMounted(false)
-    setTimeout(() => setShow(false), 360)
+    setTimeout(() => setShow(false), 340)
   }
 
   if (!show) return null
@@ -224,30 +228,27 @@ export function GreetingOverlay() {
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         padding: 'env(safe-area-inset-top, 44px) 0 env(safe-area-inset-bottom, 34px)',
         boxSizing: 'border-box',
-        background: 'rgb(0 0 0 / 0.45)',
-        backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
-        opacity: mounted && !exiting ? 1 : 0,
-        transition: mounted ? 'opacity 360ms ease' : 'none',
+        // Near-solid theme scrim, no backdrop blur: re-blurring the page while
+        // every tab mounts behind it is what made the entrance stutter.
+        background: 'radial-gradient(120% 80% at 50% 40%, rgb(var(--rgb-bg-base) / 0.9), rgb(var(--rgb-bg-base) / 0.97))',
+        opacity: exiting ? 0 : 1,
+        transition: 'opacity 340ms ease',
         userSelect: 'none', WebkitUserSelect: 'none',
       }}
     >
-      <div style={{
+      {ready && <div className={exiting ? 'greet-card-out' : 'greet-card-in'} style={{
         position: 'relative',
         width: 'min(90vw, 380px)', maxHeight: 'min(86vh, 760px)',
         borderRadius: 28, overflow: 'hidden',
         background: 'var(--color-bg-surface)',
         boxShadow: '0 40px 100px rgba(0,0,0,0.45), 0 0 0 0.5px rgb(var(--rgb-ink) / 0.10)',
         display: 'flex', flexDirection: 'column',
-        transform: mounted && !exiting ? 'none' : exiting ? 'scale(0.95) translateY(8px)' : 'scale(0.92) translateY(24px)',
-        transition: mounted
-          ? exiting ? 'transform 320ms cubic-bezier(0.4,0,1,1)' : 'transform 520ms cubic-bezier(0.34,1.56,0.64,1)'
-          : 'none',
       }}>
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '22px 22px 18px' }}>
+        <div className="greet-item" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '22px 22px 18px', ['--i' as string]: 0 }}>
           <div style={{ width: 52, height: 52, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, boxShadow: '0 0 0 2px rgba(212,175,55,0.55)' }}>
             {avatar
-              ? <img src={avatar} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ? <img src={avatar} alt="" draggable={false} onLoad={e => { e.currentTarget.style.opacity = '1' }} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0, transition: 'opacity 300ms ease' }} />
               : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(160deg,#E9CD7A,#B08A2A)', color: '#1a1200', fontWeight: 700, fontSize: 22, fontFamily: M }}>{name ? name[0].toUpperCase() : ''}</div>}
           </div>
           <div style={{ minWidth: 0 }}>
@@ -260,15 +261,15 @@ export function GreetingOverlay() {
 
         <div style={{ overflowY: 'auto', padding: '0 16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {/* Today */}
-          <section style={{ background: 'rgb(var(--rgb-ink) / 0.05)', borderRadius: 18, padding: '14px 16px' }}>
+          <section className="greet-item" style={{ background: 'rgb(var(--rgb-ink) / 0.05)', borderRadius: 18, padding: '14px 16px', ['--i' as string]: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
               <CalendarDays size={15} color="#FF453A" strokeWidth={2} />
               <span style={{ ...label, color: 'rgb(var(--rgb-ink))', letterSpacing: 0, textTransform: 'none', fontSize: 14 }}>{dateLine}</span>
             </div>
             {brief?.today == null ? skeleton(140) : evShown.length === 0 ? (
-              <p style={{ fontSize: 14, color: 'rgb(var(--rgb-ink-muted))', fontFamily: M }}>Nothing on the calendar today</p>
+              <p className="greet-fade" style={{ fontSize: 14, color: 'rgb(var(--rgb-ink-muted))', fontFamily: M }}>Nothing on the calendar today</p>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+              <div className="greet-fade" style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                 {evShown.map((e, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 10, fontFamily: M }}>
                     <span style={{ width: 54, flexShrink: 0, fontSize: 12.5, color: 'rgb(var(--rgb-ink-muted))', fontVariantNumeric: 'tabular-nums' }}>{e.time ? fmtTime(e.time) : 'All day'}</span>
@@ -281,7 +282,7 @@ export function GreetingOverlay() {
           </section>
 
           {/* Month so far */}
-          <section style={{ background: 'rgb(var(--rgb-ink) / 0.05)', borderRadius: 18, padding: '14px 16px' }}>
+          <section className="greet-item" style={{ background: 'rgb(var(--rgb-ink) / 0.05)', borderRadius: 18, padding: '14px 16px', ['--i' as string]: 2 }}>
             <p style={label}>Spent this month</p>
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10, marginTop: 4 }}>
               <span style={{ fontSize: 38, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1, color: 'rgb(var(--rgb-ink))', fontFamily: 'var(--font-big-shoulders)' }}>
@@ -306,7 +307,7 @@ export function GreetingOverlay() {
           </section>
 
           {/* Next 7 days */}
-          <section style={{ background: 'rgb(var(--rgb-ink) / 0.05)', borderRadius: 18, padding: '14px 16px' }}>
+          <section className="greet-item" style={{ background: 'rgb(var(--rgb-ink) / 0.05)', borderRadius: 18, padding: '14px 16px', ['--i' as string]: 3 }}>
             <p style={{ ...label, marginBottom: 10 }}>Next 7 days</p>
             {!brief ? skeleton(160) : upShown.length === 0 ? (
               <p style={{ fontSize: 14, color: 'rgb(var(--rgb-ink-muted))', fontFamily: M }}>No bills or paydays coming up</p>
@@ -330,7 +331,7 @@ export function GreetingOverlay() {
           </section>
 
           {/* Footnotes */}
-          <div style={{ display: 'flex', gap: 10 }}>
+          <div className="greet-item" style={{ display: 'flex', gap: 10, ['--i' as string]: 4 }}>
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, background: 'rgb(var(--rgb-ink) / 0.05)', borderRadius: 14, padding: '10px 12px', fontFamily: M }}>
               <Landmark size={15} color="#D4AF37" strokeWidth={2} />
               <div style={{ minWidth: 0 }}>
@@ -347,11 +348,13 @@ export function GreetingOverlay() {
             </div>
           </div>
         </div>
-      </div>
+      </div>}
 
-      <p style={{ marginTop: 12, fontSize: 12, color: 'rgba(255,255,255,0.6)', fontFamily: M, letterSpacing: '0.02em' }}>
-        Tap anywhere to continue
-      </p>
+      {ready && (
+        <p className="greet-fade" style={{ marginTop: 14, fontSize: 12, color: 'rgb(var(--rgb-ink-muted))', fontFamily: M, letterSpacing: '0.02em', ['--d' as string]: '700ms', opacity: exiting ? 0 : undefined, transition: 'opacity 200ms ease' }}>
+          Tap anywhere to continue
+        </p>
+      )}
     </div>
   )
 }

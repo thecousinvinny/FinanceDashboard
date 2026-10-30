@@ -83,9 +83,7 @@ export function ProfileDrawer() {
       aria-label="Profile"
       className="fixed overflow-hidden rounded-full select-none active:scale-95 transition-transform"
       style={{
-        // Below iOS's status-bar blur (it softened the top of the avatar);
-        // lines up with the pill/search row on Out and In.
-        top:       'calc(env(safe-area-inset-top, 44px) + 24px)',
+        top:       'calc(env(safe-area-inset-top, 44px) + 10px)',
         right:     16,
         width:     36,
         height:    36,

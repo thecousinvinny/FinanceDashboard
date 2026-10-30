@@ -106,7 +106,7 @@ Google OAuth via Supabase. Login (`(auth)/login`) calls `signInWithOAuth` with `
 
 ## Greeting (daily brief)
 
-`components/home/GreetingOverlay.tsx` shows once per browser session and never twice within 30 minutes (`shouldShow()` — it lives in the layout, so remounts used to re-show it) and doubles as the warm-up screen while `ScreenKeepAlive` mounts the other tabs. It shows today's Google events (via `calFetch`), month-to-date spend with pace vs the same point last month, income/net, bills and paydays in the next 7 days (subscriptions + `revenue_streams`, advanced past stale dates), net worth and en-route orders. Theme colors only.
+`components/home/GreetingOverlay.tsx` shows once per browser session and never twice within 30 minutes (`shouldShow()` — it lives in the layout, so remounts used to re-show it) and doubles as the warm-up screen while `ScreenKeepAlive` mounts the other tabs. It shows today's Google events (via `calFetch`), month-to-date spend with pace vs the same point last month, income/net, bills and paydays in the next 7 days (subscriptions + `revenue_streams`, advanced past stale dates), net worth and en-route orders. Theme colors only. Entrance: a near-solid theme scrim is up from the first paint (layout effect, no backdrop blur — blurring the page while the tabs mount behind it stuttered); the card waits for its data (capped at 600ms) and then rises in with the `greet-*` keyframes in `globals.css`, sections staggered.
 
 ## Async safety pattern (required on every `'use client'` page)
 
