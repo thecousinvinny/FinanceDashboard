@@ -6,7 +6,7 @@ import { ArrowLeft, Camera, Check, Settings2, Pencil } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { cn, $f, $fk, $fd, haptic } from '@/lib/utils'
 import { getCategoryIcon } from '@/components/ui/CategoryIcon'
-import { useOnScreenReturn, setPendingPath } from '@/lib/tab-nav'
+import { useOnScreenReturn, navigateTab } from '@/lib/tab-nav'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -905,7 +905,7 @@ export default function ProfilePage() {
           className="w-9 h-9 flex items-center justify-center rounded-full bg-bg-overlay text-ink-muted">
           <ArrowLeft size={18} strokeWidth={2} />
         </button>
-        <button onClick={() => { setPendingPath('/settings'); router.push('/settings') }}
+        <button onClick={() => { navigateTab('/settings'); router.push('/settings') }}
           className="w-9 h-9 flex items-center justify-center rounded-full bg-bg-overlay text-ink-muted">
           <Settings2 size={18} strokeWidth={1.75} />
         </button>

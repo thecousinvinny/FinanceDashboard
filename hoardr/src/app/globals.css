@@ -580,9 +580,35 @@ html.midnight-teal .pac-matched       { color: #2DD4BF !important; font-weight: 
   pointer-events: none;
   z-index: -1;
 }
-/* Opacity only — a transform here would re-anchor the screen's fixed FAB/sheets */
+/* Opacity only — a transform here would re-anchor the screen's fixed FAB/sheets.
+   Fallback for browsers without View Transitions; with them (html.vt, set by
+   navigateTab) the slide below does the animating. */
 .screen-active { animation: screenIn 0.18s ease-out both; }
+html.vt .screen-active { animation: none; }
 @keyframes screenIn { from { opacity: 0.4; } to { opacity: 1; } }
+
+/* ── Tab transitions (navigateTab → View Transitions API) ──
+   The old screen drifts out and fades quickly; the new one glides in from the
+   side it lives on, easeOutQuint, no overshoot. Snapshots only — the live
+   screens never get a transform. */
+::view-transition { background: var(--color-bg-base); }
+html[data-tab-dir]::view-transition-old(root) {
+  animation: tab-out-fwd 220ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+html[data-tab-dir]::view-transition-new(root) {
+  animation: tab-in-fwd 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+html[data-tab-dir='back']::view-transition-old(root) { animation-name: tab-out-back; }
+html[data-tab-dir='back']::view-transition-new(root) { animation-name: tab-in-back; }
+@keyframes tab-out-fwd  { to   { opacity: 0; transform: translateX(-28px) scale(0.985); } }
+@keyframes tab-in-fwd   { from { opacity: 0; transform: translateX(36px); } }
+@keyframes tab-out-back { to   { opacity: 0; transform: translateX(28px) scale(0.985); } }
+@keyframes tab-in-back  { from { opacity: 0; transform: translateX(-36px); } }
+/* The tab bar stays live (its pill slides on its own) and doesn't cross-fade */
+::view-transition-old(tabbar) { display: none; }
+::view-transition-new(tabbar) { animation: none; }
+::view-transition-group(tabbar) { animation: none; }
+::view-transition-group(profile-avatar) { animation-duration: 260ms; }
 
 /* Light theme: many inputs set colorScheme:'dark' inline for the dark themes,
    which made native date pickers and select lists open dark in Slate Mist.

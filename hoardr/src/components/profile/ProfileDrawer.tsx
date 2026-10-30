@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useActivePath, setPendingPath } from '@/lib/tab-nav'
+import { useActivePath, navigateTab } from '@/lib/tab-nav'
 import { createClient } from '@/lib/supabase/client'
 
 // Hide on pages that have their own back/settings header
@@ -79,7 +79,7 @@ export function ProfileDrawer() {
 
   return (
     <button
-      onClick={() => { setPendingPath('/profile'); router.push('/profile') }}
+      onClick={() => { navigateTab('/profile'); router.push('/profile') }}
       aria-label="Profile"
       className="fixed overflow-hidden rounded-full select-none active:scale-95 transition-transform"
       style={{
@@ -88,6 +88,7 @@ export function ProfileDrawer() {
         width:     36,
         height:    36,
         zIndex:    45,
+        viewTransitionName: 'profile-avatar',
         boxShadow: '0 2px 8px rgba(0,0,0,0.4), 0 0 0 1.5px rgba(212,175,55,0.4)',
       }}
     >

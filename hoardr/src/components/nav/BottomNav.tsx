@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Coins, TrendingDown, TrendingUp, CalendarDays } from 'lucide-react'
-import { useActivePath, setPendingPath } from '@/lib/tab-nav'
+import { useActivePath, navigateTab } from '@/lib/tab-nav'
 import { haptic } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 
@@ -39,6 +39,8 @@ export default function BottomNav() {
         padding:      PAD,
         borderRadius: 26,
         transform:    'translateX(-50%)',
+        // Own layer in tab transitions: stays still while the screens slide
+        viewTransitionName: 'tabbar',
       }}
     >
       {/* Sliding glass pill behind the active tab */}
@@ -66,7 +68,7 @@ export default function BottomNav() {
             key={href}
             href={href}
             replace
-            onClick={() => { if (!active) { haptic('tap'); setPendingPath(href) } }}
+            onClick={() => { if (!active) { haptic('tap'); navigateTab(href) } }}
             className={cn(
               'relative flex flex-col items-center justify-center gap-[3px] flex-1 min-w-0 select-none transition-colors duration-200',
               active ? 'text-gold' : 'text-ink-muted',
