@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useLayoutEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { CalendarDays, Receipt, ArrowDownLeft, Package, Landmark, TrendingDown, TrendingUp } from 'lucide-react'
 import { $fd, $fk, localToday, nextRenewalDate } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -19,6 +19,12 @@ const LS_NAME   = 'hoardr-greeting-name'
 const LS_LAST   = 'hoardr-greeting-at'      // ms timestamp of the last showing
 const SS_SHOWN  = 'hoardr-greeting-session'
 const COOLDOWN  = 30 * 60_000
+const SHOW_EVENT = 'hoardr-show-greeting'
+
+/** Open the brief now, skipping the once-per-launch rule (Settings → Preview). */
+export function showGreeting() {
+  window.dispatchEvent(new Event(SHOW_EVENT))
+}
 
 /**
  * Once per app launch (browser session), and never twice within 30 minutes.
@@ -102,12 +108,15 @@ export function GreetingOverlay() {
   const [greeting, setGreeting] = useState('')
   const [todayStr, setTodayStr] = useState('')
   const genRef = useRef(0)
+  // 0 = the automatic showing at launch; each manual preview bumps it
+  const [runKey, setRunKey] = useState(0)
   const authSubRef = useRef<{ unsubscribe: () => void } | null>(null)
 
   // Layout effect: the scrim is up before the first paint after hydration, so
   // the page never flashes underneath before the brief appears.
   useLayoutEffect(() => {
-    if (!shouldShow()) return
+    if (runKey === 0 && !shouldShow()) return
+    setReady(false); setWaiting(false); setExiting(false); setBrief(null)
     const today = localToday()
     setTodayStr(today)
     setGreeting(timeGreeting())
@@ -228,6 +237,12 @@ export function GreetingOverlay() {
       genRef.current++; clearTimeout(readyTimer); clearTimeout(waitTimer)
       authSubRef.current?.unsubscribe(); authSubRef.current = null
     }
+  }, [runKey])
+
+  useEffect(() => {
+    const onShow = () => setRunKey(k => k + 1)
+    window.addEventListener(SHOW_EVENT, onShow)
+    return () => window.removeEventListener(SHOW_EVENT, onShow)
   }, [])
 
   function dismiss() {

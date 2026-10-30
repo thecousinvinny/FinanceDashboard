@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Check, CreditCard, LogOut, CalendarDays, Tag, Settings2, Palette, CalendarCheck, Smartphone, Monitor } from 'lucide-react'
+import { ArrowLeft, Check, CreditCard, LogOut, CalendarDays, Tag, Settings2, Palette, CalendarCheck, Smartphone, Monitor, Sunrise } from 'lucide-react'
+import { showGreeting } from '@/components/home/GreetingOverlay'
 import { createClient } from '@/lib/supabase/client'
 import { connectGoogleCalendar } from '@/lib/gcal-connect'
 import { showToast } from '@/lib/toast'
@@ -265,7 +266,8 @@ export default function SettingsPage() {
           </div>
         </FormGroup>
 
-        <FormGroup footer="The colors used for income, expenses and subscriptions throughout the app.">
+        <FormGroup footer="The daily brief opens once per launch. Preview shows it now. Accent colors are used for income, expenses and subscriptions throughout the app.">
+          <FormRow icon={Sunrise} label="Preview daily brief" chevron onClick={showGreeting} />
           <FormRow icon={Palette} label="Accent colors" chevron onClick={() => setSemColorsOpen(true)}>
             <span className="flex items-center gap-1.5">
               {['var(--sem-income)', 'var(--sem-expense)', 'var(--sem-sub)'].map(c => (
