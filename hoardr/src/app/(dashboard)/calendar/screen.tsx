@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, useLayoutEffect, useCallback, useRef } from 'react'
+import { memo, useState, useMemo, useEffect, useLayoutEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getWeekStartsMonday } from '@/lib/week-start'
@@ -101,6 +101,110 @@ function addDays(ds: string, n: number): string {
 // Start/end for `ev` moved from `fromDate` to begin on `toDate`, keeping its
 // length (multi-day spans, past-midnight timed events). All-day ends are
 // exclusive in Google — an end equal to the start is rejected as empty.
+// ── Phone day list: one memoized block per month ─────────────────────────────
+// The list spans years, so it must not re-render as a whole: scrolling updates
+// screen state on every day boundary, and re-rendering hundreds of 112px rows
+// each time made the list stall. Months re-render only when their own props
+// change, and handlers come through a stable ref.
+interface ListActions {
+  rowStart:    (e: React.TouchEvent, ds: string) => void
+  rowEnd:      (e: React.TouchEvent) => void
+  rowMouseDown:(e: React.MouseEvent, ds: string) => void
+  rowMouseUp:  (e: React.MouseEvent) => void
+  clearSwipe:  () => void
+  openCreate:  (ds: string) => void
+  openEvent:   (ev: CalEvent, ds: string) => void
+  setDayRef:   (ds: string, el: HTMLDivElement | null) => void
+  setMonthRef: (key: string, el: HTMLElement | null) => void
+}
+const LIST_ROW_MIN_H = 112
+const LIST_SPAN = 24   // months loaded either side of the start month
+
+const ListMonth = memo(function ListMonth({ year: y, month: m, events, todayStr, full, actions }: {
+  year: number; month: number
+  events: Record<string, CalEvent[]>
+  todayStr: string                   // '' unless today falls in this month
+  full: boolean                      // full-list mode (grid collapsed)
+  actions: React.MutableRefObject<ListActions>
+}) {
+  const dim = getDaysInMonth(y, m)
+  const k = `${y}-${m}`
+  return (
+    // No content-visibility here: a skipped month laid out at its real height
+    // as it scrolled in from above, and Safari (no scroll anchoring) shifted
+    // the list under the finger
+    <section ref={el => actions.current.setMonthRef(k, el)}>
+      {Array.from({ length: dim }, (_, i) => {
+        const day    = i + 1
+        const ds     = toDateStr(y, m, day)
+        const isTod  = ds === todayStr
+        const evs    = events[ds] ?? []
+        const abbr   = new Date(y, m, day).toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()
+        const stripe = Math.floor(new Date(y, m, day).getTime() / 86400000) % 2 === 0
+        return (
+          <div
+            key={ds}
+            ref={el => actions.current.setDayRef(ds, el)}
+            data-day={ds}
+            onTouchStart={e => actions.current.rowStart(e, ds)}
+            onTouchEnd={e => actions.current.rowEnd(e)}
+            onMouseDown={e => actions.current.rowMouseDown(e, ds)}
+            onMouseUp={e => actions.current.rowMouseUp(e)}
+            onMouseLeave={() => actions.current.clearSwipe()}
+            // No transition: animating padding on every row re-laid out the
+            // whole list each frame of the grid snap
+            style={{ display: 'flex', alignItems: 'stretch', paddingLeft: full ? 20 : 6, background: 'var(--color-bg-surface)', cursor: 'grab' }}
+          >
+            {/* Day label — width matches one grid column when split is open, original 44px in full-list mode */}
+            <div style={{ width: full ? 44 : 'calc((100vw - 12px) / 7)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-surface)' }}>
+              <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 9, letterSpacing: '0.09em', textTransform: 'uppercase', lineHeight: 1.2, userSelect: 'none', whiteSpace: 'nowrap' }}>
+                <span style={{ color: isTod ? '#D4AF37' : 'rgb(var(--rgb-ink) / 0.75)', fontWeight: 700 }}>{abbr}</span>
+                <span style={{ color: isTod ? '#c9a84c' : 'rgb(var(--rgb-ink) / 0.25)', fontWeight: 500 }}>{' '}{day}</span>
+              </span>
+            </div>
+            {/* Vertical rule */}
+            <div style={{ width: 1, flexShrink: 0, background: isTod ? 'rgba(201,168,76,0.35)' : 'rgb(var(--rgb-ink) / 0.04)', marginTop: 8, marginBottom: 8 }} />
+            {/* Events */}
+            <div
+              onClick={() => actions.current.openCreate(ds)}
+              style={{ flex: 1, paddingLeft: 12, paddingRight: 14, paddingTop: 6, paddingBottom: 6, display: 'flex', flexDirection: 'column', gap: 2, minHeight: LIST_ROW_MIN_H, background: stripe ? 'var(--color-bg-surface)' : 'var(--color-bg-elevated)', cursor: 'text' }}>
+              {evs.map((ev, idx) => {
+                const bar  = ev.color ?? DETAIL_DOT[ev.type]
+                const M    = 'var(--font-montserrat)'
+                const row2: string | null = ev.type === 'google'
+                  ? (ev.amount ? getTimeRange(ev) : 'ALL DAY')
+                  : (ev.amount || null)
+                return (
+                  <button key={idx} onClick={e => { e.stopPropagation(); actions.current.openEvent(ev, ds) }}
+                    style={{ display: 'flex', alignItems: 'stretch', width: '100%', background: 'none', border: 'none', padding: '10px 0', cursor: 'pointer', textAlign: 'left', gap: 9 }}>
+                    <div style={{ width: 3, borderRadius: 2, background: bar, flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 14, fontWeight: 500, color: isTod ? 'rgb(var(--rgb-ink) / 0.95)' : 'rgb(var(--rgb-ink) / 0.82)', fontFamily: M, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.35 }}>
+                        {ev.title}
+                      </p>
+                      {row2 && (
+                        <p style={{ fontSize: 11, color: 'rgb(var(--rgb-ink) / 0.32)', fontFamily: M, margin: '3px 0 0', lineHeight: 1.3 }}>
+                          {row2}
+                        </p>
+                      )}
+                      {ev.location && (
+                        <p style={{ fontSize: 11, color: 'rgb(var(--rgb-ink) / 0.26)', fontFamily: M, margin: '2px 0 0', lineHeight: 1.3 }}>
+                          {ev.location}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })}
+    </section>
+  )
+})
+
+
 function shiftedTimes(ev: CalEvent, fromDate: string, toDate: string): { start: GCalEvent['start']; end: GCalEvent['end']; endDate?: string } {
   const endDay = addDays(ev.endDate ?? fromDate, daysBetween(fromDate, toDate))
   const endDate = endDay !== toDate ? endDay : undefined
@@ -295,10 +399,11 @@ export default function CalendarPage() {
   const [expandedWeeks,  setExpandedWeeks]  = useState<Set<string>>(() => new Set())
 
   // Infinite scroll
-  // Starts wide (6 months either side) so an upward scroll rarely reaches the
-  // edge where earlier months have to be inserted (see the prepend effect)
+  // Two years either side: with memoized month blocks (ListMonth) a wide
+  // range costs one render, and an upward scroll practically never
+  // reaches the edge where earlier months must be inserted (prepend effect)
   const [months, setMonths] = useState<MonthKey[]>(() =>
-    Array.from({ length: 13 }, (_, i) => addMonths(today.getFullYear(), today.getMonth(), i - 6))
+    Array.from({ length: LIST_SPAN * 2 + 1 }, (_, i) => addMonths(today.getFullYear(), today.getMonth(), i - LIST_SPAN))
   )
   const [sideLbl, setSideLbl] = useState(() => monthLabel(today.getFullYear(), today.getMonth()))
 
@@ -431,7 +536,20 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     if (!sc) return
     const threshold = sc.scrollTop + 120
     let found: string | null = null
-    outer: for (const { year: y, month: m } of monthsRef.current) {
+    // Phone list: find the month block under the line first, then only its
+    // days — not every day of two years of months
+    if (monthRefs.current.size) {
+      for (const { year: y, month: m } of monthsRef.current) {
+        const sec = monthRefs.current.get(`${y}-${m}`)
+        if (!sec || sec.offsetTop + sec.offsetHeight <= threshold) continue
+        if (sec.offsetTop > threshold) break
+        for (let d = 1, dim = getDaysInMonth(y, m); d <= dim; d++) {
+          const el = dayRefs.current.get(toDateStr(y, m, d))
+          if (el && el.offsetTop + el.offsetHeight > threshold) { found = toDateStr(y, m, d); break }
+        }
+        break
+      }
+    } else outer: for (const { year: y, month: m } of monthsRef.current) {
       const dim = getDaysInMonth(y, m)
       for (let d = 1; d <= dim; d++) {
         const ds = toDateStr(y, m, d)
@@ -1402,7 +1520,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       loadingMore.current = true
       setMonths(prev => {
         const last = prev[prev.length - 1]
-        return [...prev, ...[1, 2, 3, 4].map(i => addMonths(last.year, last.month, i))]
+        return [...prev, ...Array.from({ length: 12 }, (_, i) => addMonths(last.year, last.month, i + 1))]
       })
       setTimeout(() => { loadingMore.current = false }, 600)
     }, { root: sc, rootMargin: '0px 0px 400px 0px', threshold: 0 })
@@ -1432,7 +1550,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       prependFromH.current = sc.scrollHeight
       setMonths(prev => {
         const first = prev[0]
-        return [[6, 5, 4, 3, 2, 1].map(i => addMonths(first.year, first.month, -i)), prev].flat()
+        return [Array.from({ length: 12 }, (_, i) => addMonths(first.year, first.month, i - 12)), prev].flat()
       })
     }
     const whenIdle = () => { clearTimeout(idleT); idleT = setTimeout(prepend, 140) }
@@ -1629,7 +1747,9 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     setGridMonth(month)
     setGridSel(isCurrentMonth ? todayStr : null)
     setSideLbl(monthLabel(year, month))
-    setMonths(Array.from({ length: 9 }, (_, i) => addMonths(year, month, i - 3)))
+    const ms = monthsRef.current, v = year * 12 + month
+    const inRange = ms.length > 4 && v >= ms[2].year * 12 + ms[2].month && v <= ms[ms.length - 3].year * 12 + ms[ms.length - 3].month
+    if (!inRange) setMonths(Array.from({ length: LIST_SPAN * 2 + 1 }, (_, i) => addMonths(year, month, i - LIST_SPAN)))
     // Block the prepend observer while we reposition; re-enable once settled.
     suppressPrepend.current = true
     const target = isCurrentMonth ? todayStr : toDateStr(year, month, 1)
@@ -1670,6 +1790,11 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
 
   // ── Swipe gesture handlers ─────────────────────────────────────────────────
   // List row → Day detail: swipe left on a day row
+  // Handlers for the memoized ListMonth blocks — a stable ref, refreshed every
+  // render, so the blocks never re-render just because a handler changed
+  const monthRefs   = useRef(new Map<string, HTMLElement>())
+  const listActions = useRef<ListActions>(null!)
+
   const rowStart = useCallback((e: React.TouchEvent, ds: string) => {
     const t = e.touches[0]; rowSwipe.current = { x: t.clientX, y: t.clientY, ds }
   }, [])
@@ -1690,6 +1815,14 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       setSelectedDay(s.ds); setViewIndex(1)
     }
   }, [])
+  listActions.current = {
+    rowStart, rowEnd, rowMouseDown, rowMouseUp,
+    clearSwipe:  () => { rowSwipe.current = null },
+    openCreate:  ds => { navigator.vibrate?.(6); openCreateSheet(ds) },
+    openEvent:   (ev, ds) => { navigator.vibrate?.(6); if (ev.id) { handleOpenEdit(ev) } else { setSelectedDay(ds); setViewIndex(1) } },
+    setDayRef:   (ds, el) => { if (el) dayRefs.current.set(ds, el); else dayRefs.current.delete(ds) },
+    setMonthRef: (key, el) => { if (el) monthRefs.current.set(key, el); else monthRefs.current.delete(key) },
+  }
 
   // Day detail → split view: any right swipe
   const v3Start = useCallback((e: React.TouchEvent) => {
@@ -2414,76 +2547,17 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                 style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', position: 'relative' }}>
                 <div ref={topSentRef} style={{ height: 1 }} />
 
-                {months.map(({ year: y, month: m }) => {
-                  const dim = getDaysInMonth(y, m)
-                  return Array.from({ length: dim }, (_, i) => {
-                    const day    = i + 1
-                    const ds     = toDateStr(y, m, day)
-                    const isTod  = ds === todayStr
-                    const events = visibleMap[ds] ?? []
-                    const abbr   = new Date(y, m, day).toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()
-                    const stripe = Math.floor(new Date(y, m, day).getTime() / 86400000) % 2 === 0
-
-                    return (
-                      <div
-                        key={ds}
-                        ref={el => { if (el) dayRefs.current.set(ds, el); else dayRefs.current.delete(ds) }}
-                        data-day={ds}
-                        onTouchStart={e => rowStart(e, ds)}
-                        onTouchEnd={rowEnd}
-                        onMouseDown={e => rowMouseDown(e, ds)}
-                        onMouseUp={rowMouseUp}
-                        onMouseLeave={() => { rowSwipe.current = null }}
-                        // No transition: animating padding on every row re-laid out the
-                        // whole list each frame of the grid snap
-                        style={{ display: 'flex', alignItems: 'stretch', paddingLeft: gridH === 0 ? 20 : 6, background: 'var(--color-bg-surface)', cursor: 'grab' }}
-                      >
-                        {/* Day label — width matches one grid column when split is open, original 44px in full-list mode */}
-                        <div style={{ width: gridH === 0 ? 44 : 'calc((100vw - 12px) / 7)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-surface)' }}>
-                          <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 9, letterSpacing: '0.09em', textTransform: 'uppercase', lineHeight: 1.2, userSelect: 'none', whiteSpace: 'nowrap' }}>
-                            <span style={{ color: isTod ? '#D4AF37' : 'rgb(var(--rgb-ink) / 0.75)', fontWeight: 700 }}>{abbr}</span>
-                            <span style={{ color: isTod ? '#c9a84c' : 'rgb(var(--rgb-ink) / 0.25)', fontWeight: 500 }}>{' '}{day}</span>
-                          </span>
-                        </div>
-                        {/* Vertical rule */}
-                        <div style={{ width: 1, flexShrink: 0, background: isTod ? 'rgba(201,168,76,0.35)' : 'rgb(var(--rgb-ink) / 0.04)', marginTop: 8, marginBottom: 8 }} />
-                        {/* Events */}
-                        <div
-                          onClick={() => { navigator.vibrate?.(6); openCreateSheet(ds) }}
-                          style={{ flex: 1, paddingLeft: 12, paddingRight: 14, paddingTop: 6, paddingBottom: 6, display: 'flex', flexDirection: 'column', gap: 2, minHeight: 112, background: stripe ? 'var(--color-bg-surface)' : 'var(--color-bg-elevated)', cursor: 'text' }}>
-                          {events.map((ev, idx) => {
-                            const bar  = ev.color ?? DETAIL_DOT[ev.type]
-                            const M    = 'var(--font-montserrat)'
-                            const row2: string | null = ev.type === 'google'
-                              ? (ev.amount ? getTimeRange(ev) : 'ALL DAY')
-                              : (ev.amount || null)
-                            return (
-                              <button key={idx} onClick={e => { e.stopPropagation(); navigator.vibrate?.(6); if (ev.id) { handleOpenEdit(ev) } else { setSelectedDay(ds); setViewIndex(1) } }}
-                                style={{ display: 'flex', alignItems: 'stretch', width: '100%', background: 'none', border: 'none', padding: '10px 0', cursor: 'pointer', textAlign: 'left', gap: 9 }}>
-                                <div style={{ width: 3, borderRadius: 2, background: bar, flexShrink: 0 }} />
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <p style={{ fontSize: 14, fontWeight: 500, color: isTod ? 'rgb(var(--rgb-ink) / 0.95)' : 'rgb(var(--rgb-ink) / 0.82)', fontFamily: M, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.35 }}>
-                                    {ev.title}
-                                  </p>
-                                  {row2 && (
-                                    <p style={{ fontSize: 11, color: 'rgb(var(--rgb-ink) / 0.32)', fontFamily: M, margin: '3px 0 0', lineHeight: 1.3 }}>
-                                      {row2}
-                                    </p>
-                                  )}
-                                  {ev.location && (
-                                    <p style={{ fontSize: 11, color: 'rgb(var(--rgb-ink) / 0.26)', fontFamily: M, margin: '2px 0 0', lineHeight: 1.3 }}>
-                                      {ev.location}
-                                    </p>
-                                  )}
-                                </div>
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    )
-                  })
-                })}
+                {months.map(({ year: y, month: m }) => (
+                  <ListMonth
+                    key={`${y}-${m}`}
+                    year={y}
+                    month={m}
+                    events={visibleMap}
+                    todayStr={todayStr.startsWith(toDateStr(y, m, 1).slice(0, 8)) ? todayStr : ''}
+                    full={gridH === 0}
+                    actions={listActions}
+                  />
+                ))}
 
                 <div ref={botSentRef} style={{ height: 1 }} />
                 <div style={{ height: 96 }} />

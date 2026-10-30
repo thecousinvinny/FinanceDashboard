@@ -3,26 +3,27 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 /**
- * Phone split view's top half: months stacked vertically and scrolled with
- * native momentum, like iOS Calendar's month view (it used to be one month at
- * a time, swiped left/right).
+ * Phone split view's top half: months stacked vertically, one month per page.
+ * Native momentum scrolling with CSS scroll snap, so every scroll comes to
+ * rest with exactly one month filling the view — never a month's days with
+ * the next month's name squeezed in at the bottom. (It used to be one month at
+ * a time, swiped left/right.)
  *
  * Kept smooth on purpose:
  * - Scrolling never re-renders the calendar screen (thousands of list rows).
  *   The header label follows along through `labelRef` (a DOM write), and the
- *   screen hears about the new month only once the scroll settles (`onSettle`).
- * - Month blocks are memoized and only the one holding the selected day or
- *   today re-renders when those move; off-screen blocks skip rendering
- *   (`content-visibility: auto`).
- * - A month chosen elsewhere (the list below, Today, the picker) scrolls into
- *   view smoothly — unless the user is scrolling the grid themselves.
+ *   screen hears about the new month only once a scroll the user made settles.
+ * - Month pages are memoized; only the one holding the selected day or today
+ *   re-renders when those move.
+ * - A month chosen elsewhere (the list below, Today, the picker) glides into
+ *   view — unless the user is scrolling the grid themselves.
  */
 
 export interface DotEvent { type: string; color?: string }
 
-const ROW_H   = 38   // one week
-const LABEL_H = 26   // month name row
-const SPAN    = 24   // months rendered either side of the centre
+const LABEL_H   = 26   // month name row
+const WEEKS     = 6    // every page has room for a 6-week month
+const SPAN      = 24   // months rendered either side of the centre
 const SETTLE_MS = 160
 
 const key  = (y: number, m: number) => `${y}-${m}`
@@ -31,11 +32,9 @@ function addMonths(y: number, m: number, n: number) {
   const d = new Date(y, m + n, 1)
   return { y: d.getFullYear(), m: d.getMonth() }
 }
-function weeksIn(y: number, m: number, wsMon: boolean) {
+function leadIn(y: number, m: number, wsMon: boolean) {
   const first = new Date(y, m, 1).getDay()
-  const lead  = wsMon ? (first + 6) % 7 : first
-  const days  = new Date(y, m + 1, 0).getDate()
-  return { lead, days, rows: Math.ceil((lead + days) / 7) }
+  return wsMon ? (first + 6) % 7 : first
 }
 
 interface Props {
@@ -62,6 +61,18 @@ export function MonthScroller({ year, month, selected, todayStr, wsMon, visibleM
   const onSettleRef = useRef(onSettle)
   onSettleRef.current = onSettle
 
+  // Page height = the scroller's height, measured (a % height inside a scroll
+  // container isn't dependable in Safari)
+  const [pageH, setPageH] = useState(0)
+  useLayoutEffect(() => {
+    const sc = scRef.current
+    if (!sc) return
+    const ro = new ResizeObserver(() => { if (sc.clientHeight) setPageH(sc.clientHeight) })
+    ro.observe(sc)
+    if (sc.clientHeight) setPageH(sc.clientHeight)
+    return () => ro.disconnect()
+  }, [])
+
   // Rendered window, re-centred when a far-away month is asked for
   const [centre, setCentre] = useState(() => ({ y: year, m: month }))
   const months = useMemo(
@@ -82,39 +93,21 @@ export function MonthScroller({ year, month, selected, todayStr, wsMon, visibleM
     const sc = scRef.current, el = blockRefs.current.get(key(y, m))
     if (!sc || !el) return
     visibleKey.current = key(y, m)
+    userDriven.current = false
     sc.scrollTo({ top: el.offsetTop, behavior: smooth ? 'smooth' : 'auto' })
   }, [])
 
   // First layout (and after a re-centre): sit on the screen's month, no animation
-  useLayoutEffect(() => { scrollToMonth(year, month, false) }, [centre, scrollToMonth])  // eslint-disable-line react-hooks/exhaustive-deps
+  useLayoutEffect(() => { scrollToMonth(year, month, false) }, [centre, pageH, scrollToMonth])  // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Follow the list below (and Today / the picker), unless the user is driving
-  // the grid: a new month shows from its first week; within a month the
-  // selected day's week is kept in view, so the two halves move together.
+  // Follow the list below (and Today / the picker): glide to that month's page,
+  // unless the user is driving the grid
   useEffect(() => {
     if (performance.now() - userAt.current < 600) return
+    if (key(year, month) === visibleKey.current) return
     if (!inWindow(year, month)) { setCentre({ y: year, m: month }); return }
-    const sc = scRef.current, el = blockRefs.current.get(key(year, month))
-    if (!sc || !el) return
-    const k = key(year, month)
-    const view = sc.clientHeight
-    const monthTop = el.offsetTop
-    let target: number | null = null
-    if (k !== visibleKey.current) target = monthTop
-    const selIn = selected && selected.startsWith(`${year}-${pad2(month + 1)}`)
-    if (selIn) {
-      const { lead } = weeksIn(year, month, wsMon)
-      const day = Number(selected!.slice(8, 10))
-      const rowTop = monthTop + LABEL_H + Math.floor((lead + day - 1) / 7) * ROW_H
-      const from = target ?? sc.scrollTop
-      if (rowTop + ROW_H > from + view) target = rowTop + ROW_H - view + 6   // below: bring it up
-      else if (rowTop < from) target = Math.max(monthTop, rowTop - 6)        // above: bring it down
-    }
-    if (target === null || Math.abs(target - sc.scrollTop) < 2) return
-    visibleKey.current = k
-    userDriven.current = false
-    sc.scrollTo({ top: target, behavior: 'smooth' })
-  }, [year, month, selected])  // eslint-disable-line react-hooks/exhaustive-deps
+    scrollToMonth(year, month, true)
+  }, [year, month])  // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const sc = scRef.current
@@ -123,25 +116,18 @@ export function MonthScroller({ year, month, selected, todayStr, wsMon, visibleM
     const onScroll = () => {
       cancelAnimationFrame(raf.current)
       raf.current = requestAnimationFrame(() => {
-        // The month whose block covers the top of the viewport (+ a little)
-        const probe = sc.scrollTop + 24
-        let top = months[0]
-        for (const mo of months) {
-          const el = blockRefs.current.get(key(mo.y, mo.m))
-          if (!el) continue
-          if (el.offsetTop <= probe) top = mo
-          else break
-        }
-        const k = key(top.y, top.m)
-        if (k !== visibleKey.current) { visibleKey.current = k; writeLabel(top.y, top.m) }
+        // Pages are all one viewport tall: the nearest page is the month
+        const i = Math.max(0, Math.min(months.length - 1, Math.round(sc.scrollTop / Math.max(1, sc.clientHeight))))
+        const mo = months[i]
+        const k = key(mo.y, mo.m)
+        if (k !== visibleKey.current) { visibleKey.current = k; writeLabel(mo.y, mo.m) }
       })
       clearTimeout(settleT.current)
       settleT.current = setTimeout(() => {
         const [y, m] = visibleKey.current.split('-').map(Number)
         // Only a scroll the user made moves the list. Reporting our own
         // follow-the-list glides too fed back into the list (which rebuilds
-        // around the month) while it was prepending months on an upward
-        // scroll — each round stepped further back: Dec → … → Oct 2024.
+        // around the month) — each round stepped further back.
         if (userDriven.current) { userDriven.current = false; onSettleRef.current(y, m) }
         // Near either end of the window: re-centre so scrolling never runs out
         if (!inWindow(y, m)) setCentre({ y, m })
@@ -172,9 +158,10 @@ export function MonthScroller({ year, month, selected, todayStr, wsMon, visibleM
     <div
       ref={scRef}
       data-touch-scroll
-      // position: relative — block offsetTop is measured from here. Without it
-      // offsets counted the header above, and every jump overshot ~2 weeks.
-      style={{ position: 'relative', flex: 1, overflowY: 'auto', overflowX: 'hidden', overscrollBehavior: 'contain', paddingLeft: 6, paddingRight: 6 }}
+      // position: relative — page offsetTop is measured from here (without it,
+      // offsets counted the header above and every jump overshot).
+      // Mandatory snap: every scroll rests on exactly one month.
+      style={{ position: 'relative', flex: 1, overflowY: 'auto', overflowX: 'hidden', overscrollBehavior: 'contain', scrollSnapType: 'y mandatory', paddingLeft: 6, paddingRight: 6 }}
     >
       {months.map(({ y, m }) => {
         const ym = `${y}-${pad2(m + 1)}`
@@ -191,6 +178,7 @@ export function MonthScroller({ year, month, selected, todayStr, wsMon, visibleM
             dotColor={dotColor}
             onPickDay={onPickDay}
             setRef={setBlockRef}
+            pageH={pageH}
           />
         )
       })}
@@ -198,32 +186,33 @@ export function MonthScroller({ year, month, selected, todayStr, wsMon, visibleM
   )
 }
 
-const MonthBlock = memo(function MonthBlock({ k, year, month, wsMon, selected, todayStr, visibleMap, dotColor, onPickDay, setRef }: {
-  k: string; year: number; month: number; wsMon: boolean
+const MonthBlock = memo(function MonthBlock({ k, year, month, wsMon, selected, todayStr, visibleMap, dotColor, onPickDay, setRef, pageH }: {
+  k: string; year: number; month: number; wsMon: boolean; pageH: number
   selected: string | null; todayStr: string | null
   visibleMap: Record<string, DotEvent[]>; dotColor: Record<string, string>
   onPickDay: (ds: string) => void
   setRef: (k: string, el: HTMLDivElement | null) => void
 }) {
-  const { lead, days, rows } = weeksIn(year, month, wsMon)
-  const height = LABEL_H + rows * ROW_H
+  const lead = leadIn(year, month, wsMon)
+  const days = new Date(year, month + 1, 0).getDate()
   const name = new Date(year, month, 1).toLocaleDateString('en-US', month === 0 ? { month: 'short', year: 'numeric' } : { month: 'short' })
   const isThisMonth = todayStr !== null
 
   return (
+    // One page: exactly the scroller's height, label + 6 week rows
     <div
       ref={el => setRef(k, el)}
-      style={{ height, contentVisibility: 'auto', containIntrinsicSize: `auto ${height}px` }}
+      style={{ height: pageH || '100%', display: 'flex', flexDirection: 'column', scrollSnapAlign: 'start' }}
     >
       {/* Month name over the column of its 1st, like iOS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', height: LABEL_H, alignItems: 'end' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', height: LABEL_H, flexShrink: 0, alignItems: 'end' }}>
         <span style={{
           gridColumn: `${lead + 1} / span 3`, justifySelf: 'start', paddingLeft: 'calc((100% / 3 - 26px) / 2)',
           fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1, paddingBottom: 4,
           color: isThisMonth ? '#D4AF37' : 'rgb(var(--rgb-ink))', fontFamily: 'var(--font-montserrat)',
         }}>{name}</span>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: ROW_H }}>
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridTemplateRows: `repeat(${WEEKS}, 1fr)` }}>
         {Array.from({ length: lead }, (_, i) => <div key={`l${i}`} />)}
         {Array.from({ length: days }, (_, i) => {
           const day = i + 1
