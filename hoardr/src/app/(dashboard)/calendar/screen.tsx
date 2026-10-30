@@ -17,7 +17,7 @@ import { pageCache } from '@/lib/page-cache'
 import { MonthScroller } from '@/components/calendar/MonthScroller'
 import { createCalEvent, updateCalEvent, deleteCalEvent, moveCalEvent, getCalEvent, extractRRule, rruleUntilBefore, type GCalEvent, calFetch } from '@/lib/calendar'
 import { connectGoogleCalendar } from '@/lib/gcal-connect'
-import { useOnScreenReturn, useScreenActive } from '@/lib/tab-nav'
+import { useOnScreenReturn, useScreenActive, useScreenReady } from '@/lib/tab-nav'
 import { sameAsLast } from '@/lib/same-data'
 import { Segmented } from '@/components/ui/Form'
 import { useToday } from '@/lib/use-today'
@@ -717,6 +717,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
   useEffect(() => { loadData(); return () => { loadGen.current++; abortRef.current?.abort() } }, [loadData])
   // Kept alive across tabs — refresh quietly whenever this screen is shown again
   useOnScreenReturn(() => { loadData(); setGRefreshKey(k => k + 1) })
+  useScreenReady(dataLoaded)   // releases the load screen once this screen has its data
 
   // Leaving the calendar drops its transient selection state. Its keyboard
   // shortcuts listen on the document, so a selection or copied event left

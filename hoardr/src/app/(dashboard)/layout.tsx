@@ -2,6 +2,7 @@ import BottomNav from '@/components/nav/BottomNav'
 import { ToastContainer } from '@/components/ui/ToastContainer'
 import { ProfileDrawer } from '@/components/profile/ProfileDrawer'
 import { GreetingOverlay } from '@/components/home/GreetingOverlay'
+import { BootSplash } from '@/components/nav/BootSplash'
 import { AuthWatcher } from '@/components/auth/AuthWatcher'
 import { ScreenKeepAlive } from '@/components/nav/ScreenKeepAlive'
 
@@ -20,6 +21,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <ToastContainer />
       <ProfileDrawer />
       <GreetingOverlay />
+      <BootSplash />
       {/* Clears the floating tab bar: 62px capsule + 10px gap + safe area */}
       <main className="flex-1" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 84px)' }}>
         <ScreenKeepAlive />

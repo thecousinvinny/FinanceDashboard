@@ -27,7 +27,7 @@ import { usePillSwipe } from '@/hooks/usePillSwipe'
 import { getAppPrefs } from '@/lib/app-prefs'
 import { GlobalFAB } from '@/components/ui/GlobalFAB'
 import { useOnScreenReturn } from '@/lib/tab-nav'
-import { afterSlideTimeout, useScreenVisit } from '@/lib/tab-nav'
+import { afterSlideTimeout, useScreenReady, useScreenVisit } from '@/lib/tab-nav'
 import { sameAsLast } from '@/lib/same-data'
 
 type Tab = 'Expenses' | 'Subs' | 'Wishlist'
@@ -355,6 +355,7 @@ export default function OutPage() {
   useEffect(() => { loadData(); return () => { loadGen.current++; abortRef.current?.abort() } }, [loadData])
   // Kept alive across tabs — refresh quietly whenever this screen is shown again
   useOnScreenReturn(loadData)
+  useScreenReady(!loading)   // releases the load screen once this screen has its data
   useEffect(() => { txListRef.current = txList }, [txList])
   useEffect(() => { hasMoreRef.current = hasMore }, [hasMore])
 

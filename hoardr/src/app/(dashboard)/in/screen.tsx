@@ -27,7 +27,7 @@ import { pageCache } from '@/lib/page-cache'
 import { PullIndicator } from '@/components/ui/PullIndicator'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { useOnScreenReturn } from '@/lib/tab-nav'
-import { afterSlideTimeout, useScreenVisit } from '@/lib/tab-nav'
+import { afterSlideTimeout, useScreenReady, useScreenVisit } from '@/lib/tab-nav'
 
 interface CardExpense {
   id: string; name: string; cost: number; date: string; categories: { name: string } | null
@@ -481,6 +481,7 @@ export default function InPage() {
   }, [loadIncome])
   // Kept alive across tabs — refresh quietly whenever this screen is shown again
   useOnScreenReturn(() => { loadData(); loadIncome() })
+  useScreenReady(!loading && !incomeLoading)   // releases the load screen once this screen has its data
 
   useEffect(() => { incomeListRef.current = incomeList }, [incomeList])
   useEffect(() => { recentIncomeRef.current = recentIncome }, [recentIncome])

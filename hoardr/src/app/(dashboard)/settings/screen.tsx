@@ -13,7 +13,7 @@ import { SemanticColorSheet } from '@/components/ui/SemanticColorSheet'
 import { getWeekStartsMonday, setWeekStartsMonday } from '@/lib/week-start'
 import { applySemanticColors } from '@/lib/semantic-colors'
 import { calFetch } from '@/lib/calendar'
-import { useOnScreenReturn } from '@/lib/tab-nav'
+import { useOnScreenReturn, useScreenReady } from '@/lib/tab-nav'
 import { Sheet } from '@/components/ui/Sheet'
 import { FormGroup, FormRow, Segmented } from '@/components/ui/Form'
 
@@ -185,6 +185,7 @@ export default function SettingsPage() {
 
   useEffect(() => { loadSessions() }, [supabase])  // eslint-disable-line react-hooks/exhaustive-deps
   useOnScreenReturn(loadSessions)
+  useScreenReady(true)   // releases the load screen once this screen has its data
 
   async function revokeSession(s: AuthSession) {
     setRevokingId(s.id)

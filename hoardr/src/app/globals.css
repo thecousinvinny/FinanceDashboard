@@ -703,7 +703,8 @@ html.slate-mist, html.light {
 
 /* Daily brief due: a solid cover from the very first paint until the
    greeting's own backdrop is up (lib/greeting-boot.ts). */
-html.greet-boot body::after {
+html.greet-boot body::after,
+html.boot-splash body::after {
   content: '';
   position: fixed;
   inset: 0;

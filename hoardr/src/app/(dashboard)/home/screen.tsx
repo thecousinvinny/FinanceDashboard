@@ -20,7 +20,7 @@ import type { SeedTx } from '@/lib/data/transactions'
 import { Truck, PlusCircle, Star, ArrowUpCircle } from 'lucide-react'
 import { HoardChest } from '@/components/home/HoardChest'
 import { GlobalFAB } from '@/components/ui/GlobalFAB'
-import { navigateTab, useOnScreenReturn } from '@/lib/tab-nav'
+import { navigateTab, useOnScreenReturn, useScreenReady } from '@/lib/tab-nav'
 import { sameAsLast } from '@/lib/same-data'
 import { ActivityDetailSheet, type ActivityRef } from '@/components/home/ActivityDetailSheet'
 
@@ -284,6 +284,7 @@ export default function HomePage() {
   useEffect(() => { loadData(); return () => { loadGen.current++; abortRef.current?.abort() } }, [loadData])
   // Kept alive across tabs — refresh quietly whenever this screen is shown again
   useOnScreenReturn(loadData)
+  useScreenReady(!loading)   // releases the load screen once this screen has its data
 
   useEffect(() => {
     let mounted = true

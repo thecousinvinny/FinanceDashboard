@@ -136,6 +136,27 @@ export const ScreenActiveContext = createContext(true)
 /** Increments each time the screen is shown (starts at 1 when first shown). */
 export const ScreenVisitContext = createContext(1)
 
+// ── First screen ready (load screen) ─────────────────────────────────────────
+// The load screen (BootSplash) stays up until the visible screen has its data.
+// Sticky: a listener added after it fired runs at once.
+let firstReady = false
+const readyListeners = new Set<() => void>()
+export function onScreenReady(cb: () => void): () => void {
+  if (firstReady) { cb(); return () => {} }
+  readyListeners.add(cb)
+  return () => { readyListeners.delete(cb) }
+}
+/** Screens call this with "my data is loaded"; the visible one releases the load screen. */
+export function useScreenReady(ready: boolean) {
+  const active = useScreenActive()
+  useEffect(() => {
+    if (!ready || !active || firstReady) return
+    firstReady = true
+    readyListeners.forEach(l => l())
+    readyListeners.clear()
+  }, [ready, active])
+}
+
 // ── Replay ───────────────────────────────────────────────────────────────────
 // Counts as a fresh visit to the visible screen, so its entrance animations
 // play again — used when the greeting, which covered them, goes away.
