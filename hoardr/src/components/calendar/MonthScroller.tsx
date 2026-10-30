@@ -87,14 +87,32 @@ export function MonthScroller({ year, month, selected, todayStr, wsMon, visibleM
   // First layout (and after a re-centre): sit on the screen's month, no animation
   useLayoutEffect(() => { scrollToMonth(year, month, false) }, [centre, scrollToMonth])  // eslint-disable-line react-hooks/exhaustive-deps
 
-  // The month changed elsewhere: follow, unless the user is driving the grid
+  // Follow the list below (and Today / the picker), unless the user is driving
+  // the grid: a new month shows from its first week; within a month the
+  // selected day's week is kept in view, so the two halves move together.
   useEffect(() => {
-    const k = key(year, month)
-    if (k === visibleKey.current) return
     if (performance.now() - userAt.current < 600) return
     if (!inWindow(year, month)) { setCentre({ y: year, m: month }); return }
-    scrollToMonth(year, month, true)
-  }, [year, month])  // eslint-disable-line react-hooks/exhaustive-deps
+    const sc = scRef.current, el = blockRefs.current.get(key(year, month))
+    if (!sc || !el) return
+    const k = key(year, month)
+    const view = sc.clientHeight
+    const monthTop = el.offsetTop
+    let target: number | null = null
+    if (k !== visibleKey.current) target = monthTop
+    const selIn = selected && selected.startsWith(`${year}-${pad2(month + 1)}`)
+    if (selIn) {
+      const { lead } = weeksIn(year, month, wsMon)
+      const day = Number(selected!.slice(8, 10))
+      const rowTop = monthTop + LABEL_H + Math.floor((lead + day - 1) / 7) * ROW_H
+      const from = target ?? sc.scrollTop
+      if (rowTop + ROW_H > from + view) target = rowTop + ROW_H - view + 6   // below: bring it up
+      else if (rowTop < from) target = Math.max(monthTop, rowTop - 6)        // above: bring it down
+    }
+    if (target === null || Math.abs(target - sc.scrollTop) < 2) return
+    visibleKey.current = k
+    sc.scrollTo({ top: target, behavior: 'smooth' })
+  }, [year, month, selected])  // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const sc = scRef.current
@@ -148,7 +166,9 @@ export function MonthScroller({ year, month, selected, todayStr, wsMon, visibleM
     <div
       ref={scRef}
       data-touch-scroll
-      style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', overscrollBehavior: 'contain', paddingLeft: 6, paddingRight: 6 }}
+      // position: relative — block offsetTop is measured from here. Without it
+      // offsets counted the header above, and every jump overshot ~2 weeks.
+      style={{ position: 'relative', flex: 1, overflowY: 'auto', overflowX: 'hidden', overscrollBehavior: 'contain', paddingLeft: 6, paddingRight: 6 }}
     >
       {months.map(({ y, m }) => {
         const ym = `${y}-${pad2(m + 1)}`
