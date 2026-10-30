@@ -44,14 +44,17 @@ export function ScreenKeepAlive() {
   const [mounted, setMounted] = useState<Set<string>>(() => new Set(SCREEN_PATHS.includes(active) ? [active] : []))
   const scrollPos = useRef<Record<string, number>>({})
   const activeRef = useRef(active)
-  // How many times each screen has been shown — drives entrance animations
+  // How many times each screen has been shown — drives entrance animations.
+  // Bumped during render (React's "adjust state on prop change"), not in an
+  // effect: an effect landed one frame after the switch, so the screen first
+  // painted its numbers settled from last time, then snapped them to 0 and
+  // spun — a visible stutter, worst inside the tab slide.
   const [visits, setVisits] = useState<Record<string, number>>(() => ({ [active]: 1 }))
-  const lastShown = useRef(active)
-  useEffect(() => {
-    if (lastShown.current === active) return
-    lastShown.current = active
+  const [shownPath, setShownPath] = useState(active)
+  if (shownPath !== active) {
+    setShownPath(active)
     setVisits(v => ({ ...v, [active]: (v[active] ?? 0) + 1 }))
-  }, [active])
+  }
 
   // Replay the visible screen's entrance (see replayActiveScreen)
   useEffect(() => onReplayActiveScreen(() => {
