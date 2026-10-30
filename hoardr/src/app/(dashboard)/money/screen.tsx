@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { useState, useMemo, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { PillGroup } from '@/components/ui/Pill'
 import { AddTransactionSheet, type CardOption, type BankOption } from '@/components/money/AddTransactionSheet'
@@ -28,6 +28,7 @@ import { getAppPrefs } from '@/lib/app-prefs'
 import { GlobalFAB } from '@/components/ui/GlobalFAB'
 import { useOnScreenReturn } from '@/lib/tab-nav'
 import { useScreenVisit } from '@/lib/tab-nav'
+import { sameAsLast } from '@/lib/same-data'
 
 type Tab = 'Expenses' | 'Subs' | 'Wishlist'
 
@@ -39,22 +40,19 @@ function CategoryPillBar({ cat, index, isSub = false, onClick, isExpanded = fals
   isExpanded?: boolean
   variant?: 'gold' | 'emerald'
 }) {
-  const [animPct, setAnimPct] = useState(0)
   const visit = useScreenVisit()   // fill when shown, every time it's shown
 
-  // Fill from zero when the screen is shown; on a data refresh just ease to the
-  // new width instead of resetting (which made the bars jump)
-  const lastVisit = useRef(-1)
-  useEffect(() => {
+  // Fill from zero when the screen is shown; a data refresh just eases to the
+  // new width. Reset in a layout effect so the bar never paints full for a
+  // frame first, and grow with scaleX (composited) rather than width, which
+  // re-ran layout every frame and dropped frames during the tab slide.
+  const [grown, setGrown] = useState(false)
+  useLayoutEffect(() => {
     if (visit === 0) return
-    if (lastVisit.current !== visit) {
-      lastVisit.current = visit
-      setAnimPct(0)
-      const t = setTimeout(() => setAnimPct(cat.pct), 50 + index * 80)
-      return () => clearTimeout(t)
-    }
-    setAnimPct(cat.pct)
-  }, [cat.pct, index, visit])
+    setGrown(false)
+    const t = setTimeout(() => setGrown(true), 50)
+    return () => clearTimeout(t)
+  }, [visit])
 
   const fillGradient = variant === 'emerald'
     ? 'linear-gradient(90deg, rgba(34,197,94,0.40), rgba(34,197,94,0.12))'
@@ -69,10 +67,12 @@ function CategoryPillBar({ cat, index, isSub = false, onClick, isExpanded = fals
       <div style={{
         position:   'absolute',
         left: 0, top: 0, bottom: 0,
-        width:      `${animPct}%`,
+        width:      '100%',
         borderRadius: 8,
         background: fillGradient,
-        transition: 'width 600ms cubic-bezier(0.22, 1, 0.36, 1)',
+        transform:  `scaleX(${grown ? cat.pct / 100 : 0})`,
+        transformOrigin: 'left',
+        transition: grown ? `transform 600ms cubic-bezier(0.22, 1, 0.36, 1) ${index * 80}ms` : 'none',
       }} />
       {/* Content overlay — always full track width, never clipped */}
       <div style={{
@@ -238,6 +238,7 @@ export default function OutPage() {
   const loadGen              = useRef(0)
   const abortRef             = useRef<AbortController | null>(null)
   const txListRef            = useRef<SeedTx[]>(cachedTx ?? [])
+  const dataSigRef           = useRef('')
   const offsetRef            = useRef(0)
   const searchGen            = useRef(0)
   const hasMoreRef           = useRef(false)
@@ -327,14 +328,23 @@ export default function OutPage() {
       }, 0)
 
       if (gen !== loadGen.current) return
-      setTxList(rows)
-      offsetRef.current = expenses?.length ?? 0
-      setHasMore((expenses?.length ?? 0) >= LIMIT)
-      setSubs(newSubs)
-      setWishlist(newWish.filter(w => !pendingWishDeleteIds.current.has(w.id)))
-      setSubExps(newSubExps)
-      setSavedMonth(monthSaved)
-      setSavedYear(yearSaved)
+      // Only touch what changed: a return-to-tab refresh lands mid transition.
+      // If the first page matches what's shown, keep the list (and any pages
+      // scrolled in) — resetting it changed the page height under the user.
+      const cur = txListRef.current
+      if (cur.length < rows.length || JSON.stringify(rows) !== JSON.stringify(cur.slice(0, rows.length))) {
+        setTxList(rows)
+        offsetRef.current = expenses?.length ?? 0
+        setHasMore((expenses?.length ?? 0) >= LIMIT)
+      }
+      const wish = newWish.filter(w => !pendingWishDeleteIds.current.has(w.id))
+      if (!sameAsLast(dataSigRef, [newSubs, wish, newSubExps, monthSaved, yearSaved])) {
+        setSubs(newSubs)
+        setWishlist(wish)
+        setSubExps(newSubExps)
+        setSavedMonth(monthSaved)
+        setSavedYear(yearSaved)
+      }
       pageCache.set('out', rows)
       setLoading(false)
     } catch (err) {

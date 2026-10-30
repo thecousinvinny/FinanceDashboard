@@ -17,6 +17,7 @@ import { pageCache } from '@/lib/page-cache'
 import { createCalEvent, updateCalEvent, deleteCalEvent, moveCalEvent, getCalEvent, extractRRule, rruleUntilBefore, type GCalEvent, calFetch } from '@/lib/calendar'
 import { connectGoogleCalendar } from '@/lib/gcal-connect'
 import { useOnScreenReturn, useScreenActive } from '@/lib/tab-nav'
+import { sameAsLast } from '@/lib/same-data'
 import { Segmented } from '@/components/ui/Form'
 import { useToday } from '@/lib/use-today'
 
@@ -367,6 +368,8 @@ export default function CalendarPage() {
 
   const supabase      = useMemo(() => createClient(), [])
   const loadGen       = useRef(0)
+  const eventSigRef   = useRef('')
+  const prefsSigRef   = useRef('')
   const abortRef      = useRef<AbortController | null>(null)
   const gEvGen        = useRef(0)
   const editRuleGen   = useRef(0)   // guards the async master-RRULE fetch on edit-open
@@ -458,7 +461,9 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
           supabase.from('profiles').select('calendar_prefs').abortSignal(controller.signal).single(),
         ])
       if (gen !== loadGen.current) return
-      if (profile?.calendar_prefs) setPrefs(profile.calendar_prefs as CalPrefs)
+      // Same prefs → keep the old object: a fresh googleCalendarIds array re-ran
+      // the Google fetch effect, doubling the refetch on every return
+      if (profile?.calendar_prefs && !sameAsLast(prefsSigRef, profile.calendar_prefs)) setPrefs(profile.calendar_prefs as CalPrefs)
 
       // Use browser local date — must match todayStr (which also uses new Date()) so that
       // events advanced to "today" are not immediately classified as isPast
@@ -494,8 +499,10 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
         while (renewDate < calToday) renewDate = nextRenewalDate(renewDate, s.billing as Parameters<typeof nextRenewalDate>[1])
         push(renewDate, { title: String(s.name), type: 'sub', amount: `$${Number(s.cost).toFixed(2)}` })
       }
-      setEventMap(map)
-      pageCache.set('cal-events', map)
+      if (!sameAsLast(eventSigRef, map)) {
+        setEventMap(map)
+        pageCache.set('cal-events', map)
+      }
       setDataLoaded(true)
     } catch (err) {
       if ((err as Error)?.name === 'AbortError') return
@@ -648,6 +655,9 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
         for (const date of Object.keys(map)) {
           map[date].sort(byStart)
         }
+        // Unchanged (the usual return-to-tab refetch): keep the old map so the
+        // grid doesn't re-render
+        if (JSON.stringify(map) === JSON.stringify(prev)) return prev
         pageCache.set('cal-google', map)
         return map
       })

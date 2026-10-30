@@ -176,7 +176,8 @@ export default function SettingsPage() {
   }
 
   async function loadSessions() {
-    setSessionsLoading(true)
+    // "Loading…" only before the first result; a refresh keeps the list up
+    if (!sessions.length) setSessionsLoading(true)
     const { data, error } = await supabase.rpc('list_my_sessions')
     if (!error && data) setSessions(data as AuthSession[])
     setSessionsLoading(false)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { useState, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { flushSync } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 import { PillGroup } from '@/components/ui/Pill'
@@ -130,7 +130,9 @@ function IncomeBarChart({ incomeList }: { incomeList: IncomeRow[] }) {
   // Grow from zero only when the screen is shown. A data refresh (and a
   // return to the tab triggers a couple) must not reset the bars — that made
   // them bounce up and down; new totals just ease to their new height.
-  useEffect(() => {
+  // Layout effect: the reset lands before paint (an effect let the bars show
+  // full height for a frame, then drop and regrow)
+  useLayoutEffect(() => {
     setAnimated(false)
     if (visit === 0) return
     const t = setTimeout(() => setAnimated(true), 30)
@@ -163,11 +165,14 @@ function IncomeBarChart({ incomeList }: { incomeList: IncomeRow[] }) {
             >
               <div style={{
                 width:        BAR_W,
-                height:       animated ? `${heightPct}%` : '0%',
-                minHeight:    m.total > 0 && animated ? 3 : 0,
+                // Grows with scaleY (composited), not height (layout per frame)
+                height:       `${heightPct}%`,
+                minHeight:    m.total > 0 ? 3 : 0,
                 borderRadius: 6,
                 background:   `rgba(${incRgb},${hoverIdx === i ? Math.min(opacity + 0.15, 1) : opacity})`,
-                transition:   'height 600ms cubic-bezier(0.22, 1, 0.36, 1)',
+                transform:    `scaleY(${animated ? 1 : 0})`,
+                transformOrigin: 'bottom',
+                transition:   animated ? 'transform 600ms cubic-bezier(0.22, 1, 0.36, 1), height 600ms cubic-bezier(0.22, 1, 0.36, 1)' : 'none',
                 flexShrink:   0,
               }} />
             </div>

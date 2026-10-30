@@ -1,12 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Camera, Check, Settings2, Pencil } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { cn, $f, $fk, $fd, haptic } from '@/lib/utils'
 import { getCategoryIcon } from '@/components/ui/CategoryIcon'
-import { useOnScreenReturn, navigateTab } from '@/lib/tab-nav'
+import { useOnScreenReturn, useScreenVisit, navigateTab } from '@/lib/tab-nav'
+import { sameAsLast } from '@/lib/same-data'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,6 +27,7 @@ function SimpleBars({ bars, active, color, sparse }: {
   bars: SimpleBar[]; active: boolean; color: string; sparse?: boolean
 }) {
   const [anim, setAnim] = useState(false)
+  const visit = useScreenVisit()
   const max = useMemo(() => Math.max(...bars.map(b => b.value), 1), [bars])
   const H   = 72
 
@@ -35,20 +37,25 @@ function SimpleBars({ bars, active, color, sparse }: {
     return [...new Set([0, 6, 13, 20, last].filter(i => i <= last))]
   }, [bars, sparse])
 
-  useEffect(() => {
-    if (!active) { setAnim(false); return }
+  // Grow when shown (each visit, and when its Month/Annual page is selected).
+  // Layout effect so the reset lands before paint.
+  useLayoutEffect(() => {
+    setAnim(false)
+    if (!active || visit === 0) return
     const t = setTimeout(() => setAnim(true), 60)
     return () => clearTimeout(t)
-  }, [active])
+  }, [active, visit])
 
   return (
     <div>
       <div className="flex items-end gap-px" style={{ height: H }}>
         {bars.map((b, i) => (
           <div key={i} className="flex-1 rounded-t-[2px]" style={{
-            height:     anim ? Math.max((b.value / max) * H, b.value > 0 ? 2 : 0) : 0,
+            height:     Math.max((b.value / max) * H, b.value > 0 ? 2 : 0),
             background: color,
-            transition: `height 450ms cubic-bezier(0.22,1,0.36,1) ${i * 11}ms`,
+            transform:  `scaleY(${anim ? 1 : 0})`,
+            transformOrigin: 'bottom',
+            transition: anim ? `transform 450ms cubic-bezier(0.22, 1, 0.36, 1) ${i * 11}ms` : 'none',
           }} />
         ))}
       </div>
@@ -63,20 +70,31 @@ function SimpleBars({ bars, active, color, sparse }: {
   )
 }
 
+// ─── Shared: grow-in trigger for the pill bars ────────────────────────────────
+
+/**
+ * False → true shortly after the bars are shown (each screen visit, and when
+ * their Month/Annual page is selected). Layout effect, so the reset to zero
+ * lands before paint instead of after a frame at full width.
+ */
+function useGrowIn(active: boolean) {
+  const visit = useScreenVisit()
+  const [grown, setGrown] = useState(false)
+  useLayoutEffect(() => {
+    setGrown(false)
+    if (!active || visit === 0) return
+    const t = setTimeout(() => setGrown(true), 60)
+    return () => clearTimeout(t)
+  }, [active, visit])
+  return grown
+}
+
 // ─── Shared: category pill bars ───────────────────────────────────────────────
 
 function CategoryPills({ cats, active }: { cats: CatItem[]; active: boolean }) {
-  const [animPcts, setAnimPcts] = useState<number[]>(cats.map(() => 0))
-
-  useEffect(() => {
-    if (!active) { setAnimPcts(cats.map(() => 0)); return }
-    const timers = cats.map((_, i) =>
-      setTimeout(() => setAnimPcts(prev => {
-        const next = [...prev]; next[i] = cats[i].pct; return next
-      }), 60 + i * 90),
-    )
-    return () => timers.forEach(clearTimeout)
-  }, [cats, active])
+  // Grow when shown; new data eases to the new width instead of collapsing
+  // to zero and regrowing (a refresh hands over a fresh array every time)
+  const grown = useGrowIn(active)
 
   if (cats.length === 0) return <p className="text-[12px] text-ink-faint text-center py-4">No data</p>
 
@@ -89,9 +107,11 @@ function CategoryPills({ cats, active }: { cats: CatItem[]; active: boolean }) {
             <div className="relative flex-1 flex items-center rounded-[8px] overflow-hidden"
               style={{ height: 32, background: 'var(--color-bg-overlay)' }}>
               <div className="absolute inset-y-0 left-0 rounded-[8px]" style={{
-                width: `${animPcts[i] ?? 0}%`,
+                width: '100%',
                 background: 'linear-gradient(90deg, rgba(var(--sem-expense-rgb),0.35), rgba(var(--sem-expense-rgb),0.08))',
-                transition: `width 600ms cubic-bezier(0.22,1,0.36,1) ${i * 80}ms`,
+                transform: `scaleX(${grown ? cat.pct / 100 : 0})`,
+                transformOrigin: 'left',
+                transition: grown ? `transform 600ms cubic-bezier(0.22, 1, 0.36, 1) ${i * 80}ms` : 'none',
               }} />
               <div className="relative flex items-center gap-2 px-2.5 z-10">
                 <Icon size={13} className="text-gold flex-shrink-0" strokeWidth={1.75} />
@@ -112,18 +132,7 @@ function CategoryPills({ cats, active }: { cats: CatItem[]; active: boolean }) {
 
 function CostPills({ items, active }: { items: PillItem[]; active: boolean }) {
   const maxVal = useMemo(() => Math.max(...items.map(i => i.value), 1), [items])
-  const [animPcts, setAnimPcts] = useState<number[]>([])
-
-  useEffect(() => {
-    setAnimPcts(items.map(() => 0))
-    if (!active) return
-    const timers = items.map((item, i) =>
-      setTimeout(() => setAnimPcts(prev => {
-        const next = [...prev]; next[i] = (item.value / maxVal) * 100; return next
-      }), 60 + i * 80),
-    )
-    return () => timers.forEach(clearTimeout)
-  }, [active, items, maxVal])
+  const grown = useGrowIn(active)
 
   if (items.length === 0) return <p className="text-[12px] text-ink-faint text-center py-4">No data</p>
 
@@ -134,9 +143,11 @@ function CostPills({ items, active }: { items: PillItem[]; active: boolean }) {
           <div className="relative flex-1 flex items-center rounded-[8px] overflow-hidden"
             style={{ height: 30, background: 'var(--color-bg-overlay)' }}>
             <div className="absolute inset-y-0 left-0 rounded-[8px]" style={{
-              width: `${animPcts[i] ?? 0}%`,
+              width: '100%',
               background: 'linear-gradient(90deg, rgba(var(--sem-expense-rgb),0.35), rgba(var(--sem-expense-rgb),0.08))',
-              transition: `width 600ms cubic-bezier(0.22,1,0.36,1) ${i * 80}ms`,
+              transform: `scaleX(${grown ? item.value / maxVal : 0})`,
+              transformOrigin: 'left',
+              transition: grown ? `transform 600ms cubic-bezier(0.22, 1, 0.36, 1) ${i * 80}ms` : 'none',
             }} />
             <span className="relative px-2.5 text-[12px] font-medium text-ink z-10 truncate">{item.name}</span>
           </div>
@@ -679,6 +690,7 @@ export default function ProfilePage() {
   // ── Load financial data ────────────────────────────────────────────────────
 
   const loadGen  = useRef(0)
+  const dataSigRef = useRef('')
   const abortRef = useRef<AbortController | null>(null)
 
   const loadData = useCallback(async () => {
@@ -699,10 +711,15 @@ export default function ProfilePage() {
       if (iRes.error) console.error('[Profile] income:',  iRes.error)
       if (sRes.error) console.error('[Profile] subs:',    sRes.error)
       const banks = (bRes.data ?? []) as { balance: number }[]
-      setNetWorth(banks.reduce((s, b) => s + ((b.balance as number) ?? 0), 0))
-      setExpenses((eRes.data ?? []) as ExpRow[])
-      setIncome((iRes.data ?? []) as IncRow[])
-      setSubs((sRes.data ?? []) as SubRow[])
+      const nw = banks.reduce((s, b) => s + ((b.balance as number) ?? 0), 0)
+      // Nothing changed since the last load: skip the re-render (and the
+      // analytics recompute over thousands of rows) mid tab-transition
+      if (!sameAsLast(dataSigRef, [nw, eRes.data, iRes.data, sRes.data])) {
+        setNetWorth(nw)
+        setExpenses((eRes.data ?? []) as ExpRow[])
+        setIncome((iRes.data ?? []) as IncRow[])
+        setSubs((sRes.data ?? []) as SubRow[])
+      }
       setLoading(false)
     } catch (err) {
       if ((err as Error)?.name === 'AbortError') return

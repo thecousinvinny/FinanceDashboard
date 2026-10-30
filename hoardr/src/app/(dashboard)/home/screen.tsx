@@ -22,6 +22,7 @@ import { Truck, PlusCircle, Star, ArrowUpCircle } from 'lucide-react'
 import { HoardChest } from '@/components/home/HoardChest'
 import { GlobalFAB } from '@/components/ui/GlobalFAB'
 import { useOnScreenReturn } from '@/lib/tab-nav'
+import { sameAsLast } from '@/lib/same-data'
 import { ActivityDetailSheet, type ActivityRef } from '@/components/home/ActivityDetailSheet'
 
 interface EnRouteItem {
@@ -76,6 +77,7 @@ export default function HomePage() {
 
   const supabase          = useMemo(() => createClient(), [])
   const loadGen           = useRef(0)
+  const dataSigRef        = useRef('')
   const abortRef          = useRef<AbortController | null>(null)
 
   const loadData = useCallback(async () => {
@@ -254,12 +256,15 @@ export default function HomePage() {
         }
       })
 
-      pageCache.set('home', {
+      const homeData = {
         spent: newSpent, earned: newEarned,
         monthlySubs: newMonthlySubs, hoardTotal: newHoardTotal,
         upcoming: newUpcoming, enRoute: newEnRoute, activity: newActivity,
         sparkPoints: newSparkPoints, annualSparkPoints: newAnnualSparkPoints,
-      })
+      }
+      // A return-to-tab refresh that changed nothing must not re-render
+      if (sameAsLast(dataSigRef, homeData)) { setLoading(false); return }
+      pageCache.set('home', homeData)
 
       setSpent(newSpent)
       setEarned(newEarned)
