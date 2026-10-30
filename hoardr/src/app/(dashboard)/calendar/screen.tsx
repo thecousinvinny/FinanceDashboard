@@ -184,6 +184,7 @@ function layoutCell(lanes: SpanBar[][], col: number, singles: Array<{ ev: CalEve
 const DESK_VIEWS = ['month', 'list'] as const
 const SAFE_TOP = 'calc(max(env(safe-area-inset-top, 0px), 44px) + 12px)'
 const GRID_EXPANDED = 280  // px — compact month grid height in split view
+const SNAP = 'height 0.3s cubic-bezier(0.4,0,0.2,1)'
 
 // ── Notion month grid sizing constants (single source of truth) ──────────────
 const MAX_VIS_EVENTS = 6   // max event rows per cell — governs both height and overflow cutoff
@@ -389,7 +390,11 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
   const scrolledToToday   = useRef(false)
   const googleRescrollDone = useRef(false) // prevents re-scroll after the first Google events load
   const gridSwipe       = useRef<{ x: number; y: number } | null>(null)
-  const handleDragRef   = useRef<{ startY: number; startH: number } | null>(null)
+  // Split-view handle: dragged with native listeners (see the effect below)
+  const gridWrapRef     = useRef<HTMLDivElement>(null)
+  const gridHRef        = useRef(gridH)
+  gridHRef.current      = gridH
+  const [handleEl, setHandleEl] = useState<HTMLDivElement | null>(null)
   const dragOverRef     = useRef<string | null>(null)
   const monthLblTapRef   = useRef<number>(0)                              // timestamp of last month-label tap (double-tap detect)
   const monthLblTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)  // pending single-tap (open picker) timer
@@ -447,6 +452,65 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
   }, [])
 
   // ── Data loading ──────────────────────────────────────────────────────────
+  // Drag the split-view handle to resize the month grid; flick or pass halfway
+  // to snap open/closed; tap toggles. Native listeners with touch-action:none
+  // so iOS never claims the swipe as a page scroll (it cancelled the drag
+  // partway — several tries to move it — and after view transitions refused
+  // it outright), and the height is written to the DOM per move: setting React
+  // state re-rendered the whole calendar on every pixel.
+  useEffect(() => {
+    const el = handleEl
+    if (!el) return
+    let startY = 0, startH = 0, lastY = 0, lastT = 0, v = 0
+    let active = false, moved = false
+    const clampH = (h: number) => Math.max(0, Math.min(GRID_EXPANDED, h))
+    const onStart = (e: TouchEvent) => {
+      const y = e.touches[0].clientY
+      startY = lastY = y; lastT = e.timeStamp; startH = gridHRef.current
+      v = 0; active = true; moved = false
+      e.stopPropagation()
+    }
+    const onMove = (e: TouchEvent) => {
+      if (!active) return
+      e.preventDefault(); e.stopPropagation()
+      const y = e.touches[0].clientY
+      if (!moved && Math.abs(y - startY) < 4) return
+      if (!moved) { moved = true; setIsDraggingHandle(true) }
+      const dt = Math.max(1, e.timeStamp - lastT)
+      v = v * 0.6 + ((y - lastY) / dt) * 0.4          // px/ms, smoothed
+      lastY = y; lastT = e.timeStamp
+      const w = gridWrapRef.current
+      if (w) { w.style.transition = 'none'; w.style.height = `${clampH(startH + y - startY)}px` }
+    }
+    const onEnd = (e: TouchEvent) => {
+      if (!active) return
+      active = false
+      e.stopPropagation()
+      let target: number
+      if (!moved) {
+        e.preventDefault()                            // no synthetic click: this was the tap
+        target = gridHRef.current > 0 ? 0 : GRID_EXPANDED
+      } else {
+        const h = clampH(startH + lastY - startY)
+        target = Math.abs(v) > 0.3 ? (v > 0 ? GRID_EXPANDED : 0) : (h > GRID_EXPANDED / 2 ? GRID_EXPANDED : 0)
+      }
+      const w = gridWrapRef.current
+      if (w) { w.style.transition = SNAP; w.style.height = `${target}px` }
+      setIsDraggingHandle(false)
+      setGridH(target)
+    }
+    el.addEventListener('touchstart',  onStart, { passive: true })
+    el.addEventListener('touchmove',   onMove,  { passive: false })
+    el.addEventListener('touchend',    onEnd,   { passive: false })
+    el.addEventListener('touchcancel', onEnd,   { passive: false })
+    return () => {
+      el.removeEventListener('touchstart',  onStart)
+      el.removeEventListener('touchmove',   onMove)
+      el.removeEventListener('touchend',    onEnd)
+      el.removeEventListener('touchcancel', onEnd)
+    }
+  }, [handleEl])
+
   const loadData = useCallback(async () => {
     abortRef.current?.abort()
     const controller = new AbortController()
@@ -2232,7 +2296,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
           <div style={{ width: '100vw', height: '100%', flex: 'none', display: 'flex', flexDirection: 'column', background: 'var(--color-bg-base)', userSelect: 'none', paddingTop: SAFE_TOP, boxSizing: 'border-box' }}>
 
             {/* Compact month grid — collapsible */}
-            <div style={{ height: gridH, overflow: 'hidden', flexShrink: 0, transition: isDraggingHandle ? 'none' : 'height 0.3s cubic-bezier(0.4,0,0.2,1)', background: 'var(--color-bg-surface)' }}>
+            <div ref={gridWrapRef} style={{ height: gridH, overflow: 'hidden', flexShrink: 0, transition: isDraggingHandle ? 'none' : SNAP, background: 'var(--color-bg-surface)' }}>
               <div style={{ height: GRID_EXPANDED, display: 'flex', flexDirection: 'column' }}>
                 {/* Month header */}
                 <div style={{ display: 'flex', alignItems: 'center', paddingLeft: 16, paddingRight: 56, paddingTop: 12, paddingBottom: 6, flexShrink: 0 }}>
@@ -2301,14 +2365,14 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
               </div>
             </div>
 
-            {/* Drag handle — tap to toggle, drag to resize */}
+            {/* Drag handle — tap to toggle, drag or flick to resize (native touch: see the effect) */}
             <div
-              style={{ height: 22, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'row-resize', background: 'var(--color-bg-base)', borderTop: '1px solid rgb(var(--rgb-ink) / 0.05)' }}
-              onClick={() => { if (!handleDragRef.current) setGridH(g => g > 0 ? 0 : GRID_EXPANDED) }}
-              onTouchStart={(e) => { e.stopPropagation(); handleDragRef.current = { startY: e.touches[0].clientY, startH: gridH }; setIsDraggingHandle(true) }}
-              onTouchMove={(e) => { if (!handleDragRef.current) return; e.stopPropagation(); const dy = e.touches[0].clientY - handleDragRef.current.startY; setGridH(Math.max(0, Math.min(GRID_EXPANDED, handleDragRef.current.startH + dy))) }}
-              onTouchEnd={(e) => { e.stopPropagation(); setIsDraggingHandle(false); handleDragRef.current = null; setGridH(g => g > GRID_EXPANDED / 2 ? GRID_EXPANDED : 0) }}
+              ref={setHandleEl}
+              style={{ position: 'relative', zIndex: 6, height: 22, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'row-resize', background: 'var(--color-bg-base)', borderTop: '1px solid rgb(var(--rgb-ink) / 0.05)', touchAction: 'none' }}
+              onClick={() => setGridH(g => g > 0 ? 0 : GRID_EXPANDED)}
             >
+              {/* Taller invisible hit area, so the thin handle is easy to grab */}
+              <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, top: -12, bottom: -12, touchAction: 'none' }} />
               <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgb(var(--rgb-ink) / 0.18)' }} />
             </div>
 

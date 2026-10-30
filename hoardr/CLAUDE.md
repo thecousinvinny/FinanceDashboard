@@ -356,7 +356,7 @@ Import from here, never re-define:
 
 Single client component (`calendar/page.tsx`), two panels on a horizontal rail: `transform: translateX(-${viewIndex * 100}vw)`. `viewIndex: 0 | 1`.
 
-**Panel 0 mobile** — compact month grid (`GRID_EXPANDED = 280px`) + day list with drag handle. Day tap scrolls list via `scrollTop` (never `scrollIntoView` — fails in iOS WKWebView fixed containers). Edge-zone inter-tab: inline `p0Start`/`p0End` handlers (Studio ← Calendar → In).
+**Panel 0 mobile** — compact month grid (`GRID_EXPANDED = 280px`) + day list with drag handle. The handle is dragged with **native touch listeners** (`touch-action: none`, non-passive `touchmove`) that write the grid's height straight to the DOM and commit `gridH` only on release (flick > 0.3 px/ms or past halfway snaps; a tap toggles). React touch props + `setGridH` per move re-rendered the whole calendar per pixel, and without `touch-action: none` iOS claimed the swipe as a scroll. Day tap scrolls list via `scrollTop` (never `scrollIntoView` — fails in iOS WKWebView fixed containers). Edge-zone inter-tab: inline `p0Start`/`p0End` handlers (Studio ← Calendar → In).
 
 **`months`** — drives infinite day list. `topSentRef`/`botSentRef` IntersectionObservers skip on large-screen month mode.
 
