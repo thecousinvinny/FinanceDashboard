@@ -3,7 +3,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { localToday, $fd, fmtDate, haptic } from '@/lib/utils'
-import Link from 'next/link'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import { HomeHero } from '@/components/home/HomeHero'
 import { UpcomingBills, type UpcomingSub } from '@/components/home/UpcomingBills'
@@ -21,7 +20,7 @@ import type { SeedTx } from '@/lib/data/transactions'
 import { Truck, PlusCircle, Star, ArrowUpCircle } from 'lucide-react'
 import { HoardChest } from '@/components/home/HoardChest'
 import { GlobalFAB } from '@/components/ui/GlobalFAB'
-import { useOnScreenReturn } from '@/lib/tab-nav'
+import { navigateTab, useOnScreenReturn } from '@/lib/tab-nav'
 import { sameAsLast } from '@/lib/same-data'
 import { ActivityDetailSheet, type ActivityRef } from '@/components/home/ActivityDetailSheet'
 
@@ -449,7 +448,7 @@ export default function HomePage() {
           <div className="mx-4 mt-6">
             <div className="flex items-center justify-between mb-3">
               <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint">Recent Activity</p>
-              <Link href="/money" className="text-[11px] font-medium text-gold">All →</Link>
+              <a href="/money" onClick={e => { e.preventDefault(); navigateTab('/money') }} className="text-[11px] font-medium text-gold">All →</a>
             </div>
             {activity.length > 0 ? (
               <div className="bg-bg-surface border border-ink/[0.06] rounded-card overflow-hidden divide-y divide-ink/[0.04]">

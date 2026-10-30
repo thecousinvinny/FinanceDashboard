@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { useActivePath, navigateTab } from '@/lib/tab-nav'
 import { createClient } from '@/lib/supabase/client'
 
@@ -20,7 +19,6 @@ let _cachedInitials: string        = '?'
 
 export function ProfileDrawer() {
   const pathname = useActivePath()
-  const router   = useRouter()
   const supabase = useMemo(() => createClient(), [])
 
   const [avatarSrc, setAvatarSrc] = useState<string | null>(_cachedAvatar)
@@ -79,7 +77,7 @@ export function ProfileDrawer() {
 
   return (
     <button
-      onClick={() => { navigateTab('/profile'); router.push('/profile') }}
+      onClick={() => navigateTab('/profile', 'push')}
       aria-label="Profile"
       className="fixed overflow-hidden rounded-full select-none active:scale-95 transition-transform"
       style={{

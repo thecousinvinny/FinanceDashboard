@@ -920,7 +920,7 @@ export default function ProfilePage() {
           className="w-9 h-9 flex items-center justify-center rounded-full bg-bg-overlay text-ink-muted">
           <ArrowLeft size={18} strokeWidth={2} />
         </button>
-        <button onClick={() => { navigateTab('/settings'); router.push('/settings') }}
+        <button onClick={() => navigateTab('/settings', 'push')}
           className="w-9 h-9 flex items-center justify-center rounded-full bg-bg-overlay text-ink-muted">
           <Settings2 size={18} strokeWidth={1.75} />
         </button>

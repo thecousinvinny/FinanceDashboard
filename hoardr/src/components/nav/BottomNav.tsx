@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { Coins, TrendingDown, TrendingUp, CalendarDays } from 'lucide-react'
 import { useActivePath, navigateTab } from '@/lib/tab-nav'
 import { haptic } from '@/lib/utils'
@@ -64,11 +63,15 @@ export default function BottomNav() {
       {tabs.map(({ href, label, Icon }) => {
         const active = pathname === href || pathname.startsWith(href + '/')
         return (
-          <Link
+          <a
             key={href}
             href={href}
-            replace
-            onClick={() => { if (!active) { haptic('tap'); navigateTab(href) } }}
+            onClick={e => {
+              // Modified clicks (open in new tab, desktop) keep the browser's behavior
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
+              e.preventDefault()
+              if (!active) { haptic('tap'); navigateTab(href) }
+            }}
             className={cn(
               'relative flex flex-col items-center justify-center gap-[3px] flex-1 min-w-0 select-none transition-colors duration-200',
               active ? 'text-gold' : 'text-ink-muted',
@@ -85,7 +88,7 @@ export default function BottomNav() {
             <span className={cn('text-[10px] leading-none tracking-[0.01em]', active ? 'font-semibold' : 'font-medium')}>
               {label}
             </span>
-          </Link>
+          </a>
         )
       })}
     </nav>

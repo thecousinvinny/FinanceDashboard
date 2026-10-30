@@ -93,12 +93,21 @@ export function afterSlide(ms = 0): number {
  * and avatar have their own transition names and stay put (globals.css).
  * Without support (iOS < 18) or with reduced motion it's the plain switch.
  */
-export function navigateTab(path: string) {
+export function navigateTab(path: string, mode: 'replace' | 'push' = 'replace') {
   const from = pending ?? window.location.pathname
   if (from === path) return
+  // Kept-alive screens need nothing from the server (their page.tsx renders
+  // null), so the URL changes in place — Next 15 tracks the native history API.
+  // A router navigation fetched the route from the server on every tap, and
+  // after a deploy that fetch saw a new build and hard-reloaded the whole app.
+  // Tabs replace (no back-swipe between them); Profile/Settings push.
+  const go = () => {
+    setPendingPath(path)
+    window.history[mode === 'push' ? 'pushState' : 'replaceState'](null, '', path)
+  }
   const doc = document as VTDocument
   if (!doc.startViewTransition || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    setPendingPath(path)
+    go()
     return
   }
   const root = document.documentElement
@@ -106,7 +115,7 @@ export function navigateTab(path: string) {
   root.classList.add('vt')
   root.dataset.tabDir = rank(path) >= rank(from) ? 'fwd' : 'back'
   slideEndsAt = performance.now() + SLIDE_MS
-  const vt = doc.startViewTransition(() => flushSync(() => setPendingPath(path)))
+  const vt = doc.startViewTransition(() => flushSync(go))
   const done: Promise<void> = vt.finished.catch(() => {}).then(() => new Promise<void>(r =>
     requestAnimationFrame(() => requestAnimationFrame(() => r()))))
   slideDone = done

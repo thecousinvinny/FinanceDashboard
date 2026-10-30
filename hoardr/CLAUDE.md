@@ -39,7 +39,7 @@ Home, Out, In, Calendar, Profile and Settings live in `<route>/screen.tsx`; thei
 
 ## Navigation — four tabs
 
-`BottomNav` has four tabs. All `<Link>` use the `replace` prop so tab-switching does **not** build browser history — this prevents the iOS back-swipe gesture from navigating between tabs.
+`BottomNav` has four tabs. **Switching screens never goes through the Next router**: `navigateTab(path, mode)` (`src/lib/tab-nav.ts`) flips the kept-alive screen and updates the URL with `history.replaceState` (tabs — no history, so the iOS back-swipe can't walk between them) or `pushState` (Profile, Settings), which Next 15 tracks natively. A router navigation fetched the route from the server on every tap, and after a deploy that fetch saw a new build and hard-reloaded the whole app. Use `navigateTab` for any link to a kept-alive screen; sub-routes like `/settings/categories` still use the router.
 
 | Route | Label | Feature |
 |---|---|---|
@@ -157,7 +157,7 @@ Module-level emitter — call from anywhere. `<ToastContainer />` mounted in `(d
 
 ## UI components (`src/components/`)
 
-- `nav/BottomNav.tsx` — floating frosted-glass capsule (62px, 10px above the safe area, max 420px wide). Tab order: Hoard/Out/In/Calendar. All `<Link>` use `replace`. Active = a glass pill behind the tab, slid with `transform`. `(dashboard)/layout.tsx`'s `<main>` pads `safe-area + 84px` to clear it.
+- `nav/BottomNav.tsx` — floating frosted-glass capsule (62px, 10px above the safe area, max 420px wide). Tab order: Hoard/Out/In/Calendar. Plain `<a>`s whose click calls `navigateTab` (modified clicks keep browser behavior). Active = a glass pill behind the tab, slid with `transform`. `(dashboard)/layout.tsx`'s `<main>` pads `safe-area + 84px` to clear it.
 - **Frosted glass** — `.frost` / `.frost-strong` (globals.css) and the `--glass-*` tokens (dark tint in dark themes, white glass in Slate Mist) for floating chrome over content: bottom nav, toasts, FAB menu, `Select` menus, the calendar popover + its dropdowns and context menus. Never blur a full-screen backdrop or a panel while it scales — that's what made the FAB stutter.
 - `.spark-area` — sparkline areas blend with `screen` on dark themes and `multiply` on light ones (`screen` on white is invisible).
 - `nav/TabSwipeNavigator.tsx` — **not mounted anywhere**; file exists but is unused. Inter-tab swipe was removed in favour of `replace` navigation.
