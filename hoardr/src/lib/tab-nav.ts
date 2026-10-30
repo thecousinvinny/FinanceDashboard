@@ -64,6 +64,22 @@ export function afterSlideTimeout(cb: () => void, ms: number): () => void {
   return () => { cancel(); clearTimeout(t) }
 }
 
+/**
+ * iOS Safari can leave a scroll area nested in a position:fixed screen dead to
+ * touch after a view transition (the calendar's lists: swipes did nothing).
+ * Toggling overflow makes WebKit rebuild the scrolling layer. Scroll areas opt
+ * in with `data-touch-scroll`; their position is kept.
+ */
+function revive() {
+  document.querySelectorAll<HTMLElement>('.screen-active [data-touch-scroll]').forEach(el => {
+    const top = el.scrollTop, prev = el.style.overflowY
+    el.style.overflowY = 'hidden'
+    void el.offsetHeight
+    el.style.overflowY = prev
+    el.scrollTop = top
+  })
+}
+
 /** Estimated ms until the slide ends (for CSS animation delays). */
 export function afterSlide(ms = 0): number {
   return Math.max(ms, slideEndsAt - performance.now())
@@ -94,6 +110,7 @@ export function navigateTab(path: string) {
   const done: Promise<void> = vt.finished.catch(() => {}).then(() => new Promise<void>(r =>
     requestAnimationFrame(() => requestAnimationFrame(() => r()))))
   slideDone = done
+  done.then(revive)
   vt.finished.finally(() => { delete root.dataset.tabDir; slideEndsAt = Math.min(slideEndsAt, performance.now()) })
   done.then(() => { if (slideDone === done) slideDone = null })
 }

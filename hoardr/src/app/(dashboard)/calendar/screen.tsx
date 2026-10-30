@@ -1911,7 +1911,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                   ))}
                 </div>
                   {/* Scrollable weeks */}
-                  <div ref={monthGridRef} style={{ flex: 1, overflowY: 'auto', background: 'var(--color-cal-bg)', position: 'relative' }}>
+                  <div ref={monthGridRef} data-touch-scroll style={{ flex: 1, overflowY: 'auto', background: 'var(--color-cal-bg)', position: 'relative' }}>
                     <div ref={monthGridTopSentRef} style={{ height: 1 }} />
                     {notionWeeks.map(weekStart => {
                       const days      = weekDays(weekStart)
@@ -2130,7 +2130,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                 {/* ── Agenda (desktop list) ── roomy day-grouped list. Every day keeps a
                     zero-height ref'd anchor (even empty ones) so jump-to-month,
                     scroll-to-today and the infinite-scroll sentinels keep working. */}
-                <div ref={scrollRef} onScroll={handleDetailScroll} style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', position: 'relative', background: 'var(--color-cal-bg)' }}>
+                <div ref={scrollRef} onScroll={handleDetailScroll} data-touch-scroll style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', position: 'relative', background: 'var(--color-cal-bg)' }}>
                   <div ref={topSentRef} style={{ height: 1 }} />
                   <div style={{ maxWidth: 1080, padding: '8px 48px 0 40px' }}>
                     {months.map(({ year: y, month: m }) => {
@@ -2327,7 +2327,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                   {sideLbl}
                 </span>
               </div>
-              <div ref={scrollRef} onScroll={handleDetailScroll}
+              <div ref={scrollRef} onScroll={handleDetailScroll} data-touch-scroll
                 style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', position: 'relative' }}>
                 <div ref={topSentRef} style={{ height: 1 }} />
 
@@ -2431,7 +2431,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
           </div>
 
           {/* Airy event list */}
-          <div style={{ flex: 1, overflowY: 'auto' }}>
+          <div data-touch-scroll style={{ flex: 1, overflowY: 'auto' }}>
             {(() => {
               // Prefer custom events over google duplicates (same event shows twice if dedup misfired)
               const customGids = new Set<string>()
