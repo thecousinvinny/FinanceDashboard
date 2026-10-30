@@ -39,14 +39,32 @@ type VTDocument = Document & { startViewTransition?: (cb: () => void) => { finis
 // The slide (globals.css: tab-in-* runs 420ms) plus a frame or two of capture
 const SLIDE_MS = 480
 let slideEndsAt = 0
+// Resolves two frames after the running slide finishes; null when none runs
+let slideDone: Promise<void> | null = null
 
 /**
- * How long an entrance animation should wait: at least `ms`, and until the tab
- * slide has finished. iOS Safari re-captures the incoming screen every frame
- * of a view transition, so anything animating inside it (number rolls, bars
- * growing, the sparkline reveal) turns choppy — they start once it lands.
- * 0 extra on first load and after the greeting, where nothing slides.
+ * Entrance animations (number rolls, bars growing, the sparkline reveal) wait
+ * for the tab slide. iOS Safari re-captures the incoming screen every frame of
+ * a view transition, so anything animating inside it turns choppy — and the
+ * frame where it hands back to the live page is a hitch of its own, so they
+ * start two frames after the slide really ends, not at an estimate.
+ * No wait on first load or after the greeting, where nothing slides.
  */
+export function onSlideDone(cb: () => void): () => void {
+  let live = true
+  if (slideDone) slideDone.then(() => { if (live) cb() })
+  else cb()
+  return () => { live = false }
+}
+
+/** setTimeout that starts counting once the slide is done; returns a cancel. */
+export function afterSlideTimeout(cb: () => void, ms: number): () => void {
+  let t: ReturnType<typeof setTimeout> | undefined
+  const cancel = onSlideDone(() => { t = setTimeout(cb, ms) })
+  return () => { cancel(); clearTimeout(t) }
+}
+
+/** Estimated ms until the slide ends (for CSS animation delays). */
 export function afterSlide(ms = 0): number {
   return Math.max(ms, slideEndsAt - performance.now())
 }
@@ -73,7 +91,11 @@ export function navigateTab(path: string) {
   root.dataset.tabDir = rank(path) >= rank(from) ? 'fwd' : 'back'
   slideEndsAt = performance.now() + SLIDE_MS
   const vt = doc.startViewTransition(() => flushSync(() => setPendingPath(path)))
+  const done: Promise<void> = vt.finished.catch(() => {}).then(() => new Promise<void>(r =>
+    requestAnimationFrame(() => requestAnimationFrame(() => r()))))
+  slideDone = done
   vt.finished.finally(() => { delete root.dataset.tabDir; slideEndsAt = Math.min(slideEndsAt, performance.now()) })
+  done.then(() => { if (slideDone === done) slideDone = null })
 }
 
 /** The path being shown: the tapped destination if navigation is in flight, else the URL. */
@@ -121,7 +143,13 @@ export function useOnScreenReturn(cb: () => void) {
   const cbRef   = useRef(cb)
   cbRef.current = cb
   useEffect(() => {
-    if (active && !prev.current) cbRef.current()
+    const returning = active && !prev.current
     prev.current = active
+    if (!returning) return
+    // After the slide and most of the entrance: the refresh's results (and the
+    // comparison work on them) used to land mid number-roll and hitch it.
+    // Nearly always nothing changed; when something did, it eases in.
+    return afterSlideTimeout(() => cbRef.current(), REFRESH_DELAY_MS)
   }, [active])
 }
+const REFRESH_DELAY_MS = 900

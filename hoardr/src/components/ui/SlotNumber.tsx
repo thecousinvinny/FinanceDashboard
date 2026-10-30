@@ -1,7 +1,7 @@
 'use client'
 
 import { useLayoutEffect, useRef } from 'react'
-import { afterSlide, useScreenVisit } from '@/lib/tab-nav'
+import { afterSlide, onSlideDone, useScreenVisit } from '@/lib/tab-nav'
 
 // ── Single drum column for one digit ─────────────────────────────────────────
 //
@@ -50,6 +50,11 @@ function Drum({ digit, placeFromRight, totalDigits, spinAt }: DrumProps) {
     const elapsed = performance.now() - spinAt
     if (elapsed >= del + dur) { at(10 + d); return }
     at(0)
+    // Waiting out a tab slide: start on its real end, reading the digit then
+    if (elapsed < 0) return onSlideDone(() => {
+      restart()
+      at(10 + prevDigit.current, `transform ${dur}ms ${EASE} ${del}ms`)
+    })
     restart()
     at(10 + d, `transform ${dur}ms ${EASE} ${del - elapsed}ms`)
   }, [spinAt, dur, del])
@@ -61,6 +66,8 @@ function Drum({ digit, placeFromRight, totalDigits, spinAt }: DrumProps) {
     prevDigit.current = digit
     if (from === digit) return
     if (!spinAt) { at(10 + digit); return }
+    // Still waiting for the slide: the roll will read the new digit when it starts
+    if (performance.now() < spinAt) return
     const left = spinAt + del + dur - performance.now()
     if (left > 0) { at(10 + digit, `transform ${Math.max(250, left)}ms ${EASE}`); return }
     // Forward only: from a higher digit, wrap via the same face on the first copy

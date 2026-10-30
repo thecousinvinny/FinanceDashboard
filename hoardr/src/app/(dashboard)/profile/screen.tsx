@@ -6,7 +6,7 @@ import { ArrowLeft, Camera, Check, Settings2, Pencil } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { cn, $f, $fk, $fd, haptic } from '@/lib/utils'
 import { getCategoryIcon } from '@/components/ui/CategoryIcon'
-import { afterSlide, useOnScreenReturn, useScreenVisit, navigateTab } from '@/lib/tab-nav'
+import { afterSlideTimeout, useOnScreenReturn, useScreenVisit, navigateTab } from '@/lib/tab-nav'
 import { sameAsLast } from '@/lib/same-data'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -42,8 +42,7 @@ function SimpleBars({ bars, active, color, sparse }: {
   useLayoutEffect(() => {
     setAnim(false)
     if (!active || visit === 0) return
-    const t = setTimeout(() => setAnim(true), afterSlide(60))
-    return () => clearTimeout(t)
+    return afterSlideTimeout(() => setAnim(true), 60)
   }, [active, visit])
 
   return (
@@ -83,8 +82,7 @@ function useGrowIn(active: boolean) {
   useLayoutEffect(() => {
     setGrown(false)
     if (!active || visit === 0) return
-    const t = setTimeout(() => setGrown(true), afterSlide(60))
-    return () => clearTimeout(t)
+    return afterSlideTimeout(() => setGrown(true), 60)
   }, [active, visit])
   return grown
 }
