@@ -4,6 +4,17 @@ import { useLayoutEffect, useRef } from 'react'
 import { useScreenVisit } from '@/lib/tab-nav'
 
 // ── Single drum column for one digit ─────────────────────────────────────────
+//
+// The drum is two stacked cells — the digit in the window and the one rolling
+// in under it — driven by requestAnimationFrame. It used to be a tall strip of
+// up to ~60 digits slid with a CSS transform; iOS Safari only rasterizes part
+// of a layer that tall, so during a tab's view transition the digits rolled
+// through blank, unpainted stretches. Two cells are always fully painted.
+
+// cubic-bezier(0.22, 1, 0.36, 1) ≈ easeOutQuint
+const ease = (t: number) => 1 - Math.pow(1 - t, 5)
+const ROLL_MS = 650
+
 interface DrumProps {
   digit:          number  // 0-9, the target digit to land on
   placeFromRight: number  // 0 = ones, 1 = tens, 2 = hundreds, …
@@ -11,79 +22,76 @@ interface DrumProps {
   spinAt:         number  // when this number's spin started (0 = not yet shown)
 }
 
+interface Roll { from: number; to: number; start: number; dur: number }
+
 function Drum({ digit, placeFromRight, totalDigits, spinAt }: DrumProps) {
-  const trackRef = useRef<HTMLSpanElement>(null)
-  const cellRef  = useRef<HTMLSpanElement>(null)
+  const trackRef  = useRef<HTMLSpanElement>(null)
+  const topRef    = useRef<HTMLSpanElement>(null)
+  const nextRef   = useRef<HTMLSpanElement>(null)
+  const roll      = useRef<Roll | null>(null)
+  const raf       = useRef(0)
   const prevDigit = useRef(digit)
 
   // Higher-place digits get 2 extra full rotations each so they settle last
   const totalRotations = 2 + placeFromRight * 2
-  // Stack: N full 0-9 cycles, then the exact target digit at the end
-  const stack = Array.from({ length: totalRotations * 10 }, (_, i) => i % 10).concat(digit)
-
   // Duration increases 120ms per place to the left (ones fastest)
   const dur = 900 + placeFromRight * 120
   // Stagger start: left-to-right, 60ms per digit from left
   const del = (totalDigits - 1 - placeFromRight) * 60
 
+  // Position in cells: the window shows floor(pos) % 10, sliding toward the next
+  function show(pos: number) {
+    const i = Math.floor(pos)
+    if (topRef.current)   topRef.current.textContent  = String(((i % 10) + 10) % 10)
+    if (nextRef.current)  nextRef.current.textContent = String((((i + 1) % 10) + 10) % 10)
+    if (trackRef.current) trackRef.current.style.transform = `translateY(${-(pos - i)}em)`
+  }
+
+  function tick(now: number) {
+    const r = roll.current
+    if (!r) return
+    const t = Math.min(1, Math.max(0, (now - r.start) / r.dur))
+    show(r.from + (r.to - r.from) * ease(t))
+    raf.current = t < 1 ? requestAnimationFrame(tick) : 0
+    if (t >= 1) roll.current = null
+  }
+
+  function run(r: Roll) {
+    roll.current = r
+    cancelAnimationFrame(raf.current)
+    raf.current = requestAnimationFrame(tick)
+    show(r.from + (r.to - r.from) * ease(Math.min(1, Math.max(0, (performance.now() - r.start) / r.dur))))
+  }
+
+  useLayoutEffect(() => () => cancelAnimationFrame(raf.current), [])
+
   // The spin. Layout effect so a drum that mounts after the spin is over
-  // shows its final digit on the first paint, not a flash of "0".
+  // shows its final digit on the first paint. A drum mounting mid-spin (a
+  // digit-count change) joins at the spin's current point.
   useLayoutEffect(() => {
-    const track = trackRef.current
-    const cell  = cellRef.current
-    if (!track || !cell || !spinAt) return
-
-    // Measure actual rendered pixel height of one cell (handles any font-size)
-    const h = cell.getBoundingClientRect().height
-    if (!h) return
-    const targetY = -totalRotations * 10 * h
-
-    const elapsed = performance.now() - spinAt
-
-    track.style.transition = 'none'
-    track.style.transform  = 'translateY(0)'
-    void track.offsetHeight
-    if (elapsed >= del + dur) {
-      track.style.transform = `translateY(${targetY}px)`
-      return
-    }
-    // A negative delay joins the spin already under way
-    track.style.transition = `transform ${dur}ms cubic-bezier(0.22,1,0.36,1) ${del - elapsed}ms`
-    track.style.transform  = `translateY(${targetY}px)`
+    if (!spinAt) return
+    const end = totalRotations * 10 + prevDigit.current
+    if (performance.now() >= spinAt + del + dur) { show(end); return }
+    run({ from: 0, to: end, start: spinAt + del, dur })
   }, [spinAt, totalRotations, dur, del])
 
-  // A value change. Mid-spin there's nothing to do: the last cell now holds
-  // the new digit and the spin lands on it. Once settled, roll a short way
-  // from the old digit to the new one instead of re-spinning from zero.
+  // A value change. Mid-spin, retarget the spin to land on the new digit.
+  // Once settled, roll a short way forward from the old digit to the new one.
   useLayoutEffect(() => {
     const from = prevDigit.current
     prevDigit.current = digit
-    const track = trackRef.current
-    const cell  = cellRef.current
-    if (from === digit || !track || !cell || !spinAt) return
-    if (performance.now() - spinAt < del + dur) return
-    const h = cell.getBoundingClientRect().height
-    if (!h) return
-    // Same face as before, one rotation back from the end, then roll forward
-    track.style.transition = 'none'
-    track.style.transform  = `translateY(${-((totalRotations - 1) * 10 + from) * h}px)`
-    void track.offsetHeight
-    track.style.transition = 'transform 650ms cubic-bezier(0.22,1,0.36,1)'
-    track.style.transform  = `translateY(${-totalRotations * 10 * h}px)`
-  }, [digit, spinAt, totalRotations, dur, del])
+    if (from === digit) return
+    if (!spinAt) { show(digit); return }
+    if (roll.current) { roll.current.to += digit - from; return }
+    run({ from, to: digit > from ? digit : digit + 10, start: performance.now(), dur: ROLL_MS })
+  }, [digit, spinAt])
 
+  const cell: React.CSSProperties = { display: 'block', height: '1em', lineHeight: '1' }
   return (
     <span style={{ display: 'inline-block', overflow: 'hidden', height: '1em', fontFamily: "var(--font-big-shoulders)", WebkitTextFillColor: 'currentColor' }}>
       <span ref={trackRef} style={{ display: 'block' }}>
-        {stack.map((d, i) => (
-          <span
-            key={i}
-            ref={i === 0 ? cellRef : undefined}
-            style={{ display: 'block', height: '1em', lineHeight: '1' }}
-          >
-            {d}
-          </span>
-        ))}
+        <span ref={topRef} style={cell}>{digit}</span>
+        <span ref={nextRef} style={cell}>{(digit + 1) % 10}</span>
       </span>
     </span>
   )
