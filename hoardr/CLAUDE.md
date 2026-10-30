@@ -121,6 +121,7 @@ IntersectionObserver sentinel, tracked by an `offsetRef`.
 - `hasMore` must key off the **raw** page length, never the deduped one. A full page that happens to be entirely already-seen still means more rows exist behind it.
 - The sentinel effect's deps must include `hasMore`, the active tab, and the search term — the sentinel is conditionally rendered, and re-observing fires an immediate intersection callback so a short list doesn't stall.
 - `/in` stat tiles + `IncomeBarChart` read `recentIncome` (its own date-bounded query), **not** the paginated `incomeList` — otherwise the totals would drift with scroll depth.
+- **Background refreshes never show skeletons.** `/in`'s `loadIncome` sets `incomeLoading` only on the very first load (no rows yet); a return-to-tab refresh keeps the rows on screen, and both `loadData` and `loadIncome` skip `setState` when a content signature says nothing changed. Swapping skeletons in on every return unmounted the stat tiles' `SlotNumber`s (restarting the roll) and popped History in a beat later, mid tab-transition. The income list + stats window are cached in `pageCache('in-income')`.
 
 **Search is server-side and spans all history**, not just the loaded pages. Debounced 250ms into a query, with a generation counter to drop stale responses; falls back to filtering loaded rows while in flight. Edit/delete handlers must look the row up in the *displayed* list (`filteredSorted` / `displayIncome`) and patch `searchRows` too — a search hit may never have been in the paged feed.
 

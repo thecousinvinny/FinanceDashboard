@@ -237,6 +237,11 @@ const INCOME_LIMIT        = 100
 const INCOME_SEARCH_LIMIT = 300
 const INCOME_COLS         = 'id, name, amount, date, source, bank_id'
 
+// Cheap content signatures: a background refresh that changes nothing must not
+// re-render the screen (it landed mid tab-transition and stuttered the rolls).
+const rowSig = (rows: IncomeRow[]) => rows.map(r => `${r.id}|${r.name}|${r.amount}|${r.date}|${r.source}|${r.bank_id}`).join(';')
+const statSig = (rows: IncomeRow[]) => rows.map(r => `${r.id}|${r.amount}|${r.date}`).join(';')
+
 function toIncomeRow(i: Record<string, unknown>): IncomeRow {
   return {
     id:      String(i.id),
@@ -271,7 +276,9 @@ export default function InPage() {
   const [tab,           setTab]          = useState<Tab>('History')
   usePillSwipe(tab, setTab, PILL_OPTIONS)
   type InCache = { cards: Card[]; banks: Bank[]; streams: RevenueStreamConfig[]; transfers: Transfer[] }
+  type IncomeCache = { list: IncomeRow[]; recent: IncomeRow[]; hasMore: boolean }
   const cached = pageCache.get<InCache>('in')
+  const cachedIncome = pageCache.get<IncomeCache>('in-income')
   const [cards,         setCards]        = useState<Card[]>(cached?.cards ?? [])
   const [banks,         setBanks]        = useState<Bank[]>(cached?.banks ?? [])
   const [revStreams,    setRevStreams]   = useState<RevenueStreamConfig[]>(cached?.streams ?? [])
@@ -282,13 +289,13 @@ export default function InPage() {
   const [incomeOpen,    setIncomeOpen]   = useState(false)
   const [editIncome,    setEditIncome]   = useState<IncomeInitial | null>(null)
   const [editStream,    setEditStream]   = useState<RevenueStreamConfig | null>(null)
-  const [incomeList,    setIncomeList]   = useState<IncomeRow[]>([])
-  const [incomeLoading, setIncomeLoading] = useState(true)
-  const [incomeHasMore, setIncomeHasMore] = useState(false)
+  const [incomeList,    setIncomeList]   = useState<IncomeRow[]>(cachedIncome?.list ?? [])
+  const [incomeLoading, setIncomeLoading] = useState(!cachedIncome)
+  const [incomeHasMore, setIncomeHasMore] = useState(cachedIncome?.hasMore ?? false)
   const [incomeMoreLoading, setIncomeMoreLoading] = useState(false)
   // Chart + stat tiles read from their own window of rows so they stay correct
   // no matter how far the paginated list below has been scrolled.
-  const [recentIncome,  setRecentIncome] = useState<IncomeRow[]>([])
+  const [recentIncome,  setRecentIncome] = useState<IncomeRow[]>(cachedIncome?.recent ?? [])
   const [searchOpen,    setSearchOpen]   = useState(false)
   const [query,         setQuery]        = useState('')
   const [searchRows,    setSearchRows]   = useState<IncomeRow[] | null>(null)
@@ -317,9 +324,11 @@ export default function InPage() {
   const detailAbortRef    = useRef<AbortController | null>(null)
   const incomeGen         = useRef(0)
   const incomeAbortRef    = useRef<AbortController | null>(null)
-  const incomeOffsetRef   = useRef(0)
-  const incomeListRef     = useRef<IncomeRow[]>([])
-  const incomeHasMoreRef  = useRef(false)
+  const incomeOffsetRef   = useRef(cachedIncome?.list.length ?? 0)
+  const incomeListRef     = useRef<IncomeRow[]>(cachedIncome?.list ?? [])
+  const recentIncomeRef   = useRef<IncomeRow[]>(cachedIncome?.recent ?? [])
+  const incomeHasMoreRef  = useRef(cachedIncome?.hasMore ?? false)
+  const dataSigRef        = useRef('')
   const isLoadingMoreInc  = useRef(false)
   const incomeSentinelRef = useRef<HTMLDivElement>(null)
   const incomeSearchGen   = useRef(0)
@@ -374,12 +383,17 @@ export default function InPage() {
         note:         t.note ? String(t.note) : null,
       }))
       if (gen !== loadGen.current) return
-      setCards(newCards)
-      setBanks(newBanks)
-      setRevStreams(newStreams)
-      setTransfers(newTransfers)
-      setCardStats(stats)
-      pageCache.set('in', { cards: newCards, banks: newBanks, streams: newStreams, transfers: newTransfers })
+      // Unchanged since the last load: leave state alone (no re-render)
+      const sig = JSON.stringify([newCards, newBanks, newStreams, newTransfers, stats])
+      if (sig !== dataSigRef.current) {
+        dataSigRef.current = sig
+        setCards(newCards)
+        setBanks(newBanks)
+        setRevStreams(newStreams)
+        setTransfers(newTransfers)
+        setCardStats(stats)
+        pageCache.set('in', { cards: newCards, banks: newBanks, streams: newStreams, transfers: newTransfers })
+      }
       setLoading(false)
       if (!sessionAutoGenDone) {
         sessionAutoGenDone = true
@@ -414,7 +428,10 @@ export default function InPage() {
     const controller = new AbortController()
     incomeAbortRef.current = controller
     const gen = ++incomeGen.current
-    setIncomeLoading(true)
+    // Skeletons only for the very first load. A refresh keeps showing the rows
+    // it has: swapping in skeletons unmounted the stat tiles (restarting their
+    // number roll) and popped the History list back in a beat later.
+    if (!incomeListRef.current.length && !recentIncomeRef.current.length) setIncomeLoading(true)
     try {
       const today = localToday()
       // Stats window: far enough back to cover both the 6-month chart and the
@@ -439,13 +456,24 @@ export default function InPage() {
           .abortSignal(controller.signal),
       ])
       if (gen !== incomeGen.current) return
-      const rows = (data ?? []).filter(i => !pendingDeleteIds.current.has(String(i.id))).map(toIncomeRow)
-      setIncomeList(rows)
-      setRecentIncome((statsData ?? []).filter(i => !pendingDeleteIds.current.has(String(i.id))).map(toIncomeRow))
-      incomeOffsetRef.current = data?.length ?? 0
-      const more = (data?.length ?? 0) >= INCOME_LIMIT
-      setIncomeHasMore(more)
-      incomeHasMoreRef.current = more
+      const rows   = (data ?? []).filter(i => !pendingDeleteIds.current.has(String(i.id))).map(toIncomeRow)
+      const recent = (statsData ?? []).filter(i => !pendingDeleteIds.current.has(String(i.id))).map(toIncomeRow)
+      // Only touch state for what actually changed. If the first page matches
+      // what's already shown, keep the list as is (and any pages scrolled in).
+      const cur = incomeListRef.current
+      if (rowSig(rows) !== rowSig(cur.slice(0, rows.length)) || (cur.length < rows.length)) {
+        incomeListRef.current = rows
+        setIncomeList(rows)
+        incomeOffsetRef.current = data?.length ?? 0
+        const more = (data?.length ?? 0) >= INCOME_LIMIT
+        setIncomeHasMore(more)
+        incomeHasMoreRef.current = more
+      }
+      if (statSig(recent) !== statSig(recentIncomeRef.current)) {
+        recentIncomeRef.current = recent
+        setRecentIncome(recent)
+      }
+      pageCache.set('in-income', { list: rows, recent, hasMore: (data?.length ?? 0) >= INCOME_LIMIT })
       setIncomeLoading(false)
     } catch (err) {
       if ((err as Error)?.name === 'AbortError') return
@@ -500,6 +528,7 @@ export default function InPage() {
   useOnScreenReturn(() => { loadData(); loadIncome() })
 
   useEffect(() => { incomeListRef.current = incomeList }, [incomeList])
+  useEffect(() => { recentIncomeRef.current = recentIncome }, [recentIncome])
   useEffect(() => { if (searchOpen) searchInputRef.current?.focus() }, [searchOpen])
 
   const q = searchOpen ? query.trim().toLowerCase() : ''
