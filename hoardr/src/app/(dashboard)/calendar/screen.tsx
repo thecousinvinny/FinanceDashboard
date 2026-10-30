@@ -14,6 +14,7 @@ import { CalendarSettingsSheet, canWriteToCalendar, type CalPrefs, type GCalenda
 import { CalendarPopover, defaultTimes, type PopoverFormData, type RecurScope } from '@/components/calendar/CalendarPopover'
 import { MonthYearPicker } from '@/components/calendar/MonthYearPicker'
 import { pageCache } from '@/lib/page-cache'
+import { MonthScroller } from '@/components/calendar/MonthScroller'
 import { createCalEvent, updateCalEvent, deleteCalEvent, moveCalEvent, getCalEvent, extractRRule, rruleUntilBefore, type GCalEvent, calFetch } from '@/lib/calendar'
 import { connectGoogleCalendar } from '@/lib/gcal-connect'
 import { useOnScreenReturn, useScreenActive } from '@/lib/tab-nav'
@@ -389,7 +390,7 @@ export default function CalendarPage() {
 const suppressPrepend   = useRef(true)   // true initially — cleared after scroll-to-today so prepend IO doesn't clobber initial position
   const scrolledToToday   = useRef(false)
   const googleRescrollDone = useRef(false) // prevents re-scroll after the first Google events load
-  const gridSwipe       = useRef<{ x: number; y: number } | null>(null)
+  const gridLabelRef    = useRef<HTMLSpanElement>(null)
   // Split-view handle: dragged with native listeners (see the effect below)
   const gridWrapRef     = useRef<HTMLDivElement>(null)
   const gridHRef        = useRef(gridH)
@@ -1547,38 +1548,31 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
   }
 
   // ── Grid helpers ───────────────────────────────────────────────────────────
-  const gridDays  = getDaysInMonth(gridYear, gridMonth)
-  const firstDay  = wsMon ? (new Date(gridYear, gridMonth, 1).getDay() + 6) % 7 : new Date(gridYear, gridMonth, 1).getDay()
-  const gridCells: (number | null)[] = [...Array(firstDay).fill(null), ...Array.from({ length: gridDays }, (_, i) => i + 1)]
-  while (gridCells.length % 7 !== 0) gridCells.push(null)
   const gridMonthLbl = new Date(gridYear, gridMonth, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-  const gds = (d: number) => `${gridYear}-${String(gridMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-  function goToPrev() {
-    const newMonth = gridMonth === 0 ? 11 : gridMonth - 1
-    const newYear  = gridMonth === 0 ? gridYear - 1 : gridYear
-    if (gridMonth === 0) { setGridMonth(11); setGridYear(y => y - 1) } else setGridMonth(m => m - 1)
-    setGridSel(null)
-    if (!isLargeScreen) {
-      const firstDay = `${newYear}-${String(newMonth + 1).padStart(2, '0')}-01`
-      requestAnimationFrame(() => {
-        const sc = scrollRef.current, el = dayRefs.current.get(firstDay)
-        if (sc && el) sc.scrollTop = el.offsetTop - 20
-      })
+  // Tap a day in the month scroller: select it and bring it up in the list
+  // (rebuilding the list around its month if it isn't loaded)
+  const pickGridDayRef = useRef<(ds: string) => void>(() => {})
+  pickGridDayRef.current = (ds: string) => {
+    const el = dayRefs.current.get(ds), sc = scrollRef.current
+    if (sc && el) {
+      setGridSel(ds)
+      const cR = sc.getBoundingClientRect(), eR = el.getBoundingClientRect()
+      sc.scrollTop = sc.scrollTop + eR.top - cR.top - 16
+      return
     }
+    const [y, m] = ds.split('-').map(Number)
+    jumpToMonth(y, m - 1)
+    setGridSel(ds)
   }
-  function goToNext() {
-    const newMonth = gridMonth === 11 ? 0 : gridMonth + 1
-    const newYear  = gridMonth === 11 ? gridYear + 1 : gridYear
-    if (gridMonth === 11) { setGridMonth(0); setGridYear(y => y + 1) } else setGridMonth(m => m + 1)
-    setGridSel(null)
-    if (!isLargeScreen) {
-      const firstDay = `${newYear}-${String(newMonth + 1).padStart(2, '0')}-01`
-      requestAnimationFrame(() => {
-        const sc = scrollRef.current, el = dayRefs.current.get(firstDay)
-        if (sc && el) sc.scrollTop = el.offsetTop - 20
-      })
-    }
+  const pickGridDay = useCallback((ds: string) => pickGridDayRef.current(ds), [])
+  // The scroller came to rest on another month: move the list there too
+  const settleGridMonthRef = useRef<(y: number, m: number) => void>(() => {})
+  settleGridMonthRef.current = (y: number, m: number) => {
+    if (y === gridYear && m === gridMonth) return
+    jumpToMonth(y, m)
   }
+  const settleGridMonth = useCallback((y: number, m: number) => settleGridMonthRef.current(y, m), [])
+
   const gridSelEvents = gridSel ? (visibleMap[gridSel] ?? []) : []
   const gridSelLabel  = gridSel ? new Date(gridSel + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : null
 
@@ -2327,7 +2321,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                     style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, background: 'none', border: 'none', textAlign: 'center', fontSize: 16, fontWeight: 700, color: 'var(--color-ink)', fontFamily: 'var(--font-montserrat)', userSelect: 'none', cursor: 'pointer', letterSpacing: '-0.01em', touchAction: 'manipulation' }}
                     onClick={() => setMonthPickerOpen(true)}
                   >
-                    {gridMonthLbl}
+                    <span ref={gridLabelRef}>{gridMonthLbl}</span>
                     <span style={{ fontSize: 10, color: '#C9A84C', opacity: 0.8 }}>▾</span>
                   </button>
                 </div>
@@ -2337,50 +2331,19 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                     <div key={i} style={{ textAlign: 'center', fontSize: 9, fontWeight: 700, color: 'rgba(212,175,55,0.55)', letterSpacing: '0.05em', fontFamily: 'var(--font-montserrat)' }}>{d}</div>
                   ))}
                 </div>
-                {/* Grid cells — swipe left/right to change month */}
-                <div
-                  style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gridAutoRows: '1fr', paddingLeft: 6, paddingRight: 6, paddingBottom: 4 }}
-                  onTouchStart={(e) => { gridSwipe.current = { x: e.touches[0].clientX, y: e.touches[0].clientY } }}
-                  onTouchEnd={(e) => {
-                    const s = gridSwipe.current; gridSwipe.current = null; if (!s) return
-                    const t = e.changedTouches[0], dx = t.clientX - s.x, dy = t.clientY - s.y
-                    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) { if (dx < 0) goToNext(); else goToPrev() }
-                  }}
-                  onMouseDown={(e) => { gridSwipe.current = { x: e.clientX, y: e.clientY } }}
-                  onMouseUp={(e) => {
-                    const s = gridSwipe.current; gridSwipe.current = null; if (!s) return
-                    const dx = e.clientX - s.x, dy = e.clientY - s.y
-                    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) { if (dx < 0) goToNext(); else goToPrev() }
-                  }}
-                  onMouseLeave={() => { gridSwipe.current = null }}
-                >
-                  {gridCells.map((day, i) => {
-                    if (day === null) return <div key={i} />
-                    const ds = gds(day)
-                    const isToday = ds === todayStr
-                    const isSel   = ds === gridSel
-                    const dots    = (visibleMap[ds] ?? []).slice(0, 3).map(ev => ev.color ?? DOT_COLOR[ev.type])
-                    return (
-                      <button key={i}
-                        onClick={() => {
-                          setGridSel(ds)
-                          const sc = scrollRef.current, el = dayRefs.current.get(ds)
-                          if (sc && el) { const cR = sc.getBoundingClientRect(), eR = el.getBoundingClientRect(); sc.scrollTop = sc.scrollTop + eR.top - cR.top - 16 }
-                        }}
-                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'none', cursor: 'pointer', outline: 'none', gap: 2, minWidth: 0 }}
-                      >
-                        <div style={{ width: 26, height: 26, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isToday ? '#D4AF37' : isSel ? 'rgba(212,175,55,0.15)' : 'transparent', flexShrink: 0 }}>
-                          <span style={{ fontSize: 12, fontWeight: isToday ? 700 : isSel ? 600 : 400, color: isToday ? '#000' : isSel ? '#D4AF37' : 'rgb(var(--rgb-ink) / 0.72)', fontFamily: 'var(--font-montserrat)', lineHeight: 1 }}>{day}</span>
-                        </div>
-                        {dots.length > 0 && (
-                          <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
-                            {dots.map((c, di) => <span key={di} style={{ width: 3, height: 3, borderRadius: '50%', background: c, flexShrink: 0 }} />)}
-                          </div>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
+                {/* Months scroll vertically with momentum, like iOS Calendar */}
+                <MonthScroller
+                  year={gridYear}
+                  month={gridMonth}
+                  selected={gridSel}
+                  todayStr={todayStr}
+                  wsMon={wsMon}
+                  visibleMap={visibleMap}
+                  dotColor={DOT_COLOR}
+                  labelRef={gridLabelRef}
+                  onPickDay={pickGridDay}
+                  onSettle={settleGridMonth}
+                />
               </div>
             </div>
 
