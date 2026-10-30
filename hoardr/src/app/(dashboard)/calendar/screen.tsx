@@ -295,8 +295,10 @@ export default function CalendarPage() {
   const [expandedWeeks,  setExpandedWeeks]  = useState<Set<string>>(() => new Set())
 
   // Infinite scroll
+  // Starts wide (6 months either side) so an upward scroll rarely reaches the
+  // edge where earlier months have to be inserted (see the prepend effect)
   const [months, setMonths] = useState<MonthKey[]>(() =>
-    Array.from({ length: 6 }, (_, i) => addMonths(today.getFullYear(), today.getMonth(), i - 1))
+    Array.from({ length: 13 }, (_, i) => addMonths(today.getFullYear(), today.getMonth(), i - 6))
   )
   const [sideLbl, setSideLbl] = useState(() => monthLabel(today.getFullYear(), today.getMonth()))
 
@@ -1409,28 +1411,51 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
   }, [isLargeScreen, calView])
 
   // ── Infinite scroll: prepend ───────────────────────────────────────────────
-  // Months inserted above push the content down; the scroll position is
-  // compensated in a layout effect in the same commit, before paint. It used to
-  // happen two frames later from a saved position: during a fast upward flick
-  // on iPhone the months often weren't rendered yet, so nothing was added, the
-  // view jumped four months back, the top sentinel was in view again, and it
-  // cascaded (Aug → Jan). Restoring the saved position also killed momentum.
+  // Months inserted above push the content down, so the scroll position must
+  // be compensated. On iPhone that only sticks when the list is AT REST: while
+  // a flick coasts, the scroll belongs to the OS and a scrollTop write is
+  // dropped — the view slid back by the inserted months, the top sentinel was
+  // in view again, and it cascaded (Sep 2026 → Mar 2022). So a prepend waits
+  // until no finger is down and no scroll has happened for a beat, then
+  // inserts and compensates in a layout effect in the same commit, before paint.
   const prependFromH = useRef<number | null>(null)
   useEffect(() => {
     if (isLargeScreen && calView !== 'list') return
     const sc = scrollRef.current, top = topSentRef.current
     if (!sc || !top) return
-    const obs = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting || loadingMore.current || suppressPrepend.current) return
+    let wanted = false, touching = false
+    let idleT: ReturnType<typeof setTimeout> | undefined
+    const prepend = () => {
+      if (!wanted || touching || loadingMore.current || suppressPrepend.current) return
+      wanted = false
       loadingMore.current = true
       prependFromH.current = sc.scrollHeight
       setMonths(prev => {
         const first = prev[0]
         return [[6, 5, 4, 3, 2, 1].map(i => addMonths(first.year, first.month, -i)), prev].flat()
       })
+    }
+    const whenIdle = () => { clearTimeout(idleT); idleT = setTimeout(prepend, 140) }
+    const onScroll = () => { if (wanted) whenIdle() }
+    const onTouchStart = () => { touching = true; clearTimeout(idleT) }
+    const onTouchEnd = () => { touching = false; if (wanted) whenIdle() }
+    const obs = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting || suppressPrepend.current) return
+      wanted = true
+      whenIdle()
     }, { root: sc, rootMargin: '1200px 0px 0px 0px', threshold: 0 })
     obs.observe(top)
-    return () => obs.disconnect()
+    sc.addEventListener('scroll', onScroll, { passive: true })
+    sc.addEventListener('touchstart', onTouchStart, { passive: true })
+    sc.addEventListener('touchend', onTouchEnd, { passive: true })
+    sc.addEventListener('touchcancel', onTouchEnd, { passive: true })
+    return () => {
+      obs.disconnect(); clearTimeout(idleT)
+      sc.removeEventListener('scroll', onScroll)
+      sc.removeEventListener('touchstart', onTouchStart)
+      sc.removeEventListener('touchend', onTouchEnd)
+      sc.removeEventListener('touchcancel', onTouchEnd)
+    }
   }, [isLargeScreen, calView])
   useLayoutEffect(() => {
     const fromH = prependFromH.current
@@ -1604,7 +1629,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     setGridMonth(month)
     setGridSel(isCurrentMonth ? todayStr : null)
     setSideLbl(monthLabel(year, month))
-    setMonths(Array.from({ length: 6 }, (_, i) => addMonths(year, month, i - 1)))
+    setMonths(Array.from({ length: 9 }, (_, i) => addMonths(year, month, i - 3)))
     // Block the prepend observer while we reposition; re-enable once settled.
     suppressPrepend.current = true
     const target = isCurrentMonth ? todayStr : toDateStr(year, month, 1)
