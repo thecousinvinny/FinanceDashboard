@@ -1,7 +1,7 @@
 'use client'
 
 import { useLayoutEffect, useRef } from 'react'
-import { useScreenVisit } from '@/lib/tab-nav'
+import { afterSlide, useScreenVisit } from '@/lib/tab-nav'
 
 // ── Single drum column for one digit ─────────────────────────────────────────
 //
@@ -95,7 +95,8 @@ export function SlotNumber({ value, format, className }: Props) {
   // screen is hidden (kept-alive), where nobody would see it.
   const visit = useScreenVisit()
   const spin  = useRef<{ visit: number; at: number } | null>(null)
-  if (visit > 0 && spin.current?.visit !== visit) spin.current = { visit, at: performance.now() }
+  // After a tab slide, the roll waits for the screen to land (see afterSlide)
+  if (visit > 0 && spin.current?.visit !== visit) spin.current = { visit, at: performance.now() + afterSlide() }
   const spinAt = visit > 0 ? spin.current!.at : 0
 
   const str    = format(value)

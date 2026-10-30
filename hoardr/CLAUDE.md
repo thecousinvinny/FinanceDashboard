@@ -33,6 +33,7 @@ Home, Out, In, Calendar, Profile and Settings live in `<route>/screen.tsx`; thei
   - Visit-keyed resets happen in a **layout effect** (an effect paints the old state for a frame, then snaps), and the visit counter itself is bumped during render in `ScreenKeepAlive`.
   - Bars grow with `transform: scaleX/scaleY` + `transformOrigin`, never `width`/`height` (layout every frame). Out's `CategoryPillBar`, In's `IncomeBarChart` and Profile's `SimpleBars` / `CategoryPills` / `CostPills` (`useGrowIn`) follow this; data changes ease to the new scale instead of collapsing to zero.
   - No tall layers under a transform (see `SlotNumber`), no full-screen `backdrop-filter`.
+  - **Entrance animations start after the tab slide** — delay them with `afterSlide(ms)` (`src/lib/tab-nav.ts`). iOS Safari re-captures the incoming screen every frame of a view transition, so anything animating inside it (number rolls, bar growth, the sparkline reveal) was choppy on iPhone only; first load and the post-greeting replay have no slide and no delay.
 - These routes have no `loading.tsx`; `settings/categories` and `settings/defaults` are ordinary routes rendered through `{children}`.
 
 ## Navigation — four tabs

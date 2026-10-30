@@ -27,7 +27,7 @@ import { pageCache } from '@/lib/page-cache'
 import { PullIndicator } from '@/components/ui/PullIndicator'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { useOnScreenReturn } from '@/lib/tab-nav'
-import { useScreenVisit } from '@/lib/tab-nav'
+import { afterSlide, useScreenVisit } from '@/lib/tab-nav'
 
 interface CardExpense {
   id: string; name: string; cost: number; date: string; categories: { name: string } | null
@@ -135,7 +135,7 @@ function IncomeBarChart({ incomeList }: { incomeList: IncomeRow[] }) {
   useLayoutEffect(() => {
     setAnimated(false)
     if (visit === 0) return
-    const t = setTimeout(() => setAnimated(true), 30)
+    const t = setTimeout(() => setAnimated(true), afterSlide(30))
     return () => clearTimeout(t)
   }, [visit])
 

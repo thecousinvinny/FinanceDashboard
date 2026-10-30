@@ -27,7 +27,7 @@ import { usePillSwipe } from '@/hooks/usePillSwipe'
 import { getAppPrefs } from '@/lib/app-prefs'
 import { GlobalFAB } from '@/components/ui/GlobalFAB'
 import { useOnScreenReturn } from '@/lib/tab-nav'
-import { useScreenVisit } from '@/lib/tab-nav'
+import { afterSlide, useScreenVisit } from '@/lib/tab-nav'
 import { sameAsLast } from '@/lib/same-data'
 
 type Tab = 'Expenses' | 'Subs' | 'Wishlist'
@@ -50,7 +50,7 @@ function CategoryPillBar({ cat, index, isSub = false, onClick, isExpanded = fals
   useLayoutEffect(() => {
     if (visit === 0) return
     setGrown(false)
-    const t = setTimeout(() => setGrown(true), 50)
+    const t = setTimeout(() => setGrown(true), afterSlide(50))
     return () => clearTimeout(t)
   }, [visit])
 

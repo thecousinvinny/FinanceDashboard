@@ -36,6 +36,21 @@ const rank = (p: string) => ORDER.findIndex(o => p === o || p.startsWith(o + '/'
 
 type VTDocument = Document & { startViewTransition?: (cb: () => void) => { finished: Promise<void> } }
 
+// The slide (globals.css: tab-in-* runs 420ms) plus a frame or two of capture
+const SLIDE_MS = 480
+let slideEndsAt = 0
+
+/**
+ * How long an entrance animation should wait: at least `ms`, and until the tab
+ * slide has finished. iOS Safari re-captures the incoming screen every frame
+ * of a view transition, so anything animating inside it (number rolls, bars
+ * growing, the sparkline reveal) turns choppy — they start once it lands.
+ * 0 extra on first load and after the greeting, where nothing slides.
+ */
+export function afterSlide(ms = 0): number {
+  return Math.max(ms, slideEndsAt - performance.now())
+}
+
 /**
  * Switch screens with a directional slide + fade. Uses the View Transitions
  * API: the browser snapshots the old and new screen and animates the
@@ -56,8 +71,9 @@ export function navigateTab(path: string) {
   // The snapshots do the animating; the screen's own fade-in would double it
   root.classList.add('vt')
   root.dataset.tabDir = rank(path) >= rank(from) ? 'fwd' : 'back'
+  slideEndsAt = performance.now() + SLIDE_MS
   const vt = doc.startViewTransition(() => flushSync(() => setPendingPath(path)))
-  vt.finished.finally(() => { delete root.dataset.tabDir })
+  vt.finished.finally(() => { delete root.dataset.tabDir; slideEndsAt = Math.min(slideEndsAt, performance.now()) })
 }
 
 /** The path being shown: the tapped destination if navigation is in flight, else the URL. */

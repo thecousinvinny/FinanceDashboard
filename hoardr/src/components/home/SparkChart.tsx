@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useRef, useEffect, type MutableRefObject } from 'react'
+import { useState, useRef, useEffect, type MutableRefObject, useMemo } from 'react'
 import { $fc, haptic } from '@/lib/utils'
-import { useScreenVisit } from '@/lib/tab-nav'
+import { afterSlide, useScreenVisit } from '@/lib/tab-nav'
 
 export interface DayPoint {
   day:   string  // "1", "12", "31"
@@ -171,6 +171,9 @@ export function SparkChart({ points, onHover, gestureMode }: {
   // mount hidden, so the first draw would otherwise happen unseen)
   const visit   = useScreenVisit()
   const animKey = `${n}-${Math.round(totalExp + totalInc)}-${colorRev}-${visit}`
+  // Fixed per reveal: after a tab slide it waits for the screen to land
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const revealDelay = useMemo(() => afterSlide(), [animKey])
   const hovered = hoverIdx !== null ? points[hoverIdx] : null
 
   function handleMouseMove(e: React.MouseEvent) {
@@ -212,7 +215,7 @@ export function SparkChart({ points, onHover, gestureMode }: {
       <div
         key={animKey}
         className="absolute inset-0"
-        style={{ animation: 'spark-clip-reveal 0.9s ease-out forwards' }}
+        style={{ animation: `spark-clip-reveal 0.9s ease-out ${revealDelay}ms both` }}
       >
         <svg
           width="100%"
