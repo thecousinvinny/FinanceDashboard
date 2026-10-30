@@ -742,13 +742,37 @@ html.boot-splash body::after {
 .greet-banner-img {
   animation: greet-banner-in 1600ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-@keyframes greet-spin { to { transform: rotate(360deg); } }
-.greet-spinner {
-  position: absolute;
-  width: 22px; height: 22px; border-radius: 50%;
-  border: 2px solid rgb(var(--rgb-ink) / 0.12);
-  border-top-color: #D4AF37;
-  animation: greet-fade-in 300ms ease both, greet-spin 0.8s linear infinite;
+/* ── Loading indicator (components/ui/LoadDots) ──
+   Three gold dots in a staggered hop: up fast with a slight squash-and-stretch,
+   down with a soft landing. Transform + opacity only (compositor). */
+.load-dots {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 7px;
+  height: 22px;
+  padding-top: 10px;
+  animation: greet-fade-in 300ms ease both;
+}
+.load-dots > span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: linear-gradient(160deg, #E9CD7A, #D4AF37 55%, #B08A2A);
+  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.35);
+  opacity: 0.45;
+  will-change: transform, opacity;
+  animation: load-dot-hop 1.15s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.load-dots > span:nth-child(2) { animation-delay: 0.14s; }
+.load-dots > span:nth-child(3) { animation-delay: 0.28s; }
+@keyframes load-dot-hop {
+  0%, 62%, 100% { transform: translateY(0) scale(1, 1);          opacity: 0.45; }
+  14%           { transform: translateY(0) scale(1.18, 0.82);    opacity: 0.7;  animation-timing-function: cubic-bezier(0.2, 0.8, 0.3, 1); }
+  32%           { transform: translateY(-10px) scale(0.9, 1.12); opacity: 1;    animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0.3); }
+  50%           { transform: translateY(0) scale(1.12, 0.88);    opacity: 0.75; animation-timing-function: cubic-bezier(0.3, 1.4, 0.6, 1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .load-dots > span { animation-duration: 2.4s; }
 }
 .greet-fade {
   animation: greet-fade-in 420ms ease both;

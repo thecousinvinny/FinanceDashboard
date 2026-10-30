@@ -4,6 +4,7 @@ import { useLayoutEffect, useState } from 'react'
 import { Coins } from 'lucide-react'
 import { BOOT_SPLASH_CLASS } from '@/lib/greeting-boot'
 import { onScreenReady, replayActiveScreen } from '@/lib/tab-nav'
+import { LoadDots } from '@/components/ui/LoadDots'
 
 const MAX_MS  = 3000   // never hold the app longer than this
 const FADE_MS = 380
@@ -69,7 +70,7 @@ export function BootSplash() {
       </p>
       {/* Only if the wait is noticeable */}
       <div className="greet-fade" style={{ ['--d' as string]: '500ms', marginTop: 8 }}>
-        <div className="greet-spinner" style={{ position: 'static' }} />
+        <LoadDots />
       </div>
     </div>
   )
