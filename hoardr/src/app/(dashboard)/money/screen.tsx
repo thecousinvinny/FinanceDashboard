@@ -349,7 +349,7 @@ export default function OutPage() {
   useEffect(() => { txListRef.current = txList }, [txList])
   useEffect(() => { hasMoreRef.current = hasMore }, [hasMore])
 
-  const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } = usePullToRefresh(loadData)
+  const { indicatorRef: pullRef, refreshing: pullRefreshing } = usePullToRefresh(loadData)
 
   // Offset pagination over the same (date, created_at, id) ordering as the first
   // page. The id tiebreaker matters: (date, created_at) is not unique, and rows
@@ -902,7 +902,7 @@ export default function OutPage() {
   <>
     <div className="min-h-screen bg-bg-base tab-enter">
 
-      <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
+      <PullIndicator indicatorRef={pullRef} refreshing={pullRefreshing} />
       <div style={{ height: 'calc(env(safe-area-inset-top, 44px) + 8px)' }} />
 
       {/* ── Pills + search ───────────────────────────────────────────────── */}

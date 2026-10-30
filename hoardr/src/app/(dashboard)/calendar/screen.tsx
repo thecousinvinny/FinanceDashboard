@@ -18,6 +18,7 @@ import { createCalEvent, updateCalEvent, deleteCalEvent, moveCalEvent, getCalEve
 import { connectGoogleCalendar } from '@/lib/gcal-connect'
 import { useOnScreenReturn, useScreenActive } from '@/lib/tab-nav'
 import { Segmented } from '@/components/ui/Form'
+import { useToday } from '@/lib/use-today'
 
 type EventType = 'income' | 'sub' | 'google'
 
@@ -248,7 +249,8 @@ function DayEventCard({ ev, dot, timeRange, amt, onDelete, onEdit }: {
 
 export default function CalendarPage() {
   const router   = useRouter()
-  const today    = useMemo(() => new Date(), [])
+  // Moves to the new day at midnight / on return — a mount-time Date kept showing yesterday
+  const today    = useToday()
   const todayStr = useMemo(() => toDateStr(today.getFullYear(), today.getMonth(), today.getDate()), [today])
 
   // ── View state: 0=Split/Grid 1=Day ───────────────────────────────────────

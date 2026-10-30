@@ -540,7 +540,7 @@ export default function InPage() {
     return () => obs.disconnect()
   }, [loadMoreIncome, incomeHasMore, tab, q, loading, incomeLoading])
 
-  const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } = usePullToRefresh(loadData)
+  const { indicatorRef: pullRef, refreshing: pullRefreshing } = usePullToRefresh(loadData)
 
   useEffect(() => {
     if (!interestBank) return
@@ -1057,7 +1057,7 @@ export default function InPage() {
   return (
     <>
       <div className="min-h-screen bg-bg-base tab-enter">
-        <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
+        <PullIndicator indicatorRef={pullRef} refreshing={pullRefreshing} />
         <div style={{ height: 'calc(env(safe-area-inset-top, 44px) + 8px)' }} />
 
         {/* paddingRight reserves the top-right corner for the fixed ProfileDrawer button */}

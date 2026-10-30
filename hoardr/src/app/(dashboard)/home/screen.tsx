@@ -302,7 +302,7 @@ export default function HomePage() {
     return () => { mounted = false }
   }, [supabase])
 
-  const { distance: pullDist, refreshing: pullRefreshing, threshold: pullThreshold } =
+  const { indicatorRef: pullRef, refreshing: pullRefreshing } =
     usePullToRefresh(loadData)
 
   async function handleAdd(tx: SeedTx) {
@@ -384,7 +384,7 @@ export default function HomePage() {
     <>
     <div className="min-h-screen bg-bg-base tab-enter">
 
-      <PullIndicator distance={pullDist} threshold={pullThreshold} refreshing={pullRefreshing} />
+      <PullIndicator indicatorRef={pullRef} refreshing={pullRefreshing} />
 
       <div style={{ height: 'calc(env(safe-area-inset-top, 44px) + 8px)' }} />
 

@@ -182,7 +182,12 @@ html, body {
   background-color: rgb(var(--rgb-bg-base));
   color: rgb(var(--rgb-ink));
   min-height: 100vh;
-  overscroll-behavior: none;
+  /* 'contain' keeps iOS's rubber-band bounce at the ends of a page (it was
+     'none', which made scrolling hit a hard stop) while still blocking the
+     browser's own pull-to-refresh / scroll chaining. No horizontal overscroll,
+     so a sideways swipe never triggers back-navigation. */
+  overscroll-behavior-y: contain;
+  overscroll-behavior-x: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

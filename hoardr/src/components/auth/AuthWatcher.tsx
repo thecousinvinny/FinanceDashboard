@@ -6,6 +6,7 @@ import { isAuthRetryableFetchError } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { showToast } from '@/lib/toast'
 import { syncAppPrefs } from '@/lib/app-prefs'
+import { syncLocationPrefs } from '@/lib/location-prefs'
 
 /**
  * Global session guard for the dashboard.
@@ -29,6 +30,7 @@ export function AuthWatcher() {
 
     // Pull shared defaults (default bank etc.) so this device matches the others
     void syncAppPrefs()
+    void syncLocationPrefs()   // calendar location favorites/recents follow the account
 
     function forceReauth() {
       if (redirecting.current) return

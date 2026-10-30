@@ -280,7 +280,8 @@ Still on the legacy hand-rolled chrome (migrate when touched): the Edit* sheets,
 - Background lock: `body.style.position = 'fixed'` + `body.style.top = -scrollY` + `documentElement.overscrollBehavior = 'none'` + direction-aware touchmove preventDefault
 - Swipe-down dismiss: direct DOM mutation on `sheetRef`. Dismiss threshold: 80px. Clear inline styles inside setTimeout *before* `onClose()`.
 - Keyboard scroll: `visualViewport` resize listener pads scroll area, scrolls focused field above keyboard
-- `usePullToRefresh` skips when `body.style.position === 'fixed'` — do not remove this guard
+- `usePullToRefresh` skips when `body.style.position === 'fixed'` — do not remove this guard. It never sets React state per touchmove (that re-rendered the whole tab every frame): it moves the floating `PullIndicator` through `indicatorRef` in a rAF and only sets state when a refresh starts/ends.
+- `html, body` use `overscroll-behavior-y: contain` (keeps iOS rubber-band bounce, blocks the browser's own pull-to-refresh). Never `none` globally — that made every scroll end in a hard stop.
 - `z-[60]` for sheets; `z-[70]` for RecurrencePicker above sheets; `z-[55]` for ProfileDrawer (below sheets)
 
 Every page root `<div>` includes `tab-enter`. Routes that aren't keep-alive screens have a `loading.tsx` skeleton.
@@ -352,6 +353,8 @@ Single client component (`calendar/page.tsx`), two panels on a horizontal rail: 
 
 **Desktop shell (≥768px)** — one layout for both views: sidebar (mini month that follows the grid, calendar list with color/visibility) + a toolbar (`**Month** Year` title from `deskTitle`, ‹ Today › via `deskNav`, Month/Agenda `Segmented`, filters, New). Month = the Notion grid; Agenda (`calView === 'list'`) = a day-grouped event list on the same `months` / `scrollRef` / `dayRefs` machinery as the phone list (every day keeps a zero-height ref'd anchor so `jumpToMonth` and scroll-to-today work). Agenda events open the desktop popover, not the phone sheet. Double-click a day (grid cell or agenda day) to create; a single click only clears the selection — single-click create made every click between days open the creator. The grid title samples the **middle** of the visible grid. Calendar colors come from the theme (`--color-cal-*` are mapped to theme surfaces in `globals.css`). `CalendarPopover` registers its outside-click listener once and reads `onClose` via a ref — re-registering on every parent render (cell hovers re-render the page) left it detached.
 
+**Today** — `useToday()` (`src/lib/use-today.ts`), not a mount-time `new Date()`: kept-alive screens stay mounted overnight, so the date must tick at midnight and re-check on visibility/focus.
+
 **`notionWeeks`** — large-screen month grid only. 48 weeks centered on today's Sunday. `addWeeks()` uses local `new Date(y, m-1, d + n*7)` (never UTC).
 
 **Notion grid**: `MAX_VIS_EVENTS=6`, `EV_ROW_H=20`, `CELL_MIN_H=163`. Cells lay out through `layoutCell()`: each week row is one grid of `EV_ROW_H` slots, multi-day bars keep their lane, and a lane slot with no bar on that day takes the day's next single event — so days line up across the week instead of being pushed down by empty lane rows. Each day's Google events are sorted with `byStart` (all-day first, then start time) across calendars. A calendar whose fetch fails keeps its last events. `pageCache` (`cal-events` / `cal-google`) seeds first paint on revisit. Drag-and-drop: `isBeingDragged = !!dragState && !!ev.id && dragState.ev.id === ev.id` — the `!!ev.id` guard is critical; `undefined === undefined` would fade all finance pills.
@@ -360,7 +363,7 @@ Single client component (`calendar/page.tsx`), two panels on a horizontal rail: 
 
 **Saves are optimistic** — `handlePopoverSave` / `handleCreateEvent` / `handleEditEvent` close the UI, insert a local copy via `putLocalEvent(localGoogleEvent(...))` (creates get a `tmp-` id, which edit entry points ignore), toast, then write to Google in the background and bump `gRefreshKey`. On failure they reopen the popover/sheet with the user's edits. `'following'` scope skips the local copy and waits for the refetch.
 
-**Location favorites/recents** — `src/lib/location-prefs.ts` (localStorage). Every location an event is saved with is pushed to recents (typed text too); while typing, saved places containing the text are listed above Google's results. Shared shared by `LocationPickerSheet` (phone / list view) and `CalendarPopover` (PC month view). Rows containing a star toggle must be `div role="button"`, never a `<button>` — nested buttons swallow the star click on desktop.
+**Location favorites/recents** — `src/lib/location-prefs.ts`. localStorage for synchronous reads, synced to the account via `auth.updateUser({ data: { cal_locations } })` (debounced) and pulled in by `syncLocationPrefs()` from `AuthWatcher` — the account's favorites win once they exist; recents merge by recency. Every location an event is saved with is pushed to recents (typed text too); while typing, saved places containing the text are listed above Google's results. Shared shared by `LocationPickerSheet` (phone / list view) and `CalendarPopover` (PC month view). Rows containing a star toggle must be `div role="button"`, never a `<button>` — nested buttons swallow the star click on desktop.
 
 **Finance events** — `CalEvent` type: `type: 'income'|'sub'|'google'`. Custom events carry `recurrenceRule?` and `instanceDate?`.
 
