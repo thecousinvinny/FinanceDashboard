@@ -676,14 +676,10 @@ html.slate-mist, html.light {
 }
 
 /* ── Greeting (daily brief) entrance ──────────────────────────────────────
-   Transform + opacity only, easeOutQuint, no overshoot. The card enters once
-   its data is in (or after a short cap) so nothing pops in afterwards. */
+   Transform + opacity only, easeOutQuint, no overshoot. The card enters once,
+   with everything already loaded, so nothing pops in afterwards. */
 @keyframes greet-card-in {
   from { opacity: 0; transform: translateY(18px) scale(0.965); }
-  to   { opacity: 1; transform: none; }
-}
-@keyframes greet-item-in {
-  from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: none; }
 }
 @keyframes greet-fade-in {
@@ -701,14 +697,26 @@ html.slate-mist, html.light {
 .greet-card-out {
   animation: greet-card-out 300ms cubic-bezier(0.4, 0, 1, 1) both;
 }
-.greet-item {
-  animation: greet-item-in 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: calc(140ms + var(--i, 0) * 65ms);
+/* The banner photo settles from a slow zoom while the card rises */
+@keyframes greet-banner-in {
+  from { transform: scale(1.12); }
+  to   { transform: scale(1); }
+}
+.greet-banner-img {
+  animation: greet-banner-in 1600ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes greet-spin { to { transform: rotate(360deg); } }
+.greet-spinner {
+  position: absolute;
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid rgb(var(--rgb-ink) / 0.12);
+  border-top-color: #D4AF37;
+  animation: greet-fade-in 300ms ease both, greet-spin 0.8s linear infinite;
 }
 .greet-fade {
   animation: greet-fade-in 420ms ease both;
   animation-delay: var(--d, 0ms);
 }
 @media (prefers-reduced-motion: reduce) {
-  .greet-card-in, .greet-item, .greet-fade { animation-duration: 1ms; animation-delay: 0ms; }
+  .greet-card-in, .greet-banner-img, .greet-fade { animation-duration: 1ms; animation-delay: 0ms; }
 }
