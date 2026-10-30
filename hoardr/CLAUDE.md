@@ -184,7 +184,7 @@ Module-level emitter — call from anywhere. `<ToastContainer />` mounted in `(d
 
 - `DailyBarChart` (money page) — 30-day net bars, RAF height transition
 - `CategoryPillBar` (money page) — 32px animated pill bar. Track `#1C1F22`, gold gradient fill. `variant='emerald'` switches to emerald gradient. `onClick` + `isExpanded` adds a rotating `›` chevron and toggles a max-height drilldown list below.
-- `IncomeBarChart` (in page) — 6-month bars using `rgba(--sem-income-rgb, opacity)`. Listens to `sem-colors-changed`.
+- `IncomeBarChart` (in page) — last 6 months as **horizontal pill bars**, newest first, matching Out's `CategoryPillBar` (32px track, income-accent gradient fill grown with `scaleX`). Listens to `sem-colors-changed`.
 - `StatCard` (in page) — `SlotNumber` stat tile.
 - Analytics cards in `/profile` page: `HeroSplitBarChart` (canvas, Monthly/Annual/All Time toggle — see below), `MonthAnnualCard` (shared swipeable Month/Annual wrapper), `CategoryPills`, `SimpleBars`, `CostPills`.
 

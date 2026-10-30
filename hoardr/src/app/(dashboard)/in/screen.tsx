@@ -82,22 +82,22 @@ function mapStreamRow(s: any): RevenueStreamConfig {
   }
 }
 
-const MONTH_ABBRS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
 function readCssVar(name: string, fallback: string): string {
   if (typeof window === 'undefined') return fallback
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
 }
 
+/**
+ * Last 6 months of income as horizontal pill bars, newest first — the same
+ * look as Out's "Spent This Month by Category" (CategoryPillBar), in the
+ * income accent. Each fill grows with scaleX once per visit, after the tab
+ * slide; new totals ease to their new width.
+ */
 function IncomeBarChart({ incomeList }: { incomeList: IncomeRow[] }) {
-  const [animated,  setAnimated]  = useState(false)
-  const [hoverIdx,  setHoverIdx]  = useState<number | null>(null)
-  const [tipPos,    setTipPos]    = useState({ x: 0, y: 0 })
-  const [colorRev,  setColorRev]  = useState(0)
-
-  const CHART_H = 100
-  const BAR_W   = 28
-  const visit   = useScreenVisit()
+  const [grown,    setGrown]    = useState(false)
+  const [colorRev, setColorRev] = useState(0)
+  const visit = useScreenVisit()
 
   useEffect(() => {
     const handler = () => setColorRev(r => r + 1)
@@ -112,10 +112,10 @@ function IncomeBarChart({ incomeList }: { incomeList: IncomeRow[] }) {
   const months = useMemo(() => {
     const today  = new Date()
     const result: { key: string; label: string; total: number }[] = []
-    for (let i = 5; i >= 0; i--) {
+    for (let i = 0; i < 6; i++) {
       const d   = new Date(today.getFullYear(), today.getMonth() - i, 1)
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-      result.push({ key, label: MONTH_ABBRS[d.getMonth()], total: 0 })
+      result.push({ key, label: d.toLocaleDateString('en-US', { month: 'long' }), total: 0 })
     }
     for (const row of incomeList) {
       const m = result.find(r => r.key === row.date.slice(0, 7))
@@ -127,92 +127,43 @@ function IncomeBarChart({ incomeList }: { incomeList: IncomeRow[] }) {
 
   const maxVal = Math.max(...months.map(m => m.total), 1)
 
-  // Grow from zero only when the screen is shown. A data refresh (and a
-  // return to the tab triggers a couple) must not reset the bars — that made
-  // them bounce up and down; new totals just ease to their new height.
-  // Layout effect: the reset lands before paint (an effect let the bars show
-  // full height for a frame, then drop and regrow)
+  // Grow from zero when the screen is shown (layout effect: the reset lands
+  // before paint), after the tab slide
   useLayoutEffect(() => {
-    setAnimated(false)
+    setGrown(false)
     if (visit === 0) return
-    return afterSlideTimeout(() => setAnimated(true), 30)
+    return afterSlideTimeout(() => setGrown(true), 50)
   }, [visit])
 
-  const hoveredMonth = hoverIdx !== null ? months[hoverIdx] : null
-
   return (
-    <div
-      className="mx-4 mt-4 bg-bg-surface border border-ink/[0.06]"
-      style={{ borderRadius: 14, padding: 16 }}
-    >
-      <p style={{ fontSize: 9, fontWeight: 500, letterSpacing: '0.12em', color: 'rgb(var(--rgb-ink-faint))', textTransform: 'uppercase', marginBottom: 12 }}>
-        Last 6 Months
-      </p>
-
-      {/* Bars */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', height: CHART_H }}>
+    <div className="mx-4 mt-4 bg-bg-surface border border-ink/[0.06] rounded-card px-4 py-3">
+      <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Last 6 Months</p>
+      <div className="space-y-2">
         {months.map((m, i) => {
-          const opacity   = 0.30 + (m.total / maxVal) * 0.65
-          const heightPct = m.total > 0 ? (m.total / maxVal) * 100 : 0
+          const pct = (m.total / maxVal) * 100
           return (
-            <div
-              key={m.key}
-              style={{ width: BAR_W, height: '100%', display: 'flex', alignItems: 'flex-end' }}
-              onMouseEnter={e => { setHoverIdx(i); setTipPos({ x: e.clientX, y: e.clientY }) }}
-              onMouseMove={e  => setTipPos({ x: e.clientX, y: e.clientY })}
-              onMouseLeave={()  => setHoverIdx(null)}
-            >
+            <div key={m.key} style={{ position: 'relative', height: 32, borderRadius: 8, background: 'rgb(var(--rgb-ink) / 0.08)' }}>
               <div style={{
-                width:        BAR_W,
-                // Grows with scaleY (composited), not height (layout per frame)
-                height:       `${heightPct}%`,
-                minHeight:    m.total > 0 ? 3 : 0,
-                borderRadius: 6,
-                background:   `rgba(${incRgb},${hoverIdx === i ? Math.min(opacity + 0.15, 1) : opacity})`,
-                transform:    `scaleY(${animated ? 1 : 0})`,
-                transformOrigin: 'bottom',
-                transition:   animated ? 'transform 600ms cubic-bezier(0.22, 1, 0.36, 1), height 600ms cubic-bezier(0.22, 1, 0.36, 1)' : 'none',
-                flexShrink:   0,
+                position: 'absolute', left: 0, top: 0, bottom: 0, width: '100%',
+                borderRadius: 8,
+                background: `linear-gradient(90deg, rgba(${incRgb},0.40), rgba(${incRgb},0.12))`,
+                transform: `scaleX(${grown ? pct / 100 : 0})`,
+                transformOrigin: 'left',
+                transition: grown ? `transform 600ms cubic-bezier(0.22, 1, 0.36, 1) ${i * 80}ms` : 'none',
               }} />
+              <div style={{ position: 'absolute', left: 10, right: 10, top: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 12, fontWeight: 500, color: 'rgb(var(--rgb-ink))', whiteSpace: 'nowrap' }}>
+                  {m.label}
+                  {i === 0 && <span style={{ marginLeft: 6, fontSize: 10, color: 'rgb(var(--rgb-ink-faint))' }}>so far</span>}
+                </span>
+                <span style={{ fontSize: 11, color: pct > 70 ? incColor : 'rgb(var(--rgb-ink-muted))', fontFamily: 'var(--font-big-shoulders)' }}>
+                  {$f(m.total)}
+                </span>
+              </div>
             </div>
           )
         })}
       </div>
-
-      {/* X-axis labels */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
-        {months.map((m, i) => (
-          <div key={m.key} style={{ width: BAR_W, textAlign: 'center' }}>
-            <span style={{ fontSize: 10, color: hoverIdx === i ? 'rgb(var(--rgb-ink))' : 'rgb(var(--rgb-ink-faint))', transition: 'color 150ms' }}>
-              {m.label}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* Tooltip */}
-      {hoverIdx !== null && hoveredMonth && (
-        <div
-          className="pointer-events-none"
-          style={{
-            position:     'fixed',
-            zIndex:       50,
-            top:          tipPos.y - 58,
-            left:         tipPos.x + 12,
-            background:   'var(--color-bg-elevated)',
-            border:       '0.5px solid var(--color-grid-border)',
-            borderRadius: 8,
-            padding:      '6px 10px',
-          }}
-        >
-          <p style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.10em', color: incColor, textTransform: 'uppercase', marginBottom: 2 }}>
-            {hoveredMonth.label}
-          </p>
-          <p style={{ fontSize: 13, fontWeight: 600, color: 'rgb(var(--rgb-ink))', fontFamily: 'var(--font-big-shoulders)' }}>
-            ${Math.round(hoveredMonth.total).toLocaleString('en-US')}
-          </p>
-        </div>
-      )}
     </div>
   )
 }
