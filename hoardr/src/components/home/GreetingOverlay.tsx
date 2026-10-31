@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useLayoutEffect, useRef } from 'react'
-import { CalendarDays, Receipt, ArrowDownLeft, Package, Landmark, TrendingDown, TrendingUp } from 'lucide-react'
 import { $fd, $fk, localToday, nextRenewalDate } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { calFetch } from '@/lib/calendar'
@@ -79,6 +78,28 @@ interface Brief {
   spent: number; income: number; lastMonthToDate: number
   upcoming: UpItem[]; today: TodayEv[] | null
   netWorth: number; enRoute: number
+  /** Running spend total per day: this month up to today, last month in full */
+  cum: number[]; prevCum: number[]
+  daysInMonth: number
+  topCat: { name: string; amount: number } | null
+}
+
+const CH_W = 300, CH_H = 84
+/** SVG paths for the spend-pace chart (this month vs last month, cumulative) */
+function paceChart(b: Brief) {
+  const max = Math.max(b.cum[b.cum.length - 1] ?? 0, b.prevCum[b.prevCum.length - 1] ?? 0, 1) * 1.1
+  const x = (i: number) => (b.daysInMonth <= 1 ? 0 : (i / (b.daysInMonth - 1)) * CH_W)
+  const y = (v: number) => CH_H - (v / max) * CH_H
+  const line = (pts: number[]) => pts.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('')
+  const prev = b.prevCum.slice(0, b.daysInMonth)
+  const cur  = line(b.cum)
+  const lastI = b.cum.length - 1
+  return {
+    cur,
+    area: b.cum.length ? `${cur}L${x(lastI).toFixed(1)},${CH_H}L0,${CH_H}Z` : '',
+    prev: line(prev),
+    dot: { left: `${(x(lastI) / CH_W) * 100}%`, top: `${(y(b.cum[lastI] ?? 0) / CH_H) * 100}%` },
+  }
 }
 
 export function GreetingOverlay() {
@@ -174,7 +195,7 @@ export function GreetingOverlay() {
         { data: expData }, { data: incData }, { data: subs }, { data: streams },
         { data: banks }, { data: wish }, { data: profile }, todayEvs, avatarUrl,
       ] = await Promise.all([
-        supabase.from('expenses').select('cost, date').gte('date', lmStart).lte('date', today),
+        supabase.from('expenses').select('cost, date, categories(name)').gte('date', lmStart).lte('date', today),
         supabase.from('income').select('amount').gte('date', monthStart).lte('date', today),
         supabase.from('subscriptions').select('name, cost, billing, next_renewal').eq('status', 'Active'),
         supabase.from('revenue_streams').select('name, amount, freq, next_pay_date'),
@@ -184,9 +205,26 @@ export function GreetingOverlay() {
       ])
       if (gen !== genRef.current) return
 
-      const exp = (expData ?? []) as { cost: number; date: string }[]
+      const exp = (expData ?? []) as unknown as { cost: number; date: string; categories: { name: string } | null }[]
       const spent = exp.filter(e => e.date >= monthStart).reduce((s, e) => s + Number(e.cost), 0)
       const lastMonthToDate = exp.filter(e => e.date < monthStart && e.date <= lmSameDay).reduce((s, e) => s + Number(e.cost), 0)
+
+      // Per-day spend → running totals for the pace chart
+      const daysInMonth = new Date(ty, tm, 0).getDate()
+      const prevDays    = new Date(ty, tm - 1, 0).getDate()
+      const daily = new Array<number>(td).fill(0)
+      const prevDaily = new Array<number>(prevDays).fill(0)
+      const byCat = new Map<string, number>()
+      for (const e of exp) {
+        const day = Number(e.date.slice(8, 10)) - 1
+        if (e.date >= monthStart) {
+          if (day < td) daily[day] += Number(e.cost)
+          const cat = e.categories?.name ?? 'Other'
+          byCat.set(cat, (byCat.get(cat) ?? 0) + Number(e.cost))
+        } else if (day < prevDays) prevDaily[day] += Number(e.cost)
+      }
+      const running = (a: number[]) => { let t = 0; return a.map(v => (t += v)) }
+      const top = [...byCat.entries()].sort((a, b) => b[1] - a[1])[0]
       const income = (incData ?? []).reduce((s, r) => s + Number(r.amount), 0)
 
       const upcoming: UpItem[] = []
@@ -213,6 +251,8 @@ export function GreetingOverlay() {
         spent, income, lastMonthToDate, upcoming, today: todayEvs,
         netWorth: (banks ?? []).reduce((s, b) => s + Number(b.balance ?? 0), 0),
         enRoute: (wish ?? []).length,
+        cum: running(daily), prevCum: running(prevDaily), daysInMonth,
+        topCat: top ? { name: top[0], amount: top[1] } : null,
       })
       setReady(true)
     }
@@ -247,18 +287,27 @@ export function GreetingOverlay() {
 
   const net  = (brief?.income ?? 0) - (brief?.spent ?? 0)
   const pace = brief && brief.lastMonthToDate > 0 ? ((brief.spent - brief.lastMonthToDate) / brief.lastMonthToDate) * 100 : null
+  const projected = brief && brief.cum.length ? (brief.spent / brief.cum.length) * brief.daysInMonth : null
+  const chart = brief ? paceChart(brief) : null
   const dateLine = todayStr
     ? new Date(todayStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
     : ''
   const upShown = brief?.upcoming.slice(0, 4) ?? []
   const upMore  = (brief?.upcoming.length ?? 0) - upShown.length
+  const billsDue = brief?.upcoming.filter(u => u.kind === 'bill').reduce((s, u) => s + u.amount, 0) ?? 0
+  const payDue   = brief?.upcoming.filter(u => u.kind === 'pay').reduce((s, u) => s + u.amount, 0) ?? 0
   const evShown = brief?.today?.slice(0, 3) ?? []
   const evMore  = (brief?.today?.length ?? 0) - evShown.length
 
-  const label: React.CSSProperties = { fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgb(var(--rgb-ink-muted))', fontFamily: M }
-  const tile: React.CSSProperties = { background: 'rgb(var(--rgb-ink) / 0.05)', borderRadius: 18, padding: '14px 16px' }
-  const chip: React.CSSProperties = { flex: 1, display: 'flex', alignItems: 'center', gap: 8, background: 'rgb(var(--rgb-ink) / 0.05)', borderRadius: 14, padding: '10px 12px', fontFamily: M }
-  const skeleton = (w: number) => <span style={{ display: 'inline-block', height: 12, width: w, borderRadius: 4, background: 'rgb(var(--rgb-ink) / 0.08)' }} />
+  const muted = 'rgb(var(--rgb-ink-muted))'
+  const ink   = 'rgb(var(--rgb-ink))'
+  const hair  = 'rgb(var(--rgb-ink) / 0.07)'
+  const label: React.CSSProperties = { fontSize: 10.5, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: muted, fontFamily: M }
+  const head: React.CSSProperties = { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 10 }
+  const section = (d: number): React.CSSProperties => ({ padding: '16px 0', borderTop: `1px solid ${hair}`, ['--d' as string]: `${d}ms` })
+  const statNum: React.CSSProperties = { fontSize: 15, fontWeight: 600, color: ink, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+  const statLbl: React.CSSProperties = { fontSize: 11, color: muted, marginBottom: 2 }
+  const cell = (i: number): React.CSSProperties => ({ flex: 1, minWidth: 0, paddingLeft: i ? 12 : 0, borderLeft: i ? `1px solid ${hair}` : 'none' })
 
   return (
     <div
@@ -282,14 +331,14 @@ export function GreetingOverlay() {
       {/* Same card on phone and desktop: max 380px, narrower only on small screens */}
       {ready && <div className={exiting ? 'greet-card-out' : 'greet-card-in'} style={{
         position: 'relative',
-        width: '100%', maxWidth: 380, maxHeight: 'min(88vh, 780px)',
+        width: '100%', maxWidth: 380, maxHeight: 'min(90vh, 820px)',
         borderRadius: 28, overflow: 'hidden',
         background: 'var(--color-bg-surface)',
         boxShadow: '0 40px 100px rgba(0,0,0,0.5), 0 0 0 0.5px rgb(var(--rgb-ink) / 0.10)',
         display: 'flex', flexDirection: 'column',
       }}>
         {/* Banner: profile photo under a dark gradient, greeting on top */}
-        <div style={{ position: 'relative', height: 172, flexShrink: 0, overflow: 'hidden', background: '#0c0c0f' }}>
+        <div style={{ position: 'relative', height: 150, flexShrink: 0, overflow: 'hidden', background: '#0c0c0f' }}>
           {avatar ? (
             <img
               src={hiRes(avatar)} alt="" draggable={false}
@@ -299,111 +348,143 @@ export function GreetingOverlay() {
           ) : (
             <div className="greet-banner-img" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(150deg, #E9CD7A 0%, #B08A2A 55%, #3a2c08 100%)' }} />
           )}
-          {/* Dark wash for legibility + a warm gold glint, fading into the card */}
+          {/* Dark wash for legibility, fading into the card */}
           <div style={{
             position: 'absolute', inset: 0,
-            background: [
-              'radial-gradient(90% 70% at 85% 0%, rgba(212,175,55,0.22), transparent 60%)',
-              'linear-gradient(180deg, rgba(6,6,9,0.25) 0%, rgba(6,6,9,0.55) 50%, rgba(6,6,9,0.88) 82%, var(--color-bg-surface) 100%)',
-            ].join(', '),
+            background: 'linear-gradient(180deg, rgba(6,6,9,0.3) 0%, rgba(6,6,9,0.6) 50%, rgba(6,6,9,0.9) 82%, var(--color-bg-surface) 100%)',
           }} />
-          <div style={{ position: 'absolute', left: 22, right: 22, bottom: 14 }}>
-            <p style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.72)', fontFamily: M, letterSpacing: '0.01em' }}>{greeting}</p>
-            <h1 style={{ fontSize: 30, fontWeight: 700, letterSpacing: '-0.025em', color: '#fff', lineHeight: 1.1, fontFamily: M, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textShadow: '0 2px 16px rgba(0,0,0,0.45)' }}>
-              {name || ' '}
+          <div style={{ position: 'absolute', left: 22, right: 22, bottom: 10 }}>
+            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', fontFamily: M }}>{dateLine}</p>
+            <h1 style={{ marginTop: 4, fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em', color: '#fff', lineHeight: 1.15, fontFamily: M, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {greeting}{name ? `, ${name}` : ''}
             </h1>
-            <p style={{ marginTop: 3, fontSize: 12.5, color: 'rgba(255,255,255,0.6)', fontFamily: M }}>{dateLine}</p>
           </div>
         </div>
 
-        <div style={{ overflowY: 'auto', padding: '14px 16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {/* Today */}
-          <section style={tile}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-              <CalendarDays size={15} color="#D4AF37" strokeWidth={2} />
-              <span style={label}>Today</span>
+        <div style={{ overflowY: 'auto', padding: '4px 22px 6px', fontFamily: M }}>
+          {/* Month so far: number, pace chart, three stats */}
+          <section className="greet-rise" style={{ padding: '12px 0 18px', ['--d' as string]: '120ms' }}>
+            <div style={head}>
+              <span style={label}>Spent this month</span>
+              {pace !== null && (
+                <span style={{ fontSize: 11.5, fontWeight: 600, color: pace <= 0 ? 'var(--sem-income)' : '#ef4444', whiteSpace: 'nowrap' }}>
+                  {pace <= 0 ? '↓' : '↑'} {Math.abs(pace).toFixed(0)}% vs last month
+                </span>
+              )}
             </div>
-            {brief?.today == null ? skeleton(140) : evShown.length === 0 ? (
-              <p style={{ fontSize: 14, color: 'rgb(var(--rgb-ink-muted))', fontFamily: M }}>Nothing on the calendar today</p>
+            <p style={{ fontSize: 40, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1, color: ink, fontFamily: 'var(--font-big-shoulders)' }}>
+              {brief ? $fd(brief.spent) : '—'}
+            </p>
+
+            {chart && (
+              <div style={{ position: 'relative', marginTop: 16, height: CH_H }}>
+                <svg viewBox={`0 0 ${CH_W} ${CH_H}`} preserveAspectRatio="none" width="100%" height={CH_H} style={{ display: 'block', overflow: 'visible' }}>
+                  <defs>
+                    <linearGradient id="greet-area" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#D4AF37" stopOpacity="0.28" />
+                      <stop offset="100%" stopColor="#D4AF37" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  <line x1="0" x2={CH_W} y1={CH_H} y2={CH_H} stroke="rgb(var(--rgb-ink) / 0.08)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+                  {chart.prev && <path d={chart.prev} fill="none" stroke="rgb(var(--rgb-ink) / 0.28)" strokeWidth="1.5" strokeDasharray="3 4" strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
+                  {chart.area && <path d={chart.area} fill="url(#greet-area)" />}
+                  <path d={chart.cur} fill="none" stroke="#D4AF37" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                </svg>
+                <span style={{ position: 'absolute', left: chart.dot.left, top: chart.dot.top, width: 8, height: 8, marginLeft: -4, marginTop: -4, borderRadius: '50%', background: '#D4AF37', boxShadow: '0 0 0 3px rgb(212 175 55 / 0.22)' }} />
+                {/* Draws the chart in left to right */}
+                <div className="greet-wipe" style={{ position: 'absolute', top: -8, bottom: -2, left: -6, right: -8, background: 'var(--color-bg-surface)', ['--d' as string]: '380ms' }} />
+              </div>
+            )}
+            {chart && (
+              <div style={{ display: 'flex', gap: 14, marginTop: 8, fontSize: 10.5, color: muted }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><i style={{ width: 10, height: 2, borderRadius: 2, background: '#D4AF37' }} />This month</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><i style={{ width: 10, height: 0, borderTop: '1.5px dashed rgb(var(--rgb-ink) / 0.35)' }} />Last month</span>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', marginTop: 16 }}>
+              <div style={cell(0)}>
+                <p style={statLbl}>Income</p>
+                <p style={{ ...statNum, color: 'var(--sem-income)' }}>{brief ? `+${$fk(brief.income)}` : '—'}</p>
+              </div>
+              <div style={cell(1)}>
+                <p style={statLbl}>Net</p>
+                <p style={{ ...statNum, color: net >= 0 ? 'var(--sem-income)' : '#ef4444' }}>{brief ? `${net >= 0 ? '+' : '−'}${$fk(Math.abs(net))}` : '—'}</p>
+              </div>
+              <div style={cell(2)}>
+                <p style={statLbl}>On pace for</p>
+                <p style={statNum}>{projected !== null ? $fk(projected) : '—'}</p>
+              </div>
+            </div>
+          </section>
+
+          {/* Today */}
+          <section className="greet-rise" style={section(220)}>
+            <div style={head}>
+              <span style={label}>Today</span>
+              {!!brief?.today?.length && <span style={{ fontSize: 11.5, color: muted }}>{brief.today.length} {brief.today.length === 1 ? 'event' : 'events'}</span>}
+            </div>
+            {brief?.today == null || evShown.length === 0 ? (
+              <p style={{ fontSize: 14, color: muted }}>Nothing on the calendar</p>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {evShown.map((e, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 10, fontFamily: M }}>
-                    <span style={{ width: 54, flexShrink: 0, fontSize: 12.5, color: 'rgb(var(--rgb-ink-muted))', fontVariantNumeric: 'tabular-nums' }}>{e.time ? fmtTime(e.time) : 'All day'}</span>
-                    <span style={{ fontSize: 14.5, color: 'rgb(var(--rgb-ink))', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title}</span>
+                  <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+                    <span style={{ width: 52, flexShrink: 0, fontSize: 12.5, color: muted, fontVariantNumeric: 'tabular-nums' }}>{e.time ? fmtTime(e.time) : 'All day'}</span>
+                    <span style={{ fontSize: 14.5, color: ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title}</span>
                   </div>
                 ))}
-                {evMore > 0 && <p style={{ fontSize: 12.5, color: 'rgb(var(--rgb-ink-muted))', fontFamily: M, paddingLeft: 64 }}>+{evMore} more</p>}
+                {evMore > 0 && <p style={{ fontSize: 12.5, color: muted, paddingLeft: 64 }}>+{evMore} more</p>}
               </div>
             )}
           </section>
 
-          {/* Month so far */}
-          <section style={tile}>
-            <p style={label}>Spent this month</p>
-            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10, marginTop: 4 }}>
-              <span style={{ fontSize: 38, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1, color: 'rgb(var(--rgb-ink))', fontFamily: 'var(--font-big-shoulders)' }}>
-                {brief ? $fd(brief.spent) : skeleton(110)}
-              </span>
-              {pace !== null && (
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 999,
-                  fontSize: 12, fontWeight: 600, fontFamily: M, whiteSpace: 'nowrap',
-                  color: pace <= 0 ? '#22c55e' : '#ef4444',
-                  background: pace <= 0 ? 'rgba(34,197,94,0.14)' : 'rgba(239,68,68,0.14)',
-                }}>
-                  {pace <= 0 ? <TrendingDown size={13} strokeWidth={2.25} /> : <TrendingUp size={13} strokeWidth={2.25} />}
-                  {Math.abs(pace).toFixed(0)}% vs last month
+          {/* Next 7 days */}
+          <section className="greet-rise" style={section(300)}>
+            <div style={head}>
+              <span style={label}>Next 7 days</span>
+              {brief && (billsDue > 0 || payDue > 0) && (
+                <span style={{ fontSize: 11.5, color: muted, whiteSpace: 'nowrap' }}>
+                  {billsDue > 0 && <>{$fk(billsDue)} out</>}
+                  {billsDue > 0 && payDue > 0 && ' · '}
+                  {payDue > 0 && <span style={{ color: 'var(--sem-income)' }}>+{$fk(payDue)} in</span>}
                 </span>
               )}
             </div>
-            <div style={{ display: 'flex', gap: 18, marginTop: 10, fontFamily: M, fontSize: 13 }}>
-              <span style={{ color: 'rgb(var(--rgb-ink-muted))' }}>Income <b style={{ color: 'var(--sem-income)', fontWeight: 600 }}>{brief ? `+${$fk(brief.income)}` : '—'}</b></span>
-              <span style={{ color: 'rgb(var(--rgb-ink-muted))' }}>Net <b style={{ color: net >= 0 ? 'var(--sem-income)' : '#ef4444', fontWeight: 600 }}>{brief ? `${net >= 0 ? '+' : '−'}${$fk(Math.abs(net))}` : '—'}</b></span>
-            </div>
-          </section>
-
-          {/* Next 7 days */}
-          <section style={tile}>
-            <p style={{ ...label, marginBottom: 10 }}>Next 7 days</p>
-            {!brief ? skeleton(160) : upShown.length === 0 ? (
-              <p style={{ fontSize: 14, color: 'rgb(var(--rgb-ink-muted))', fontFamily: M }}>No bills or paydays coming up</p>
+            {upShown.length === 0 ? (
+              <p style={{ fontSize: 14, color: muted }}>No bills or paydays coming up</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
                 {upShown.map((u, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: M }}>
-                    <span style={{ width: 26, height: 26, borderRadius: 8, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: u.kind === 'pay' ? 'rgba(34,197,94,0.15)' : 'rgba(212,175,55,0.15)' }}>
-                      {u.kind === 'pay' ? <ArrowDownLeft size={14} color="#22c55e" strokeWidth={2.25} /> : <Receipt size={14} color="#D4AF37" strokeWidth={2} />}
-                    </span>
-                    <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, color: 'rgb(var(--rgb-ink))', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.title}</span>
-                    <span style={{ fontSize: 12.5, color: 'rgb(var(--rgb-ink-muted))' }}>{dayLabel(u.date, todayStr)}</span>
-                    <span style={{ width: 68, textAlign: 'right', fontSize: 14, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: u.kind === 'pay' ? 'var(--sem-income)' : 'rgb(var(--rgb-ink))' }}>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, background: u.kind === 'pay' ? 'var(--sem-income)' : '#D4AF37' }} />
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, color: ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.title}</span>
+                    <span style={{ fontSize: 12.5, color: muted }}>{dayLabel(u.date, todayStr)}</span>
+                    <span style={{ width: 62, textAlign: 'right', fontSize: 14, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: u.kind === 'pay' ? 'var(--sem-income)' : ink }}>
                       {u.kind === 'pay' ? '+' : ''}{$fk(u.amount)}
                     </span>
                   </div>
                 ))}
-                {upMore > 0 && <p style={{ fontSize: 12.5, color: 'rgb(var(--rgb-ink-muted))', fontFamily: M, paddingLeft: 36 }}>+{upMore} more</p>}
+                {upMore > 0 && <p style={{ fontSize: 12.5, color: muted, paddingLeft: 16 }}>+{upMore} more</p>}
               </div>
             )}
           </section>
 
           {/* Footnotes */}
-          <div style={{ display: 'flex', gap: 10 }}>
-            <div style={chip}>
-              <Landmark size={15} color="#D4AF37" strokeWidth={2} />
-              <div style={{ minWidth: 0 }}>
-                <p style={{ fontSize: 11, color: 'rgb(var(--rgb-ink-muted))' }}>Net worth</p>
-                <p style={{ fontSize: 14.5, fontWeight: 600, color: 'rgb(var(--rgb-ink))' }}>{brief ? $fk(brief.netWorth) : '—'}</p>
-              </div>
+          <section className="greet-rise" style={{ ...section(380), display: 'flex' }}>
+            <div style={cell(0)}>
+              <p style={statLbl}>Net worth</p>
+              <p style={statNum}>{brief ? $fk(brief.netWorth) : '—'}</p>
             </div>
-            <div style={chip}>
-              <Package size={15} color="#D4AF37" strokeWidth={2} />
-              <div style={{ minWidth: 0 }}>
-                <p style={{ fontSize: 11, color: 'rgb(var(--rgb-ink-muted))' }}>On the way</p>
-                <p style={{ fontSize: 14.5, fontWeight: 600, color: 'rgb(var(--rgb-ink))' }}>{brief ? `${brief.enRoute} ${brief.enRoute === 1 ? 'order' : 'orders'}` : '—'}</p>
-              </div>
+            <div style={cell(1)}>
+              <p style={statLbl}>Top category</p>
+              <p style={statNum}>{brief?.topCat ? brief.topCat.name : '—'}</p>
             </div>
-          </div>
+            <div style={cell(2)}>
+              <p style={statLbl}>On the way</p>
+              <p style={statNum}>{brief ? `${brief.enRoute} ${brief.enRoute === 1 ? 'order' : 'orders'}` : '—'}</p>
+            </div>
+          </section>
         </div>
       </div>}
 
