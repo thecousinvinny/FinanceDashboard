@@ -11,7 +11,8 @@ export interface HeroSeries {
   cum:      number[]          // running spend so far (length = slots elapsed)
   prev:     number[] | null   // last month's running spend, full length
   prevName: string | null     // "Sep"
-  out:      number[]          // spend per slot (for the stats strip)
+  out:      number[]          // spend per slot, subs included
+  sub:      number[]          // subscription payments per slot (for the stats strip)
   inc:      number[]          // income per slot
 }
 

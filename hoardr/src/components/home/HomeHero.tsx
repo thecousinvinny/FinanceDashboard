@@ -36,11 +36,9 @@ export function HomeHero({ spent, month, year }: Props) {
   const prevAt  = s.prev && n ? s.prev[Math.min(n, s.prev.length) - 1] : null
   const pace    = prevAt ? ((s.cum[n - 1] - prevAt) / prevAt) * 100 : null
 
-  // Stats strip: full days only for no-spend (today isn't over)
+  // Stats strip: subs split out of the total, so Spent + Subs = the hero number
+  const subs      = s.sub.reduce((a, v) => a + v, 0)
   const avg       = n ? total / n : 0
-  const quiet     = isYear
-    ? s.inc.filter((v, i) => v > (s.out[i] ?? 0)).length
-    : s.out.slice(0, Math.max(0, n - 1)).filter(v => v === 0).length
 
   // Capture-phase swipe detection — intercepts quick horizontal flicks before PaceChart sees them.
   // gestureMode coordinates with PaceChart's long-press scrub: once scrubbing, swipe is suppressed.
@@ -189,20 +187,17 @@ export function HomeHero({ spent, month, year }: Props) {
 
       {/* Quick stats */}
       <div className="absolute left-0 right-0 bottom-0 flex border-t border-ink/[0.06]" style={{ height: 52, zIndex: 2 }}>
-        <div className="flex-1 min-w-0" style={{ padding: '8px 0 0 16px' }}>
-          <p className={statLbl}>{isYear ? 'Avg / month' : 'Avg / day'}</p>
-          <p className="text-ink" style={statNum}><SlotNumber value={avg} format={$fk} /></p>
-        </div>
-        <div className="flex-1 min-w-0 border-l border-ink/[0.06]" style={{ padding: '8px 0 0 12px' }}>
-          <p className={statLbl}>Net</p>
-          <p style={{ ...statNum, color: net >= 0 ? 'var(--sem-income)' : '#ef4444' }}>
-            <SlotNumber value={Math.abs(net)} format={v => `${net >= 0 ? '+' : MINUS}${$fk(v)}`} />
-          </p>
-        </div>
-        <div className="flex-1 min-w-0 border-l border-ink/[0.06]" style={{ padding: '8px 0 0 12px' }}>
-          <p className={statLbl}>{isYear ? 'Green months' : 'No-spend days'}</p>
-          <p className="text-ink" style={statNum}><SlotNumber value={quiet} format={v => String(Math.round(v))} /></p>
-        </div>
+        {([
+          ['Spent',  <SlotNumber key="s" value={Math.max(0, total - subs)} format={$fk} />, 'var(--sem-expense)'],
+          ['Subs',   <SlotNumber key="u" value={subs} format={$fk} />, 'var(--sem-sub)'],
+          ['Net',    <SlotNumber key="n" value={Math.abs(net)} format={v => `${net >= 0 ? '+' : MINUS}${$fk(v)}`} />, net >= 0 ? 'var(--sem-income)' : '#ef4444'],
+          [isYear ? 'Avg / mo' : 'Avg / day', <SlotNumber key="a" value={avg} format={$fk} />, undefined],
+        ] as const).map(([label, value, color], i) => (
+          <div key={label} className={`flex-1 min-w-0${i ? ' border-l border-ink/[0.06]' : ''}`} style={{ padding: i ? '8px 0 0 10px' : '8px 0 0 16px' }}>
+            <p className={statLbl}>{label}</p>
+            <p className={color ? undefined : 'text-ink'} style={{ ...statNum, color }}>{value}</p>
+          </div>
+        ))}
       </div>
     </div>
   )

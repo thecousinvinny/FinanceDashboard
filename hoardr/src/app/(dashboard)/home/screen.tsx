@@ -53,7 +53,7 @@ interface HomeCache {
   heroYear:          HeroSeries
 }
 
-const EMPTY_SERIES: HeroSeries = { slots: 1, labels: [], cum: [], prev: null, prevName: null, out: [], inc: [] }
+const EMPTY_SERIES: HeroSeries = { slots: 1, labels: [], cum: [], prev: null, prevName: null, out: [], sub: [], inc: [] }
 const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const running = (a: number[]) => { let t = 0; return a.map(v => (t += v)) }
@@ -143,7 +143,7 @@ export default function HomePage() {
           .order('created_at', { ascending: false })
           .limit(5)
           .abortSignal(sig),
-        supabase.from('expenses').select('cost, date').gte('date', histStart).lte('date', todayStr).abortSignal(sig),
+        supabase.from('expenses').select('cost, date, name').gte('date', histStart).lte('date', todayStr).abortSignal(sig),
         supabase.from('income').select('amount, date').gte('date', histStart).lte('date', todayStr).abortSignal(sig),
         supabase.from('banks').select('balance').abortSignal(sig),
       ])
@@ -201,8 +201,13 @@ export default function HomePage() {
 
       // Hero: running spend this month vs last month, and this year by month
       const outByDay: Record<string, number> = {}
+      const subByDay: Record<string, number> = {}
       const incByDay: Record<string, number> = {}
-      for (const e of yearExp ?? []) { const k = String(e.date); outByDay[k] = (outByDay[k] ?? 0) + Number(e.cost) }
+      for (const e of yearExp ?? []) {
+        const k = String(e.date)
+        outByDay[k] = (outByDay[k] ?? 0) + Number(e.cost)
+        if (subNameSet.has(String(e.name ?? '').toLowerCase())) subByDay[k] = (subByDay[k] ?? 0) + Number(e.cost)
+      }
       for (const i of yearInc ?? []) { const k = String(i.date); incByDay[k] = (incByDay[k] ?? 0) + Number(i.amount) }
       const monthKey  = `${y}-${m}`
       const daysIn    = new Date(Number(y), Number(m), 0).getDate()
@@ -218,10 +223,13 @@ export default function HomePage() {
         prev:     running(lmOut),
         prevName: MONTH_ABBR[lm.getMonth()],
         out:      monthOut,
+        sub:      elapsed.map(d => subByDay[dayOf(monthKey, d)] ?? 0),
         inc:      elapsed.map(d => incByDay[dayOf(monthKey, d)] ?? 0),
       }
       const outByMonth: Record<string, number> = {}
+      const subByMonth: Record<string, number> = {}
       const incByMonth: Record<string, number> = {}
+      for (const k in subByDay) if (k >= yearStart) subByMonth[k.slice(0, 7)] = (subByMonth[k.slice(0, 7)] ?? 0) + subByDay[k]
       for (const k in outByDay) if (k >= yearStart) outByMonth[k.slice(0, 7)] = (outByMonth[k.slice(0, 7)] ?? 0) + outByDay[k]
       for (const k in incByDay) if (k >= yearStart) incByMonth[k.slice(0, 7)] = (incByMonth[k.slice(0, 7)] ?? 0) + incByDay[k]
       const months   = Array.from({ length: Number(m) }, (_, i) => `${y}-${String(i + 1).padStart(2, '0')}`)
@@ -233,6 +241,7 @@ export default function HomePage() {
         prev:     null,
         prevName: null,
         out:      yearOut,
+        sub:      months.map(k => subByMonth[k] ?? 0),
         inc:      months.map(k => incByMonth[k] ?? 0),
       }
 
