@@ -9,6 +9,7 @@ import type { Session } from '@supabase/supabase-js'
 import { GREET_BOOT_CLASS } from '@/lib/greeting-boot'
 import { replayActiveScreen } from '@/lib/tab-nav'
 import { LoadBars } from '@/components/ui/LoadBars'
+import { SlotNumber } from '@/components/ui/SlotNumber'
 
 /**
  * Daily brief shown when the app opens. Doubles as the warm-up screen: while
@@ -116,6 +117,8 @@ export function GreetingOverlay() {
   // 0 = the automatic showing at launch; each manual preview bumps it
   const [runKey, setRunKey] = useState(0)
   const authSubRef = useRef<{ unsubscribe: () => void } | null>(null)
+  // When the card entered: every number's roll is timed from it
+  const enterAt = useRef(0)
 
   // Layout effect: the scrim is up before the first paint after hydration, so
   // the page never flashes underneath before the brief appears.
@@ -123,6 +126,7 @@ export function GreetingOverlay() {
     // At launch the <head> script has already decided (lib/greeting-boot.ts)
     if (runKey === 0 && !document.documentElement.classList.contains(GREET_BOOT_CLASS)) return
     setReady(false); setWaiting(false); setExiting(false); setBrief(null)
+    enterAt.current = 0
     const today = localToday()
     setTodayStr(today)
     setGreeting(timeGreeting())
@@ -284,6 +288,8 @@ export function GreetingOverlay() {
   }
 
   if (!show) return null
+  if (ready && !enterAt.current) enterAt.current = performance.now()
+  const rollAt = (ms: number) => enterAt.current + ms
 
   const net  = (brief?.income ?? 0) - (brief?.spent ?? 0)
   const pace = brief && brief.lastMonthToDate > 0 ? ((brief.spent - brief.lastMonthToDate) / brief.lastMonthToDate) * 100 : null
@@ -305,7 +311,8 @@ export function GreetingOverlay() {
   const label: React.CSSProperties = { fontSize: 10.5, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: muted, fontFamily: M }
   const head: React.CSSProperties = { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 10 }
   const section = (d: number): React.CSSProperties => ({ padding: '13px 0', borderTop: `1px solid ${hair}`, ['--d' as string]: `${d}ms` })
-  const statNum: React.CSSProperties = { fontSize: 15, fontWeight: 600, color: ink, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+  // Display face, like the rolling digits inside it
+  const statNum: React.CSSProperties = { display: 'flex', fontSize: 18, fontWeight: 700, fontFamily: 'var(--font-big-shoulders)', letterSpacing: '0.01em', lineHeight: 1.1, color: ink, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
   const statLbl: React.CSSProperties = { fontSize: 11, color: muted, marginBottom: 2 }
   const cell = (i: number): React.CSSProperties => ({ flex: 1, minWidth: 0, paddingLeft: i ? 12 : 0, borderLeft: i ? `1px solid ${hair}` : 'none' })
 
@@ -372,13 +379,13 @@ export function GreetingOverlay() {
             <div style={head}>
               <span style={label}>Spent this month</span>
               {pace !== null && (
-                <span style={{ fontSize: 11.5, fontWeight: 600, color: pace <= 0 ? 'var(--sem-income)' : '#ef4444', whiteSpace: 'nowrap' }}>
+                <span className="greet-pop" style={{ ['--d' as string]: '1250ms', display: 'inline-block', fontSize: 11.5, fontWeight: 600, color: pace <= 0 ? 'var(--sem-income)' : '#ef4444', whiteSpace: 'nowrap' }}>
                   {pace <= 0 ? '↓' : '↑'} {Math.abs(pace).toFixed(0)}% vs last month
                 </span>
               )}
             </div>
-            <p style={{ fontSize: 40, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1, color: ink, fontFamily: 'var(--font-big-shoulders)' }}>
-              {brief ? $fd(brief.spent) : '—'}
+            <p style={{ display: 'flex', fontSize: 40, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1, color: ink, fontFamily: 'var(--font-big-shoulders)' }}>
+              {brief ? <SlotNumber value={brief.spent} format={$fd} startAt={rollAt(260)} /> : '—'}
             </p>
 
             {chart && (
@@ -391,13 +398,17 @@ export function GreetingOverlay() {
                     </linearGradient>
                   </defs>
                   <line x1="0" x2={CH_W} y1={CH_H} y2={CH_H} stroke="rgb(var(--rgb-ink) / 0.08)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-                  {chart.prev && <path d={chart.prev} fill="none" stroke="rgb(var(--rgb-ink) / 0.28)" strokeWidth="1.5" strokeDasharray="3 4" strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
+                  {chart.prev && <path className="greet-fade" style={{ ['--d' as string]: '300ms' }} d={chart.prev} fill="none" stroke="rgb(var(--rgb-ink) / 0.28)" strokeWidth="1.5" strokeDasharray="3 4" strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
                   {chart.area && <path d={chart.area} fill="url(#greet-area)" />}
                   <path d={chart.cur} fill="none" stroke="#D4AF37" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
                 </svg>
-                <span style={{ position: 'absolute', left: chart.dot.left, top: chart.dot.top, width: 8, height: 8, marginLeft: -4, marginTop: -4, borderRadius: '50%', background: '#D4AF37', boxShadow: '0 0 0 3px rgb(212 175 55 / 0.22)' }} />
                 {/* Draws the chart in left to right */}
-                <div className="greet-wipe" style={{ position: 'absolute', top: -8, bottom: -2, left: -6, right: -8, background: 'var(--color-bg-surface)', ['--d' as string]: '380ms' }} />
+                <div className="greet-wipe" style={{ position: 'absolute', top: -8, bottom: -2, left: -6, right: -8, background: 'var(--color-bg-surface)', ['--d' as string]: '420ms' }} />
+                {/* Today's dot lands once the line reaches it, then keeps a slow pulse */}
+                <span style={{ position: 'absolute', left: chart.dot.left, top: chart.dot.top, width: 0, height: 0 }}>
+                  <span className="greet-pulse" style={{ position: 'absolute', left: -4, top: -4, width: 8, height: 8, borderRadius: '50%', background: '#D4AF37', ['--d' as string]: '1700ms' }} />
+                  <span className="greet-pop" style={{ position: 'absolute', left: -4, top: -4, width: 8, height: 8, borderRadius: '50%', background: '#D4AF37', boxShadow: '0 0 0 3px rgb(212 175 55 / 0.22)', ['--d' as string]: '1400ms' }} />
+                </span>
               </div>
             )}
             {chart && (
@@ -410,15 +421,15 @@ export function GreetingOverlay() {
             <div style={{ display: 'flex', marginTop: 14 }}>
               <div style={cell(0)}>
                 <p style={statLbl}>Income</p>
-                <p style={{ ...statNum, color: 'var(--sem-income)' }}>{brief ? `+${$fk(brief.income)}` : '—'}</p>
+                <p style={{ ...statNum, color: 'var(--sem-income)' }}>{brief ? <SlotNumber value={brief.income} format={n => `+${$fk(n)}`} startAt={rollAt(520)} /> : '—'}</p>
               </div>
               <div style={cell(1)}>
                 <p style={statLbl}>Net</p>
-                <p style={{ ...statNum, color: net >= 0 ? 'var(--sem-income)' : '#ef4444' }}>{brief ? `${net >= 0 ? '+' : '−'}${$fk(Math.abs(net))}` : '—'}</p>
+                <p style={{ ...statNum, color: net >= 0 ? 'var(--sem-income)' : '#ef4444' }}>{brief ? <SlotNumber value={Math.abs(net)} format={n => `${net >= 0 ? '+' : '−'}${$fk(n)}`} startAt={rollAt(600)} /> : '—'}</p>
               </div>
               <div style={cell(2)}>
                 <p style={statLbl}>On pace for</p>
-                <p style={statNum}>{projected !== null ? $fk(projected) : '—'}</p>
+                <p style={statNum}>{projected !== null ? <SlotNumber value={projected} format={$fk} startAt={rollAt(680)} /> : '—'}</p>
               </div>
             </div>
           </section>
@@ -434,7 +445,7 @@ export function GreetingOverlay() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {evShown.map((e, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+                  <div key={i} className="greet-rise" style={{ display: 'flex', alignItems: 'baseline', gap: 12, ['--d' as string]: `${320 + i * 70}ms` }}>
                     <span style={{ width: 52, flexShrink: 0, fontSize: 12.5, color: muted, fontVariantNumeric: 'tabular-nums' }}>{e.time ? fmtTime(e.time) : 'All day'}</span>
                     <span style={{ fontSize: 14.5, color: ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title}</span>
                   </div>
@@ -461,7 +472,7 @@ export function GreetingOverlay() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
                 {upShown.map((u, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div key={i} className="greet-rise" style={{ display: 'flex', alignItems: 'center', gap: 10, ['--d' as string]: `${420 + i * 70}ms` }}>
                     <span style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, background: u.kind === 'pay' ? 'var(--sem-income)' : '#D4AF37' }} />
                     <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, color: ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.title}</span>
                     <span style={{ fontSize: 12.5, color: muted }}>{dayLabel(u.date, todayStr)}</span>
@@ -479,7 +490,7 @@ export function GreetingOverlay() {
           <section className="greet-rise" style={{ ...section(380), display: 'flex' }}>
             <div style={cell(0)}>
               <p style={statLbl}>Net worth</p>
-              <p style={statNum}>{brief ? $fk(brief.netWorth) : '—'}</p>
+              <p style={statNum}>{brief ? <SlotNumber value={brief.netWorth} format={$fk} startAt={rollAt(820)} /> : '—'}</p>
             </div>
             <div style={cell(1)}>
               <p style={statLbl}>Top category</p>

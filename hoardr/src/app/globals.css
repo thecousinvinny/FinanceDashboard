@@ -804,3 +804,27 @@ html.boot-splash body::after {
 @media (prefers-reduced-motion: reduce) {
   .greet-rise, .greet-wipe { animation-duration: 1ms; animation-delay: 0ms; }
 }
+/* A small thing landing: scales up past full size and settles */
+@keyframes greet-pop {
+  0%   { opacity: 0; transform: scale(0.3); }
+  60%  { opacity: 1; transform: scale(1.25); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.greet-pop {
+  animation: greet-pop 520ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+/* A soft ring that keeps breathing out from the chart's today dot */
+@keyframes greet-pulse {
+  0%   { opacity: 0.55; transform: scale(1); }
+  100% { opacity: 0;    transform: scale(3.2); }
+}
+.greet-pulse {
+  opacity: 0;
+  animation: greet-pulse 2s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
+  animation-delay: var(--d, 0ms);
+}
+@media (prefers-reduced-motion: reduce) {
+  .greet-pop { animation-duration: 1ms; animation-delay: 0ms; }
+  .greet-pulse { animation: none; }
+}

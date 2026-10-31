@@ -21,9 +21,10 @@ interface DrumProps {
   placeFromRight: number  // 0 = ones, 1 = tens, 2 = hundreds, …
   totalDigits:    number  // total digit count in the formatted number
   spinAt:         number  // when this number's spin started (0 = not yet shown)
+  exact?:         boolean // spinAt is a real start time, not a tab-slide estimate
 }
 
-function Drum({ digit, placeFromRight, totalDigits, spinAt }: DrumProps) {
+function Drum({ digit, placeFromRight, totalDigits, spinAt, exact }: DrumProps) {
   const trackRef  = useRef<HTMLSpanElement>(null)
   const prevDigit = useRef(digit)
 
@@ -51,13 +52,13 @@ function Drum({ digit, placeFromRight, totalDigits, spinAt }: DrumProps) {
     if (elapsed >= del + dur) { at(10 + d); return }
     at(0)
     // Waiting out a tab slide: start on its real end, reading the digit then
-    if (elapsed < 0) return onSlideDone(() => {
+    if (elapsed < 0 && !exact) return onSlideDone(() => {
       restart()
       at(10 + prevDigit.current, `transform ${dur}ms ${EASE} ${del}ms`)
     })
     restart()
     at(10 + d, `transform ${dur}ms ${EASE} ${del - elapsed}ms`)
-  }, [spinAt, dur, del])
+  }, [spinAt, dur, del, exact])
 
   // A value change. Mid-roll: glide on to the new digit. Settled: a short
   // forward roll from the old digit to the new one.
@@ -91,9 +92,12 @@ interface Props {
   value:      number
   format:     (n: number) => string
   className?: string
+  /** Outside a screen (the greeting): spin from this performance.now() time
+   *  instead of on screen visits */
+  startAt?:   number
 }
 
-export function SlotNumber({ value, format, className }: Props) {
+export function SlotNumber({ value, format, className, startAt }: Props) {
   // One spin per screen visit, timed per number. Its digits share the start
   // time, so a value that settles in stages (a reload's lists arriving one by
   // one) lands mid-spin instead of restarting it, and a drum remounted by a
@@ -104,7 +108,7 @@ export function SlotNumber({ value, format, className }: Props) {
   const spin  = useRef<{ visit: number; at: number } | null>(null)
   // After a tab slide, the roll waits for the screen to land (see afterSlide)
   if (visit > 0 && spin.current?.visit !== visit) spin.current = { visit, at: performance.now() + afterSlide() }
-  const spinAt = visit > 0 ? spin.current!.at : 0
+  const spinAt = startAt ?? (visit > 0 ? spin.current!.at : 0)
 
   const str    = format(value)
   const tokens = str.split('').map(c => ({ char: c, isDigit: /\d/.test(c) }))
@@ -124,6 +128,7 @@ export function SlotNumber({ value, format, className }: Props) {
             placeFromRight={placeFromRight}
             totalDigits={total}
             spinAt={spinAt}
+            exact={startAt !== undefined}
           />
         )
       })}
