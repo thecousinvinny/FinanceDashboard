@@ -154,7 +154,7 @@ function IncomeBarChart({ incomeList }: { incomeList: IncomeRow[] }) {
               <div style={{ position: 'absolute', left: 10, right: 10, top: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: 12, fontWeight: 500, color: 'rgb(var(--rgb-ink))', whiteSpace: 'nowrap' }}>
                   {m.label}
-                  {i === 0 && <span style={{ marginLeft: 6, fontSize: 10, color: 'rgb(var(--rgb-ink-faint))' }}>so far</span>}
+                  {i === 0 && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 500, color: 'rgb(var(--rgb-ink) / 0.72)' }}>so far</span>}
                 </span>
                 <span style={{ fontSize: 11, color: pct > 70 ? incColor : 'rgb(var(--rgb-ink-muted))', fontFamily: 'var(--font-big-shoulders)' }}>
                   {$f(m.total)}
