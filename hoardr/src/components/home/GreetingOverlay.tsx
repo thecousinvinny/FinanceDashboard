@@ -337,13 +337,15 @@ export function GreetingOverlay() {
         boxShadow: '0 40px 100px rgba(0,0,0,0.5), 0 0 0 0.5px rgb(var(--rgb-ink) / 0.10)',
         display: 'flex', flexDirection: 'column',
       }}>
-        {/* Banner: profile photo under a dark gradient, greeting on top */}
-        <div style={{ position: 'relative', height: 150, flexShrink: 0, overflow: 'hidden', background: '#0c0c0f' }}>
+        {/* One scroller: the photo scrolls away with the card on short screens */}
+        <div style={{ overflowY: 'auto', overscrollBehavior: 'contain' }}>
+        {/* Hero: the profile photo takes the top of the card, greeting where it fades out */}
+        <div style={{ position: 'relative', height: 'min(300px, 38vh)', minHeight: 220, overflow: 'hidden', background: '#0c0c0f' }}>
           {avatar ? (
             <img
               src={hiRes(avatar)} alt="" draggable={false}
               className="greet-banner-img"
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%' }}
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 25%' }}
             />
           ) : (
             <div className="greet-banner-img" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(150deg, #E9CD7A 0%, #B08A2A 55%, #3a2c08 100%)' }} />
@@ -351,17 +353,17 @@ export function GreetingOverlay() {
           {/* Dark wash for legibility, fading into the card */}
           <div style={{
             position: 'absolute', inset: 0,
-            background: 'linear-gradient(180deg, rgba(6,6,9,0.3) 0%, rgba(6,6,9,0.6) 50%, rgba(6,6,9,0.9) 82%, var(--color-bg-surface) 100%)',
+            background: 'linear-gradient(180deg, rgba(6,6,9,0) 38%, rgba(6,6,9,0.45) 65%, rgba(6,6,9,0.85) 86%, var(--color-bg-surface) 100%)',
           }} />
-          <div style={{ position: 'absolute', left: 22, right: 22, bottom: 10 }}>
+          <div style={{ position: 'absolute', left: 22, right: 22, bottom: 8 }}>
             <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', fontFamily: M }}>{dateLine}</p>
-            <h1 style={{ marginTop: 4, fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em', color: '#fff', lineHeight: 1.15, fontFamily: M, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <h1 style={{ marginTop: 4, fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em', color: '#fff', lineHeight: 1.15, fontFamily: M, textShadow: '0 2px 14px rgba(0,0,0,0.4)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {greeting}{name ? `, ${name}` : ''}
             </h1>
           </div>
         </div>
 
-        <div style={{ overflowY: 'auto', padding: '4px 22px 6px', fontFamily: M }}>
+        <div style={{ padding: '4px 22px 6px', fontFamily: M }}>
           {/* Month so far: number, pace chart, three stats */}
           <section className="greet-rise" style={{ padding: '12px 0 18px', ['--d' as string]: '120ms' }}>
             <div style={head}>
@@ -485,6 +487,7 @@ export function GreetingOverlay() {
               <p style={statNum}>{brief ? `${brief.enRoute} ${brief.enRoute === 1 ? 'order' : 'orders'}` : '—'}</p>
             </div>
           </section>
+        </div>
         </div>
       </div>}
 
