@@ -15,7 +15,7 @@ import { reportDbError, requireUser } from '@/lib/db-error'
 import { PullIndicator } from '@/components/ui/PullIndicator'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
-import type { DayPoint } from '@/components/home/SparkChart'
+import type { HeroSeries } from '@/components/home/PaceChart'
 import type { SeedTx } from '@/lib/data/transactions'
 import { Truck, PlusCircle, Star, ArrowUpCircle } from 'lucide-react'
 import { HoardChest } from '@/components/home/HoardChest'
@@ -49,9 +49,14 @@ interface HomeCache {
   upcoming:          UpcomingSub[]
   enRoute:           EnRouteItem[]
   activity:          ActivityRow[]
-  sparkPoints:       DayPoint[]
-  annualSparkPoints: DayPoint[]
+  heroMonth:         HeroSeries
+  heroYear:          HeroSeries
 }
+
+const EMPTY_SERIES: HeroSeries = { slots: 1, labels: [], cum: [], prev: null, prevName: null, out: [], inc: [] }
+const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December']
+const running = (a: number[]) => { let t = 0; return a.map(v => (t += v)) }
 
 export default function HomePage() {
   const cached = pageCache.get<HomeCache>('home')
@@ -63,8 +68,8 @@ export default function HomePage() {
   const [upcoming,      setUpcoming]      = useState<UpcomingSub[]>(cached?.upcoming ?? [])
   const [enRoute,       setEnRoute]       = useState<EnRouteItem[]>(cached?.enRoute ?? [])
   const [activity,      setActivity]      = useState<ActivityRow[]>(cached?.activity ?? [])
-  const [sparkPoints,        setSparkPoints]        = useState<DayPoint[]>(cached?.sparkPoints ?? [])
-  const [annualSparkPoints,  setAnnualSparkPoints]  = useState<DayPoint[]>(cached?.annualSparkPoints ?? [])
+  const [heroMonth,          setHeroMonth]          = useState<HeroSeries>(cached?.heroMonth ?? EMPTY_SERIES)
+  const [heroYear,           setHeroYear]           = useState<HeroSeries>(cached?.heroYear ?? EMPTY_SERIES)
   const [loading,            setLoading]            = useState(!cached)
   const [expenseOpen,   setExpenseOpen]   = useState(false)
   const [detailItem,    setDetailItem]    = useState<ActivityRef | null>(null)
@@ -93,15 +98,11 @@ export default function HomePage() {
       const yearStart     = `${y}-01-01`
       const sig           = controller.signal
 
-      // Build last-14-days array (may cross a month boundary)
-      const chart14Days: string[] = []
-      for (let back = 13; back >= 0; back--) {
-        const dt = new Date(Number(y), Number(m) - 1, Number(dStr) - back)
-        chart14Days.push(
-          `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
-        )
-      }
-      const chartStart = chart14Days[0]
+      // History reaches back to the start of last month, so the hero can draw
+      // last month's pace even in January
+      const lm         = new Date(Number(y), Number(m) - 2, 1)
+      const lmKey      = `${lm.getFullYear()}-${String(lm.getMonth() + 1).padStart(2, '0')}`
+      const histStart  = `${lmKey}-01` < yearStart ? `${lmKey}-01` : yearStart
 
       const [
         { data: monthExp },
@@ -111,8 +112,6 @@ export default function HomePage() {
         { data: enRouteData },
         { data: recentExp },
         { data: recentInc },
-        { data: chartExp },
-        { data: chartInc },
         { data: yearExp },
         { data: yearInc },
         { data: bankBalances },
@@ -144,10 +143,8 @@ export default function HomePage() {
           .order('created_at', { ascending: false })
           .limit(5)
           .abortSignal(sig),
-        supabase.from('expenses').select('cost, date, name').gte('date', chartStart).lte('date', todayStr).abortSignal(sig),
-        supabase.from('income').select('amount, date').gte('date', chartStart).lte('date', todayStr).abortSignal(sig),
-        supabase.from('expenses').select('cost, date, name').gte('date', yearStart).lte('date', todayStr).abortSignal(sig),
-        supabase.from('income').select('amount, date').gte('date', yearStart).lte('date', todayStr).abortSignal(sig),
+        supabase.from('expenses').select('cost, date').gte('date', histStart).lte('date', todayStr).abortSignal(sig),
+        supabase.from('income').select('amount, date').gte('date', histStart).lte('date', todayStr).abortSignal(sig),
         supabase.from('banks').select('balance').abortSignal(sig),
       ])
 
@@ -202,64 +199,48 @@ export default function HomePage() {
         .sort((a, b) => b.date.localeCompare(a.date))
         .slice(0, 5)
 
-      // Daily 14-day chart — each DayPoint is that day's amounts, not cumulative
-      const chartDailyExp: Record<string, number> = {}
-      const chartDailyInc: Record<string, number> = {}
-      const chartDailySub: Record<string, number> = {}
-      for (const e of chartExp ?? []) {
-        const k = String(e.date)
-        if (subNameSet.has(String(e.name ?? '').toLowerCase())) {
-          chartDailySub[k] = (chartDailySub[k] ?? 0) + Number(e.cost)
-        } else {
-          chartDailyExp[k] = (chartDailyExp[k] ?? 0) + Number(e.cost)
-        }
+      // Hero: running spend this month vs last month, and this year by month
+      const outByDay: Record<string, number> = {}
+      const incByDay: Record<string, number> = {}
+      for (const e of yearExp ?? []) { const k = String(e.date); outByDay[k] = (outByDay[k] ?? 0) + Number(e.cost) }
+      for (const i of yearInc ?? []) { const k = String(i.date); incByDay[k] = (incByDay[k] ?? 0) + Number(i.amount) }
+      const monthKey  = `${y}-${m}`
+      const daysIn    = new Date(Number(y), Number(m), 0).getDate()
+      const lmDays    = new Date(lm.getFullYear(), lm.getMonth() + 1, 0).getDate()
+      const dayOf     = (mk: string, d: number) => `${mk}-${String(d).padStart(2, '0')}`
+      const elapsed   = Array.from({ length: Number(dStr) }, (_, i) => i + 1)
+      const monthOut  = elapsed.map(d => outByDay[dayOf(monthKey, d)] ?? 0)
+      const lmOut     = Array.from({ length: Math.min(lmDays, daysIn) }, (_, i) => outByDay[dayOf(lmKey, i + 1)] ?? 0)
+      const newHeroMonth: HeroSeries = {
+        slots:    daysIn,
+        labels:   Array.from({ length: daysIn }, (_, i) => `${MONTH_ABBR[Number(m) - 1]} ${i + 1}`),
+        cum:      running(monthOut),
+        prev:     running(lmOut),
+        prevName: MONTH_ABBR[lm.getMonth()],
+        out:      monthOut,
+        inc:      elapsed.map(d => incByDay[dayOf(monthKey, d)] ?? 0),
       }
-      for (const i of chartInc ?? []) {
-        const k = String(i.date)
-        chartDailyInc[k] = (chartDailyInc[k] ?? 0) + Number(i.amount)
+      const outByMonth: Record<string, number> = {}
+      const incByMonth: Record<string, number> = {}
+      for (const k in outByDay) if (k >= yearStart) outByMonth[k.slice(0, 7)] = (outByMonth[k.slice(0, 7)] ?? 0) + outByDay[k]
+      for (const k in incByDay) if (k >= yearStart) incByMonth[k.slice(0, 7)] = (incByMonth[k.slice(0, 7)] ?? 0) + incByDay[k]
+      const months   = Array.from({ length: Number(m) }, (_, i) => `${y}-${String(i + 1).padStart(2, '0')}`)
+      const yearOut  = months.map(k => outByMonth[k] ?? 0)
+      const newHeroYear: HeroSeries = {
+        slots:    12,
+        labels:   MONTH_FULL.map(n => `${n} ${y}`),
+        cum:      running(yearOut),
+        prev:     null,
+        prevName: null,
+        out:      yearOut,
+        inc:      months.map(k => incByMonth[k] ?? 0),
       }
-      const newSparkPoints: DayPoint[] = chart14Days.map(dateStr => ({
-        day:   String(Number(dateStr.split('-')[2])),
-        label: new Date(dateStr + 'T12:00:00').toLocaleString('en-US', { month: 'short', day: 'numeric' }),
-        exp:   chartDailyExp[dateStr] ?? 0,
-        inc:   chartDailyInc[dateStr] ?? 0,
-        sub:   chartDailySub[dateStr] ?? 0,
-      }))
-
-      // Annual chart — group year expenses + income by month (Jan → current month)
-      const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-      const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December']
-      const annualExpByMonth: Record<string, number> = {}
-      const annualSubByMonth: Record<string, number> = {}
-      const annualIncByMonth: Record<string, number> = {}
-      for (const e of yearExp ?? []) {
-        const mk = String(e.date).slice(0, 7)
-        if (subNameSet.has(String(e.name ?? '').toLowerCase())) {
-          annualSubByMonth[mk] = (annualSubByMonth[mk] ?? 0) + Number(e.cost)
-        } else {
-          annualExpByMonth[mk] = (annualExpByMonth[mk] ?? 0) + Number(e.cost)
-        }
-      }
-      for (const i of yearInc ?? []) {
-        const mk = String(i.date).slice(0, 7)
-        annualIncByMonth[mk] = (annualIncByMonth[mk] ?? 0) + Number(i.amount)
-      }
-      const newAnnualSparkPoints: DayPoint[] = Array.from({ length: Number(m) }, (_, i) => {
-        const mk = `${y}-${String(i + 1).padStart(2, '0')}`
-        return {
-          day:   MONTH_ABBR[i],
-          label: `${MONTH_FULL[i]} ${y}`,
-          exp:   annualExpByMonth[mk] ?? 0,
-          inc:   annualIncByMonth[mk] ?? 0,
-          sub:   annualSubByMonth[mk] ?? 0,
-        }
-      })
 
       const homeData = {
         spent: newSpent, earned: newEarned,
         monthlySubs: newMonthlySubs, hoardTotal: newHoardTotal,
         upcoming: newUpcoming, enRoute: newEnRoute, activity: newActivity,
-        sparkPoints: newSparkPoints, annualSparkPoints: newAnnualSparkPoints,
+        heroMonth: newHeroMonth, heroYear: newHeroYear,
       }
       // A return-to-tab refresh that changed nothing must not re-render
       if (sameAsLast(dataSigRef, homeData)) { setLoading(false); return }
@@ -272,8 +253,8 @@ export default function HomePage() {
       setUpcoming(newUpcoming)
       setEnRoute(newEnRoute)
       setActivity(newActivity)
-      setSparkPoints(newSparkPoints)
-      setAnnualSparkPoints(newAnnualSparkPoints)
+      setHeroMonth(newHeroMonth)
+      setHeroYear(newHeroYear)
       setLoading(false)
     } catch (err) {
       if ((err as Error)?.name === 'AbortError') return
@@ -402,7 +383,7 @@ export default function HomePage() {
 
       {!loading && (
         <>
-          <HomeHero spent={spent} points={sparkPoints} annualPoints={annualSparkPoints} />
+          <HomeHero spent={spent} month={heroMonth} year={heroYear} />
 
           {/* ── Hoard pile ──────────────────────────────────────────────── */}
           {/* <HoardChest hoardTotal={hoardTotal} thisMonthNet={saved} /> */}
