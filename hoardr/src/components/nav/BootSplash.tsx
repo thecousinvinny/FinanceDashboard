@@ -1,7 +1,6 @@
 'use client'
 
 import { useLayoutEffect, useState } from 'react'
-import { Coins } from 'lucide-react'
 import { BOOT_SPLASH_CLASS } from '@/lib/greeting-boot'
 import { onScreenReady, replayActiveScreen } from '@/lib/tab-nav'
 import { LoadBars } from '@/components/ui/LoadBars'
@@ -57,14 +56,12 @@ export function BootSplash() {
         pointerEvents: fading ? 'none' : 'auto',
       }}
     >
-      <div style={{
-        width: 64, height: 64, borderRadius: 20,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'linear-gradient(160deg, #E9CD7A 0%, #D4AF37 45%, #B08A2A 100%)',
-        boxShadow: '0 10px 30px rgba(212,175,55,0.25), inset 0 1px 0 rgba(255,255,255,0.45)',
-      }}>
-        <Coins size={30} strokeWidth={2} color="#1a1200" />
-      </div>
+      {/* The app's own icon, as on the home screen */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/DARKICON.png" alt="" width={72} height={72} decoding="sync"
+        style={{ width: 72, height: 72, borderRadius: 16, boxShadow: '0 10px 30px rgba(0,0,0,0.35), 0 0 0 1px rgb(var(--rgb-ink) / 0.08)' }}
+      />
       <p style={{ fontSize: 13, fontWeight: 600, letterSpacing: '0.28em', textTransform: 'uppercase', color: 'rgb(var(--rgb-ink-muted))', fontFamily: 'var(--font-montserrat)', paddingLeft: '0.28em' }}>
         Hoardr
       </p>
