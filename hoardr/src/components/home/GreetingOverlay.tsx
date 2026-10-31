@@ -84,7 +84,7 @@ interface Brief {
   topCat: { name: string; amount: number } | null
 }
 
-const CH_W = 300, CH_H = 84
+const CH_W = 300, CH_H = 64
 /** SVG paths for the spend-pace chart (this month vs last month, cumulative) */
 function paceChart(b: Brief) {
   const max = Math.max(b.cum[b.cum.length - 1] ?? 0, b.prevCum[b.prevCum.length - 1] ?? 0, 1) * 1.1
@@ -292,7 +292,7 @@ export function GreetingOverlay() {
   const dateLine = todayStr
     ? new Date(todayStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
     : ''
-  const upShown = brief?.upcoming.slice(0, 4) ?? []
+  const upShown = brief?.upcoming.slice(0, 3) ?? []
   const upMore  = (brief?.upcoming.length ?? 0) - upShown.length
   const billsDue = brief?.upcoming.filter(u => u.kind === 'bill').reduce((s, u) => s + u.amount, 0) ?? 0
   const payDue   = brief?.upcoming.filter(u => u.kind === 'pay').reduce((s, u) => s + u.amount, 0) ?? 0
@@ -304,7 +304,7 @@ export function GreetingOverlay() {
   const hair  = 'rgb(var(--rgb-ink) / 0.07)'
   const label: React.CSSProperties = { fontSize: 10.5, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: muted, fontFamily: M }
   const head: React.CSSProperties = { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 10 }
-  const section = (d: number): React.CSSProperties => ({ padding: '16px 0', borderTop: `1px solid ${hair}`, ['--d' as string]: `${d}ms` })
+  const section = (d: number): React.CSSProperties => ({ padding: '13px 0', borderTop: `1px solid ${hair}`, ['--d' as string]: `${d}ms` })
   const statNum: React.CSSProperties = { fontSize: 15, fontWeight: 600, color: ink, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
   const statLbl: React.CSSProperties = { fontSize: 11, color: muted, marginBottom: 2 }
   const cell = (i: number): React.CSSProperties => ({ flex: 1, minWidth: 0, paddingLeft: i ? 12 : 0, borderLeft: i ? `1px solid ${hair}` : 'none' })
@@ -331,16 +331,19 @@ export function GreetingOverlay() {
       {/* Same card on phone and desktop: max 380px, narrower only on small screens */}
       {ready && <div className={exiting ? 'greet-card-out' : 'greet-card-in'} style={{
         position: 'relative',
-        width: '100%', maxWidth: 380, maxHeight: 'min(90vh, 820px)',
+        // Fills the screen (less the "tap to continue" line): the photo takes
+        // whatever the stats leave, so nothing scrolls on phone or desktop
+        width: '100%', maxWidth: 380,
+        height: 'min(calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 76px), 900px)',
         borderRadius: 28, overflow: 'hidden',
         background: 'var(--color-bg-surface)',
         boxShadow: '0 40px 100px rgba(0,0,0,0.5), 0 0 0 0.5px rgb(var(--rgb-ink) / 0.10)',
         display: 'flex', flexDirection: 'column',
       }}>
         {/* One scroller: the photo scrolls away with the card on short screens */}
-        <div style={{ overflowY: 'auto', overscrollBehavior: 'contain' }}>
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto', overscrollBehavior: 'contain' }}>
         {/* Hero: the profile photo takes the top of the card, greeting where it fades out */}
-        <div style={{ position: 'relative', height: 'min(300px, 38vh)', minHeight: 220, overflow: 'hidden', background: '#0c0c0f' }}>
+        <div style={{ position: 'relative', flex: '1 0 150px', overflow: 'hidden', background: '#0c0c0f' }}>
           {avatar ? (
             <img
               src={hiRes(avatar)} alt="" draggable={false}
@@ -363,9 +366,9 @@ export function GreetingOverlay() {
           </div>
         </div>
 
-        <div style={{ padding: '4px 22px 6px', fontFamily: M }}>
+        <div style={{ flexShrink: 0, padding: '2px 22px 4px', fontFamily: M }}>
           {/* Month so far: number, pace chart, three stats */}
-          <section className="greet-rise" style={{ padding: '12px 0 18px', ['--d' as string]: '120ms' }}>
+          <section className="greet-rise" style={{ padding: '10px 0 14px', ['--d' as string]: '120ms' }}>
             <div style={head}>
               <span style={label}>Spent this month</span>
               {pace !== null && (
@@ -379,7 +382,7 @@ export function GreetingOverlay() {
             </p>
 
             {chart && (
-              <div style={{ position: 'relative', marginTop: 16, height: CH_H }}>
+              <div style={{ position: 'relative', marginTop: 14, height: CH_H }}>
                 <svg viewBox={`0 0 ${CH_W} ${CH_H}`} preserveAspectRatio="none" width="100%" height={CH_H} style={{ display: 'block', overflow: 'visible' }}>
                   <defs>
                     <linearGradient id="greet-area" x1="0" y1="0" x2="0" y2="1">
@@ -404,7 +407,7 @@ export function GreetingOverlay() {
               </div>
             )}
 
-            <div style={{ display: 'flex', marginTop: 16 }}>
+            <div style={{ display: 'flex', marginTop: 14 }}>
               <div style={cell(0)}>
                 <p style={statLbl}>Income</p>
                 <p style={{ ...statNum, color: 'var(--sem-income)' }}>{brief ? `+${$fk(brief.income)}` : '—'}</p>
