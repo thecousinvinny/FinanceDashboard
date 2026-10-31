@@ -78,7 +78,7 @@ interface TodayEv { title: string; time: string | null }
 interface Brief {
   spent: number; income: number; lastMonthToDate: number
   upcoming: UpItem[]; today: TodayEv[] | null
-  netWorth: number; enRoute: number
+  saved: number; yesterday: number; enRoute: number
   /** Running spend total per day: this month up to today, last month in full */
   cum: number[]; prevCum: number[]
   daysInMonth: number
@@ -197,20 +197,22 @@ export function GreetingOverlay() {
 
       const [
         { data: expData }, { data: incData }, { data: subs }, { data: streams },
-        { data: banks }, { data: wish }, { data: profile }, todayEvs, avatarUrl,
+        { data: wish }, { data: profile }, todayEvs, avatarUrl,
       ] = await Promise.all([
-        supabase.from('expenses').select('cost, date, categories(name)').gte('date', lmStart).lte('date', today),
+        supabase.from('expenses').select('cost, savings, date, categories(name)').gte('date', lmStart).lte('date', today),
         supabase.from('income').select('amount').gte('date', monthStart).lte('date', today),
         supabase.from('subscriptions').select('name, cost, billing, next_renewal').eq('status', 'Active'),
         supabase.from('revenue_streams').select('name, amount, freq, next_pay_date'),
-        supabase.from('banks').select('balance'),
         supabase.from('wishlist').select('id').eq('status', 'Ordered'),
         profileP, todayP, avatarP,
       ])
       if (gen !== genRef.current) return
 
-      const exp = (expData ?? []) as unknown as { cost: number; date: string; categories: { name: string } | null }[]
+      const exp = (expData ?? []) as unknown as { cost: number; savings: number | null; date: string; categories: { name: string } | null }[]
       const spent = exp.filter(e => e.date >= monthStart).reduce((s, e) => s + Number(e.cost), 0)
+      const saved = exp.filter(e => e.date >= monthStart).reduce((s, e) => s + Number(e.savings ?? 0), 0)
+      const yDay = addDays(today, -1)
+      const yesterday = exp.filter(e => e.date === yDay).reduce((s, e) => s + Number(e.cost), 0)
       const lastMonthToDate = exp.filter(e => e.date < monthStart && e.date <= lmSameDay).reduce((s, e) => s + Number(e.cost), 0)
 
       // Per-day spend → running totals for the pace chart
@@ -253,7 +255,7 @@ export function GreetingOverlay() {
 
       setBrief({
         spent, income, lastMonthToDate, upcoming, today: todayEvs,
-        netWorth: (banks ?? []).reduce((s, b) => s + Number(b.balance ?? 0), 0),
+        saved, yesterday,
         enRoute: (wish ?? []).length,
         cum: running(daily), prevCum: running(prevDaily), daysInMonth,
         topCat: top ? { name: top[0], amount: top[1] } : null,
@@ -293,7 +295,6 @@ export function GreetingOverlay() {
 
   const net  = (brief?.income ?? 0) - (brief?.spent ?? 0)
   const pace = brief && brief.lastMonthToDate > 0 ? ((brief.spent - brief.lastMonthToDate) / brief.lastMonthToDate) * 100 : null
-  const projected = brief && brief.cum.length ? (brief.spent / brief.cum.length) * brief.daysInMonth : null
   const chart = brief ? paceChart(brief) : null
   const dateLine = todayStr
     ? new Date(todayStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
@@ -428,8 +429,8 @@ export function GreetingOverlay() {
                 <p style={{ ...statNum, color: net >= 0 ? 'var(--sem-income)' : '#ef4444' }}>{brief ? <SlotNumber value={Math.abs(net)} format={n => `${net >= 0 ? '+' : '−'}${$fk(n)}`} startAt={rollAt(600)} /> : '—'}</p>
               </div>
               <div style={cell(2)}>
-                <p style={statLbl}>On pace for</p>
-                <p style={statNum}>{projected !== null ? <SlotNumber value={projected} format={$fk} startAt={rollAt(680)} /> : '—'}</p>
+                <p style={statLbl}>Saved</p>
+                <p style={{ ...statNum, color: 'var(--sem-income)' }}>{brief ? <SlotNumber value={brief.saved} format={$fk} startAt={rollAt(680)} /> : '—'}</p>
               </div>
             </div>
           </section>
@@ -489,8 +490,8 @@ export function GreetingOverlay() {
           {/* Footnotes */}
           <section className="greet-rise" style={{ ...section(380), display: 'flex' }}>
             <div style={cell(0)}>
-              <p style={statLbl}>Net worth</p>
-              <p style={statNum}>{brief ? <SlotNumber value={brief.netWorth} format={$fk} startAt={rollAt(820)} /> : '—'}</p>
+              <p style={statLbl}>Yesterday</p>
+              <p style={statNum}>{brief ? <SlotNumber value={brief.yesterday} format={$fk} startAt={rollAt(820)} /> : '—'}</p>
             </div>
             <div style={cell(1)}>
               <p style={statLbl}>Top category</p>
