@@ -78,11 +78,10 @@ interface TodayEv { title: string; time: string | null }
 interface Brief {
   spent: number; income: number; lastMonthToDate: number
   upcoming: UpItem[]; today: TodayEv[] | null
-  saved: number; yesterday: number; enRoute: number
+  subsMonthly: number; dailyAvg: number; noSpendDays: number; enRoute: number
   /** Running spend total per day: this month up to today, last month in full */
   cum: number[]; prevCum: number[]
   daysInMonth: number
-  topCat: { name: string; amount: number } | null
 }
 
 const CH_W = 300, CH_H = 64
@@ -199,20 +198,17 @@ export function GreetingOverlay() {
         { data: expData }, { data: incData }, { data: subs }, { data: streams },
         { data: wish }, { data: profile }, todayEvs, avatarUrl,
       ] = await Promise.all([
-        supabase.from('expenses').select('cost, savings, date, categories(name)').gte('date', lmStart).lte('date', today),
+        supabase.from('expenses').select('cost, date').gte('date', lmStart).lte('date', today),
         supabase.from('income').select('amount').gte('date', monthStart).lte('date', today),
-        supabase.from('subscriptions').select('name, cost, billing, next_renewal').eq('status', 'Active'),
+        supabase.from('subscriptions').select('name, cost, billing, next_renewal, monthly_cost').eq('status', 'Active'),
         supabase.from('revenue_streams').select('name, amount, freq, next_pay_date'),
         supabase.from('wishlist').select('id').eq('status', 'Ordered'),
         profileP, todayP, avatarP,
       ])
       if (gen !== genRef.current) return
 
-      const exp = (expData ?? []) as unknown as { cost: number; savings: number | null; date: string; categories: { name: string } | null }[]
+      const exp = (expData ?? []) as unknown as { cost: number; date: string }[]
       const spent = exp.filter(e => e.date >= monthStart).reduce((s, e) => s + Number(e.cost), 0)
-      const saved = exp.filter(e => e.date >= monthStart).reduce((s, e) => s + Number(e.savings ?? 0), 0)
-      const yDay = addDays(today, -1)
-      const yesterday = exp.filter(e => e.date === yDay).reduce((s, e) => s + Number(e.cost), 0)
       const lastMonthToDate = exp.filter(e => e.date < monthStart && e.date <= lmSameDay).reduce((s, e) => s + Number(e.cost), 0)
 
       // Per-day spend → running totals for the pace chart
@@ -220,17 +216,15 @@ export function GreetingOverlay() {
       const prevDays    = new Date(ty, tm - 1, 0).getDate()
       const daily = new Array<number>(td).fill(0)
       const prevDaily = new Array<number>(prevDays).fill(0)
-      const byCat = new Map<string, number>()
-      for (const e of exp) {
+          for (const e of exp) {
         const day = Number(e.date.slice(8, 10)) - 1
         if (e.date >= monthStart) {
           if (day < td) daily[day] += Number(e.cost)
-          const cat = e.categories?.name ?? 'Other'
-          byCat.set(cat, (byCat.get(cat) ?? 0) + Number(e.cost))
         } else if (day < prevDays) prevDaily[day] += Number(e.cost)
       }
       const running = (a: number[]) => { let t = 0; return a.map(v => (t += v)) }
-      const top = [...byCat.entries()].sort((a, b) => b[1] - a[1])[0]
+      // Full days only: today isn't over yet
+      const noSpendDays = daily.slice(0, td - 1).filter(v => v === 0).length
       const income = (incData ?? []).reduce((s, r) => s + Number(r.amount), 0)
 
       const upcoming: UpItem[] = []
@@ -255,10 +249,10 @@ export function GreetingOverlay() {
 
       setBrief({
         spent, income, lastMonthToDate, upcoming, today: todayEvs,
-        saved, yesterday,
+        subsMonthly: (subs ?? []).reduce((s, x) => s + Number(x.monthly_cost ?? 0), 0),
+        dailyAvg: spent / td, noSpendDays,
         enRoute: (wish ?? []).length,
         cum: running(daily), prevCum: running(prevDaily), daysInMonth,
-        topCat: top ? { name: top[0], amount: top[1] } : null,
       })
       setReady(true)
     }
@@ -429,8 +423,8 @@ export function GreetingOverlay() {
                 <p style={{ ...statNum, color: net >= 0 ? 'var(--sem-income)' : '#ef4444' }}>{brief ? <SlotNumber value={Math.abs(net)} format={n => `${net >= 0 ? '+' : '−'}${$fk(n)}`} startAt={rollAt(600)} /> : '—'}</p>
               </div>
               <div style={cell(2)}>
-                <p style={statLbl}>Saved</p>
-                <p style={{ ...statNum, color: 'var(--sem-income)' }}>{brief ? <SlotNumber value={brief.saved} format={$fk} startAt={rollAt(680)} /> : '—'}</p>
+                <p style={statLbl}>No-spend days</p>
+                <p style={statNum}>{brief ? <SlotNumber value={brief.noSpendDays} format={n => String(Math.round(n))} startAt={rollAt(680)} /> : '—'}</p>
               </div>
             </div>
           </section>
@@ -490,12 +484,12 @@ export function GreetingOverlay() {
           {/* Footnotes */}
           <section className="greet-rise" style={{ ...section(380), display: 'flex' }}>
             <div style={cell(0)}>
-              <p style={statLbl}>Yesterday</p>
-              <p style={statNum}>{brief ? <SlotNumber value={brief.yesterday} format={$fk} startAt={rollAt(820)} /> : '—'}</p>
+              <p style={statLbl}>Subs / month</p>
+              <p style={statNum}>{brief ? <SlotNumber value={brief.subsMonthly} format={$fk} startAt={rollAt(820)} /> : '—'}</p>
             </div>
             <div style={cell(1)}>
-              <p style={statLbl}>Top category</p>
-              <p style={statNum}>{brief?.topCat ? brief.topCat.name : '—'}</p>
+              <p style={statLbl}>Daily avg</p>
+              <p style={statNum}>{brief ? <SlotNumber value={brief.dailyAvg} format={$fk} startAt={rollAt(880)} /> : '—'}</p>
             </div>
             <div style={cell(2)}>
               <p style={statLbl}>On the way</p>
