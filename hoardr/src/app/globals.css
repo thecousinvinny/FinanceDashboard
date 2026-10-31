@@ -742,37 +742,38 @@ html.boot-splash body::after {
 .greet-banner-img {
   animation: greet-banner-in 1600ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-/* ── Loading indicator (components/ui/LoadDots) ──
-   Three gold dots in a staggered hop: up fast with a slight squash-and-stretch,
-   down with a soft landing. Transform + opacity only (compositor). */
-.load-dots {
+/* ── Loading indicator (components/ui/LoadBars) ──
+   Six gold bars that flatten to a baseline, then rise to uneven heights like a
+   small bar chart, in a left-to-right wave. Each bar's peak is its --h.
+   scaleY from the bottom + opacity only (compositor). */
+.load-bars {
   display: inline-flex;
   align-items: flex-end;
-  gap: 7px;
-  height: 22px;
-  padding-top: 10px;
+  gap: 4px;
+  height: 30px;
   animation: greet-fade-in 300ms ease both;
 }
-.load-dots > span {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: linear-gradient(160deg, #E9CD7A, #D4AF37 55%, #B08A2A);
-  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.35);
-  opacity: 0.45;
-  will-change: transform, opacity;
-  animation: load-dot-hop 1.15s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+.load-bars > span {
+  width: 4px;
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #E9CD7A, #D4AF37 55%, #B08A2A);
+  transform-origin: bottom;
+  will-change: transform;
+  animation: load-bar-rise 1.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }
-.load-dots > span:nth-child(2) { animation-delay: 0.14s; }
-.load-dots > span:nth-child(3) { animation-delay: 0.28s; }
-@keyframes load-dot-hop {
-  0%, 62%, 100% { transform: translateY(0) scale(1, 1);          opacity: 0.45; }
-  14%           { transform: translateY(0) scale(1.18, 0.82);    opacity: 0.7;  animation-timing-function: cubic-bezier(0.2, 0.8, 0.3, 1); }
-  32%           { transform: translateY(-10px) scale(0.9, 1.12); opacity: 1;    animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0.3); }
-  50%           { transform: translateY(0) scale(1.12, 0.88);    opacity: 0.75; animation-timing-function: cubic-bezier(0.3, 1.4, 0.6, 1); }
+.load-bars > span:nth-child(1) { --h: 0.45; }
+.load-bars > span:nth-child(2) { --h: 0.75; animation-delay: 0.07s; }
+.load-bars > span:nth-child(3) { --h: 0.55; animation-delay: 0.14s; }
+.load-bars > span:nth-child(4) { --h: 1;    animation-delay: 0.21s; }
+.load-bars > span:nth-child(5) { --h: 0.8;  animation-delay: 0.28s; }
+.load-bars > span:nth-child(6) { --h: 0.6;  animation-delay: 0.35s; }
+@keyframes load-bar-rise {
+  0%, 20%, 80%, 100% { transform: scaleY(0.12); }
+  50%                { transform: scaleY(var(--h)); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .load-dots > span { animation-duration: 2.4s; }
+  .load-bars > span { animation-duration: 3.2s; }
 }
 .greet-fade {
   animation: greet-fade-in 420ms ease both;

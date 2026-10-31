@@ -9,7 +9,7 @@ import type { BillingCycle } from '@/types'
 import type { Session } from '@supabase/supabase-js'
 import { GREET_BOOT_CLASS } from '@/lib/greeting-boot'
 import { replayActiveScreen } from '@/lib/tab-nav'
-import { LoadDots } from '@/components/ui/LoadDots'
+import { LoadBars } from '@/components/ui/LoadBars'
 
 /**
  * Daily brief shown when the app opens. Doubles as the warm-up screen: while
@@ -277,7 +277,7 @@ export function GreetingOverlay() {
         userSelect: 'none', WebkitUserSelect: 'none',
       }}
     >
-      {!ready && waiting && <LoadDots style={{ position: 'absolute' }} />}
+      {!ready && waiting && <LoadBars style={{ position: 'absolute' }} />}
 
       {/* Same card on phone and desktop: max 380px, narrower only on small screens */}
       {ready && <div className={exiting ? 'greet-card-out' : 'greet-card-in'} style={{
