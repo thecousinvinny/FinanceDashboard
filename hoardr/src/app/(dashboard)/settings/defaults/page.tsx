@@ -16,7 +16,7 @@ interface SettingsBank { id: string; name: string }
 
 const BILLING_OPTIONS: BillingCycle[] = ['Weekly', 'BiWeekly', 'Monthly', 'Quarterly', 'Annual']
 const BILLING_LABELS: Record<BillingCycle, string> = {
-  Weekly: 'Weekly', BiWeekly: 'Bi-Weekly', Monthly: 'Monthly', Quarterly: 'Quarterly', Annual: 'Annual',
+  Weekly: 'Weekly', BiWeekly: 'Bi-Weekly', Monthly: 'Monthly', Quarterly: 'Quarterly', Annual: 'Annual', Custom: 'Custom',
 }
 
 /** Settings → Form defaults: what new expenses, subscriptions and income start with. */

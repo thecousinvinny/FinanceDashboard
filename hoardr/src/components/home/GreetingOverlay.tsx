@@ -3,7 +3,7 @@
 import { hiResGoogle } from '@/lib/image'
 import { loadNowWeather, getWeatherInfo, type NowWeather } from '@/lib/weather'
 import { useState, useEffect, useLayoutEffect, useRef } from 'react'
-import { $fk, localToday, nextRenewalDate } from '@/lib/utils'
+import { $fk, localToday, nextRenewalDate, type BillingSpec } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { calFetch } from '@/lib/calendar'
 import type { BillingCycle } from '@/types'
@@ -192,7 +192,7 @@ export function GreetingOverlay() {
       ] = await Promise.all([
         supabase.from('expenses').select('cost, date, name').gte('date', heroHistoryStart(today)).lte('date', today),
         supabase.from('income').select('amount, date').gte('date', heroHistoryStart(today)).lte('date', today),
-        supabase.from('subscriptions').select('name, cost, billing, next_renewal, monthly_cost').eq('status', 'Active'),
+        supabase.from('subscriptions').select('name, cost, billing, billing_every, billing_unit, next_renewal, monthly_cost').eq('status', 'Active'),
         supabase.from('revenue_streams').select('name, amount, freq, next_pay_date'),
         supabase.from('wishlist').select('id').eq('status', 'Ordered'),
         profileP,
@@ -220,7 +220,7 @@ export function GreetingOverlay() {
       for (const s of subs ?? []) {
         if (!s.next_renewal || !s.billing) continue
         let d = String(s.next_renewal)
-        while (d < today) d = nextRenewalDate(d, s.billing as BillingCycle)
+        while (d < today) d = nextRenewalDate(d, s as BillingSpec)
         if (d <= weekEnd) upcoming.push({ date: d, title: String(s.name), amount: Number(s.cost), kind: 'bill' })
       }
       for (const r of streams ?? []) {

@@ -11,6 +11,7 @@ import { Sheet } from '@/components/ui/Sheet'
 import { ActionSheet } from '@/components/ui/ActionSheet'
 import { FormGroup, FormRow, Toggle } from '@/components/ui/Form'
 import { DateRangePicker } from './DateRangePicker'
+import { DEFAULT_START, DEFAULT_END } from './CalendarPopover'
 import { useIsLargeScreen } from '@/lib/use-large-screen'
 import type { GCalendar } from './CalendarSettingsSheet'
 import type { RecurScope } from '@/lib/calendar'
@@ -149,8 +150,8 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
         date:           event.date,
         endDate:        event.endDate || event.date,
         allDay:         event.allDay,
-        startTime:      event.startTime || '09:00',
-        endTime:        event.endTime   || '10:00',
+        startTime:      event.startTime || DEFAULT_START,
+        endTime:        event.endTime   || DEFAULT_END,
         location:       event.location,
         notes:          event.notes,
         recurrenceRule: event.recurrenceRule,
@@ -237,7 +238,7 @@ export function EditEventSheet({ open, event, googleCals = [], onClose, onSave, 
   )
   const timeChip = (key: 'startTime' | 'endTime') => form && (
     <Chip picker={
-      <input type="time" value={form[key]} onChange={e => e.target.value && set(key, e.target.value)} style={hiddenInput} />
+      <input type="time" step={900} value={form[key]} onChange={e => e.target.value && set(key, e.target.value)} style={hiddenInput} />
     }>
       {fmt12(form[key])}
     </Chip>

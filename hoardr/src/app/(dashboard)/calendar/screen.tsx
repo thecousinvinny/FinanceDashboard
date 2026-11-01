@@ -5,14 +5,14 @@ import { memo, useState, useMemo, useEffect, useLayoutEffect, useCallback, useRe
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getWeekStartsMonday } from '@/lib/week-start'
-import { cn, nextRenewalDate } from '@/lib/utils'
+import { cn, nextRenewalDate, type BillingSpec } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
 import { COLOR_PALETTE } from '@/lib/category-meta'
 import { Plus, SlidersHorizontal, Eye, EyeOff, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning, CalendarPlus, MapPin, type LucideIcon , ChevronLeft, ChevronRight} from 'lucide-react'
 import { GlobalFAB } from '@/components/ui/GlobalFAB'
 import { EditEventSheet, type EditableEvent, type EventEdits, type RecurrenceScope } from '@/components/calendar/EditEventSheet'
 import { CalendarSettingsSheet, canWriteToCalendar, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
-import { CalendarPopover, defaultTimes, type PopoverFormData, type RecurScope } from '@/components/calendar/CalendarPopover'
+import { CalendarPopover, defaultTimes, DEFAULT_START, DEFAULT_END, type PopoverFormData, type RecurScope } from '@/components/calendar/CalendarPopover'
 import { MonthYearPicker } from '@/components/calendar/MonthYearPicker'
 import { ActionSheet } from '@/components/ui/ActionSheet'
 import { pageCache } from '@/lib/page-cache'
@@ -204,8 +204,8 @@ function shiftedTimes(ev: CalEvent, fromDate: string, toDate: string): { start: 
   if (!ev.amount?.trim()) return { start: { date: toDate }, end: { date: addDays(endDay, 1) }, endDate }
   const [st, et] = ev.amount.split(' – ').map(t => t.trim())
   return {
-    start: { dateTime: `${toDate}T${st || '09:00'}:00`, timeZone: 'America/Los_Angeles' },
-    end:   { dateTime: `${endDay}T${et || st || '10:00'}:00`, timeZone: 'America/Los_Angeles' },
+    start: { dateTime: `${toDate}T${st || DEFAULT_START}:00`, timeZone: 'America/Los_Angeles' },
+    end:   { dateTime: `${endDay}T${et || st || DEFAULT_END}:00`, timeZone: 'America/Los_Angeles' },
     endDate,
   }
 }
@@ -672,7 +672,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       const [{ data: inc }, { data: subs }, { data: streams }, { data: profile }] =
         await Promise.all([
           supabase.from('income').select('name, amount, date').abortSignal(controller.signal),
-          supabase.from('subscriptions').select('name, cost, next_renewal, billing').eq('status', 'Active').abortSignal(controller.signal),
+          supabase.from('subscriptions').select('name, cost, next_renewal, billing, billing_every, billing_unit').eq('status', 'Active').abortSignal(controller.signal),
           supabase.from('revenue_streams').select('name, amount, freq, next_pay_date').abortSignal(controller.signal),
           supabase.from('profiles').select('calendar_prefs').abortSignal(controller.signal).single(),
         ])
@@ -712,7 +712,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       for (const s of subs ?? []) {
         if (!s.next_renewal || !s.billing) continue
         let renewDate = String(s.next_renewal)
-        while (renewDate < calToday) renewDate = nextRenewalDate(renewDate, s.billing as Parameters<typeof nextRenewalDate>[1])
+        while (renewDate < calToday) renewDate = nextRenewalDate(renewDate, s as BillingSpec)
         push(renewDate, { title: String(s.name), type: 'sub', amount: `$${Number(s.cost).toFixed(2)}` })
       }
       if (!sameAsLast(eventSigRef, map)) {
@@ -1182,8 +1182,8 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     const allDay = !ev.amount?.trim()
     setPopover({ anchorRect: anchor, mode: 'create', data: {
       title: `${ev.title} (copy)`, date, endDate: ev.endDate ?? date, allDay,
-      startTime: !allDay && parts[0] ? parts[0] : '09:00',
-      endTime:   !allDay && parts[1] ? parts[1] : '10:00',
+      startTime: !allDay && parts[0] ? parts[0] : DEFAULT_START,
+      endTime:   !allDay && parts[1] ? parts[1] : DEFAULT_END,
       location: ev.location ?? '', notes: ev.notes ?? '', recurrenceRule: '',
       // Don't inherit the source calendar blindly — duplicating an event that
       // lives on a read-only calendar (a shared one, or an @import ICS feed)
@@ -1229,7 +1229,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
   // ── Drag-to-create (multi-day) ────────────────────────────────────────────
   function openCreatePopoverRange(start: string, end: string) {
     const calId = pickCreateCalId()
-    setPopover({ anchorRect: null, mode: 'create', data: { title: '', date: start, endDate: end, allDay: true, startTime: '09:00', endTime: '10:00', location: '', notes: '', recurrenceRule: '', calendarId: calId } })
+    setPopover({ anchorRect: null, mode: 'create', data: { title: '', date: start, endDate: end, allDay: true, startTime: DEFAULT_START, endTime: DEFAULT_END, location: '', notes: '', recurrenceRule: '', calendarId: calId } })
   }
 
   function startCreateDrag(ds: string) {
@@ -1254,8 +1254,8 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       id: ev.id, title: ev.title, allDay,
       date:    ev.instanceDate ?? '',
       endDate: ev.endDate ?? ev.instanceDate ?? '',
-      startTime: !allDay && parts[0] ? parts[0] : '09:00',
-      endTime:   !allDay && parts[1] ? parts[1] : '10:00',
+      startTime: !allDay && parts[0] ? parts[0] : DEFAULT_START,
+      endTime:   !allDay && parts[1] ? parts[1] : DEFAULT_END,
       location: ev.location ?? '', notes: ev.notes ?? '',
       recurrenceRule: '',
       calendarId: ev.calendarId ?? 'primary',
@@ -1312,7 +1312,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     const parts = ev.amount?.split(' – ').map(t => t.trim()) ?? []
     const allDay = !ev.amount?.trim()
     setSelectedEvId(ev.id)
-    setPopover({ anchorRect, mode: 'edit', data: { eventId: ev.id, title: ev.title, date, endDate: ev.endDate ?? date, allDay, startTime: !allDay && parts[0] ? parts[0] : '09:00', endTime: !allDay && parts[1] ? parts[1] : '10:00', location: ev.location ?? '', notes: ev.notes ?? '', recurrenceRule: '', calendarId: ev.calendarId ?? 'primary', recurringEventId: ev.recurringEventId } })
+    setPopover({ anchorRect, mode: 'edit', data: { eventId: ev.id, title: ev.title, date, endDate: ev.endDate ?? date, allDay, startTime: !allDay && parts[0] ? parts[0] : DEFAULT_START, endTime: !allDay && parts[1] ? parts[1] : DEFAULT_END, location: ev.location ?? '', notes: ev.notes ?? '', recurrenceRule: '', calendarId: ev.calendarId ?? 'primary', recurringEventId: ev.recurringEventId } })
     // Expanded instances don't carry the RRULE — only the master does.
     if (ev.recurringEventId) {
       const gen = ++editRuleGen.current

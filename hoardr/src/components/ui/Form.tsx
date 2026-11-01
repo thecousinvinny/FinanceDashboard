@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronRight, type LucideIcon } from 'lucide-react'
+import { ChevronRight, Minus, Plus, type LucideIcon } from 'lucide-react'
 import { getCategoryIcon } from '@/components/ui/CategoryIcon'
 import { cn, haptic } from '@/lib/utils'
 
@@ -261,5 +261,26 @@ export function ChoiceChips<T extends string>({ options, value, onChange, labels
         )
       })}
     </div>
+  )
+}
+
+/** − n + stepper for a form row; the number can be typed */
+export function Stepper({ value, onChange, min, max }: { value: number; onChange: (n: number) => void; min: number; max: number }) {
+  const btn = 'w-8 h-8 flex items-center justify-center rounded-full disabled:opacity-30'
+  const bg = { background: 'rgb(var(--rgb-ink) / 0.08)' }
+  return (
+    <span className="flex items-center gap-2">
+      <button type="button" className={btn} style={bg} disabled={value <= min} aria-label="Fewer"
+        onClick={() => { haptic('tap'); onChange(Math.max(min, value - 1)) }}><Minus size={15} className="text-ink" /></button>
+      {/* Typeable too: tapping + ninety times for "every 90 days" is no way to live */}
+      <input
+        type="text" inputMode="numeric" value={value} aria-label="Count"
+        onChange={e => { const n = parseInt(e.target.value.replace(/\D/g, ''), 10); if (!isNaN(n)) onChange(Math.min(max, Math.max(min, n))) }}
+        onFocus={e => e.currentTarget.select()}
+        className="w-[38px] bg-transparent text-center text-[16px] font-semibold tabular-nums text-ink outline-none"
+      />
+      <button type="button" className={btn} style={bg} disabled={value >= max} aria-label="More"
+        onClick={() => { haptic('tap'); onChange(Math.min(max, value + 1)) }}><Plus size={15} className="text-ink" /></button>
+    </span>
   )
 }

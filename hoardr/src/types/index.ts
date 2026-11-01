@@ -1,6 +1,8 @@
 // ── Enums ──────────────────────────────────────────────────────────────────
 
-export type BillingCycle     = 'Weekly' | 'Monthly' | 'Quarterly' | 'BiWeekly' | 'Annual'
+export type BillingCycle     = 'Weekly' | 'Monthly' | 'Quarterly' | 'BiWeekly' | 'Annual' | 'Custom'
+/** Unit of a 'Custom' cycle: every `billing_every` of these */
+export type BillingUnit      = 'day' | 'week' | 'month' | 'year'
 export type ExpenseStatus    = 'Ordered' | 'Procured'
 // Lifecycle: Interested → Ordered (bought) → Delivered (arrived).
 // The DB enum also still carries a legacy 'Purchased' value that the app no longer writes.

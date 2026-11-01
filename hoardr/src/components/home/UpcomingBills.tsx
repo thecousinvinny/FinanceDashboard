@@ -5,7 +5,7 @@ import { RefreshCw, CheckCircle, XCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import { getCategoryIcon } from '@/components/ui/CategoryIcon'
-import { daysUntilLabel, $fd, localToday, nextRenewalDate } from '@/lib/utils'
+import { daysUntilLabel, $fd, localToday, nextRenewalDate, billingShort } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
 import type { BillingCycle } from '@/types'
 
@@ -15,18 +15,10 @@ export interface UpcomingSub {
   cost:         number
   next_renewal: string | null
   billing:      BillingCycle
+  billing_every?: number | null
+  billing_unit?:  string | null
   category:     string | null
   card_id:      string | null
-}
-
-function billingShort(b: BillingCycle) {
-  switch (b) {
-    case 'Annual':    return '/ yr'
-    case 'Weekly':    return '/ wk'
-    case 'BiWeekly':  return '/ 2wk'
-    case 'Quarterly': return '/ qtr'
-    default:          return '/ mo'
-  }
 }
 
 export function UpcomingBills({ initial, onPaid }: { initial: UpcomingSub[]; onPaid?: (sub: UpcomingSub) => void }) {
@@ -40,7 +32,7 @@ export function UpcomingBills({ initial, onPaid }: { initial: UpcomingSub[]; onP
     if (!sub) return
 
     const today      = localToday()
-    const newRenewal = nextRenewalDate(sub.next_renewal ?? today, sub.billing)
+    const newRenewal = nextRenewalDate(sub.next_renewal ?? today, sub)
 
     // Remove immediately — parent will inject the next upcoming sub via the effect above
     setItems(prev => prev.filter(s => s.id !== id))
@@ -119,7 +111,7 @@ export function UpcomingBills({ initial, onPaid }: { initial: UpcomingSub[]; onP
                 </div>
                 <div className="text-right flex-shrink-0">
                   <p className="text-[15px] font-semibold font-mono text-ink">{$fd(sub.cost)}</p>
-                  <p className="text-[10px] text-ink-faint">{billingShort(sub.billing)}</p>
+                  <p className="text-[10px] text-ink-faint">{billingShort(sub)}</p>
                 </div>
               </div>
             </SwipeToDelete>

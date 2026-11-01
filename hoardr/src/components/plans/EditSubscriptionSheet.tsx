@@ -1,29 +1,24 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { CreditCard, Landmark, CalendarDays, Repeat } from 'lucide-react'
+import { CreditCard, Landmark, CalendarDays } from 'lucide-react'
 import { calcSubCosts } from '@/lib/utils'
 import { CustomDateInput } from '@/components/ui/CustomDateInput'
-import type { BillingCycle } from '@/types'
+import type { BillingCycle, BillingUnit } from '@/types'
+import { BillingPicker, billingCaption, type BillingValue } from './BillingPicker'
 import type { CardOption, BankOption } from '@/components/money/AddTransactionSheet'
 import { expenseCategories } from '@/lib/data/transactions'
 import { Select } from '@/components/ui/Select'
 import { Sheet } from '@/components/ui/Sheet'
 import { FormGroup, FormRow, Toggle, AmountHero, CategoryPicker, rowInput, amountStr } from '@/components/ui/Form'
 
-const BILLING_OPTIONS: { value: BillingCycle; label: string }[] = [
-  { value: 'Weekly',    label: 'Weekly'        },
-  { value: 'BiWeekly',  label: 'Every 2 Weeks' },
-  { value: 'Monthly',   label: 'Monthly'       },
-  { value: 'Quarterly', label: 'Quarterly'     },
-  { value: 'Annual',    label: 'Yearly'        },
-]
-
 interface SubSnapshot {
   id:           string
   name:         string
   cost:         number
   billing:      BillingCycle
+  billing_every?: number | null
+  billing_unit?:  string | null
   next_renewal: string | null
   card_id:      string | null
   bank_id:      string | null
@@ -34,6 +29,8 @@ export interface SubEdits {
   name:         string
   cost:         number
   billing:      BillingCycle
+  billing_every: number | null
+  billing_unit:  BillingUnit | null
   next_renewal: string
   monthly_cost: number
   annual_cost:  number
@@ -55,7 +52,7 @@ interface Props {
 export function EditSubscriptionSheet({ sub, open, onClose, onSave, cards = [], banks = [] }: Props) {
   const [name,        setName]        = useState('')
   const [amount,      setAmount]      = useState('')
-  const [billing,     setBilling]     = useState<BillingCycle>('Monthly')
+  const [billing,     setBilling]     = useState<BillingValue>({ billing: 'Monthly', billing_every: null, billing_unit: null })
   const [nextRenewal, setNextRenewal] = useState('')
   const [cardId,      setCardId]      = useState<string | null>(null)
   const [bankId,      setBankId]      = useState<string | null>(null)
@@ -66,7 +63,7 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave, cards = [], 
     if (sub) {
       setName(sub.name)
       setAmount(amountStr(sub.cost))
-      setBilling(sub.billing)
+      setBilling({ billing: sub.billing, billing_every: sub.billing_every ?? null, billing_unit: (sub.billing_unit as BillingUnit | null) ?? null })
       setNextRenewal(sub.next_renewal ?? '')
       setCardId(sub.card_id)
       setBankId(sub.bank_id)
@@ -82,7 +79,7 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave, cards = [], 
     const parsed = parseFloat(amount) || 0
     const { monthly, annual } = calcSubCosts(parsed, billing)
     onSave(sub.id, {
-      name: name.trim(), cost: parsed, billing, next_renewal: nextRenewal,
+      name: name.trim(), cost: parsed, ...billing, next_renewal: nextRenewal,
       monthly_cost: monthly, annual_cost: annual,
       card_id: direct ? null : cardId,
       bank_id: direct ? bankId : null,
@@ -93,7 +90,7 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave, cards = [], 
 
   const card = cards.find(c => c.id === cardId)
   const bank = banks.find(b => b.id === bankId)
-  const billingLabel = BILLING_OPTIONS.find(o => o.value === billing)?.label ?? billing
+  const billingLabel = billingCaption(billing)
 
   return (
     <Sheet
@@ -113,15 +110,7 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave, cards = [], 
             className={rowInput}
           />
         </FormRow>
-        <Select
-          value={billing}
-          onChange={e => setBilling(e.target.value as BillingCycle)}
-          aria-label="Repeats"
-          className="w-full text-left"
-          trigger={<FormRow icon={Repeat} label="Repeats" chevron><span>{billingLabel}</span></FormRow>}
-        >
-          {BILLING_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </Select>
+        <BillingPicker value={billing} onChange={setBilling} />
         <FormRow icon={CalendarDays} label="Next renewal">
           <CustomDateInput
             value={nextRenewal}

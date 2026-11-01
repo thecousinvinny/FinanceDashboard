@@ -103,7 +103,7 @@ export default function HomePage() {
         supabase.from('expenses').select('cost, date, name').gte('date', monthStart).lte('date', monthEnd).abortSignal(sig),
         supabase.from('subscriptions').select('name').eq('status', 'Active').abortSignal(sig),
         supabase.from('subscriptions')
-          .select('id, name, cost, next_renewal, billing, category, card_id')
+          .select('id, name, cost, next_renewal, billing, billing_every, billing_unit, category, card_id')
           .eq('status', 'Active')
           .not('next_renewal', 'is', null)
           .order('next_renewal', { ascending: true })
@@ -140,6 +140,8 @@ export default function HomePage() {
         cost:         Number(s.cost),
         next_renewal: s.next_renewal ? String(s.next_renewal) : null,
         billing:      s.billing as UpcomingSub['billing'],
+        billing_every: (s.billing_every as number | null) ?? null,
+        billing_unit:  (s.billing_unit as string | null) ?? null,
         category:     s.category ? String(s.category) : null,
         card_id:      (s as { card_id?: string | null }).card_id
           ? String((s as { card_id?: string | null }).card_id) : null,

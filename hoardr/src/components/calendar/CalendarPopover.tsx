@@ -173,22 +173,16 @@ function addOneDay(dateStr: string): string {
   return d.toISOString().slice(0, 10)
 }
 
+// New timed events start at noon and run an hour
+export const DEFAULT_START = '12:00'
+export const DEFAULT_END   = '13:00'
 export function defaultTimes(): { startTime: string; endTime: string } {
-  const now       = new Date()
-  const totalMins = now.getHours() * 60 + now.getMinutes()
-  const rounded   = Math.round(totalMins / 30) * 30
-  const sm        = rounded % (24 * 60)
-  const sh        = Math.floor(sm / 60)
-  const smin      = sm % 60
-  const eh        = (sh + 1) % 24
-  return {
-    startTime: `${String(sh).padStart(2, '0')}:${String(smin).padStart(2, '0')}`,
-    endTime:   `${String(eh).padStart(2, '0')}:${String(smin).padStart(2, '0')}`,
-  }
+  return { startTime: DEFAULT_START, endTime: DEFAULT_END }
 }
 
-const TIMES  = Array.from({ length: 48 }, (_, i) =>
-  `${String(Math.floor(i / 2)).padStart(2, '0')}:${i % 2 === 0 ? '00' : '30'}`
+// The time dropdowns step every 15 minutes
+const TIMES  = Array.from({ length: 96 }, (_, i) =>
+  `${String(Math.floor(i / 4)).padStart(2, '0')}:${String((i % 4) * 15).padStart(2, '0')}`
 )
 const ITEM_H = 36
 

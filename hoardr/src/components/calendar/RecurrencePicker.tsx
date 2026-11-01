@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Check, Minus, Plus } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { haptic } from '@/lib/utils'
 import { CustomDateInput } from '@/components/ui/CustomDateInput'
 import { Sheet } from '@/components/ui/Sheet'
-import { FormGroup, FormRow, Segmented } from '@/components/ui/Form'
+import { FormGroup, FormRow, Segmented, Stepper } from '@/components/ui/Form'
 
 const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 const DOW_RRULE  = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA']
@@ -64,21 +64,6 @@ interface Props {
   value:    string
   onClose:  () => void
   onChange: (rule: string) => void
-}
-
-/** − n + stepper for a form row */
-function Stepper({ value, onChange, min, max }: { value: number; onChange: (n: number) => void; min: number; max: number }) {
-  const btn = 'w-8 h-8 flex items-center justify-center rounded-full disabled:opacity-30'
-  const bg = { background: 'rgb(var(--rgb-ink) / 0.08)' }
-  return (
-    <span className="flex items-center gap-2">
-      <button type="button" className={btn} style={bg} disabled={value <= min} aria-label="Fewer"
-        onClick={() => { haptic('tap'); onChange(Math.max(min, value - 1)) }}><Minus size={15} className="text-ink" /></button>
-      <span className="min-w-[26px] text-center text-[16px] font-semibold tabular-nums text-ink">{value}</span>
-      <button type="button" className={btn} style={bg} disabled={value >= max} aria-label="More"
-        onClick={() => { haptic('tap'); onChange(Math.min(max, value + 1)) }}><Plus size={15} className="text-ink" /></button>
-    </span>
-  )
 }
 
 /** Toggle chips in a row (weekdays, months) */

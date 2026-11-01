@@ -1,4 +1,4 @@
-import type { BillingCycle } from '@/types'
+import type { BillingCycle, BillingUnit } from '@/types'
 
 // ── Formatting ─────────────────────────────────────────────────────────────
 
@@ -95,27 +95,72 @@ export function daysUntilLabel(d: string | null | undefined): string {
 // ── Subscription math ──────────────────────────────────────────────────────
 
 /** Matches the original app's calcSubCosts logic exactly */
-export function calcSubCosts(cost: number, billing: BillingCycle) {
-  switch (billing) {
-    case 'Annual':    return { monthly: cost / 12,    annual: cost        }
-    case 'BiWeekly':  return { monthly: cost * 2.17,  annual: cost * 26   }
-    case 'Weekly':    return { monthly: cost * 4.33,  annual: cost * 52   }
-    case 'Quarterly': return { monthly: cost / 3,     annual: cost * 4    }
-    default:          return { monthly: cost,          annual: cost * 12   }
+/** A subscription's cycle: a preset, or 'Custom' with every N units */
+export interface BillingSpec {
+  billing:        BillingCycle
+  billing_every?: number | null
+  billing_unit?:  BillingUnit | string | null
+}
+type Cycle = { every: number; unit: BillingUnit }
+
+const PRESET_CYCLE: Record<Exclude<BillingCycle, 'Custom'>, Cycle> = {
+  Weekly:    { every: 1, unit: 'week'  },
+  BiWeekly:  { every: 2, unit: 'week'  },
+  Monthly:   { every: 1, unit: 'month' },
+  Quarterly: { every: 3, unit: 'month' },
+  Annual:    { every: 1, unit: 'year'  },
+}
+
+export function cycleOf(b: BillingCycle | BillingSpec): Cycle {
+  const spec = typeof b === 'string' ? { billing: b } : b
+  if (spec.billing === 'Custom') {
+    const unit = (['day', 'week', 'month', 'year'] as const).find(u => u === spec.billing_unit) ?? 'month'
+    return { every: Math.max(1, Math.round(Number(spec.billing_every) || 1)), unit }
   }
+  return PRESET_CYCLE[spec.billing] ?? PRESET_CYCLE.Monthly
+}
+
+/** Cost per month / year of one charge every cycle */
+export function calcSubCosts(cost: number, billing: BillingCycle | BillingSpec) {
+  const { every, unit } = cycleOf(billing)
+  // Charges per year for one unit, then spread over `every`
+  const perYear = { day: 365, week: 52, month: 12, year: 1 }[unit] / every
+  return { monthly: cost * perYear / 12, annual: cost * perYear }
 }
 
 /** Next renewal date string (YYYY-MM-DD) from a base date and billing cycle */
-export function nextRenewalDate(from: string, billing: BillingCycle): string {
-  const d = new Date(from + 'T12:00:00')
-  switch (billing) {
-    case 'Annual':    d.setFullYear(d.getFullYear() + 1); break
-    case 'Quarterly': d.setMonth(d.getMonth() + 3);       break
-    case 'BiWeekly':  d.setDate(d.getDate() + 14);        break
-    case 'Weekly':    d.setDate(d.getDate() + 7);         break
-    default:          d.setMonth(d.getMonth() + 1);       break
+export function nextRenewalDate(from: string, billing: BillingCycle | BillingSpec): string {
+  const { every, unit } = cycleOf(billing)
+  const [y, m, d] = from.split('-').map(Number)
+  let dt: Date
+  if (unit === 'day' || unit === 'week') {
+    dt = new Date(y, m - 1, d + every * (unit === 'week' ? 7 : 1))
+  } else {
+    // Month/year steps keep the day, clamped to the target month's length
+    // (Jan 31 + 1 month = Feb 28, not Mar 3)
+    const months = every * (unit === 'year' ? 12 : 1)
+    const ty = y + Math.floor((m - 1 + months) / 12), tm = (m - 1 + months) % 12
+    dt = new Date(ty, tm, Math.min(d, new Date(ty, tm + 1, 0).getDate()))
   }
-  return d.toISOString().slice(0, 10)
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+}
+
+const UNIT_WORD: Record<BillingUnit, string> = { day: 'day', week: 'week', month: 'month', year: 'year' }
+
+/** "Monthly", "Every 3 weeks" */
+export function billingLabel(b: BillingCycle | BillingSpec): string {
+  const spec = typeof b === 'string' ? { billing: b } : b
+  if (spec.billing !== 'Custom') return spec.billing === 'BiWeekly' ? 'Bi-Weekly' : spec.billing
+  const { every, unit } = cycleOf(spec)
+  return every === 1 ? `Every ${UNIT_WORD[unit]}` : `Every ${every} ${UNIT_WORD[unit]}s`
+}
+
+/** Compact cycle for rows: /mo, /yr, /3wk */
+export function billingShort(b: BillingCycle | BillingSpec): string {
+  const { every, unit } = cycleOf(b)
+  const u = { day: 'd', week: 'wk', month: 'mo', year: 'yr' }[unit]
+  if (every === 3 && unit === 'month') return '/ qtr'
+  return every === 1 ? `/ ${u}` : `/ ${every}${u}`
 }
 
 // ── Data helpers ───────────────────────────────────────────────────────────
