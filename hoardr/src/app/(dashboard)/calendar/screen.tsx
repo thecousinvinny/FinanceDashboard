@@ -122,11 +122,10 @@ const LIST_SPAN = 24   // months loaded either side of the start month
 
 const NO_EVENTS: Record<string, CalEvent[]> = {}
 
-const ListMonth = memo(function ListMonth({ year: y, month: m, events, todayStr, full, actions }: {
+const ListMonth = memo(function ListMonth({ year: y, month: m, events, todayStr, actions }: {
   year: number; month: number
   events: Record<string, CalEvent[]>
   todayStr: string                   // '' unless today falls in this month
-  full: boolean                      // full-list mode (grid collapsed)
   actions: React.MutableRefObject<ListActions>
 }) {
   const dim = getDaysInMonth(y, m)
@@ -153,12 +152,12 @@ const ListMonth = memo(function ListMonth({ year: y, month: m, events, todayStr,
             onMouseDown={e => actions.current.rowMouseDown(e, ds)}
             onMouseUp={e => actions.current.rowMouseUp(e)}
             onMouseLeave={() => actions.current.clearSwipe()}
-            // No transition: animating padding on every row re-laid out the
-            // whole list each frame of the grid snap
-            style={{ display: 'flex', alignItems: 'stretch', paddingLeft: full ? 20 : 6, background: 'var(--color-bg-surface)', cursor: 'grab' }}
+            // One layout whether or not the grid is open: switching padding and
+            // label width on collapse shoved every row sideways
+            style={{ display: 'flex', alignItems: 'stretch', paddingLeft: 6, background: 'var(--color-bg-surface)', cursor: 'grab' }}
           >
-            {/* Day label — width matches one grid column when split is open, original 44px in full-list mode */}
-            <div style={{ width: full ? 44 : 'calc((100vw - 12px) / 7)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-surface)' }}>
+            {/* Day label — one grid column wide, so it lines up under the grid */}
+            <div style={{ width: 'calc((100vw - 12px) / 7)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-surface)' }}>
               <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 9, letterSpacing: '0.09em', textTransform: 'uppercase', lineHeight: 1.2, userSelect: 'none', whiteSpace: 'nowrap' }}>
                 <span style={{ color: isTod ? '#D4AF37' : 'rgb(var(--rgb-ink) / 0.75)', fontWeight: 700 }}>{abbr}</span>
                 <span style={{ color: isTod ? '#c9a84c' : 'rgb(var(--rgb-ink) / 0.25)', fontWeight: 500 }}>{' '}{day}</span>
@@ -512,8 +511,6 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
   gridHRef.current      = gridH
   const [handleEl, setHandleEl] = useState<HTMLDivElement | null>(null)
   const dragOverRef     = useRef<string | null>(null)
-  const monthLblTapRef   = useRef<number>(0)                              // timestamp of last month-label tap (double-tap detect)
-  const monthLblTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)  // pending single-tap (open picker) timer
 
   useEffect(() => { monthsRef.current = months }, [months])
   useEffect(() => { notionWeeksRef.current = notionWeeks }, [notionWeeks])
@@ -1864,27 +1861,6 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     setTimeout(() => tryScroll(), 60)
   }
 
-  // ── Month label tap: single tap → open picker, double tap → jump to today ──
-  function handleMonthLabelTap() {
-    const now = Date.now()
-    if (now - monthLblTapRef.current < 300) {
-      // Double tap — cancel the pending picker-open and jump to today instead
-      monthLblTapRef.current = 0
-      if (monthLblTimerRef.current) { clearTimeout(monthLblTimerRef.current); monthLblTimerRef.current = null }
-      jumpToMonth(today.getFullYear(), today.getMonth())
-    } else {
-      monthLblTapRef.current = now
-      if (monthLblTimerRef.current) clearTimeout(monthLblTimerRef.current)
-      monthLblTimerRef.current = setTimeout(() => {
-        monthLblTimerRef.current = null
-        setMonthPickerOpen(true)
-      }, 300)
-    }
-  }
-
-  // Clear any pending single-tap timer on unmount
-  useEffect(() => () => { if (monthLblTimerRef.current) clearTimeout(monthLblTimerRef.current) }, [])
-
   // ── Swipe gesture handlers ─────────────────────────────────────────────────
   // List row → Day detail: swipe left on a day row
   // Handlers for the memoized ListMonth blocks — a stable ref, refreshed every
@@ -2622,24 +2598,19 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
             >
               {/* Taller invisible hit area, so the thin handle is easy to grab */}
               <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, top: -12, bottom: -12, touchAction: 'none' }} />
-              <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgb(var(--rgb-ink) / 0.18)' }} />
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgb(var(--rgb-ink) / 0.18)', opacity: gridH === 0 ? 0 : 1, transition: 'opacity 0.2s ease' }} />
+              {/* Grid folded away: the month you're in takes the grabber's place.
+                  Same bar, same height — nothing below moves. Tap opens the grid. */}
+              <span aria-hidden={gridH !== 0} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 800, color: 'rgba(212,175,55,0.75)',
+                opacity: gridH === 0 ? 1 : 0, transition: 'opacity 0.2s ease', pointerEvents: 'none', whiteSpace: 'nowrap' }}>
+                {sideLbl}
+                <span style={{ fontSize: 8, opacity: 0.7 }}>▾</span>
+              </span>
             </div>
 
             {/* Infinite scroll list — same design as before */}
             <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-              {/* Gold month label — visible only in full-list mode (gridH === 0); tap = picker, double-tap = today */}
-              <div
-                style={{ position: 'absolute', left: 4, top: 0, bottom: 0, width: 20, zIndex: 5,
-                         display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                         opacity: gridH === 0 ? 1 : 0,
-                         pointerEvents: gridH === 0 ? 'auto' : 'none', touchAction: 'manipulation',
-                         transition: 'opacity 0.25s ease' }}
-                onClick={handleMonthLabelTap}
-              >
-                <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 8, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 800, color: 'rgba(212,175,55,0.65)', userSelect: 'none', whiteSpace: 'nowrap' }}>
-                  {sideLbl}
-                </span>
-              </div>
               <div ref={scrollRef} onScroll={handleDetailScroll} data-touch-scroll
                 style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', position: 'relative' }}>
                 <div ref={topSentRef} style={{ height: 1 }} />
@@ -2651,7 +2622,6 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                     month={m}
                     events={monthEvents[`${y}-${m}`] ?? NO_EVENTS}
                     todayStr={todayStr.startsWith(toDateStr(y, m, 1).slice(0, 8)) ? todayStr : ''}
-                    full={gridH === 0}
                     actions={listActions}
                   />
                 ))}
