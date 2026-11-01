@@ -1,3 +1,5 @@
+import { pushUiPrefs } from '@/lib/ui-prefs'
+
 const KEY = 'week-start-monday'
 
 export function getWeekStartsMonday(): boolean {
@@ -6,4 +8,5 @@ export function getWeekStartsMonday(): boolean {
 
 export function setWeekStartsMonday(v: boolean): void {
   try { localStorage.setItem(KEY, v ? '1' : '0') } catch {}
+  pushUiPrefs()
 }

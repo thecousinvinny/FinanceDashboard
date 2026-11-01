@@ -1,3 +1,5 @@
+import { pushUiPrefs } from '@/lib/ui-prefs'
+
 export type Theme = 'obsidian' | 'charcoal-slate' | 'slate-mist' | 'midnight-teal'
 
 export interface ThemeDef {
@@ -38,6 +40,7 @@ export function applyTheme(t: Theme) {
   const meta = document.querySelector('meta[name="theme-color"]')
   if (meta) meta.setAttribute('content', THEME_BG[t])
   localStorage.setItem('theme', t)
+  pushUiPrefs()
 }
 
 export function readTheme(): Theme {

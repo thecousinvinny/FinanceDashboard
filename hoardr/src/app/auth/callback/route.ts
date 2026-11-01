@@ -5,10 +5,10 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
 
-  // Use the Host header so redirects work when accessed via IP (mobile testing)
-  const host   = request.headers.get('host') ?? 'localhost:3000'
-  const proto  = request.headers.get('x-forwarded-proto') ?? 'http'
-  const origin = `${proto}://${host}`
+  // The URL Next resolved for this request (works on Vercel and on a LAN IP in
+  // dev). Never build it from raw Host / X-Forwarded-* headers: a spoofed
+  // header would turn this into an open redirect carrying fresh auth cookies.
+  const origin = request.nextUrl.origin
 
   if (code) {
     // Collect cookies so we can apply them directly to the redirect response.

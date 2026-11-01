@@ -1,3 +1,5 @@
+import { pushUiPrefs } from '@/lib/ui-prefs'
+
 export type FlatColor     = { type: 'flat';     hex: string }
 export type GradientColor = { type: 'gradient'; from: string; to: string; angle: number }
 export type ColorPref     = FlatColor | GradientColor
@@ -21,6 +23,7 @@ export function getSemanticColors(): SemanticColors {
 
 export function setSemanticColors(colors: SemanticColors) {
   localStorage.setItem('sem-colors', JSON.stringify(colors))
+  pushUiPrefs()
   applySemanticColors(colors)
   window.dispatchEvent(new CustomEvent('sem-colors-changed'))
 }

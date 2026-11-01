@@ -2,7 +2,9 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Check, CreditCard, LogOut, CalendarDays, Tag, Settings2, Palette, CalendarCheck, Smartphone, Monitor, Sunrise } from 'lucide-react'
+import { ArrowLeft, Check, CreditCard, LogOut, CalendarDays, Tag, Settings2, Palette, CalendarCheck, Smartphone, Monitor, Sunrise, DatabaseBackup, Sheet as SheetIcon } from 'lucide-react'
+import { downloadBackup, downloadTransactionsCsv } from '@/lib/backup'
+import { UI_PREFS_SYNCED } from '@/lib/ui-prefs'
 import { showGreeting } from '@/components/home/GreetingOverlay'
 import { createClient } from '@/lib/supabase/client'
 import { connectGoogleCalendar } from '@/lib/gcal-connect'
@@ -94,10 +96,27 @@ export default function SettingsPage() {
   const [revokingId,           setRevokingId]           = useState<string | null>(null)
 
   useEffect(() => {
-    setTheme(readTheme())
-    setWsMon(getWeekStartsMonday())
+    const read = () => { setTheme(readTheme()); setWsMon(getWeekStartsMonday()) }
+    read()
     applySemanticColors()
+    // Settings saved on another device arrived
+    window.addEventListener(UI_PREFS_SYNCED, read)
+    return () => window.removeEventListener(UI_PREFS_SYNCED, read)
   }, [])
+
+  const [exporting, setExporting] = useState<'json' | 'csv' | null>(null)
+  async function exportData(kind: 'json' | 'csv') {
+    if (exporting) return
+    setExporting(kind)
+    try {
+      const { rows } = kind === 'json' ? await downloadBackup() : await downloadTransactionsCsv()
+      showToast(kind === 'json' ? `Backup saved · ${rows.toLocaleString()} records` : `Exported ${rows.toLocaleString()} transactions`, { type: 'add' })
+    } catch {
+      showToast('Couldn’t export — check your connection and try again', { type: 'delete' })
+    } finally {
+      setExporting(null)
+    }
+  }
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => { setEmail(data.user?.email ?? null) })
@@ -298,6 +317,16 @@ export default function SettingsPage() {
             <div className="w-[128px]">
               <Segmented options={WEEK_START} value={wsMon ? 'Mon' : 'Sun'} onChange={v => selectWsMon(v === 'Mon')} />
             </div>
+          </FormRow>
+        </FormGroup>
+
+        {/* Your data */}
+        <FormGroup header="Your data" footer="Saved to this device. The backup holds every expense, income, subscription, account, card, wishlist item, transfer and event; the spreadsheet opens in Numbers, Excel or Sheets.">
+          <FormRow icon={DatabaseBackup} label="Back up everything" chevron onClick={() => exportData('json')}>
+            {exporting === 'json' ? 'Preparing…' : 'JSON'}
+          </FormRow>
+          <FormRow icon={SheetIcon} label="Export transactions" chevron onClick={() => exportData('csv')}>
+            {exporting === 'csv' ? 'Preparing…' : 'CSV'}
           </FormRow>
         </FormGroup>
 

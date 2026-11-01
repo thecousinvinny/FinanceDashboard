@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { $f, $fd } from '@/lib/utils'
+import { pushUiPrefs, UI_PREFS_SYNCED } from '@/lib/ui-prefs'
 
 const GOAL_KEY     = 'hoard-goal'
 const DEFAULT_GOAL = 50_000
@@ -15,6 +16,7 @@ function readGoal(): number {
 
 function writeGoal(v: number) {
   try { localStorage.setItem(GOAL_KEY, String(v)) } catch {}
+  pushUiPrefs()
 }
 
 interface Coin { id: number; x: number; dur: number }
@@ -32,7 +34,13 @@ export function HoardChest({ hoardTotal, thisMonthNet }: Props) {
   const [editing,   setEditing]   = useState(false)
   const [goalInput, setGoalInput] = useState('')
 
-  useEffect(() => { setGoalState(readGoal()) }, [])
+  useEffect(() => {
+    setGoalState(readGoal())
+    // Another device's goal arrived
+    const onSync = () => setGoalState(readGoal())
+    window.addEventListener(UI_PREFS_SYNCED, onSync)
+    return () => window.removeEventListener(UI_PREFS_SYNCED, onSync)
+  }, [])
 
   useEffect(() => {
     const pct = Math.min(1, Math.max(0, hoardTotal / goal))

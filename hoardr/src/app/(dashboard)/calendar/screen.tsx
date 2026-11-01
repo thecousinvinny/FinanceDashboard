@@ -18,6 +18,7 @@ import { MonthScroller } from '@/components/calendar/MonthScroller'
 import { createCalEvent, updateCalEvent, deleteCalEvent, moveCalEvent, getCalEvent, extractRRule, rruleUntilBefore, type GCalEvent, calFetch } from '@/lib/calendar'
 import { connectGoogleCalendar } from '@/lib/gcal-connect'
 import { useOnScreenReturn, useScreenActive, useScreenReady } from '@/lib/tab-nav'
+import { pushUiPrefs, UI_PREFS_SYNCED } from '@/lib/ui-prefs'
 import { sameAsLast } from '@/lib/same-data'
 import { Segmented } from '@/components/ui/Form'
 import { useToday } from '@/lib/use-today'
@@ -514,7 +515,19 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
 
   useEffect(() => { monthsRef.current = months }, [months])
   useEffect(() => { notionWeeksRef.current = notionWeeks }, [notionWeeks])
-  useEffect(() => { localStorage.setItem('cal-hidden-google-cals', JSON.stringify([...hiddenGoogleCals])) }, [hiddenGoogleCals])
+  useEffect(() => {
+    try { localStorage.setItem('cal-hidden-google-cals', JSON.stringify([...hiddenGoogleCals])) } catch {}
+    pushUiPrefs()
+  }, [hiddenGoogleCals])
+  // Another device's calendar visibility arrived
+  useEffect(() => {
+    const onSync = (e: Event) => {
+      if (!(e as CustomEvent<string[]>).detail?.includes('cal-hidden-google-cals')) return
+      try { const s = localStorage.getItem('cal-hidden-google-cals'); setHiddenGoogleCals(s ? new Set(JSON.parse(s)) : new Set()) } catch {}
+    }
+    window.addEventListener(UI_PREFS_SYNCED, onSync)
+    return () => window.removeEventListener(UI_PREFS_SYNCED, onSync)
+  }, [])
 
   // ── Large-screen detection (iPad ≥768px, Mac ≥1024px) ────────────────────
   useEffect(() => {
