@@ -14,6 +14,7 @@ import { EditEventSheet, type EditableEvent, type EventEdits, type RecurrenceSco
 import { CalendarSettingsSheet, canWriteToCalendar, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
 import { CalendarPopover, defaultTimes, type PopoverFormData, type RecurScope } from '@/components/calendar/CalendarPopover'
 import { MonthYearPicker } from '@/components/calendar/MonthYearPicker'
+import { ActionSheet } from '@/components/ui/ActionSheet'
 import { pageCache } from '@/lib/page-cache'
 import { MonthScroller } from '@/components/calendar/MonthScroller'
 import { createCalEvent, updateCalEvent, deleteCalEvent, moveCalEvent, getCalEvent, extractRRule, rruleUntilBefore, type GCalEvent, calFetch } from '@/lib/calendar'
@@ -2880,72 +2881,35 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
 
     {/* Recurring delete scope prompt — shared by the day card, context menu and
         keyboard delete, so every surface asks rather than silently assuming. */}
-    {deleteScopeAsk && (
-      <div
-        style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
-        onClick={() => setDeleteScopeAsk(null)}
-      >
-        <div onClick={e => e.stopPropagation()} style={{ background: 'var(--color-bg-elevated)', borderRadius: 16, padding: '22px 22px 18px', maxWidth: 340, width: '100%', boxShadow: '0 8px 40px rgba(0,0,0,0.7)', border: '0.5px solid rgb(var(--rgb-ink) / 0.1)', fontFamily: 'var(--font-montserrat)' }}>
-          <p style={{ fontSize: 17, fontWeight: 600, color: 'var(--color-ink)', margin: '0 0 6px' }}>Delete Recurring Event</p>
-          <p style={{ fontSize: 13.5, color: 'rgb(var(--rgb-ink) / 0.5)', margin: '0 0 16px', lineHeight: 1.45 }}>
-            &ldquo;{deleteScopeAsk.ev.title}&rdquo; repeats. What should be deleted?
-          </p>
-          {([
-            ['this',      'This event',         'Only this occurrence',                  false],
-            ['following', 'This and following', 'This occurrence and every one after it', true ],
-          ] as const).map(([val, label, hint, danger]) => (
-            <button
-              key={val}
-              onClick={() => {
-                const { ev, date } = deleteScopeAsk
-                setDeleteScopeAsk(null)
-                setSelectedEvId(null)
-                runCalDelete({ eventId: ev.id!, masterId: ev.recurringEventId, calId: ev.calendarId ?? 'primary', fromDate: date, scope: val })
-              }}
-              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 12px', marginBottom: 7, borderRadius: 10, border: '0.5px solid rgb(var(--rgb-ink) / 0.1)', background: 'rgb(var(--rgb-ink) / 0.04)', cursor: 'pointer', fontFamily: 'var(--font-montserrat)' }}
-            >
-              <div style={{ fontSize: 14, fontWeight: 600, color: danger ? '#ef4444' : 'var(--color-ink)' }}>{label}</div>
-              <div style={{ fontSize: 11.5, color: 'rgb(var(--rgb-ink) / 0.45)', marginTop: 2 }}>{hint}</div>
-            </button>
-          ))}
-          <button
-            onClick={() => setDeleteScopeAsk(null)}
-            style={{ width: '100%', padding: '9px', marginTop: 2, borderRadius: 10, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13.5, color: 'rgb(var(--rgb-ink) / 0.5)', fontFamily: 'var(--font-montserrat)' }}
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    )}
+    <ActionSheet
+      open={!!deleteScopeAsk}
+      title={deleteScopeAsk ? `“${deleteScopeAsk.ev.title}” repeats.` : undefined}
+      onClose={() => setDeleteScopeAsk(null)}
+      options={(['this', 'following'] as const).map(scope => ({
+        label: scope === 'this' ? 'Delete this event only' : 'Delete this and future events',
+        destructive: true,
+        onSelect: () => {
+          if (!deleteScopeAsk) return
+          const { ev, date } = deleteScopeAsk
+          setDeleteScopeAsk(null)
+          setSelectedEvId(null)
+          runCalDelete({ eventId: ev.id!, masterId: ev.recurringEventId, calId: ev.calendarId ?? 'primary', fromDate: date, scope })
+        },
+      }))}
+    />
 
-    {/* Delete confirm dialog */}
-    {deleteConfirm && (
-      <div
-        style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        onClick={() => setDeleteConfirm(null)}
-      >
-        <div onClick={e => e.stopPropagation()} style={{ background: 'var(--color-bg-elevated)', borderRadius: 16, padding: '24px 24px 20px', maxWidth: 340, width: 'calc(100vw - 40px)', boxShadow: '0 8px 40px rgba(0,0,0,0.7)', border: '0.5px solid rgb(var(--rgb-ink) / 0.1)', fontFamily: 'var(--font-montserrat)' }}>
-          <p style={{ fontSize: 17, fontWeight: 600, color: 'var(--color-ink)', margin: '0 0 8px' }}>Delete Event</p>
-          <p style={{ fontSize: 14, color: 'rgb(var(--rgb-ink) / 0.5)', margin: '0 0 20px', lineHeight: 1.45 }}>
-            &ldquo;{deleteConfirm.title}&rdquo; will be permanently deleted.
-          </p>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button
-              onClick={() => setDeleteConfirm(null)}
-              style={{ padding: '8px 16px', borderRadius: 8, background: 'rgb(var(--rgb-ink) / 0.06)', border: '0.5px solid rgb(var(--rgb-ink) / 0.1)', color: 'var(--color-ink)', fontSize: 14, cursor: 'pointer', fontFamily: 'var(--font-montserrat)' }}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => { handleDeleteCalEvent(deleteConfirm); setDeleteConfirm(null); setSelectedEvId(null) }}
-              style={{ padding: '8px 18px', borderRadius: 8, background: '#ef4444', border: 'none', color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-montserrat)' }}
-            >
-              Delete
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
+    {/* Delete confirm */}
+    <ActionSheet
+      open={!!deleteConfirm}
+      title={deleteConfirm ? `Delete “${deleteConfirm.title}”?` : undefined}
+      message="This can't be undone."
+      onClose={() => setDeleteConfirm(null)}
+      options={[{
+        label: 'Delete Event',
+        destructive: true,
+        onSelect: () => { if (deleteConfirm) handleDeleteCalEvent(deleteConfirm); setDeleteConfirm(null); setSelectedEvId(null) },
+      }]}
+    />
     </>
   )
 }

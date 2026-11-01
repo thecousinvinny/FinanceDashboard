@@ -31,6 +31,8 @@ interface Props {
   action?:   SheetAction
   /** Left button label. Defaults to "Cancel". */
   cancelLabel?: string
+  /** Left button action when it isn't closing — e.g. "Back" inside a picker. */
+  onCancel?: () => void
   /**
    * Where the action lives. 'bottom' (default, forms): a big button pinned to
    * the bottom of the sheet, in thumb reach after filling the form top-down.
@@ -55,6 +57,29 @@ const FIELD_SEL = [
   'textarea:not([disabled]):not([readonly])',
 ].join(',')
 
+// Sheets can stack (the calendar's location and repeat pickers open over the
+// event sheet). Only the top one handles touches and Esc, and the page stays
+// locked until the last one closes — each sheet used to lock and unlock on
+// its own, so closing a picker unlocked the page under the sheet below it.
+const stack: symbol[] = []
+const isTop = (id: symbol) => stack[stack.length - 1] === id
+let lockedY = 0
+
+function lockPage() {
+  lockedY = window.scrollY
+  const body = document.body
+  body.style.position = 'fixed'
+  body.style.top = `-${lockedY}px`
+  body.style.width = '100%'
+  document.documentElement.style.overscrollBehavior = 'none'
+}
+function unlockPage() {
+  const body = document.body
+  body.style.position = ''; body.style.top = ''; body.style.width = ''
+  document.documentElement.style.overscrollBehavior = ''
+  window.scrollTo(0, lockedY)
+}
+
 function fieldsIn(root: HTMLElement): HTMLElement[] {
   return Array.from(root.querySelectorAll<HTMLElement>(FIELD_SEL)).filter(el => el.getClientRects().length > 0)
 }
@@ -68,7 +93,7 @@ function revealField(sc: HTMLElement, el: HTMLElement) {
   sc.scrollTo({ top: sc.scrollTop + r.top - box.top - Math.max(12, (bottom - box.top) / 3), behavior: 'smooth' })
 }
 
-export function Sheet({ open, onClose, title, action, cancelLabel = 'Cancel', actionPlacement = 'bottom', scrollRef, children }: Props) {
+export function Sheet({ open, onClose, title, action, cancelLabel = 'Cancel', onCancel, actionPlacement = 'bottom', scrollRef, children }: Props) {
   const large = useIsLargeScreen()
   const [mounted, setMounted] = useState(false)
   // Kept rendered through the close animation
@@ -78,6 +103,7 @@ export function Sheet({ open, onClose, title, action, cancelLabel = 'Cancel', ac
   const ownScroll = useRef<HTMLDivElement>(null)
   const scrollEl  = scrollRef ?? ownScroll
   const drag      = useRef<{ y: number; t: number; dy: number } | null>(null)
+  const id        = useRef(Symbol('sheet')).current
 
   useEffect(() => setMounted(true), [])
 
@@ -96,18 +122,16 @@ export function Sheet({ open, onClose, title, action, cancelLabel = 'Cancel', ac
     return () => clearTimeout(t)
   }, [open])
 
-  // Body scroll lock (iOS-safe: position:fixed, never overflow:hidden)
+  // Body scroll lock (iOS-safe: position:fixed, never overflow:hidden), shared
+  // by every open sheet
   useEffect(() => {
     if (!open) return
-    const scrollY = window.scrollY
-    const body = document.body
-    body.style.position = 'fixed'
-    body.style.top = `-${scrollY}px`
-    body.style.width = '100%'
-    document.documentElement.style.overscrollBehavior = 'none'
+    if (stack.length === 0) lockPage()
+    stack.push(id)
     let lastY = 0
     const onStart = (e: TouchEvent) => { lastY = e.touches[0].clientY }
     const onMove  = (e: TouchEvent) => {
+      if (!isTop(id)) return
       const el = scrollEl.current
       // Leave the drag zone and pickers alone; block page scroll everywhere else
       if ((e.target as Element)?.closest?.('[data-sheet-drag]')) return
@@ -120,13 +144,13 @@ export function Sheet({ open, onClose, title, action, cancelLabel = 'Cancel', ac
     document.addEventListener('touchstart', onStart, { passive: true })
     document.addEventListener('touchmove',  onMove,  { passive: false })
     return () => {
-      body.style.position = ''; body.style.top = ''; body.style.width = ''
-      document.documentElement.style.overscrollBehavior = ''
       document.removeEventListener('touchstart', onStart)
       document.removeEventListener('touchmove',  onMove)
-      window.scrollTo(0, scrollY)
+      const i = stack.indexOf(id)
+      if (i >= 0) stack.splice(i, 1)
+      if (stack.length === 0) unlockPage()
     }
-  }, [open, scrollEl])
+  }, [open, scrollEl, id])
 
   // Keyboard avoidance: pad the scroll area and lift the focused field
   useEffect(() => {
@@ -199,12 +223,13 @@ export function Sheet({ open, onClose, title, action, cancelLabel = 'Cancel', ac
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !document.querySelector('.select-menu, [data-daterange-picker]')) { e.preventDefault(); onClose() }
+      if (!isTop(id)) return
+      if (e.key === 'Escape' && !document.querySelector('.select-menu, [data-daterange-picker], [data-action-sheet]')) { e.preventDefault(); (onCancel ?? onClose)() }
       if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && action && !action.disabled) { e.preventDefault(); action.onClick() }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [open, onClose, action])
+  }, [open, onClose, onCancel, action, id])
 
   // ── Drag to dismiss (phone) ────────────────────────────────────────────────
   function onTouchStart(e: React.TouchEvent) {
@@ -258,7 +283,7 @@ export function Sheet({ open, onClose, title, action, cancelLabel = 'Cancel', ac
       <div className="relative flex items-center justify-between h-[52px] px-2">
         <button
           type="button"
-          onClick={onClose}
+          onClick={onCancel ?? onClose}
           className="sheet-nav-btn h-11 px-3 text-[17px] text-gold"
         >
           {cancelLabel}

@@ -5,7 +5,8 @@ import { cn } from '@/lib/utils'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const GOLD_GRADIENT = 'linear-gradient(135deg,#F7DF9E,#D4AF37,#A47F23)'
+const GOLD_GRADIENT = 'linear-gradient(160deg, #E9CD7A, #D4AF37 45%, #B08A2A)'
+const EASE = 'cubic-bezier(0.32, 0.72, 0, 1)'
 const GOLD = '#D4AF37'
 
 interface Props {
@@ -48,10 +49,10 @@ export function MonthYearPicker({ open, year, month, onClose, onSelect }: Props)
       <div
         onClick={onClose}
         className={cn(
-          'fixed inset-0 z-[64] transition-opacity duration-200',
+          'fixed inset-0 z-[64] transition-opacity duration-300',
           open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
         )}
-        style={{ background: 'rgba(0,0,0,0.6)' }}
+        style={{ background: 'rgba(0,0,0,0.4)' }}
       />
 
       {/* Card */}
@@ -59,10 +60,17 @@ export function MonthYearPicker({ open, year, month, onClose, onSelect }: Props)
         role="dialog"
         aria-modal="true"
         className={cn(
-          'fixed left-1/2 top-1/2 z-[65] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-[20px] bg-bg-surface border border-ink/[0.08] transition-all duration-200',
-          open ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none',
+          // Frosted like the app's other floating panels (Select menus, the FAB menu)
+          'frost-strong fixed left-1/2 top-1/2 z-[65] w-[300px] rounded-[20px]',
+          open ? 'pointer-events-auto' : 'pointer-events-none',
         )}
-        style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.5)', fontFamily: 'var(--font-montserrat)' }}
+        style={{
+          fontFamily: 'var(--font-montserrat)',
+          opacity: open ? 1 : 0,
+          // Fade only: scaling a blurred panel re-blurs it every frame (the FAB stutter)
+          transform: 'translate(-50%, -50%)',
+          transition: `opacity 260ms ${EASE}`,
+        }}
       >
         {/* Header: ‹  year / year-range  › */}
         <div className="flex items-center justify-between px-3 pt-3 pb-2">
@@ -99,11 +107,11 @@ export function MonthYearPicker({ open, year, month, onClose, onSelect }: Props)
                   <button
                     key={mn}
                     onClick={() => { onSelect(viewYear, i); onClose() }}
-                    className={cn(cellBase, selected ? 'text-black' : 'bg-bg-overlay text-ink-muted')}
+                    className={cn(cellBase, selected ? 'text-[#1a1200]' : 'text-ink-muted')}
                     style={
                       selected   ? { background: GOLD_GRADIENT }
                       : isCurrent ? { boxShadow: `inset 0 0 0 1px ${GOLD}`, color: GOLD }
-                      : undefined
+                      : { background: 'rgb(var(--rgb-ink) / 0.07)' }
                     }
                   >
                     {mn}
@@ -120,11 +128,11 @@ export function MonthYearPicker({ open, year, month, onClose, onSelect }: Props)
                   <button
                     key={y}
                     onClick={() => { setViewYear(y); setMode('month') }}
-                    className={cn(cellBase, selected ? 'text-black' : 'bg-bg-overlay text-ink-muted')}
+                    className={cn(cellBase, selected ? 'text-[#1a1200]' : 'text-ink-muted')}
                     style={
                       selected   ? { background: GOLD_GRADIENT }
                       : isCurrent ? { boxShadow: `inset 0 0 0 1px ${GOLD}`, color: GOLD }
-                      : undefined
+                      : { background: 'rgb(var(--rgb-ink) / 0.07)' }
                     }
                   >
                     {y}

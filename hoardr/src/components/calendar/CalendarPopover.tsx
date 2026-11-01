@@ -355,7 +355,7 @@ export function CalendarPopover({
         !endDropRef.current?.contains(e.target as Node) &&
         !locDropRef.current?.contains(e.target as Node) &&
         !(e.target as Element)?.closest?.('[data-daterange-picker]') &&
-        !(e.target as Element)?.closest?.('[data-recur-picker]')
+        !(e.target as Element)?.closest?.('[data-action-sheet]')
       ) onCloseRef.current()
     }
     const t = setTimeout(() => document.addEventListener('mousedown', onDown), 60)

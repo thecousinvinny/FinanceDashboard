@@ -1,8 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, MapPin, Clock, Star, Search } from 'lucide-react'
+import { MapPin, Clock, Star, Search, XCircle } from 'lucide-react'
 import { getLocFavorites, getLocRecents, toggleLocFavorite, pushLocRecent } from '@/lib/location-prefs'
+import { haptic } from '@/lib/utils'
+import { Sheet } from '@/components/ui/Sheet'
+import { FormGroup } from '@/components/ui/Form'
 
 interface LocSuggestion {
   placeId:  string
@@ -18,11 +21,6 @@ interface Props {
   onSelect: (location: string) => void
 }
 
-const M    = 'var(--font-montserrat)'
-const GOLD = '#C9A84C'
-const MUTED = 'rgb(var(--rgb-ink-muted))'
-const SEP   = 'rgb(var(--rgb-ink) / 0.06)'
-
 function highlightMatch(text: string, query: string) {
   if (!query.trim()) return <>{text}</>
   const idx = text.toLowerCase().indexOf(query.toLowerCase())
@@ -30,23 +28,22 @@ function highlightMatch(text: string, query: string) {
   return (
     <>
       {text.slice(0, idx)}
-      <span style={{ color: GOLD }}>{text.slice(idx, idx + query.length)}</span>
+      <span className="text-gold">{text.slice(idx, idx + query.length)}</span>
       {text.slice(idx + query.length)}
     </>
   )
 }
 
+/** Location search for the phone event sheet: favorites, recents, then Google Places. */
 export function LocationPickerSheet({ open, initial, onClose, onSelect }: Props) {
   const [query,       setQuery]       = useState('')
   const [suggestions, setSuggestions] = useState<LocSuggestion[]>([])
   const [recents,     setRecents]     = useState<string[]>([])
   const [favorites,   setFavorites]   = useState<string[]>([])
 
-  const svcRef    = useRef<unknown>(null)
-  const timerRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const inputRef  = useRef<HTMLInputElement>(null)
-  const sheetRef  = useRef<HTMLDivElement>(null)
-  const dragStartY = useRef<number | null>(null)
+  const svcRef   = useRef<unknown>(null)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   // Initialize AutocompleteService once
   useEffect(() => {
@@ -72,15 +69,14 @@ export function LocationPickerSheet({ open, initial, onClose, onSelect }: Props)
   }, [])
 
   useEffect(() => {
-    if (open) {
-      setQuery('')
-      setSuggestions([])
-      setRecents(getLocRecents())
-      setFavorites(getLocFavorites())
-      setTimeout(() => inputRef.current?.focus(), 350)
-    } else {
-      setTimeout(() => { setQuery(''); setSuggestions([]) }, 300)
-    }
+    if (!open) return
+    setQuery('')
+    setSuggestions([])
+    setRecents(getLocRecents())
+    setFavorites(getLocFavorites())
+    // After the sheet has risen, so the keyboard doesn't fight the animation
+    const t = setTimeout(() => inputRef.current?.focus(), 420)
+    return () => clearTimeout(t)
   }, [open])
 
   function handleSearch(val: string) {
@@ -100,226 +96,127 @@ export function LocationPickerSheet({ open, initial, onClose, onSelect }: Props)
   }
 
   function selectLocation(text: string) {
+    haptic('tap')
     setRecents(pushLocRecent(text))
     onSelect(text)
     onClose()
   }
 
-  function toggleFavorite(e: React.MouseEvent, text: string) {
-    e.stopPropagation()
-    setFavorites(toggleLocFavorite(text))
-  }
+  const isFav = (t: string) => favorites.includes(t)
 
   // Rows are divs, not buttons: the star toggle inside them is a real button,
   // and a <button> nested in a <button> is invalid — desktop browsers route the
   // click to the outer row, so starring never registered on PC.
-  const rowProps = (text: string) => ({
-    role: 'button' as const,
-    tabIndex: 0,
-    style: rowStyle,
-    onClick: () => selectLocation(text),
-    onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectLocation(text) } },
-  })
-
-  function onDragStart(e: React.TouchEvent) { dragStartY.current = e.touches[0].clientY }
-  function onDragMove(e: React.TouchEvent) {
-    if (dragStartY.current === null || !sheetRef.current) return
-    const dy = Math.max(0, e.touches[0].clientY - dragStartY.current)
-    sheetRef.current.style.transform = `translateY(${dy}px)`; sheetRef.current.style.transition = 'none'
-  }
-  function onDragEnd(e: React.TouchEvent) {
-    if (!sheetRef.current) return
-    const dy = dragStartY.current !== null ? Math.max(0, e.changedTouches[0].clientY - dragStartY.current) : 0
-    dragStartY.current = null
-    if (dy > 80) {
-      sheetRef.current.style.transition = 'transform 0.28s cubic-bezier(0.4,0,0.2,1)'
-      sheetRef.current.style.transform  = 'translateY(100%)'
-      setTimeout(() => { if (sheetRef.current) { sheetRef.current.style.transform = ''; sheetRef.current.style.transition = '' } onClose() }, 280)
-    } else { sheetRef.current.style.transform = ''; sheetRef.current.style.transition = '' }
-  }
-
-  const isFav = (t: string) => favorites.includes(t)
-
-  const rowStyle: React.CSSProperties = {
-    display: 'flex', alignItems: 'center', gap: 12,
-    padding: '13px 16px', borderBottom: `0.5px solid ${SEP}`,
-    background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer',
+  function Row({ text, icon, primary, secondary, star = true }: {
+    text: string; icon: React.ReactNode; primary: React.ReactNode; secondary?: string; star?: boolean
+  }) {
+    return (
+      <div
+        role="button" tabIndex={0}
+        onClick={() => selectLocation(text)}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectLocation(text) } }}
+        className="flex items-center gap-3 px-4 min-h-[50px] py-2.5 cursor-pointer active:bg-[rgb(var(--rgb-ink)/0.06)] transition-colors"
+        style={{ ['--sep-inset' as string]: '50px' }}
+      >
+        <span className="w-[22px] flex justify-center flex-shrink-0">{icon}</span>
+        <span className="flex-1 min-w-0">
+          <span className="block text-[16px] leading-snug text-ink">{primary}</span>
+          {secondary && <span className="block text-[13px] leading-snug text-ink-muted truncate">{secondary}</span>}
+        </span>
+        {star && (
+          <button
+            type="button"
+            onClick={e => { e.stopPropagation(); haptic('tap'); setFavorites(toggleLocFavorite(text)) }}
+            aria-label={isFav(text) ? 'Remove favorite' : 'Add favorite'}
+            className="w-9 h-9 -mr-2 flex items-center justify-center flex-shrink-0"
+          >
+            <Star size={16} strokeWidth={1.9} className={isFav(text) ? 'text-gold' : 'text-ink-faint'} fill={isFav(text) ? 'currentColor' : 'none'} />
+          </button>
+        )}
+      </div>
+    )
   }
 
-  const sectionLabel: React.CSSProperties = {
-    fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
-    color: MUTED, padding: '10px 16px 4px', fontFamily: M,
-  }
-
-  const showFavorites  = !query.trim() && favorites.length > 0
-  const showRecents    = !query.trim() && recents.length > 0
-  const showSuggestions = query.trim().length > 0
+  const q  = query.trim()
+  const ql = q.toLowerCase()
   // While typing: saved places containing the text come first, then Google
-  const ql = query.trim().toLowerCase()
   const savedMatches = ql ? [...new Set([...favorites, ...recents])].filter(t => t.toLowerCase().includes(ql)).slice(0, 5) : []
   const placeResults = suggestions.filter(s => !savedMatches.includes(s.description))
+  const muted = 'text-ink-muted'
 
   return (
-    <>
-      {/* Backdrop — above edit sheet */}
-      <div
-        className={`fixed inset-0 z-[54] transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-        style={{ background: 'rgba(0,0,0,0.5)' }}
-        onClick={onClose}
-      />
-
-      {/* Sheet */}
-      <div
-        ref={sheetRef}
-        className="fixed inset-x-0 bottom-0 z-[55] rounded-t-[24px] flex flex-col"
-        style={{
-          background:  'var(--color-bg-surface)',
-          height:      'calc(100dvh - env(safe-area-inset-top, 44px) - 8px)',
-          willChange:  'transform',
-          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-          transform:   open ? 'translateY(0)' : 'translateY(100%)',
-          transition:  'transform 0.3s cubic-bezier(0.4,0,0.2,1)',
-        }}
-      >
-        {/* Drag zone: handle + header */}
-        <div
-          onTouchStart={onDragStart} onTouchMove={onDragMove} onTouchEnd={onDragEnd}
-          className="flex-shrink-0" style={{ touchAction: 'none' }}
-        >
-          <div className="flex justify-center pt-3 pb-1">
-            <div className="w-9 h-1 rounded-full bg-ink/20" />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', padding: '8px 16px 10px' }}>
-            <button
-              onTouchStart={e => e.stopPropagation()}
-              onClick={onClose}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px 4px 0', display: 'flex', alignItems: 'center', color: GOLD, marginRight: 8 }}
-            >
-              <ArrowLeft size={20} color={GOLD} />
-            </button>
-            <span style={{ fontFamily: M, fontSize: 17, fontWeight: 600, color: 'var(--color-ink)', flex: 1 }}>
-              Location
-            </span>
-          </div>
-        </div>
-
-        {/* Search input */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          margin: '0 16px 12px',
-          background: 'rgb(var(--rgb-ink) / 0.06)',
-          borderRadius: 12, padding: '10px 14px',
-          flexShrink: 0,
-        }}>
-          <Search size={15} color={MUTED} style={{ flexShrink: 0 }} />
+    <Sheet open={open} onClose={onClose} title="Location">
+      {/* Search */}
+      <div className="sticky top-0 z-10 -mx-4 px-4 pt-2 pb-3" style={{ background: 'var(--color-bg-surface)' }}>
+        <label className="flex items-center gap-2 h-[38px] px-3 rounded-[10px]" style={{ background: 'rgb(var(--rgb-ink) / 0.08)' }}>
+          <Search size={16} strokeWidth={2} className="text-ink-muted flex-shrink-0" />
           <input
             ref={inputRef}
             type="text"
-            placeholder="Search location…"
+            placeholder={initial || 'Search or enter a place'}
             value={query}
             onChange={e => handleSearch(e.target.value)}
-            style={{
-              flex: 1, background: 'none', border: 'none', outline: 'none',
-              fontSize: 15, fontFamily: M, color: 'var(--color-ink)',
-            }}
+            onKeyDown={e => { if (e.key === 'Enter' && q) { e.preventDefault(); selectLocation(q) } }}
+            enterKeyHint="done"
+            className="flex-1 min-w-0 bg-transparent text-[16px] text-ink placeholder:text-ink-faint outline-none"
           />
-          {query.length > 0 && (
-            <button onClick={() => { setQuery(''); setSuggestions([]) }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: MUTED, fontSize: 18, lineHeight: 1, padding: 0, display: 'flex', alignItems: 'center' }}>
-              ×
+          {query && (
+            <button type="button" onClick={() => { setQuery(''); setSuggestions([]); inputRef.current?.focus() }} aria-label="Clear" className="flex-shrink-0">
+              <XCircle size={17} className="text-ink-faint" fill="currentColor" stroke="var(--color-bg-surface)" />
             </button>
           )}
-        </div>
-
-        {/* Scrollable list */}
-        <div className="flex-1 overflow-y-auto" style={{ overscrollBehavior: 'contain', borderTop: `0.5px solid ${SEP}` }}>
-
-          {/* Favorites */}
-          {showFavorites && (
-            <>
-              <p style={sectionLabel}>Favorites</p>
-              {favorites.map(loc => (
-                <div key={loc} {...rowProps(loc)}>
-                  <Star size={15} color={GOLD} fill={GOLD} style={{ flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontSize: 14, color: 'var(--color-ink)', fontFamily: M, lineHeight: 1.4, textAlign: 'left' }}>{loc}</span>
-                  <button onClick={e => toggleFavorite(e, loc)} aria-label={isFav(loc) ? 'Remove favorite' : 'Add favorite'}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0 }}>
-                    <Star size={14} color={GOLD} fill={GOLD} />
-                  </button>
-                </div>
-              ))}
-            </>
-          )}
-
-          {/* Recents */}
-          {showRecents && (
-            <>
-              <p style={sectionLabel}>Recents</p>
-              {recents.map(loc => (
-                <div key={loc} {...rowProps(loc)}>
-                  <Clock size={15} color={MUTED} style={{ flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontSize: 14, color: 'var(--color-ink)', fontFamily: M, lineHeight: 1.4, textAlign: 'left' }}>{loc}</span>
-                  <button onClick={e => toggleFavorite(e, loc)} aria-label={isFav(loc) ? 'Remove favorite' : 'Add favorite'}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0 }}>
-                    <Star size={14} color={isFav(loc) ? GOLD : MUTED} fill={isFav(loc) ? GOLD : 'none'} />
-                  </button>
-                </div>
-              ))}
-            </>
-          )}
-
-          {/* Autocomplete: typed text, saved matches, then Google */}
-          {showSuggestions && (
-            <>
-              <div {...rowProps(query.trim())}>
-                <MapPin size={15} color={GOLD} style={{ flexShrink: 0 }} />
-                <span style={{ flex: 1, fontSize: 14, color: 'var(--color-ink)', fontFamily: M, lineHeight: 1.4, textAlign: 'left' }}>
-                  Use &ldquo;{query.trim()}&rdquo;
-                </span>
-              </div>
-              {savedMatches.length > 0 && <p style={sectionLabel}>Saved</p>}
-              {savedMatches.map(loc => (
-                <div key={`s:${loc}`} {...rowProps(loc)}>
-                  {isFav(loc) ? <Star size={15} color={GOLD} fill={GOLD} style={{ flexShrink: 0 }} /> : <Clock size={15} color={MUTED} style={{ flexShrink: 0 }} />}
-                  <span style={{ flex: 1, fontSize: 14, color: 'var(--color-ink)', fontFamily: M, lineHeight: 1.4, textAlign: 'left' }}>{highlightMatch(loc, query)}</span>
-                  <button onClick={e => toggleFavorite(e, loc)} aria-label={isFav(loc) ? 'Remove favorite' : 'Add favorite'}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0 }}>
-                    <Star size={14} color={isFav(loc) ? GOLD : MUTED} fill={isFav(loc) ? GOLD : 'none'} />
-                  </button>
-                </div>
-              ))}
-              {placeResults.length > 0 && savedMatches.length > 0 && <p style={sectionLabel}>Suggestions</p>}
-              {placeResults.map(sug => (
-                <div key={sug.placeId} {...rowProps(sug.description)}>
-                  <MapPin size={15} color={MUTED} style={{ flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-                    <div style={{ fontSize: 14, color: 'var(--color-ink)', fontFamily: M, lineHeight: 1.4 }}>
-                      {highlightMatch(sug.mainText, query)}
-                    </div>
-                    {sug.secText && (
-                      <div style={{ fontSize: 12, color: MUTED, fontFamily: M, lineHeight: 1.4, marginTop: 2 }}>{sug.secText}</div>
-                    )}
-                  </div>
-                  <button onClick={e => toggleFavorite(e, sug.description)} aria-label={isFav(sug.description) ? 'Remove favorite' : 'Add favorite'}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0 }}>
-                    <Star size={14} color={isFav(sug.description) ? GOLD : MUTED} fill={isFav(sug.description) ? GOLD : 'none'} />
-                  </button>
-                </div>
-              ))}
-            </>
-          )}
-
-          {/* Empty state */}
-          {!showFavorites && !showRecents && !showSuggestions && (
-            <div style={{ padding: '40px 16px', textAlign: 'center' }}>
-              <MapPin size={32} color={MUTED} style={{ margin: '0 auto 12px' }} />
-              <p style={{ fontFamily: M, fontSize: 14, color: MUTED }}>Search for a place or address</p>
-            </div>
-          )}
-
-          <div style={{ height: 20 }} />
-        </div>
+        </label>
       </div>
-    </>
+
+      {q ? (
+        <>
+          <FormGroup className="!mt-1">
+            <Row text={q} star={false} icon={<MapPin size={18} strokeWidth={1.75} className="text-gold" />}
+              primary={<>Use &ldquo;{q}&rdquo;</>} />
+          </FormGroup>
+          {savedMatches.length > 0 && (
+            <FormGroup header="Saved">
+              {savedMatches.map(loc => (
+                <Row key={`s:${loc}`} text={loc} primary={highlightMatch(loc, q)}
+                  icon={isFav(loc) ? <Star size={17} className="text-gold" fill="currentColor" /> : <Clock size={17} strokeWidth={1.75} className={muted} />} />
+              ))}
+            </FormGroup>
+          )}
+          {placeResults.length > 0 && (
+            <FormGroup header="Places">
+              {placeResults.map(sug => (
+                <Row key={sug.placeId} text={sug.description} primary={highlightMatch(sug.mainText, q)} secondary={sug.secText}
+                  icon={<MapPin size={17} strokeWidth={1.75} className={muted} />} />
+              ))}
+            </FormGroup>
+          )}
+        </>
+      ) : favorites.length === 0 && recents.length === 0 ? (
+        <div className="py-14 flex flex-col items-center text-center">
+          <div className="w-12 h-12 rounded-full bg-bg-overlay flex items-center justify-center mb-3">
+            <MapPin size={20} className="text-ink-muted" strokeWidth={1.75} />
+          </div>
+          <p className="text-[15px] font-medium text-ink">Search for a place</p>
+          <p className="text-[13px] text-ink-muted mt-1">Star one to keep it at the top.</p>
+        </div>
+      ) : (
+        <>
+          {favorites.length > 0 && (
+            <FormGroup header="Favorites" className="!mt-1">
+              {favorites.map(loc => (
+                <Row key={loc} text={loc} primary={loc} icon={<Star size={17} className="text-gold" fill="currentColor" />} />
+              ))}
+            </FormGroup>
+          )}
+          {recents.length > 0 && (
+            <FormGroup header="Recents" className={favorites.length ? undefined : '!mt-1'}>
+              {recents.map(loc => (
+                <Row key={loc} text={loc} primary={loc} icon={<Clock size={17} strokeWidth={1.75} className={muted} />} />
+              ))}
+            </FormGroup>
+          )}
+        </>
+      )}
+    </Sheet>
   )
 }
