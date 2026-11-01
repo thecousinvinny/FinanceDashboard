@@ -32,8 +32,11 @@ function useGrow() {
 export function CashflowCard({ months }: { months: CfMonth[] }) {
   const thisYear = months.length ? Number(months[months.length - 1].key.slice(0, 4)) : new Date().getFullYear()
   const years    = useMemo(() => [...new Set(months.map(m => Number(m.key.slice(0, 4))))].sort((a, b) => b - a), [months])
-  const ranges   = useMemo(() => [{ id: '12m', label: '12 mo' }, ...years.map(y => ({ id: String(y), label: String(y) }))], [years])
   const [range, setRange] = useState('12m')
+  // The year the stepper shows: the one picked, else the latest. One pill and
+  // a stepper whatever the number of years — a pill per year grew forever.
+  const shownYear = range === '12m' ? years[0] : Number(range)
+  const yi = years.indexOf(shownYear)
   const shown = useMemo(() => range === '12m' ? months.slice(-12) : months.filter(m => m.key.startsWith(range)), [months, range])
   const [selRaw, setSel] = useState<number | null>(null)
   const sel = selRaw !== null && selRaw < shown.length ? selRaw : shown.length - 1
@@ -56,13 +59,23 @@ export function CashflowCard({ months }: { months: CfMonth[] }) {
     }}>
       <div className="flex items-center gap-2 mb-3">
         <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-gold">Cashflow</p>
-        <div className="flex gap-1.5 ml-auto">
-          {ranges.map(r => (
-            <button key={r.id} onClick={() => { setRange(r.id); setSel(null) }}
-              className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-colors ${range === r.id ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted'}`}>
-              {r.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-1.5 ml-auto">
+          <button onClick={() => { setRange('12m'); setSel(null) }}
+            className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-colors ${range === '12m' ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted'}`}>
+            12 mo
+          </button>
+          {years.length > 0 && (
+            <div className={`flex items-center rounded-full transition-colors ${range !== '12m' ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted'}`}>
+              <button aria-label="Earlier year" disabled={range !== '12m' && yi >= years.length - 1}
+                onClick={() => { setRange(String(range === '12m' ? years[0] : years[yi + 1])); setSel(null) }}
+                className="pl-2 pr-0.5 py-1 text-[12px] leading-none disabled:opacity-30">‹</button>
+              <button onClick={() => { setRange(String(shownYear)); setSel(null) }}
+                className="px-1 py-1 text-[11px] font-semibold tabular-nums">{shownYear}</button>
+              <button aria-label="Later year" disabled={range === '12m' || yi <= 0}
+                onClick={() => { setRange(String(years[yi - 1])); setSel(null) }}
+                className="pl-0.5 pr-2 py-1 text-[12px] leading-none disabled:opacity-30">›</button>
+            </div>
+          )}
         </div>
       </div>
 

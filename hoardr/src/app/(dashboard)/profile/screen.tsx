@@ -5,12 +5,12 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Camera, Check, Settings2, Pencil } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { cn, $f, $fk } from '@/lib/utils'
+import { $f, $fk, haptic } from '@/lib/utils'
 import { getCategoryIcon } from '@/components/ui/CategoryIcon'
 import { afterSlideTimeout, useOnScreenReturn, useScreenReady, useScreenVisit, navigateTab } from '@/lib/tab-nav'
 import { sameAsLast } from '@/lib/same-data'
 import { CashflowCard } from '@/components/profile/CashflowCard'
-import { profileStats, type ProfExp, type ProfInc, type ProfSub } from '@/lib/profile-stats'
+import { profileStats, breakdown, BREAK_RANGES, type BreakRange, type ProfExp, type ProfInc, type ProfSub } from '@/lib/profile-stats'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -21,8 +21,6 @@ interface PillItem { name: string; value: number; display: string; note?: string
 
 const MINUS    = '−'
 const RED      = '#ef4444'
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const WEEKDAYS_FULL = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays']
 const sgn = (n: number) => `${n < 0 ? MINUS : '+'}${$fk(Math.abs(n))}`
 const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 const shortDate = (d: string) => `${MONTH_ABBR[Number(d.slice(5, 7)) - 1]} ’${d.slice(2, 4)}`
@@ -84,39 +82,6 @@ function RankPills({ items, tone }: { items: PillItem[]; tone: 'expense' | 'inco
   )
 }
 
-// ─── Weekday spending bars ────────────────────────────────────────────────────
-
-function WeekdayBars({ values }: { values: number[] }) {
-  const grown = useGrowIn()
-  const max   = Math.max(...values, 1)
-  const top   = values.indexOf(max)
-  const H     = 64
-  return (
-    <div>
-      <div className="flex items-end gap-2" style={{ height: H }}>
-        {values.map((v, i) => (
-          <div key={i} className="flex-1 rounded-[5px]" style={{
-            height: Math.max(3, (v / max) * H),
-            background: i === top
-              ? 'linear-gradient(180deg, var(--sem-expense), rgba(var(--sem-expense-rgb),0.45))'
-              : 'rgba(var(--sem-expense-rgb),0.22)',
-            transform: `scaleY(${grown ? 1 : 0})`, transformOrigin: 'bottom',
-            transition: grown ? `transform 550ms cubic-bezier(0.22, 1, 0.36, 1) ${i * 40}ms` : 'none',
-          }} />
-        ))}
-      </div>
-      <div className="flex gap-2 mt-1.5">
-        {values.map((v, i) => (
-          <div key={i} className="flex-1 text-center">
-            <p className={cn('text-[10px]', i === top ? 'text-gold font-semibold' : 'text-ink-faint')}>{WEEKDAYS[i]}</p>
-            <p className="text-[10px] text-ink-muted" style={{ fontFamily: 'var(--font-big-shoulders)' }}>{$fk(v)}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function Card({ label, stat, children }: { label: string; stat?: React.ReactNode; children: React.ReactNode }) {
@@ -142,6 +107,25 @@ function Record({ label, value, sub, color }: { label: string; value: string; su
     </div>
   )
 }
+
+/** This mo · 6 mo · This yr · All — a breakdown card's range, in its header */
+function RangePills({ value, onChange }: { value: BreakRange; onChange: (r: BreakRange) => void }) {
+  return (
+    <div className="flex gap-1">
+      {BREAK_RANGES.map(r => (
+        <button key={r.id} onClick={() => { haptic('tap'); onChange(r.id) }}
+          className={`px-2 py-[3px] rounded-full text-[10.5px] font-semibold whitespace-nowrap transition-colors ${value === r.id ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted'}`}>
+          {r.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+function Empty({ children }: { children: React.ReactNode }) {
+  return <p className="text-[13px] text-ink-muted py-3 text-center">{children}</p>
+}
+const rangeWords = (r: BreakRange) => ({ mo: 'this month', '6m': 'in the last 6 months', yr: 'this year', all: 'so far' })[r]
+const vsWords = (r: BreakRange) => BREAK_RANGES.find(x => x.id === r)!.vs
 
 const trendNote = (t: number | null) => t === null ? undefined : `${t >= 0 ? '↑' : '↓'} ${Math.abs(Math.round(t * 100))}%`
 
@@ -287,7 +271,14 @@ export default function ProfilePage() {
 
   const [now, setNow] = useState(() => new Date())
   const stats = useMemo(() => profileStats(expenses, income, subs, now), [expenses, income, subs, now])
-  const { records: rec, habits, allTime } = stats
+  const { records: rec, allTime } = stats
+  // Each breakdown card has its own range
+  const [catRange, setCatRange] = useState<BreakRange>('mo')
+  const [subRange, setSubRange] = useState<BreakRange>('mo')
+  const [srcRange, setSrcRange] = useState<BreakRange>('mo')
+  const catBreak = useMemo(() => breakdown(expenses, income, subs, now, catRange), [expenses, income, subs, now, catRange])
+  const subBreak = useMemo(() => breakdown(expenses, income, subs, now, subRange), [expenses, income, subs, now, subRange])
+  const srcBreak = useMemo(() => breakdown(expenses, income, subs, now, srcRange), [expenses, income, subs, now, srcRange])
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -412,39 +403,38 @@ export default function ProfilePage() {
             </div>
           </Card>
 
-          {/* ── Habits ────────────────────────────────────────────────────────── */}
-          <Card label="Habits" stat={<>You spend most on <span className="text-gold font-semibold">{WEEKDAYS_FULL[habits.weekday.indexOf(Math.max(...habits.weekday))]}</span></>}>
-            <WeekdayBars values={habits.weekday} />
-            <div className="grid grid-cols-2 gap-2 mt-4">
-              <Record label="Typical purchase" value={$fk(habits.median)} sub="the median expense" />
-              <Record label="Purchases a month" value={String(Math.round(habits.perMonth))} sub="on average" />
-            </div>
-          </Card>
-
-          {/* ── Categories, all time ──────────────────────────────────────────── */}
-          <Card label="Categories" stat="All time · last 90 days vs the 90 before">
-            <RankPills tone="expense" items={stats.categories.map(c => ({
-              name: c.name, value: c.total, display: $fk(c.total), icon: true,
-              note: [`${Math.round(c.share * 100)}%`, trendNote(c.trend)].filter(Boolean).join(' · '),
-            }))} />
+          {/* ── Categories ────────────────────────────────────────────────────── */}
+          <Card label="Categories" stat={<RangePills value={catRange} onChange={setCatRange} />}>
+            {catBreak.categories.length ? (
+              <RankPills tone="expense" items={catBreak.categories.map(c => ({
+                name: c.name, value: c.total, display: $fk(c.total), icon: true,
+                note: [`${Math.round(c.share * 100)}%`, trendNote(c.trend)].filter(Boolean).join(' · '),
+              }))} />
+            ) : <Empty>No spending {rangeWords(catRange)}</Empty>}
+            <p className="text-[11px] text-ink-muted mt-3">Share of spending · trend {vsWords(catRange)}</p>
           </Card>
 
           {/* ── Subscriptions ─────────────────────────────────────────────────── */}
-          <Card label="Subscriptions" stat={<><span className="text-ink font-semibold">{$fk(stats.subs.monthly)}</span>/mo · {$fk(stats.subs.yearly)}/yr</>}>
-            <RankPills tone="expense" items={stats.subs.list.slice(0, 6).map(s => ({
-              name: s.name, value: s.monthly_cost, display: $fk(s.monthly_cost),
-            }))} />
+          <Card label="Subscriptions" stat={<RangePills value={subRange} onChange={setSubRange} />}>
+            {subBreak.subs.list.length ? (
+              <RankPills tone="expense" items={subBreak.subs.list.slice(0, 6).map(s => ({
+                name: s.name, value: s.total, display: $fk(s.total), note: `${$fk(s.monthly)}/mo`,
+              }))} />
+            ) : <Empty>No active subscriptions</Empty>}
             <p className="text-[11px] text-ink-muted mt-3">
-              {stats.subs.list.length} active · {$f(stats.subs.lifetime)} paid to subscriptions so far
+              <span className="text-ink font-semibold">{$f(subBreak.subs.paid)}</span> paid {rangeWords(subRange)} · {subBreak.subs.active} active · {$fk(subBreak.subs.monthly)}/mo · {$fk(subBreak.subs.yearly)}/yr
             </p>
           </Card>
 
           {/* ── Income sources ────────────────────────────────────────────────── */}
-          <Card label="Income sources" stat="All time · share of income">
-            <RankPills tone="income" items={stats.sources.map(s => ({
-              name: s.name, value: s.total, display: $fk(s.total),
-              note: [`${Math.round(s.share * 100)}%`, trendNote(s.trend)].filter(Boolean).join(' · '),
-            }))} />
+          <Card label="Income sources" stat={<RangePills value={srcRange} onChange={setSrcRange} />}>
+            {srcBreak.sources.length ? (
+              <RankPills tone="income" items={srcBreak.sources.map(s => ({
+                name: s.name, value: s.total, display: $fk(s.total),
+                note: [`${Math.round(s.share * 100)}%`, trendNote(s.trend)].filter(Boolean).join(' · '),
+              }))} />
+            ) : <Empty>No income {rangeWords(srcRange)}</Empty>}
+            <p className="text-[11px] text-ink-muted mt-3">Share of income · trend {vsWords(srcRange)}</p>
           </Card>
 
           {/* ── All time ──────────────────────────────────────────────────────── */}
