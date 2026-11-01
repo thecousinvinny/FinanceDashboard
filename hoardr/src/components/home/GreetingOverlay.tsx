@@ -87,6 +87,9 @@ interface Brief {
 }
 
 const FLY_MS = 560
+/** The hero rides a little smaller on the card (more photo); it grows to full size landing on Home */
+const HERO_SCALE = 0.84
+const HERO_H = 292
 
 export function GreetingOverlay() {
   const [show,     setShow]     = useState(false)
@@ -251,25 +254,28 @@ export function GreetingOverlay() {
   /** Flies a frozen copy of the card's hero onto Home's, which stays hidden
    *  (and skips its entrance) until the copy lands on it. */
   function flyHeroHome() {
-    const src = heroRef.current?.firstElementChild as HTMLElement | null
+    const src = heroRef.current?.firstElementChild?.firstElementChild as HTMLElement | null
     const dst = document.querySelector<HTMLElement>('[data-home-hero]')
     if (!src || !dst || dst.closest('.screen-hidden')) return
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    // a: where it shows (scaled), w × h: its real size, b: where it lands
     const a = src.getBoundingClientRect(), b = dst.getBoundingClientRect()
-    if (!a.width || b.bottom <= 0 || b.top >= window.innerHeight) return
+    const w = src.offsetWidth, h = src.offsetHeight
+    if (!a.width || !w || b.bottom <= 0 || b.top >= window.innerHeight) return
     const ghost = src.cloneNode(true) as HTMLElement
     // Frozen: a clone would replay every entrance animation from the start
     ghost.querySelectorAll<HTMLElement | SVGElement>('*').forEach(n => { n.style.animation = 'none' })
     Object.assign(ghost.style, {
-      position: 'fixed', left: `${a.left}px`, top: `${a.top}px`, width: `${a.width}px`, height: `${a.height}px`,
+      position: 'fixed', left: `${a.left}px`, top: `${a.top}px`, width: `${w}px`, height: `${h}px`,
       margin: '0', zIndex: '90', pointerEvents: 'none', transformOrigin: '0 0', willChange: 'transform',
+      transform: `scale(${a.width / w})`,
       boxShadow: '0 24px 60px rgba(0,0,0,0.45)',
-      transition: `transform ${FLY_MS}ms cubic-bezier(0.32, 0.72, 0, 1), box-shadow ${FLY_MS}ms ease`,
     })
     document.body.appendChild(ghost)
     beginHeroHandoff()
     void ghost.offsetHeight
-    ghost.style.transform = `translate3d(${b.left - a.left}px, ${b.top - a.top}px, 0) scale(${b.width / a.width})`
+    ghost.style.transition = `transform ${FLY_MS}ms cubic-bezier(0.32, 0.72, 0, 1), box-shadow ${FLY_MS}ms ease`
+    ghost.style.transform = `translate3d(${b.left - a.left}px, ${b.top - a.top}px, 0) scale(${b.width / w})`
     ghost.style.boxShadow = '0 0 0 rgba(0,0,0,0)'
     setTimeout(() => {
       endHeroHandoff()
@@ -379,12 +385,15 @@ export function GreetingOverlay() {
               // The month/year dots switch the view here instead of closing the card
               onClick={e => { if ((e.target as HTMLElement).closest('button')) e.stopPropagation() }}
             >
-              {brief && (
-                <HomeHero
-                  spent={brief.hero.spent} month={brief.hero.month} year={brief.hero.year}
-                  greeting={{ rollAt, chartDelay: 380 }}
-                />
-              )}
+              {/* Scaled, not resized: it must be the exact card Home shows, just smaller */}
+              <div style={{ transform: `scale(${HERO_SCALE})`, transformOrigin: 'top center', marginBottom: -(1 - HERO_SCALE) * HERO_H }}>
+                {brief && (
+                  <HomeHero
+                    spent={brief.hero.spent} month={brief.hero.month} year={brief.hero.year}
+                    greeting={{ rollAt, chartDelay: 380 }}
+                  />
+                )}
+              </div>
             </div>
           </section>
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { memo, startTransition, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import HomeScreen from '@/app/(dashboard)/home/screen'
 import OutScreen from '@/app/(dashboard)/money/screen'
@@ -8,7 +8,7 @@ import InScreen from '@/app/(dashboard)/in/screen'
 import CalendarScreen from '@/app/(dashboard)/calendar/screen'
 import ProfileScreen from '@/app/(dashboard)/profile/screen'
 import SettingsScreen from '@/app/(dashboard)/settings/screen'
-import { ScreenActiveContext, ScreenVisitContext, clearPendingPath, onReplayActiveScreen, useActivePath } from '@/lib/tab-nav'
+import { ScreenActiveContext, ScreenVisitContext, afterSlideTimeout, clearPendingPath, onReplayActiveScreen, useActivePath } from '@/lib/tab-nav'
 
 /**
  * Keeps every main screen mounted once it has rendered, so switching tabs is
@@ -31,6 +31,16 @@ const SCREENS: { path: string; Screen: React.ComponentType }[] = [
   { path: '/settings', Screen: SettingsScreen },
 ]
 export const SCREEN_PATHS = SCREENS.map(s => s.path)
+
+/**
+ * A screen's own tree only re-renders through what it reads (its context, its
+ * state) — not every time this switcher renders. Without this, each tab tap
+ * re-rendered all six screens (the calendar's thousands of rows included)
+ * inside the view transition's capture: tap → visible pause → slide.
+ */
+const ScreenBody = memo(function ScreenBody({ Screen }: { Screen: React.ComponentType }) {
+  return <Screen />
+})
 
 const idle = (fn: () => void): (() => void) => {
   const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number; cancelIdleCallback?: (id: number) => void }
@@ -55,6 +65,24 @@ export function ScreenKeepAlive() {
     setShownPath(active)
     setVisits(v => ({ ...v, [active]: (v[active] ?? 0) + 1 }))
   }
+
+  // The screen being left is hidden at once (its wrapper's class), but it
+  // hears "you're inactive" only after the slide, in idle time: re-rendering
+  // a big screen on the way out delayed the switch as much as the new one.
+  const [leaving, setLeaving] = useState<string | null>(null)
+  const prevActive = useRef(active)
+  if (prevActive.current !== active) {
+    if (leaving !== prevActive.current) setLeaving(prevActive.current)
+    prevActive.current = active
+  }
+  useEffect(() => {
+    if (!leaving) return
+    let cancelIdle = () => {}
+    const cancelWait = afterSlideTimeout(() => {
+      cancelIdle = idle(() => startTransition(() => setLeaving(null)))
+    }, 120)
+    return () => { cancelWait(); cancelIdle() }
+  }, [leaving])
 
   // Replay the visible screen's entrance (see replayActiveScreen)
   useEffect(() => onReplayActiveScreen(() => {
@@ -98,7 +126,7 @@ export function ScreenKeepAlive() {
         if (!mounted.has(path)) return null
         const isActive = path === active
         return (
-          <ScreenActiveContext.Provider key={path} value={isActive}>
+          <ScreenActiveContext.Provider key={path} value={isActive || path === leaving}>
             <ScreenVisitContext.Provider value={visits[path] ?? 0}>
             <div
               data-screen={path}
@@ -106,7 +134,7 @@ export function ScreenKeepAlive() {
               aria-hidden={!isActive}
               className={isActive ? 'screen-active' : 'screen-hidden'}
             >
-              <Screen />
+              <ScreenBody Screen={Screen} />
             </div>
             </ScreenVisitContext.Provider>
           </ScreenActiveContext.Provider>

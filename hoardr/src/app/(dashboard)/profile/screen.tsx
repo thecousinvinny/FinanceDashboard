@@ -142,18 +142,6 @@ function Record({ label, value, sub, color }: { label: string; value: string; su
   )
 }
 
-function Row({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }) {
-  return (
-    <div className="flex items-center justify-between py-3 border-b border-ink/[0.04] last:border-0">
-      <div>
-        <p className="text-[14px] font-medium text-ink">{label}</p>
-        {sub && <p className="text-[11px] text-ink-muted">{sub}</p>}
-      </div>
-      <p className={cn('text-[15px] font-semibold font-mono', accent ? 'text-emerald' : 'text-ink')}>{value}</p>
-    </div>
-  )
-}
-
 const trendNote = (t: number | null) => t === null ? undefined : `${t >= 0 ? '↑' : '↓'} ${Math.abs(Math.round(t * 100))}%`
 
 // ─── Main page ────────────────────────────────────────────────────────────────
@@ -433,18 +421,17 @@ export default function ProfilePage() {
           </Card>
 
           {/* ── All time ──────────────────────────────────────────────────────── */}
-          <div className="px-5 mb-5">
-            <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">
-              All time{allTime.since ? ` · since ${allTime.since}` : ''}
-            </p>
-            <div className="bg-bg-surface border border-ink/[0.06] rounded-card px-4">
-              <Row label="Earned" value={$f(allTime.earned)} accent />
-              <Row label="Spent" value={$f(allTime.spent)} />
-              <Row label="Kept" value={`${allTime.earned - allTime.spent < 0 ? MINUS : '+'}${$f(Math.abs(allTime.earned - allTime.spent))}`} accent={allTime.earned >= allTime.spent} />
-              <Row label="Saved on discounts" value={$f(allTime.saved)} accent={allTime.saved > 0} />
-              <Row label="Expenses logged" value={allTime.count.toLocaleString('en-US')} />
+          <Card label="All time" stat={allTime.since ? `since ${allTime.since}` : undefined}>
+            <div className="grid grid-cols-2 gap-2">
+              <Record label="Earned" value={$f(allTime.earned)} color="var(--sem-income)" />
+              <Record label="Spent" value={$f(allTime.spent)} color="var(--sem-expense)" />
+              <Record label="Kept" value={`${allTime.earned - allTime.spent < 0 ? MINUS : '+'}${$f(Math.abs(allTime.earned - allTime.spent))}`}
+                color={allTime.earned >= allTime.spent ? 'var(--sem-income)' : RED} />
+              <Record label="Saved on discounts" value={$f(allTime.saved)} color={allTime.saved > 0 ? 'var(--sem-income)' : undefined} />
+              <Record label="Expenses logged" value={allTime.count.toLocaleString('en-US')} />
+              <Record label="Months tracked" value={String(stats.months.length)} />
             </div>
-          </div>
+          </Card>
         </>
       )}
 

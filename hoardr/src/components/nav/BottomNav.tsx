@@ -66,11 +66,16 @@ export default function BottomNav() {
           <a
             key={href}
             href={href}
+            // Switch the moment a finger lands: waiting for the lift (click)
+            // added the whole tap's length before anything moved
+            onPointerDown={e => {
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
+              if (!active) { haptic('tap'); navigateTab(href) }
+            }}
             onClick={e => {
               // Modified clicks (open in new tab, desktop) keep the browser's behavior
               if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
               e.preventDefault()
-              if (!active) { haptic('tap'); navigateTab(href) }
             }}
             className={cn(
               'relative flex flex-col items-center justify-center gap-[3px] flex-1 min-w-0 select-none transition-colors duration-200',
