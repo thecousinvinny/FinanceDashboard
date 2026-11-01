@@ -495,7 +495,7 @@ export default function CalendarPage() {
   // top. Whatever lands (events, months inserted above) is re-anchored to it
   // in a layout effect — Safari has no scroll anchoring of its own.
   const listAnchor     = useRef<{ el: HTMLElement; off: number } | null>(null)
-  const listTouching   = useRef(false)
+  const listTouching   = useRef(0)   // touchstart time while a finger is down, else 0
   const lastListScroll = useRef(0)
 
   // Swipe gesture refs
@@ -1595,7 +1595,9 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
   // anything that changes row heights waits for this and is then re-anchored.
   const whenListIdle = useCallback((fn: () => void) => {
     const attempt = () => {
-      if (listTouching.current || performance.now() - lastListScroll.current < 160) { setTimeout(attempt, 180); return }
+      // A touch older than 4s lost its touchend (the screen switched mid-touch)
+      const touching = listTouching.current && performance.now() - listTouching.current < 4000
+      if (touching || performance.now() - lastListScroll.current < 160) { setTimeout(attempt, 180); return }
       fn()
     }
     attempt()
@@ -1603,8 +1605,8 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
   useEffect(() => {
     const sc = scrollRef.current
     if (!sc) return
-    const down = () => { listTouching.current = true }
-    const up   = () => { listTouching.current = false; lastListScroll.current = performance.now() }
+    const down = () => { listTouching.current = performance.now() }
+    const up   = () => { listTouching.current = 0; lastListScroll.current = performance.now() }
     sc.addEventListener('touchstart', down, { passive: true })
     sc.addEventListener('touchend', up, { passive: true })
     sc.addEventListener('touchcancel', up, { passive: true })

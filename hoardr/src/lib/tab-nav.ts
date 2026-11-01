@@ -86,6 +86,15 @@ function revive() {
   })
 }
 
+const wait = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
+/** Two frames, or 150ms if frames are throttled (low-power mode, backgrounded). */
+const twoFrames = () => new Promise<void>(r => {
+  let fired = false
+  const once = () => { if (!fired) { fired = true; r() } }
+  requestAnimationFrame(() => requestAnimationFrame(once))
+  setTimeout(once, 150)
+})
+
 /** Estimated ms until the slide ends (for CSS animation delays). */
 export function afterSlide(ms = 0): number {
   return Math.max(ms, slideEndsAt - performance.now())
@@ -122,7 +131,8 @@ export function navigateTab(path: string, mode: 'replace' | 'push' = 'replace') 
   // without starting another. Stacking view transitions (each one snapshots
   // the whole screen) is what crashed iOS Safari on rapid tab taps.
   if (currentVT) {
-    currentVT.skipTransition?.()
+    try { currentVT.skipTransition?.() } catch {}
+    currentVT = null
     go()
     return
   }
@@ -133,11 +143,15 @@ export function navigateTab(path: string, mode: 'replace' | 'push' = 'replace') 
   slideEndsAt = performance.now() + SLIDE_MS
   const vt = doc.startViewTransition(() => flushSync(go))
   currentVT = vt
-  const done: Promise<void> = vt.finished.catch(() => {}).then(() => new Promise<void>(r =>
-    requestAnimationFrame(() => requestAnimationFrame(() => r()))))
+  // Everything that waits for the slide (number rolls, bars, refreshes, the
+  // old screen switching off) hangs off this, so it must always settle: iOS
+  // Safari doesn't reliably settle `finished` for an interrupted slide, which
+  // left every number stuck at 0. Capped at the slide's length plus margin.
+  const finished = Promise.race([vt.finished.catch(() => {}), wait(SLIDE_MS + 400)])
+  const done: Promise<void> = finished.then(twoFrames)
   slideDone = done
   done.then(revive)
-  vt.finished.finally(() => {
+  finished.then(() => {
     if (currentVT === vt) currentVT = null
     delete root.dataset.tabDir
     slideEndsAt = Math.min(slideEndsAt, performance.now())

@@ -7,6 +7,16 @@
 let version = 0
 
 export function markDataChanged() { version++ }
+
+// Back in the app after a minute or more away (another device, Google
+// Calendar, a failed load while the phone slept): refresh screens on return
+if (typeof document !== 'undefined') {
+  let hiddenAt = 0
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) hiddenAt = Date.now()
+    else if (hiddenAt && Date.now() - hiddenAt > 60_000) version++
+  })
+}
 export function dataVersion() { return version }
 
 /**
