@@ -5,7 +5,11 @@ export default function manifest(): MetadataRoute.Manifest {
     name:             'Hoardr',
     short_name:       'Hoardr',
     description:      'Your personal finance hoard. Track every coin in the cave.',
-    id:               '/home',
+    // A new identity (was the implied '/home'): Brave/Chrome store an
+    // installed app's icons by id and kept reusing the letter "H" they made
+    // when the first install couldn't fetch any — even across reinstalls.
+    // Change this again only to force every install to refetch its icons.
+    id:               '/?app=hoardr-2',
     start_url:        '/home',
     scope:            '/',
     display:          'standalone',
