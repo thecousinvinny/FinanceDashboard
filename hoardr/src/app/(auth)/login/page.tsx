@@ -21,7 +21,7 @@ export default function LoginPage() {
 
         {/* Brand */}
         <div className="text-center mb-10">
-          <div className="text-6xl mb-5 select-none">🐉</div>
+          <img src="/icons/icon-512.png" alt="" width={84} height={84} draggable={false} className="mx-auto mb-5 rounded-[22px] select-none" />
           <h1 className="text-[32px] font-bold tracking-[-0.04em] text-ink mb-2">
             Hoardr
           </h1>

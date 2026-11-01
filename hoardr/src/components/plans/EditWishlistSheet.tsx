@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Truck } from 'lucide-react'
-import { EXPENSE_CATEGORIES } from '@/lib/data/transactions'
+import { expenseCategories } from '@/lib/data/transactions'
 import { CustomDateInput } from '@/components/ui/CustomDateInput'
 import { Sheet } from '@/components/ui/Sheet'
 import { FormGroup, FormRow, AmountHero, CategoryPicker, rowInput, amountStr } from '@/components/ui/Form'
@@ -108,7 +108,7 @@ export function EditWishlistSheet({ item, open, onClose, onSave }: Props) {
       )}
 
       <FormGroup header="Category" footer="Optional — tap again to clear.">
-        <CategoryPicker categories={EXPENSE_CATEGORIES} value={category || null} type="Expense" optional onChange={c => setCategory(c ?? '')} />
+        <CategoryPicker categories={expenseCategories()} value={category || null} type="Expense" optional onChange={c => setCategory(c ?? '')} />
       </FormGroup>
     </Sheet>
   )

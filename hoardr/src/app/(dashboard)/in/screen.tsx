@@ -176,15 +176,11 @@ function SectionHead({ label, note }: { label: string; note?: string }) {
 function StatCard({ label, value, sub, loading }: { label: string; value: number; sub?: string; loading: boolean }) {
   return (
     <div className="flex-1 bg-bg-surface border border-ink/[0.06] rounded-[22px] p-4">
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint">{label}</p>
-      </div>
-      {loading
-        ? <div className="h-8 w-20 rounded-[6px] skeleton" />
-        : <p className="text-[26px] font-bold tracking-tight text-emerald leading-none">
-            <SlotNumber value={Math.round(value)} format={$f} />
-          </p>
-      }
+      {/* Same tile as Out's: label on top, the number in the display face */}
+      <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted mb-3">{label}</p>
+      <p className="text-[26px] font-bold tracking-tight text-emerald leading-none" style={{ fontFamily: 'var(--font-big-shoulders)' }}>
+        {loading ? <span className="text-ink-faint">—</span> : <SlotNumber value={Math.round(value)} format={$f} />}
+      </p>
       {sub && !loading && <p className="text-[11px] font-mono text-ink-faint mt-1">{sub}</p>}
     </div>
   )
@@ -1161,37 +1157,37 @@ export default function InPage() {
 
         {/* ── Streams ─────────────────────────────────────────────────────── */}
         {!loading && tab === 'Streams' && (
-          <div className="mx-4 mt-4 space-y-5">
+          <div className="mx-4 mt-5 space-y-6">
             {revStreams.length > 0 && (
-              <div>
-                <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Revenue Streams</p>
+              <section>
+                <SectionHead label="Paychecks & streams" note={`${revStreams.length} ${revStreams.length === 1 ? "stream" : "streams"}`} />
                 <div className="bg-bg-surface border border-ink/[0.06] rounded-card overflow-hidden divide-y divide-ink/[0.04]">
                   {revStreams.map(stream => (
                     <SwipeToDelete key={stream.id} onDelete={() => handleDeleteStream(stream.id)} onTap={() => { setEditStream(stream); setStreamOpen(true) }}>
-                      <div className="flex items-center gap-3 px-4 py-3.5">
-                        <div className="w-10 h-10 rounded-[12px] bg-emerald/10 flex items-center justify-center flex-shrink-0">
-                          <Banknote size={15} className="text-emerald" strokeWidth={1.75} />
+                      <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface">
+                        <div className="w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-ink/[0.06] flex items-center justify-center flex-shrink-0">
+                          <Banknote size={17} className="text-emerald" strokeWidth={1.75} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-[14px] font-medium text-ink truncate">{stream.name}</p>
-                          <p className="text-[11px] text-ink-muted">
-                            {$fd(stream.amount)} · {stream.freq}
-                            {banks.find(b => b.id === stream.bankId) ? ` · ${banks.find(b => b.id === stream.bankId)!.name}` : ''}
+                          <p className="text-[11px] text-ink-muted truncate">
+                            {[stream.freq, banks.find(b => b.id === stream.bankId)?.name].filter(Boolean).join(' · ')}
                           </p>
                         </div>
                         <div className="text-right flex-shrink-0">
+                          <p className="text-[17px] font-semibold tabular-nums text-emerald" style={{ fontFamily: 'var(--font-big-shoulders)' }}>+{$fd(stream.amount)}</p>
                           <p className="text-[11px] text-ink-muted">{daysUntilLabel(stream.nextPayDate)}</p>
                         </div>
                       </div>
                     </SwipeToDelete>
                   ))}
                 </div>
-              </div>
+              </section>
             )}
 
             {banks.filter(b => b.apy && b.balance).length > 0 && (
-              <div>
-                <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Interest</p>
+              <section>
+                <SectionHead label="Interest" note="Tap to change the rate" />
                 <div className="bg-bg-surface border border-ink/[0.06] rounded-card overflow-hidden divide-y divide-ink/[0.04]">
                   {banks.filter(b => b.apy && b.balance).map(bank => {
                     const freq    = (bank.interest_freq as 'Monthly' | 'Quarterly') ?? 'Monthly'
@@ -1205,31 +1201,40 @@ export default function InPage() {
                           type: 'delete',
                           undo: {
                             onUndo:   () => setBanks(snapshot),
-                            onCommit: () => { supabase.from('banks').update({ apy: null, next_interest_date: null, interest_freq: null }).eq('id', bank.id).then() },
+                            onCommit: async () => {
+                              const { error } = await supabase.from('banks').update({ apy: null, next_interest_date: null, interest_freq: null }).eq('id', bank.id)
+                              if (reportDbError(error, 'remove interest')) setBanks(snapshot)
+                            },
                           },
                         })
                       }} onTap={() => setInterestBank(bank)}>
-                        <div className="flex items-center gap-3 px-4 py-3.5">
-                          <div className="w-10 h-10 rounded-[12px] bg-emerald/10 flex items-center justify-center flex-shrink-0"><Landmark size={18} className="text-emerald" strokeWidth={1.75} /></div>
+                        <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface">
+                          <div className="w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-ink/[0.06] flex items-center justify-center flex-shrink-0">
+                            <Landmark size={17} className="text-emerald" strokeWidth={1.75} />
+                          </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-[14px] font-medium text-ink truncate">{bank.name} Interest</p>
-                            <p className="text-[11px] text-ink-muted">{bank.apy}% APY · {freq}</p>
+                            <p className="text-[14px] font-medium text-ink truncate">{bank.name}</p>
+                            <p className="text-[11px] text-ink-muted truncate">{bank.apy}% APY · paid {freq.toLowerCase()}</p>
                           </div>
                           <div className="text-right flex-shrink-0">
-                            <p className="text-[13px] font-semibold font-mono text-emerald">+{$fd(amount)}</p>
-                            <p className="text-[10px] text-ink-faint">{bank.next_interest_date ? daysUntilLabel(bank.next_interest_date) : 'not scheduled'}</p>
+                            <p className="text-[17px] font-semibold tabular-nums text-emerald" style={{ fontFamily: 'var(--font-big-shoulders)' }}>+{$fd(amount)}</p>
+                            <p className="text-[11px] text-ink-muted">{bank.next_interest_date ? daysUntilLabel(bank.next_interest_date) : 'Not scheduled'}</p>
                           </div>
                         </div>
                       </SwipeToDelete>
                     )
                   })}
                 </div>
-              </div>
+              </section>
             )}
 
-            {revStreams.length === 0 && !banks.some(b => b.apy) && (
-              <div className="py-12 text-center">
-                <p className="text-[13px] text-ink-faint">No streams yet — tap + to add one.</p>
+            {revStreams.length === 0 && !banks.some(b => b.apy && b.balance) && (
+              <div className="py-14 flex flex-col items-center text-center">
+                <div className="w-12 h-12 rounded-full bg-bg-overlay flex items-center justify-center mb-3">
+                  <Banknote size={20} className="text-ink-muted" strokeWidth={1.75} />
+                </div>
+                <p className="text-[15px] font-medium text-ink">No streams yet</p>
+                <p className="text-[13px] text-ink-muted mt-1">Tap + to add a paycheck, or set an APY on a bank.</p>
               </div>
             )}
           </div>

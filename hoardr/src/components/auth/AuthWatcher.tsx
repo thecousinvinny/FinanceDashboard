@@ -8,6 +8,7 @@ import { showToast } from '@/lib/toast'
 import { syncAppPrefs } from '@/lib/app-prefs'
 import { syncLocationPrefs } from '@/lib/location-prefs'
 import { syncUiPrefs } from '@/lib/ui-prefs'
+import { syncCategories } from '@/lib/category-meta'
 import { applyTheme, readTheme } from '@/lib/theme'
 import { applySemanticColors } from '@/lib/semantic-colors'
 
@@ -34,7 +35,8 @@ export function AuthWatcher() {
     // Pull shared defaults (default bank etc.) so this device matches the others
     void syncAppPrefs()
     void syncLocationPrefs()   // calendar location favorites/recents follow the account
-    // Theme, accent colors, week start, hoard goal, hidden calendars
+    void syncCategories()      // your categories and their icons, for every form
+    // Theme, accent colors, week start, hidden calendars
     void syncUiPrefs(changed => {
       if (changed.includes('theme')) applyTheme(readTheme())
       if (changed.includes('sem-colors')) {

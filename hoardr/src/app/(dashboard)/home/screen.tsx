@@ -19,7 +19,6 @@ import type { HeroSeries } from '@/components/home/PaceChart'
 import { buildHeroSeries, heroHistoryStart, EMPTY_SERIES } from '@/lib/hero-series'
 import type { SeedTx } from '@/lib/data/transactions'
 import { Truck, PlusCircle, Star, ArrowUpCircle } from 'lucide-react'
-import { HoardChest } from '@/components/home/HoardChest'
 import { GlobalFAB } from '@/components/ui/GlobalFAB'
 import { useOnScreenReturn, useScreenReady } from '@/lib/tab-nav'
 import { sameAsLast } from '@/lib/same-data'
@@ -44,9 +43,6 @@ interface ActivityRow {
 
 interface HomeCache {
   spent:             number
-  earned:            number
-  monthlySubs:       number
-  hoardTotal:        number
   upcoming:          UpcomingSub[]
   enRoute:           EnRouteItem[]
   activity:          ActivityRow[]
@@ -58,9 +54,6 @@ export default function HomePage() {
   const cached = pageCache.get<HomeCache>('home')
 
   const [spent,         setSpent]         = useState(cached?.spent ?? 0)
-  const [earned,        setEarned]        = useState(cached?.earned ?? 0)
-  const [monthlySubs, setMonthlySubs] = useState(cached?.monthlySubs ?? 0)
-  const [hoardTotal,  setHoardTotal]  = useState(cached?.hoardTotal ?? 0)
   const [upcoming,      setUpcoming]      = useState<UpcomingSub[]>(cached?.upcoming ?? [])
   const [enRoute,       setEnRoute]       = useState<EnRouteItem[]>(cached?.enRoute ?? [])
   const [activity,      setActivity]      = useState<ActivityRow[]>(cached?.activity ?? [])
@@ -99,7 +92,6 @@ export default function HomePage() {
 
       const [
         { data: monthExp },
-        { data: monthInc },
         { data: activeSubs },
         { data: upcomingData },
         { data: enRouteData },
@@ -107,11 +99,9 @@ export default function HomePage() {
         { data: recentInc },
         { data: yearExp },
         { data: yearInc },
-        { data: bankBalances },
       ] = await Promise.all([
         supabase.from('expenses').select('cost, date, name').gte('date', monthStart).lte('date', monthEnd).abortSignal(sig),
-        supabase.from('income').select('amount, date').gte('date', monthStart).lte('date', monthEnd).abortSignal(sig),
-        supabase.from('subscriptions').select('id, name, monthly_cost').eq('status', 'Active').abortSignal(sig),
+        supabase.from('subscriptions').select('name').eq('status', 'Active').abortSignal(sig),
         supabase.from('subscriptions')
           .select('id, name, cost, next_renewal, billing, category, card_id')
           .eq('status', 'Active')
@@ -138,16 +128,11 @@ export default function HomePage() {
           .abortSignal(sig),
         supabase.from('expenses').select('cost, date, name').gte('date', histStart).lte('date', todayStr).abortSignal(sig),
         supabase.from('income').select('amount, date').gte('date', histStart).lte('date', todayStr).abortSignal(sig),
-        supabase.from('banks').select('balance').abortSignal(sig),
       ])
 
       if (gen !== loadGen.current) return
 
       const newSpent        = (monthExp    ?? []).reduce((s, e) => s + Number(e.cost),              0)
-      const newEarned       = (monthInc    ?? []).reduce((s, i) => s + Number(i.amount),             0)
-      const newMonthlySubs  = (activeSubs ?? []).reduce((s, r) => s + Number(r.monthly_cost ?? 0), 0)
-      // Hoard = sum of bank balances — reflects actual saved cash, updates when user updates balances
-      const newHoardTotal = (bankBalances ?? []).reduce((s, b) => s + Number((b as { balance?: number | null }).balance ?? 0), 0)
 
       const newUpcoming: UpcomingSub[] = (upcomingData ?? []).map(s => ({
         id:           String(s.id),
@@ -196,8 +181,7 @@ export default function HomePage() {
       const { month: newHeroMonth, year: newHeroYear } = buildHeroSeries(yearExp ?? [], yearInc ?? [], subNameSet, todayStr)
 
       const homeData = {
-        spent: newSpent, earned: newEarned,
-        monthlySubs: newMonthlySubs, hoardTotal: newHoardTotal,
+        spent: newSpent,
         upcoming: newUpcoming, enRoute: newEnRoute, activity: newActivity,
         heroMonth: newHeroMonth, heroYear: newHeroYear,
       }
@@ -206,9 +190,6 @@ export default function HomePage() {
       pageCache.set('home', homeData)
 
       setSpent(newSpent)
-      setEarned(newEarned)
-      setMonthlySubs(newMonthlySubs)
-      setHoardTotal(newHoardTotal)
       setUpcoming(newUpcoming)
       setEnRoute(newEnRoute)
       setActivity(newActivity)
@@ -323,8 +304,6 @@ export default function HomePage() {
     await supabase.from('wishlist').update({ status: 'Delivered', delivered_at: localToday() }).eq('id', id)
   }
 
-  const saved = earned - spent
-
   return (
     <>
     <div className="min-h-screen bg-bg-base tab-enter">
@@ -343,9 +322,6 @@ export default function HomePage() {
       {!loading && (
         <>
           <HomeHero spent={spent} month={heroMonth} year={heroYear} />
-
-          {/* ── Hoard pile ──────────────────────────────────────────────── */}
-          {/* <HoardChest hoardTotal={hoardTotal} thisMonthNet={saved} /> */}
 
           <UpcomingBills initial={upcoming} onPaid={handleSubPaid} />
 

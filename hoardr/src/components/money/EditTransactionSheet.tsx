@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react'
 import { CreditCard, Landmark, CalendarDays } from 'lucide-react'
 import {
-  EXPENSE_CATEGORIES,
-  INCOME_CATEGORIES,
+  expenseCategories,
+  incomeCategories,
   type SeedTx,
 } from '@/lib/data/transactions'
 import { CustomDateInput } from '@/components/ui/CustomDateInput'
@@ -104,7 +104,7 @@ export function EditTransactionSheet({ tx, open, onClose, onSave, cards = [], ba
 
       <FormGroup header="Category">
         <CategoryPicker
-          categories={isExpense ? EXPENSE_CATEGORIES : INCOME_CATEGORIES}
+          categories={isExpense ? expenseCategories() : incomeCategories()}
           value={category}
           type={isExpense ? 'Expense' : 'Income'}
           onChange={c => c && setCategory(c)}

@@ -14,7 +14,6 @@ const KEYS = [
   'theme',                    // lib/theme.ts
   'sem-colors',               // lib/semantic-colors.ts
   'week-start-monday',        // lib/week-start.ts
-  'hoard-goal',               // components/home/HoardChest.tsx
   'cal-hidden-google-cals',   // calendar sidebar visibility
 ] as const
 

@@ -1,5 +1,6 @@
 'use client'
 
+import { LoadBars } from '@/components/ui/LoadBars'
 import { hiResGoogle } from '@/lib/image'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -314,7 +315,7 @@ export default function ProfilePage() {
         }} />
         {uploading && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-            <div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+            <LoadBars />
           </div>
         )}
 

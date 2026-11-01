@@ -1,3 +1,5 @@
+import { categoriesFor } from '@/lib/category-meta'
+
 export interface SeedTx {
   id:             string
   type:           'Expense' | 'Income'
@@ -41,6 +43,10 @@ export const INCOME_CATEGORIES: TxCategory[] = [
   { name: 'Stocks'    },
   { name: 'Other'     },
 ]
+
+/** The lists forms show: the built-ins above plus the account's own categories */
+export const expenseCategories = () => categoriesFor('Expense', EXPENSE_CATEGORIES)
+export const incomeCategories  = () => categoriesFor('Income',  INCOME_CATEGORIES)
 
 // Sorted newest-first so groupByMonth preserves that order within each month
 export const SEED_TRANSACTIONS: SeedTx[] = [

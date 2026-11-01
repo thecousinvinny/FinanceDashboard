@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { EXPENSE_CATEGORIES } from '@/lib/data/transactions'
+import { expenseCategories } from '@/lib/data/transactions'
 import { Sheet } from '@/components/ui/Sheet'
 import { FormGroup, FormRow, AmountHero, CategoryPicker, rowInput } from '@/components/ui/Form'
 
@@ -113,7 +113,7 @@ export function AddWishlistSheet({ open, onClose, onAdd }: Props) {
 
       <FormGroup header="Category" footer="Optional — tap again to clear.">
         <CategoryPicker
-          categories={EXPENSE_CATEGORIES}
+          categories={expenseCategories()}
           value={category || null}
           type="Expense"
           optional

@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { CreditCard, Landmark, CalendarDays } from 'lucide-react'
 import {
-  EXPENSE_CATEGORIES,
-  INCOME_CATEGORIES,
+  expenseCategories,
+  incomeCategories,
   type SeedTx,
 } from '@/lib/data/transactions'
 import { localToday, $fd, haptic } from '@/lib/utils'
@@ -53,10 +53,11 @@ export function AddTransactionSheet({ open, onClose, onAdd, cards = [], banks = 
   // and amount, and categories are listed in the order you use them
   const memory     = useTxMemory(type, open)
   const categories = useMemo(
-    () => byUse(type === 'Expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES, memory.catCounts),
+    () => byUse(type === 'Expense' ? expenseCategories() : incomeCategories(), memory.catCounts),
     // catCounts is mutated in place by rememberTx; names.size changes with it
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [type, memory, memory.names.size],
+    // open: the account's categories (lib/category-meta) may have loaded since
+    [type, memory, memory.names.size, open],
   )
   const suggestions = nameFocused ? suggestNames(memory, name) : []
   useEffect(() => { warmTxMemory() }, [])

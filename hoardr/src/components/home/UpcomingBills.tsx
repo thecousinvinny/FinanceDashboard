@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
 import { RefreshCw, CheckCircle, XCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
@@ -95,10 +94,7 @@ export function UpcomingBills({ initial, onPaid }: { initial: UpcomingSub[]; onP
 
   return (
     <div className="mx-4 mt-6">
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint">Upcoming</p>
-        <Link href="/plans" className="text-[11px] font-medium text-gold">All →</Link>
-      </div>
+      <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Upcoming</p>
       <div className="bg-bg-surface border border-ink/[0.06] rounded-card overflow-hidden divide-y divide-ink/[0.04]">
         {items.map(sub => {
           const Icon     = sub.category ? getCategoryIcon(sub.category, 'Expense') : RefreshCw

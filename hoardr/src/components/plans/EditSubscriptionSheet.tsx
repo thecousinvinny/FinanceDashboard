@@ -6,7 +6,7 @@ import { calcSubCosts } from '@/lib/utils'
 import { CustomDateInput } from '@/components/ui/CustomDateInput'
 import type { BillingCycle } from '@/types'
 import type { CardOption, BankOption } from '@/components/money/AddTransactionSheet'
-import { EXPENSE_CATEGORIES } from '@/lib/data/transactions'
+import { expenseCategories } from '@/lib/data/transactions'
 import { Select } from '@/components/ui/Select'
 import { Sheet } from '@/components/ui/Sheet'
 import { FormGroup, FormRow, Toggle, AmountHero, CategoryPicker, rowInput, amountStr } from '@/components/ui/Form'
@@ -165,7 +165,7 @@ export function EditSubscriptionSheet({ sub, open, onClose, onSave, cards = [], 
       </FormGroup>
 
       <FormGroup header="Category" footer="Optional — tap again to clear.">
-        <CategoryPicker categories={EXPENSE_CATEGORIES} value={category} type="Expense" optional onChange={setCategory} />
+        <CategoryPicker categories={expenseCategories()} value={category} type="Expense" optional onChange={setCategory} />
       </FormGroup>
     </Sheet>
   )

@@ -9,6 +9,7 @@ import { AddSubscriptionSheet, type NewSub } from '@/components/plans/AddSubscri
 import { EditSubscriptionSheet, type SubEdits } from '@/components/plans/EditSubscriptionSheet'
 import { AddWishlistSheet, type NewWishItem } from '@/components/plans/AddWishlistSheet'
 import { EditWishlistSheet, type WishEdits } from '@/components/plans/EditWishlistSheet'
+import { BuyWishlistSheet } from '@/components/plans/BuyWishlistSheet'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import { type SeedTx } from '@/lib/data/transactions'
 import { groupByMonth, fmtDate, localToday, $fk, $fc, $fd, cn, calcSubCosts, nextRenewalDate, daysUntilLabel } from '@/lib/utils'
@@ -21,7 +22,7 @@ import { CustomDateInput } from '@/components/ui/CustomDateInput'
 import { PullIndicator } from '@/components/ui/PullIndicator'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { createCalEvent, updateCalEvent, deleteCalEvent, allDayEvent } from '@/lib/calendar'
-import { RefreshCw, CreditCard, XCircle, MinusCircle, Repeat2, ShoppingCart, Search, X, Truck } from 'lucide-react'
+import { RefreshCw, CreditCard, XCircle, MinusCircle, Repeat2, ShoppingCart, Search, X, Truck, TrendingUp, Sparkles, Star, CalendarRange } from 'lucide-react'
 import type { BillingCycle } from '@/types'
 import { usePillSwipe } from '@/hooks/usePillSwipe'
 import { getAppPrefs } from '@/lib/app-prefs'
@@ -223,9 +224,6 @@ export default function OutPage() {
   const [savedYear,     setSavedYear]    = useState(0)
   const [editWish,      setEditWish]     = useState<WishItem | null>(null)
   const [buyItem,       setBuyItem]      = useState<WishItem | null>(null)
-  const [buyAmount,     setBuyAmount]    = useState('')
-  const [buyDate,       setBuyDate]      = useState('')
-  const [buyCardId,     setBuyCardId]    = useState<string | null>(null)
   const [wishSheet,     setWishSheet]    = useState(false)
 
   // Shared
@@ -964,7 +962,7 @@ export default function OutPage() {
           >
             <div className="flex items-center justify-between mb-3">
               <p className={cn('text-[10px] font-semibold tracking-[0.1em] uppercase', expStatCard === 'spent' ? 'text-gold' : 'text-ink-muted')}>Spent This Month</p>
-              <span className="text-[13px] text-gold">↑</span>
+              <TrendingUp size={15} strokeWidth={1.9} className="text-gold" />
             </div>
             <p className="text-[26px] font-bold tracking-tight text-ink" style={{ fontFamily: 'var(--font-big-shoulders)' }}>
               <SlotNumber value={monthSpent} format={$fc} />
@@ -977,7 +975,7 @@ export default function OutPage() {
           >
             <div className="flex items-center justify-between mb-3">
               <p className={cn('text-[10px] font-semibold tracking-[0.1em] uppercase', expStatCard === 'saved' ? 'text-emerald' : 'text-ink-muted')}>Saved This Month</p>
-              <span className="text-[13px] text-emerald">✦</span>
+              <Sparkles size={15} strokeWidth={1.9} className="text-emerald" />
             </div>
             <p className="text-[26px] font-bold tracking-tight text-emerald" style={{ fontFamily: 'var(--font-big-shoulders)' }}>
               <SlotNumber value={savedMonth} format={$fc} />
@@ -994,7 +992,7 @@ export default function OutPage() {
           >
             <div className="flex items-center justify-between mb-3">
               <p className={cn('text-[10px] font-semibold tracking-[0.1em] uppercase', subStatCard === 'month' ? 'text-gold' : 'text-ink-muted')}>This Month</p>
-              <span className="text-[13px] text-gold">↻</span>
+              <Repeat2 size={15} strokeWidth={1.9} className="text-gold" />
             </div>
             <p className="text-[26px] font-bold tracking-tight text-ink" style={{ fontFamily: 'var(--font-big-shoulders)' }}>
               <SlotNumber value={paidTotals.monthly} format={$fc} />
@@ -1008,7 +1006,7 @@ export default function OutPage() {
           >
             <div className="flex items-center justify-between mb-3">
               <p className={cn('text-[10px] font-semibold tracking-[0.1em] uppercase', subStatCard === 'year' ? 'text-gold' : 'text-ink-muted')}>This Year</p>
-              <span className="text-[13px] text-emerald">∞</span>
+              <CalendarRange size={15} strokeWidth={1.9} className="text-emerald" />
             </div>
             <p className="text-[26px] font-bold tracking-tight text-ink" style={{ fontFamily: 'var(--font-big-shoulders)' }}>
               <SlotNumber value={paidTotals.annual} format={$fc} />
@@ -1022,7 +1020,7 @@ export default function OutPage() {
           <div className="flex-1 bg-bg-surface border border-ink/[0.06] rounded-[22px] p-4">
             <div className="flex items-center justify-between mb-3">
               <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">On List</p>
-              <span className="text-[13px] text-gold">★</span>
+              <Star size={15} strokeWidth={1.9} className="text-gold" />
             </div>
             <p className="text-[26px] font-bold tracking-tight text-ink" style={{ fontFamily: 'var(--font-big-shoulders)' }}>
               <SlotNumber value={wishStats.total} format={$fc} />
@@ -1031,7 +1029,7 @@ export default function OutPage() {
           <div className="flex-1 bg-bg-surface border border-ink/[0.06] rounded-[22px] p-4">
             <div className="flex items-center justify-between mb-3">
               <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Saved / Yr</p>
-              <span className="text-[13px] text-emerald">✦</span>
+              <Sparkles size={15} strokeWidth={1.9} className="text-emerald" />
             </div>
             <p className="text-[26px] font-bold tracking-tight text-emerald" style={{ fontFamily: 'var(--font-big-shoulders)' }}>
               <SlotNumber value={savedYear} format={$fc} />
@@ -1289,7 +1287,7 @@ export default function OutPage() {
                       key={item.id}
                       onDelete={() => handleDeleteWish(item.id)}
                       onTap={() => setEditWish(item)}
-                      onRight={item.status === 'Interested' ? () => { setBuyItem(item); setBuyAmount(''); setBuyDate(localToday()); setBuyCardId(defaultCardId) } : undefined}
+                      onRight={item.status === 'Interested' ? () => setBuyItem(item) : undefined}
                       rightLabel={<CreditCard size={18} strokeWidth={1.5} className="text-white" />}
                     >
                       <div className="flex items-center gap-3 px-4 py-3.5">
@@ -1470,88 +1468,13 @@ export default function OutPage() {
       onSave={handleEditWish}
     />
 
-    {/* ── Buy sheet ────────────────────────────────────────────────────── */}
-    <div
-      onClick={() => setBuyItem(null)}
-      className={cn('fixed inset-0 z-[59] transition-opacity duration-300', buyItem ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none')}
-      style={{ background: 'rgba(0,0,0,0.72)' }}
+    <BuyWishlistSheet
+      item={buyItem}
+      onClose={() => setBuyItem(null)}
+      cards={cards}
+      defaultCardId={defaultCardId}
+      onBuy={handleBuyItem}
     />
-    <div
-      className={cn('fixed inset-x-0 bottom-0 z-[60] rounded-t-[24px] bg-bg-surface transition-transform duration-300', buyItem ? 'translate-y-0' : 'translate-y-full')}
-      style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-    >
-      <div className="flex justify-center pt-3 pb-2">
-        <div className="w-9 h-1 rounded-full bg-ink/20" />
-      </div>
-      <div className="flex items-center justify-between px-5 mb-5">
-        <div>
-          <h2 className="text-[18px] font-bold tracking-tight text-ink">Mark as Bought</h2>
-          {buyItem && <p className="text-[12px] text-ink-muted mt-0.5 truncate max-w-[220px]">{buyItem.name}</p>}
-        </div>
-        <button onClick={() => setBuyItem(null)} className="w-8 h-8 flex items-center justify-center text-[22px] text-ink-muted">×</button>
-      </div>
-      <div className="px-5 space-y-5" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 32px)' }}>
-        {buyItem?.original_cost != null && (
-          <div className="flex items-center justify-between">
-            <p className="text-[13px] text-ink-muted">List price</p>
-            <p className="text-[13px] font-mono text-ink-muted">{$fd(buyItem.original_cost)}</p>
-          </div>
-        )}
-        <div>
-          <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">What did you pay?</p>
-          <div className="flex items-center gap-1.5 bg-bg-overlay rounded-[14px] px-4 py-3">
-            <span className="text-[22px] font-light text-ink-muted font-mono">$</span>
-            <input
-              type="text" inputMode="decimal" placeholder="0.00" value={buyAmount}
-              onChange={e => { const v = e.target.value; if (v === '' || /^\d*\.?\d{0,2}$/.test(v)) setBuyAmount(v) }}
-              className="flex-1 bg-transparent text-[28px] font-bold font-mono text-ink outline-none placeholder:text-ink-faint"
-            />
-          </div>
-          {buyItem?.original_cost != null && parseFloat(buyAmount) > 0 && buyItem.original_cost > parseFloat(buyAmount) && (
-            <p className="text-[11px] text-emerald font-mono mt-2">You saved {$fd(buyItem.original_cost - parseFloat(buyAmount))}</p>
-          )}
-        </div>
-        <div>
-          <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Date</p>
-          <div className="rounded-[14px]">
-            <CustomDateInput value={buyDate} onChange={setBuyDate}
-              className="w-full bg-bg-overlay border border-ink/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink outline-none focus:border-gold/40" />
-          </div>
-        </div>
-        {cards.length > 0 && (
-          <div>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-faint mb-2">Card</p>
-            <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-              <button onClick={() => setBuyCardId(null)}
-                className={cn('flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all select-none',
-                  buyCardId === null ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
-                None
-              </button>
-              {cards.map(c => (
-                <button key={c.id} onClick={() => setBuyCardId(c.id)}
-                  className={cn('flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all select-none',
-                    buyCardId === c.id ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
-                  {c.name}{c.last4 ? ` ••••${c.last4}` : ''}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-        <button
-          onClick={() => {
-            const paid = parseFloat(buyAmount)
-            if (!paid || !buyItem) return
-            handleBuyItem(buyItem.id, paid, buyDate || localToday(), buyCardId)
-            setBuyItem(null)
-            setBuyAmount('')
-          }}
-          disabled={!parseFloat(buyAmount)}
-          className={cn('w-full py-4 rounded-[14px] text-[15px] font-semibold transition-all select-none', parseFloat(buyAmount) ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-faint')}
-        >
-          Add to Expenses
-        </button>
-      </div>
-    </div>
   </>
   )
 }

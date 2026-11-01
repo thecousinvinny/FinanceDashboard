@@ -136,29 +136,44 @@ export interface CategoryMeta {
 
 export const categoryMeta: Record<string, CategoryMeta> = {}
 
+let metaLoaded = false
+export const CATEGORIES_CHANGED = 'categories-changed'
+
+/** The account's categories (all of them — this replaces what was there). */
 export function setCategoryMeta(cats: { name: string; icon: string; color: string; tx_type: string }[]) {
+  for (const k of Object.keys(categoryMeta)) delete categoryMeta[k]
   for (const c of cats) categoryMeta[c.name] = { icon: c.icon, color: c.color, tx_type: c.tx_type }
+  metaLoaded = true
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(CATEGORIES_CHANGED))
 }
 
-// ── Icon color mode ───────────────────────────────────────────────────────────
-
-export type IconColorMode = 'category' | 'semantic'
-
-let _iconColorMode: IconColorMode = 'category'
-let _modeInit = false
-
-export function getIconColorMode(): IconColorMode {
-  if (!_modeInit && typeof window !== 'undefined') {
-    _iconColorMode = (localStorage.getItem('icon-color-mode') as IconColorMode) ?? 'category'
-    _modeInit = true
-  }
-  return _iconColorMode
+/** Pulls the account's categories once per load (from AuthWatcher), so icons
+ *  you changed and categories you added show everywhere, not only on the
+ *  Categories page. */
+export async function syncCategories() {
+  const { createClient } = await import('@/lib/supabase/client')
+  const supabase = createClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) return
+  const { data, error } = await supabase.from('categories')
+    .select('name, icon, color, tx_type').eq('user_id', session.user.id)
+  if (!error && data?.length) setCategoryMeta(data as { name: string; icon: string; color: string; tx_type: string }[])
 }
 
-export function setIconColorMode(mode: IconColorMode) {
-  _iconColorMode = mode
-  _modeInit = true
-  if (typeof window !== 'undefined') localStorage.setItem('icon-color-mode', mode)
+/**
+ * What a form offers for one type: the built-ins in their usual order (less
+ * any you deleted), then categories you added. A name is stored once per
+ * account, so a built-in shared by both types ('Stocks', 'Other') is kept by
+ * the built-in lists rather than by its row's tx_type.
+ */
+export function categoriesFor<T extends { name: string }>(type: 'Expense' | 'Income', builtins: T[]): { name: string }[] {
+  if (!metaLoaded) return builtins
+  const builtinNames = new Set([...BUILTIN_EXPENSE_CATEGORIES, ...BUILTIN_INCOME_CATEGORIES].map(c => c.name))
+  const custom = Object.entries(categoryMeta)
+    .filter(([name, m]) => !builtinNames.has(name) && m.tx_type === type)
+    .map(([name]) => ({ name }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+  return [...builtins.filter(b => b.name in categoryMeta), ...custom]
 }
 
 // ── Built-in defaults (used for seeding + fallback) ───────────────────────────
