@@ -432,7 +432,7 @@ export default function HomePage() {
     </div>
 
     {/* ── FAB ─────────────────────────────────────────────────────────── */}
-    <GlobalFAB actions={[
+    <GlobalFAB primary={2} actions={[
       { Icon: Star,       label: 'Add to Wishlist', onTap: () => setWishlistOpen(true) },
       { Icon: ArrowUpCircle, label: 'New Income',   onTap: () => { setTxMode('Income');  setExpenseOpen(true) } },
       { Icon: PlusCircle, label: 'New Expense',     onTap: () => { setTxMode('Expense'); setExpenseOpen(true) } },

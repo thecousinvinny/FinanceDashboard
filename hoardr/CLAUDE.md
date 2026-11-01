@@ -166,7 +166,7 @@ Module-level emitter — call from anywhere. `<ToastContainer />` mounted in `(d
 - `ui/CategoryIcon.tsx` — glyph from `categoryMeta[name]` (DB icon) or defaults; color is **always semantic** (gold expense, emerald income, `sem-sub` subscription). Per-category DB colors are not used for icons — they loaded late and made tabs inconsistent. `CategoryPicker` and `FormRow` icons follow the same neutral style (no colored tiles).
 - `ui/LoadBars.tsx` — the app's loading indicator: six gold bars that flatten and rise to uneven heights like a small bar chart, in a wave (`.load-bars` in globals.css, `scaleY` from the bottom only). Use it instead of a spinner or dots.
 - `ui/SwipeToDelete.tsx` — swipe-left-to-delete; `onTap` fires on clean tap only; `actionBg` default `bg-ruby`. `onRight`/`rightLabel`/`rightBg` for right-swipe confirm. Press-scale + haptic built in.
-- `ui/Sheet.tsx` + `ui/Form.tsx` — the iOS sheet and form kit (see Bottom sheet rules). `money/AddTransactionSheet.tsx` is the reference sheet built on them; exports `CardOption`, `BankOption`
+- `ui/Sheet.tsx` + `ui/Form.tsx` — the iOS sheet and form kit (see Bottom sheet rules). `money/AddTransactionSheet.tsx` is the reference sheet built on them; exports `CardOption`, `BankOption`. Field order is required-first: amount → merchant → category → card/bank + date → **More** (note, discount). **Merchant memory** (`src/lib/tx-memory.ts`): one module-level load of the last 18 months of expenses + income (warmed on sheet mount, refreshed when stale on open, `rememberTx` patches it after an add). Typing a merchant lists matching names you've used (prefix first, then by use count); tapping one fills its latest category, card/bank and — if empty — amount. Typing a known name in full applies category/card on blur. A category or card you picked yourself in this sheet is never overridden. Categories are ordered by use in the last 180 days (`byUse`). Suggestion rows act on `pointerdown` (preventDefault) so the input's blur doesn't unmount them before the tap lands.
 - `wallet/RevenueStreamSheet.tsx` — `RevenueStreamConfig: { id, name, amount, freq, bankId, nextPayDate }`. **No DB ops** — calls `onDone(config)` synchronously.
 - `wallet/AddTransferSheet.tsx` — `TransferPayload: { from_bank_id, to_bank_id, amount, date, note }`. Swap button swaps from/to. Calls `onAdd(payload)` then closes; caller handles DB + balance updates.
 - `wallet/CardVisual.tsx` — renders card from `Card` prop using `CARD_STYLE_DEFS`. `getTexturePattern` inline (JSX). Accepts `expenseCount?`, `subCount?`.
@@ -346,7 +346,7 @@ Import from here, never re-define:
 
 ## FAB pattern
 
-`ui/GlobalFAB.tsx` — 56px gold button (`right: 16`, above the nav + safe area), spring press. One action → tapping runs it directly. Several → an iOS context-menu style frosted panel (portaled) springs from the button; list actions top-to-bottom with the primary one last (closest to the thumb). All tabs except Settings. Never use a header button for add actions.
+`ui/GlobalFAB.tsx` — 56px gold button (`right: 16`, above the nav + safe area), spring press. One action → tapping runs it directly. Several → an iOS context-menu style frosted panel (portaled) springs from the button; list actions top-to-bottom with the primary one last (closest to the thumb). All tabs except Settings. Never use a header button for add actions. `primary={i}` (Home and Out: New Expense) makes a tap run that action directly and a long-press (420ms) / right-click open the menu; keyboard activation still opens the menu.
 
 ## Calendar page architecture
 

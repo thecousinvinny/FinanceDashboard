@@ -21,8 +21,12 @@ const MENU_MS = 260
  * single choice). Several → an iOS context-menu style frosted panel springs
  * out of the button, actions listed top-to-bottom with the primary one
  * closest to the thumb.
+ *
+ * `primary` (an index into actions) makes a tap run that action straight
+ * away — the one you use most — and a long-press (or right-click) open the
+ * full menu instead.
  */
-export function GlobalFAB({ actions }: { actions: FABAction[] }) {
+export function GlobalFAB({ actions, primary }: { actions: FABAction[]; primary?: number }) {
   const [open,    setOpen]    = useState(false)
   const [present, setPresent] = useState(false)
   const [shown,   setShown]   = useState(false)
@@ -30,6 +34,9 @@ export function GlobalFAB({ actions }: { actions: FABAction[] }) {
   const [pressed, setPressed] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const viaKeyboard = useRef(false)
+  const holdTimer   = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const heldOpen    = useRef(false)
+  const quick       = primary != null && actions[primary] ? actions[primary] : null
 
   useEffect(() => setMounted(true), [])
 
@@ -59,9 +66,30 @@ export function GlobalFAB({ actions }: { actions: FABAction[] }) {
 
   function onMain(e: React.MouseEvent) {
     viaKeyboard.current = e.detail === 0   // keyboard-activated clicks have no click count
+    if (heldOpen.current) { heldOpen.current = false; return }   // the long-press already opened it
     haptic('tap')
     if (actions.length === 1) { actions[0].onTap(); return }
+    // Keyboard users get the menu: they can't long-press
+    if (quick && !open && !viaKeyboard.current) { quick.onTap(); return }
     setOpen(v => !v)
+  }
+
+  function cancelHold() {
+    if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null }
+  }
+
+  function startHold() {
+    cancelHold()
+    heldOpen.current = false
+    if (!quick || open) return
+    holdTimer.current = setTimeout(() => {
+      holdTimer.current = null
+      heldOpen.current = true
+      haptic('confirm')
+      setPressed(false)
+      viaKeyboard.current = false
+      setOpen(true)
+    }, 420)
   }
 
   function run(onTap: () => void) {
@@ -133,11 +161,18 @@ export function GlobalFAB({ actions }: { actions: FABAction[] }) {
 
       <button
         onClick={onMain}
-        onPointerDown={() => setPressed(true)}
-        onPointerUp={() => setPressed(false)}
-        onPointerLeave={() => setPressed(false)}
-        onPointerCancel={() => setPressed(false)}
-        aria-label={single ? actions[0].label : open ? 'Close' : 'Add'}
+        onPointerDown={() => { setPressed(true); startHold() }}
+        onPointerUp={() => { setPressed(false); cancelHold() }}
+        onPointerLeave={() => { setPressed(false); cancelHold() }}
+        onPointerCancel={() => { setPressed(false); cancelHold() }}
+        onContextMenu={e => {
+          e.preventDefault()
+          if (!quick || heldOpen.current) return
+          cancelHold()
+          haptic('tap')
+          setOpen(true)
+        }}
+        aria-label={single ? actions[0].label : open ? 'Close' : quick ? `${quick.label} (hold for more)` : 'Add'}
         aria-haspopup={single ? undefined : 'menu'}
         aria-expanded={single ? undefined : open}
         className="fixed rounded-full flex items-center justify-center select-none outline-none"
@@ -157,6 +192,8 @@ export function GlobalFAB({ actions }: { actions: FABAction[] }) {
           transform: pressed ? 'scale(0.9)' : 'scale(1)',
           transition: `transform ${pressed ? '120ms ease-out' : `420ms ${SPRING}`}`,
           WebkitTapHighlightColor: 'transparent',
+          WebkitTouchCallout: 'none',
+          WebkitUserSelect: 'none',
         }}
       >
         <Icon
