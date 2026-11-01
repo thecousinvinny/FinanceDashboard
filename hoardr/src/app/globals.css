@@ -604,6 +604,19 @@ html[data-tab-dir='back']::view-transition-new(root) { animation-name: tab-in-ba
 @keyframes tab-in-fwd   { from { opacity: 0; transform: translateX(36px); } }
 @keyframes tab-out-back { to   { opacity: 0; transform: translateX(28px) scale(0.985); } }
 @keyframes tab-in-back  { from { opacity: 0; transform: translateX(-36px); } }
+/* Desktop (mouse) only — phones keep the exact slide above. The default
+   cross-fade blends the two snapshots with plus-lighter inside an isolated
+   group: an extra full-window compositing pass every frame, which at desktop
+   size was the last visible hitch (the fade). A plain fade stacks them
+   instead, and the old screen only drifts (no scale: resampling a
+   full-window texture every frame). */
+@media (pointer: fine) {
+  ::view-transition-image-pair(root) { isolation: auto; }
+  ::view-transition-old(root),
+  ::view-transition-new(root) { mix-blend-mode: normal; }
+  @keyframes tab-out-fwd  { to { opacity: 0; transform: translateX(-28px); } }
+  @keyframes tab-out-back { to { opacity: 0; transform: translateX(28px); } }
+}
 /* The tab bar stays live (its pill slides on its own) and doesn't cross-fade */
 ::view-transition-old(tabbar) { display: none; }
 ::view-transition-new(tabbar) { animation: none; }
