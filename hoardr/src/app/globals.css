@@ -704,13 +704,11 @@ html.slate-mist, html.light {
 /* Daily brief due: a solid cover from the very first paint until the
    greeting's own backdrop is up (lib/greeting-boot.ts). */
 html.greet-boot body::after,
-html.boot-splash body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 79;
-  background: var(--color-bg-base);
-}
+/* The load screen is in the server HTML (BootSplash); the head script's
+   class shows it from the first frame, React keeps it up after that */
+.boot-splash-el { display: none; }
+html.boot-splash .boot-splash-el,
+.boot-splash-el[data-show] { display: flex; }
 
 /* ── Greeting (daily brief) entrance ──────────────────────────────────────
    Transform + opacity only, easeOutQuint, no overshoot. The card enters once,

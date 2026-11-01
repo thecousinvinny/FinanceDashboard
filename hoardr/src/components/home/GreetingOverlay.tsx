@@ -274,8 +274,23 @@ export function GreetingOverlay() {
     document.body.appendChild(ghost)
     beginHeroHandoff()
     void ghost.offsetHeight
-    ghost.style.transition = `transform ${FLY_MS}ms cubic-bezier(0.32, 0.72, 0, 1), box-shadow ${FLY_MS}ms ease`
-    ghost.style.transform = `translate3d(${b.left - a.left}px, ${b.top - a.top}px, 0) scale(${b.width / w})`
+    const ease = `${FLY_MS}ms cubic-bezier(0.32, 0.72, 0, 1)`
+    const move = `translate3d(${b.left - a.left}px, ${b.top - a.top}px, 0)`
+    // Phone: Home's hero is the same shape, so one uniform scale lands it
+    // exactly (transform only). Desktop: Home's card is much wider than the
+    // greeting's but just as tall — a uniform scale doubled its height, then
+    // the copy vanished onto the shorter card. There it resizes to Home's box
+    // instead (the chart stretches; the text keeps its size).
+    const sameShape = Math.abs(b.width / w - b.height / h) < 0.03
+    if (sameShape) {
+      ghost.style.transition = `transform ${ease}, box-shadow ${FLY_MS}ms ease`
+      ghost.style.transform = `${move} scale(${b.width / w})`
+    } else {
+      ghost.style.transition = `transform ${ease}, width ${ease}, height ${ease}, box-shadow ${FLY_MS}ms ease`
+      ghost.style.transform = `${move} scale(1)`
+      ghost.style.width  = `${b.width}px`
+      ghost.style.height = `${b.height}px`
+    }
     ghost.style.boxShadow = '0 0 0 rgba(0,0,0,0)'
     setTimeout(() => {
       endHeroHandoff()
