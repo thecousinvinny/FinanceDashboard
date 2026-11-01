@@ -120,6 +120,8 @@ interface ListActions {
 const LIST_ROW_MIN_H = 112
 const LIST_SPAN = 24   // months loaded either side of the start month
 
+const NO_EVENTS: Record<string, CalEvent[]> = {}
+
 const ListMonth = memo(function ListMonth({ year: y, month: m, events, todayStr, full, actions }: {
   year: number; month: number
   events: Record<string, CalEvent[]>
@@ -490,6 +492,12 @@ export default function CalendarPage() {
   const botSentRef    = useRef<HTMLDivElement>(null)
   const loadingMore   = useRef(false)
   const monthsRef     = useRef(months)
+  // Phone list: the day row under the reading line and its offset from the
+  // top. Whatever lands (events, months inserted above) is re-anchored to it
+  // in a layout effect — Safari has no scroll anchoring of its own.
+  const listAnchor     = useRef<{ el: HTMLElement; off: number } | null>(null)
+  const listTouching   = useRef(false)
+  const lastListScroll = useRef(0)
 
   // Swipe gesture refs
   const v3Swipe        = useRef<{ x: number; y: number } | null>(null)
@@ -534,6 +542,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
   const handleDetailScroll = useCallback(() => {
     const sc = scrollRef.current
     if (!sc) return
+    lastListScroll.current = performance.now()
     const threshold = sc.scrollTop + 120
     let found: string | null = null
     // Phone list: find the month block under the line first, then only its
@@ -560,6 +569,8 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
         if (top + el.offsetHeight > threshold) { found = ds; break outer }
       }
     }
+    const anchorEl = found ? dayRefs.current.get(found) : undefined
+    if (anchorEl) listAnchor.current = { el: anchorEl, off: anchorEl.offsetTop - sc.scrollTop }
     if (found && found !== lastHapticDay.current) {
       lastHapticDay.current = found
       navigator.vibrate?.(8)
@@ -799,37 +810,57 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     return () => { cancelled = true }
   }, [supabase, gRefreshKey])
 
+  // What's already been fetched from Google. Scrolling the list adds months
+  // at either end; that only fetches the new months and merges them in —
+  // refetching all ~4 years each time re-laid out the list mid-scroll.
+  const gLoaded = useRef<{ sig: string; min: string; max: string } | null>(null)
   useEffect(() => {
     const calIds = prefs.googleCalendarIds
-    if (calIds.length === 0) { setGoogleEvMap({}); return }
+    if (calIds.length === 0) { gLoaded.current = null; setGoogleEvMap({}); return }
     const gen = ++gEvGen.current
-    // Parse range from gEvRangeKey (YYYY-MM..YYYY-MM)
+    // Range as YYYY-MM..YYYY-MM
     const [minPart, maxPart] = gEvRangeKey.split('..')
-    const [minY, minM] = minPart.split('-').map(Number)
-    const [maxY, maxM] = maxPart.split('-').map(Number)
-    const tMin = new Date(minY, minM - 1, 1).toISOString()
-    const tMax = new Date(maxY, maxM, 0, 23, 59, 59).toISOString()
+    const sig = `${calIds.join(',')}|${googleCals.map(c => c.id + c.backgroundColor).join(',')}|${gRefreshKey}`
+    const had = gLoaded.current?.sig === sig ? gLoaded.current : null
+    const ym = (v: string) => v.split('-').map(Number) as [number, number]
+    const shift = (v: string, d: number) => { const [y, m] = ym(v); const t = new Date(y, m - 1 + d, 1); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}` }
+    // Segments to fetch: everything, or only the months added at each end
+    const segs: [string, string][] = !had ? [[minPart, maxPart]] : [
+      ...(minPart < had.min ? [[minPart, shift(had.min, -1)] as [string, string]] : []),
+      ...(maxPart > had.max ? [[shift(had.max, 1), maxPart] as [string, string]] : []),
+    ]
+    if (!segs.length) return
     const clr: Record<string, string> = {}
     for (const c of googleCals) clr[c.id] = c.backgroundColor
-    Promise.all(calIds.map(calId =>
-      calFetch(`/api/calendar?action=events&calendarId=${encodeURIComponent(calId)}&timeMin=${encodeURIComponent(tMin)}&timeMax=${encodeURIComponent(tMax)}`)
-        .then(async r => {
-          const d = await r.json() as { items?: Array<{ id: string; summary?: string; description?: string; location?: string; start: { date?: string; dateTime?: string }; end: { date?: string; dateTime?: string } }> }
-          return { calId, items: d.items ?? [], ok: r.ok, status: r.status }
-        })
-        .catch(() => ({ calId, items: [], ok: false, status: 0 }))
-    )).then(results => {
+    type GItem = { id: string; summary?: string; description?: string; location?: string; recurringEventId?: string; start: { date?: string; dateTime?: string }; end: { date?: string; dateTime?: string } }
+    Promise.all(segs.flatMap(([a, b]) => {
+      const [minY, minM] = ym(a), [maxY, maxM] = ym(b)
+      const tMin = new Date(minY, minM - 1, 1).toISOString()
+      const tMax = new Date(maxY, maxM, 0, 23, 59, 59).toISOString()
+      return calIds.map(calId =>
+        calFetch(`/api/calendar?action=events&calendarId=${encodeURIComponent(calId)}&timeMin=${encodeURIComponent(tMin)}&timeMax=${encodeURIComponent(tMax)}`)
+          .then(async r => {
+            const d = await r.json() as { items?: GItem[] }
+            return { calId, items: d.items ?? [], ok: r.ok, status: r.status }
+          })
+          .catch(() => ({ calId, items: [] as GItem[], ok: false, status: 0 }))
+      )
+    })).then(results => {
       if (gen !== gEvGen.current) return
       // A calendar whose fetch failed keeps its last-known events instead of
       // blanking out; 403 (needs reconnect) already has its own banner.
       const failed = new Set(results.filter(r => !r.ok).map(r => r.calId))
       if (results.some(r => !r.ok && r.status !== 403)) showToast('Couldn’t refresh some calendars — showing last loaded events', { type: 'delete' })
       const map: Record<string, CalEvent[]> = {}
+      const seen = new Set<string>()   // a multi-day event can come back in both segments
       for (const { calId, items } of results) {
         const color = prefs.googleCalendarColors?.[calId] ?? clr[calId] ?? '#4285F4'
         for (const ev of items) {
           const date = ev.start.date ?? ev.start.dateTime?.slice(0, 10)
           if (!date) continue
+          const once = `${calId}|${ev.id}|${date}`
+          if (seen.has(once)) continue
+          seen.add(once)
           const isAllDay = !!ev.start.date && !ev.start.dateTime
           const st = isAllDay ? null : (ev.start.dateTime ? ev.start.dateTime.slice(11, 16) : null)
           const et = isAllDay ? null : (ev.end.dateTime   ? ev.end.dateTime.slice(11, 16)   : null)
@@ -845,26 +876,35 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
             if (endDay !== date) endDate = endDay
           }
           if (!map[date]) map[date] = []
-          map[date].push({ id: ev.id, title: ev.summary ?? '(no title)', type: 'google', amount: st ? `${st}${et ? ` – ${et}` : ''}` : '', location: ev.location, notes: ev.description, color, endDate, calendarId: calId, instanceDate: date, recurringEventId: (ev as { recurringEventId?: string }).recurringEventId })
+          map[date].push({ id: ev.id, title: ev.summary ?? '(no title)', type: 'google', amount: st ? `${st}${et ? ` – ${et}` : ''}` : '', location: ev.location, notes: ev.description, color, endDate, calendarId: calId, instanceDate: date, recurringEventId: ev.recurringEventId })
         }
       }
-      setGoogleEvMap(prev => {
-        if (failed.size) {
+      // Only dates inside the fetched segments are replaced
+      const covers = (date: string) => { const k = date.slice(0, 7); return segs.some(([a, b]) => k >= a && k <= b) }
+      gLoaded.current = had
+        ? { sig, min: minPart < had.min ? minPart : had.min, max: maxPart > had.max ? maxPart : had.max }
+        : { sig, min: minPart, max: maxPart }
+      // Rows change height when events land, so wait for the list to be at
+      // rest; the anchor layout effect then keeps the day you're on in place
+      whenListIdle(() => {
+        if (gen !== gEvGen.current) return
+        setGoogleEvMap(prev => {
+          const next: Record<string, CalEvent[]> = {}
           for (const [date, evs] of Object.entries(prev)) {
+            if (!covers(date)) { next[date] = evs; continue }
             const keep = evs.filter(e => e.calendarId && failed.has(e.calendarId))
-            if (keep.length) map[date] = [...(map[date] ?? []), ...keep]
+            if (keep.length) next[date] = keep
           }
-        }
-        // Merge across calendars by time: all-day first, then by start
-        // ("HH:MM" strings sort chronologically; all-day has none).
-        for (const date of Object.keys(map)) {
-          map[date].sort(byStart)
-        }
-        // Unchanged (the usual return-to-tab refetch): keep the old map so the
-        // grid doesn't re-render
-        if (JSON.stringify(map) === JSON.stringify(prev)) return prev
-        pageCache.set('cal-google', map)
-        return map
+          for (const [date, evs] of Object.entries(map)) next[date] = [...(next[date] ?? []), ...evs]
+          // Merge across calendars by time: all-day first, then by start
+          // ("HH:MM" strings sort chronologically; all-day has none).
+          for (const date of Object.keys(map)) next[date].sort(byStart)
+          // Unchanged (the usual return-to-tab refetch): keep the old map so the
+          // grid doesn't re-render
+          if (JSON.stringify(next) === JSON.stringify(prev)) return prev
+          pageCache.set('cal-google', next)
+          return next
+        })
       })
     })
     return () => { gEvGen.current++ }
@@ -900,6 +940,30 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     }
     return m
   }, [eventMap, googleEvMap, prefs.visibleTypes, prefs.googleCalendarColors, prefs.typeColors])
+
+  // The phone list's events, one object per month that keeps its identity
+  // while that month's events are unchanged — so a refetch or a new event
+  // re-renders only the months it touches, not two years of rows
+  const monthSliceCache = useRef(new Map<string, { sig: string; evs: Record<string, CalEvent[]> }>())
+  const monthEvents = useMemo(() => {
+    const by = new Map<string, Record<string, CalEvent[]>>()
+    for (const [date, evs] of Object.entries(visibleMap)) {
+      const k = `${+date.slice(0, 4)}-${+date.slice(5, 7) - 1}`
+      let b = by.get(k)
+      if (!b) by.set(k, b = {})
+      b[date] = evs
+    }
+    const out: Record<string, Record<string, CalEvent[]>> = {}
+    for (const { year, month } of months) {
+      const k = `${year}-${month}`
+      const evs = by.get(k) ?? {}
+      const sig = JSON.stringify(evs)
+      const hit = monthSliceCache.current.get(k)
+      if (hit && hit.sig === sig) out[k] = hit.evs
+      else { monthSliceCache.current.set(k, { sig, evs }); out[k] = evs }
+    }
+    return out
+  }, [visibleMap, months])
 
   const monthVisibleMap = useMemo(() => {
     if (hiddenTypes.size === 0 && hiddenGoogleCals.size === 0) return visibleMap
@@ -1529,6 +1593,31 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
     return () => obs.disconnect()
   }, [isLargeScreen, calView])
 
+  // Run once the phone list is at rest (no finger down, no scroll for a beat).
+  // On iPhone a scrollTop write during a coasting flick is dropped, so
+  // anything that changes row heights waits for this and is then re-anchored.
+  const whenListIdle = useCallback((fn: () => void) => {
+    const attempt = () => {
+      if (listTouching.current || performance.now() - lastListScroll.current < 160) { setTimeout(attempt, 180); return }
+      fn()
+    }
+    attempt()
+  }, [])
+  useEffect(() => {
+    const sc = scrollRef.current
+    if (!sc) return
+    const down = () => { listTouching.current = true }
+    const up   = () => { listTouching.current = false; lastListScroll.current = performance.now() }
+    sc.addEventListener('touchstart', down, { passive: true })
+    sc.addEventListener('touchend', up, { passive: true })
+    sc.addEventListener('touchcancel', up, { passive: true })
+    return () => {
+      sc.removeEventListener('touchstart', down)
+      sc.removeEventListener('touchend', up)
+      sc.removeEventListener('touchcancel', up)
+    }
+  }, [isLargeScreen, calView])
+
   // ── Infinite scroll: prepend ───────────────────────────────────────────────
   // Months inserted above push the content down, so the scroll position must
   // be compensated. On iPhone that only sticks when the list is AT REST: while
@@ -1578,13 +1667,20 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
   }, [isLargeScreen, calView])
   useLayoutEffect(() => {
     const fromH = prependFromH.current
-    if (fromH === null) return
     prependFromH.current = null
+    if (fromH !== null) loadingMore.current = false
     const sc = scrollRef.current
-    // Relative (+=): keeps whatever the flick has scrolled since
-    if (sc) sc.scrollTop += sc.scrollHeight - fromH
-    loadingMore.current = false
-  }, [months])
+    if (!sc) return
+    const a = listAnchor.current
+    // Keep the day you're reading exactly where it was. Skipped while the
+    // list is being positioned (first scroll to today, a jump to a month).
+    if (a && a.el.isConnected && scrolledToToday.current && !suppressPrepend.current) {
+      const want = a.el.offsetTop - a.off
+      if (Math.abs(sc.scrollTop - want) > 0.5) sc.scrollTop = want
+    } else if (fromH !== null) {
+      sc.scrollTop += sc.scrollHeight - fromH
+    }
+  }, [months, monthEvents])
 
   // ── Month grid infinite scroll: append ────────────────────────────────────
   useEffect(() => {
@@ -2553,7 +2649,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
                     key={`${y}-${m}`}
                     year={y}
                     month={m}
-                    events={visibleMap}
+                    events={monthEvents[`${y}-${m}`] ?? NO_EVENTS}
                     todayStr={todayStr.startsWith(toDateStr(y, m, 1).slice(0, 8)) ? todayStr : ''}
                     full={gridH === 0}
                     actions={listActions}
