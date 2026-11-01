@@ -1417,7 +1417,7 @@ export default function OutPage() {
     </div>
 
     {/* ── FAB ───────────────────────────────────────────────────────────── */}
-    <GlobalFAB primary={2} actions={[
+    <GlobalFAB actions={[
       { Icon: Repeat2,      label: 'New Subscription', onTap: () => setSubSheet(true)   },
       { Icon: ShoppingCart, label: 'Add to Wishlist',  onTap: () => setWishSheet(true)  },
       { Icon: MinusCircle,  label: 'New Expense',      onTap: () => setSheetOpen(true)  },

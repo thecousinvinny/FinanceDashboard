@@ -355,7 +355,7 @@ Import from here, never re-define:
 
 ## FAB pattern
 
-`ui/GlobalFAB.tsx` — 56px gold button (`right: 16`, above the nav + safe area), spring press. One action → tapping runs it directly. Several → an iOS context-menu style frosted panel (portaled) springs from the button; list actions top-to-bottom with the primary one last (closest to the thumb). All tabs except Settings. Never use a header button for add actions. `primary={i}` (Home and Out: New Expense) makes a tap run that action directly and a long-press (420ms) / right-click open the menu; keyboard activation still opens the menu.
+`ui/GlobalFAB.tsx` — 56px gold button (`right: 16`, above the nav + safe area), spring press. One action → tapping runs it directly. Several → an iOS context-menu style frosted panel (portaled) springs from the button; list actions top-to-bottom with the primary one last (closest to the thumb). All tabs except Settings. Never use a header button for add actions. `primary={i}` would make a tap run that action directly and a long-press (420ms) / right-click open the menu — no screen uses it: the user wants the whole menu on a single tap.
 
 ## Calendar page architecture
 
