@@ -1,3 +1,5 @@
+import { markDataChangedSoon } from '@/lib/data-version'
+
 export type ToastType = 'add' | 'payment' | 'delete'
 
 export interface ToastUndo {
@@ -24,6 +26,8 @@ export function showToast(
   message: string,
   opts: { type?: ToastType; undo?: ToastUndo } = {},
 ): void {
+  // Every add / payment / delete toasts — so other screens refresh on return
+  markDataChangedSoon()
   const id = Math.random().toString(36).slice(2, 9)
   _items = [
     { id, message, type: opts.type ?? 'add', duration: opts.undo ? 5000 : 2500, undo: opts.undo },
@@ -37,6 +41,7 @@ export function dismissToast(id: string, action: 'commit' | 'undo'): void {
   if (item?.undo) {
     if (action === 'undo') item.undo.onUndo()
     else item.undo.onCommit()
+    markDataChangedSoon()   // the deferred delete (or the undo's re-insert) just ran
   }
   _items = _items.filter(t => t.id !== id)
   _emit()

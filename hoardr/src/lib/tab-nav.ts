@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useSyncExternalStore } from 'react'
 import { flushSync } from 'react-dom'
 import { usePathname } from 'next/navigation'
+import { dataVersion } from '@/lib/data-version'
 
 /**
  * Keep-alive screens (see components/nav/ScreenKeepAlive.tsx).
@@ -34,7 +35,12 @@ function subscribe(l: () => void) { listeners.add(l); return () => { listeners.d
 const ORDER = ['/home', '/money', '/in', '/calendar', '/profile', '/settings']
 const rank = (p: string) => ORDER.findIndex(o => p === o || p.startsWith(o + '/'))
 
-type VTDocument = Document & { startViewTransition?: (cb: () => void) => { finished: Promise<void> } }
+type ViewTransition = { finished: Promise<void>; skipTransition?: () => void }
+type VTDocument = Document & { startViewTransition?: (cb: () => void) => ViewTransition }
+
+// The slide in flight, and a counter so a superseded slide's update is a no-op
+let currentVT: ViewTransition | null = null
+let navSeq = 0
 
 // The slide (globals.css: tab-in-* runs 420ms) plus a frame or two of capture
 const SLIDE_MS = 480
@@ -101,12 +107,22 @@ export function navigateTab(path: string, mode: 'replace' | 'push' = 'replace') 
   // A router navigation fetched the route from the server on every tap, and
   // after a deploy that fetch saw a new build and hard-reloaded the whole app.
   // Tabs replace (no back-swipe between them); Profile/Settings push.
+  const seq = ++navSeq
   const go = () => {
+    if (seq !== navSeq) return          // a later tap won; its own switch runs
     setPendingPath(path)
     window.history[mode === 'push' ? 'pushState' : 'replaceState'](null, '', path)
   }
   const doc = document as VTDocument
   if (!doc.startViewTransition || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    go()
+    return
+  }
+  // Tapping again mid-slide: finish the running slide at once and switch
+  // without starting another. Stacking view transitions (each one snapshots
+  // the whole screen) is what crashed iOS Safari on rapid tab taps.
+  if (currentVT) {
+    currentVT.skipTransition?.()
     go()
     return
   }
@@ -116,11 +132,16 @@ export function navigateTab(path: string, mode: 'replace' | 'push' = 'replace') 
   root.dataset.tabDir = rank(path) >= rank(from) ? 'fwd' : 'back'
   slideEndsAt = performance.now() + SLIDE_MS
   const vt = doc.startViewTransition(() => flushSync(go))
+  currentVT = vt
   const done: Promise<void> = vt.finished.catch(() => {}).then(() => new Promise<void>(r =>
     requestAnimationFrame(() => requestAnimationFrame(() => r()))))
   slideDone = done
   done.then(revive)
-  vt.finished.finally(() => { delete root.dataset.tabDir; slideEndsAt = Math.min(slideEndsAt, performance.now()) })
+  vt.finished.finally(() => {
+    if (currentVT === vt) currentVT = null
+    delete root.dataset.tabDir
+    slideEndsAt = Math.min(slideEndsAt, performance.now())
+  })
   done.then(() => { if (slideDone === done) slideDone = null })
 }
 
@@ -180,23 +201,34 @@ export function useScreenVisit(): number {
 }
 
 /**
- * Runs `cb` each time this screen becomes visible again (not on first mount —
- * the screen's own mount effect handles that). Used to refresh data in the
- * background, since a kept-alive screen no longer refetches by remounting.
+ * Runs `cb` when this screen becomes visible again (not on first mount — the
+ * screen's own mount effect handles that) **and** its data may be out of date:
+ * something was added / paid / deleted since its last load (`data-version`),
+ * or that load is over STALE_MS old. Data changes rarely, so most tab switches
+ * refetch nothing.
  */
 export function useOnScreenReturn(cb: () => void) {
   const active  = useScreenActive()
   const prev    = useRef(active)
   const cbRef   = useRef(cb)
   cbRef.current = cb
+  // Mounting loads the screen's data, so that counts as the first refresh
+  const last    = useRef<{ at: number; v: number } | null>(null)
+  if (last.current === null) last.current = { at: performance.now(), v: dataVersion() }
   useEffect(() => {
     const returning = active && !prev.current
     prev.current = active
     if (!returning) return
+    const l = last.current!
+    if (l.v === dataVersion() && performance.now() - l.at < STALE_MS) return
     // After the slide and most of the entrance: the refresh's results (and the
     // comparison work on them) used to land mid number-roll and hitch it.
     // Nearly always nothing changed; when something did, it eases in.
-    return afterSlideTimeout(() => cbRef.current(), REFRESH_DELAY_MS)
+    return afterSlideTimeout(() => {
+      last.current = { at: performance.now(), v: dataVersion() }
+      cbRef.current()
+    }, REFRESH_DELAY_MS)
   }, [active])
 }
 const REFRESH_DELAY_MS = 900
+const STALE_MS = 5 * 60_000
