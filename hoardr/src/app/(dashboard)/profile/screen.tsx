@@ -291,6 +291,10 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-bg-base tab-enter pb-28">
+      {/* One centered column on desktop, the same as Settings: its 640px less
+          its 24px gutters is 592px of content, and the cards here have 20px
+          gutters, so 632px lines the two pages up exactly. Full width on a phone. */}
+      <div className="mx-auto w-full max-w-[632px]">
 
       {/* ── Header: your photo full-bleed, fading into the page ──────────────── */}
       {/* Tap the photo to change it, the name to edit it */}
@@ -452,6 +456,7 @@ export default function ProfilePage() {
 
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
         onChange={e => { const f = e.target.files?.[0]; if (f) handleAvatarFile(f); e.target.value = '' }} />
+      </div>
     </div>
   )
 }
