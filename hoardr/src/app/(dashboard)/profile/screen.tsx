@@ -292,65 +292,80 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-bg-base tab-enter pb-28">
 
-      {/* ── Top bar ──────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-4 pb-2"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top, 44px) + 8px)' }}>
-        <button onClick={() => router.back()}
-          className="w-9 h-9 flex items-center justify-center rounded-full bg-bg-overlay text-ink-muted">
-          <ArrowLeft size={18} strokeWidth={2} />
-        </button>
-        <button onClick={() => navigateTab('/settings', 'push')}
-          className="w-9 h-9 flex items-center justify-center rounded-full bg-bg-overlay text-ink-muted">
-          <Settings2 size={18} strokeWidth={1.75} />
-        </button>
-      </div>
-
-      {/* ── Avatar + identity ─────────────────────────────────────────────────── */}
-      <div className="flex flex-col items-center px-5 pt-4 pb-6">
-        <div className="relative mb-4">
-          <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
-            className="w-24 h-24 rounded-full overflow-hidden block select-none"
-            style={{ boxShadow: '0 0 0 2.5px rgba(212,175,55,0.5)', transition: 'transform 0.14s cubic-bezier(0.25,1,0.5,1), opacity 0.1s ease-out' }}>
-            {avatarSrc
-              ? <img src={avatarSrc} alt="avatar" className="w-full h-full object-cover" />
-              : <div className="w-full h-full gradient-gold flex items-center justify-center">
-                  <span className="text-[32px] font-bold text-white">{initials}</span>
-                </div>
-            }
-            {uploading && (
-              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                <div className="w-5 h-5 border-2 border-gold border-t-transparent rounded-full animate-spin" />
-              </div>
-            )}
-          </button>
-          {!hasPhoto && (
-            <div className="absolute bottom-0.5 right-0.5 w-7 h-7 gradient-gold rounded-full flex items-center justify-center pointer-events-none"
-              style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.4)' }}>
-              <Camera size={13} className="text-white" strokeWidth={2} />
+      {/* ── Header: your photo full-bleed, fading into the page ──────────────── */}
+      {/* Tap the photo to change it, the name to edit it */}
+      <div
+        className="relative overflow-hidden select-none"
+        style={{ height: 'calc(env(safe-area-inset-top, 44px) + 232px)', cursor: uploading ? 'default' : 'pointer' }}
+        onClick={() => { if (!uploading && !editingName) fileInputRef.current?.click() }}
+      >
+        {avatarSrc
+          ? <img src={avatarSrc} alt="" draggable={false} className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: 'center 30%' }} />
+          : <div className="absolute inset-0 gradient-gold flex items-center justify-center">
+              <span className="text-[64px] font-bold text-white/90" style={{ fontFamily: 'var(--font-big-shoulders)' }}>{initials}</span>
             </div>
-          )}
+        }
+        {/* Dark wash for legibility, fading into the page */}
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: 'linear-gradient(180deg, rgba(6,6,9,0.35) 0%, rgba(6,6,9,0) 26%, rgba(6,6,9,0) 40%, rgba(6,6,9,0.55) 70%, var(--color-bg-base) 100%)',
+        }} />
+        {uploading && (
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+            <div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+
+        {/* Floating glass buttons */}
+        <div className="absolute left-4 right-4 flex items-center justify-between" style={{ top: 'calc(env(safe-area-inset-top, 44px) + 8px)' }}>
+          {([
+            [() => router.back(), <ArrowLeft key="b" size={18} strokeWidth={2} />, 'Back'],
+            [() => navigateTab('/settings', 'push'), <Settings2 key="s" size={18} strokeWidth={1.75} />, 'Settings'],
+          ] as const).map(([fn, icon, label]) => (
+            <button key={label} aria-label={label} onClick={e => { e.stopPropagation(); fn() }}
+              className="w-9 h-9 flex items-center justify-center rounded-full text-white"
+              style={{ background: 'rgba(10,10,11,0.38)', WebkitBackdropFilter: 'blur(12px)', backdropFilter: 'blur(12px)' }}>
+              {icon}
+            </button>
+          ))}
         </div>
 
-        {editingName ? (
-          <div className="flex items-center gap-2 mb-1">
-            <input ref={nameInputRef} value={nameInput} onChange={e => setNameInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') saveName() }} onBlur={saveName}
-              className="bg-bg-overlay rounded-[10px] px-3 py-1.5 text-[20px] font-bold text-ink text-center outline-none border border-gold/40"
-              style={{ maxWidth: 240, colorScheme: 'dark' }} />
-            <button onClick={saveName} className="w-7 h-7 gradient-gold rounded-full flex items-center justify-center flex-shrink-0">
-              <Check size={12} className="text-white" strokeWidth={2.5} />
+        {/* Name over the photo */}
+        <div className="absolute left-5 right-5 bottom-3" onClick={e => e.stopPropagation()}>
+          {allTime.since && (
+            <p className="text-[10px] font-semibold tracking-[0.12em] uppercase" style={{ color: 'rgba(255,255,255,0.65)' }}>
+              Since {allTime.since}
+            </p>
+          )}
+          {editingName ? (
+            <div className="flex items-center gap-2 mt-1">
+              <input ref={nameInputRef} value={nameInput} onChange={e => setNameInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') saveName() }} onBlur={saveName}
+                className="rounded-[10px] px-3 py-1.5 text-[22px] font-bold text-white outline-none border border-gold/50 min-w-0 flex-1"
+                style={{ maxWidth: 260, background: 'rgba(10,10,11,0.45)', colorScheme: 'dark' }} />
+              <button onClick={saveName} className="w-8 h-8 gradient-gold rounded-full flex items-center justify-center flex-shrink-0">
+                <Check size={13} className="text-white" strokeWidth={2.5} />
+              </button>
+            </div>
+          ) : (
+            <button onClick={startEditName} className="flex items-center gap-2 mt-0.5 group select-none text-left max-w-full">
+              <span className="text-[30px] font-bold text-white tracking-[-0.02em] leading-tight truncate"
+                style={{ textShadow: '0 2px 14px rgba(0,0,0,0.4)' }}>
+                {displayName ?? 'Set your name'}
+              </span>
+              <Pencil size={14} className="text-white/55 group-active:text-gold transition-colors flex-shrink-0" strokeWidth={1.75} />
             </button>
+          )}
+          {email && <p className="text-[12px] truncate" style={{ color: 'rgba(255,255,255,0.6)' }}>{email}</p>}
+        </div>
+
+        {!hasPhoto && (
+          <div className="absolute right-5 bottom-4 w-8 h-8 gradient-gold rounded-full flex items-center justify-center pointer-events-none"
+            style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.4)' }}>
+            <Camera size={14} className="text-white" strokeWidth={2} />
           </div>
-        ) : (
-          <button onClick={startEditName} className="flex items-center gap-1.5 mb-1 group select-none">
-            <span className="text-[22px] font-bold text-ink tracking-[-0.02em]">
-              {displayName ?? 'Set your name'}
-            </span>
-            <Pencil size={13} className="text-ink-faint group-active:text-gold transition-colors" strokeWidth={1.75} />
-          </button>
         )}
-        {email && <p className="text-[12px] text-ink-muted">{email}</p>}
       </div>
+      <div className="h-4" />
 
       {!loading && (
         <>
@@ -421,7 +436,7 @@ export default function ProfilePage() {
           </Card>
 
           {/* ── All time ──────────────────────────────────────────────────────── */}
-          <Card label="All time" stat={allTime.since ? `since ${allTime.since}` : undefined}>
+          <Card label="All time">
             <div className="grid grid-cols-2 gap-2">
               <Record label="Earned" value={$f(allTime.earned)} color="var(--sem-income)" />
               <Record label="Spent" value={$f(allTime.spent)} color="var(--sem-expense)" />
