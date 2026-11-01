@@ -29,9 +29,6 @@ export const metadata: Metadata = {
     statusBarStyle:  'black-translucent',
     title:           'Hoardr',
   },
-  icons: {
-    apple: '/DARKICON.png',
-  },
 }
 
 export const viewport: Viewport = {

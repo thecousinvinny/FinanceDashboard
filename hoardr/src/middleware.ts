@@ -105,7 +105,9 @@ export const config = {
   matcher: [
     // Exclude API + auth-callback routes (they handle their own auth) and
     // static assets, so middleware only guards actual pages. Fewer getUser()
-    // calls = less refresh-token rotation churn.
-    '/((?!api|auth|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // calls = less refresh-token rotation churn. The manifest must be public:
+    // browsers fetch it without cookies, so guarding it redirected the
+    // install prompt to /login and desktop installs got a letter "H" icon.
+    '/((?!api|auth|_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 }
