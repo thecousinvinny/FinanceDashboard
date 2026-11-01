@@ -2,12 +2,12 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Check, CreditCard, LogOut, CalendarDays, Tag, Settings2, Palette, CalendarCheck, Smartphone, Monitor, Sunrise, DatabaseBackup, Sheet as SheetIcon } from 'lucide-react'
+import { ArrowLeft, Check, CreditCard, LogOut, CalendarDays, Tag, Settings2, Palette, Smartphone, Monitor, Sunrise, DatabaseBackup, Sheet as SheetIcon } from 'lucide-react'
 import { downloadBackup, downloadTransactionsCsv } from '@/lib/backup'
 import { UI_PREFS_SYNCED } from '@/lib/ui-prefs'
 import { showGreeting } from '@/components/home/GreetingOverlay'
 import { createClient } from '@/lib/supabase/client'
-import { connectGoogleCalendar } from '@/lib/gcal-connect'
+import { ConnectionsGroup } from '@/components/settings/ConnectionsGroup'
 import { showToast } from '@/lib/toast'
 import { type Theme, THEMES, applyTheme, readTheme } from '@/lib/theme'
 import { CalendarSettingsSheet, type CalPrefs, type GCalendar } from '@/components/calendar/CalendarSettingsSheet'
@@ -190,10 +190,6 @@ export default function SettingsPage() {
   }
 
   // Re-grant Google Calendar access without signing out (see gcal-connect.ts)
-  async function reconnectCalendar() {
-    await connectGoogleCalendar(email)
-  }
-
   async function loadSessions() {
     // "Loading…" only before the first result; a refresh keeps the list up
     if (!sessions.length) setSessionsLoading(true)
@@ -310,15 +306,17 @@ export default function SettingsPage() {
         </FormGroup>
 
         {/* Calendar */}
-        <FormGroup header="Calendar" footer="Reconnect if events stop syncing — you stay signed in.">
+        <FormGroup header="Calendar">
           <FormRow icon={CalendarDays} label="Calendars & filters" chevron onClick={() => setCalOpen(true)} />
-          <FormRow icon={CalendarCheck} label="Connect Google Calendar" chevron onClick={reconnectCalendar} />
           <FormRow label="Week starts on">
             <div className="w-[128px]">
               <Segmented options={WEEK_START} value={wsMon ? 'Mon' : 'Sun'} onChange={v => selectWsMon(v === 'Mon')} />
             </div>
           </FormRow>
         </FormGroup>
+
+        {/* Connections — every outside service, with its status and fix */}
+        <ConnectionsGroup email={email} />
 
         {/* Your data */}
         <FormGroup header="Your data" footer="Saved to this device. The backup holds every expense, income, subscription, account, card, wishlist item, transfer and event; the spreadsheet opens in Numbers, Excel or Sheets.">
