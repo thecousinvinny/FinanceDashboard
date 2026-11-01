@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useLayoutEffect, useRef } from 'react'
-import { $fd, $fk, localToday, nextRenewalDate } from '@/lib/utils'
+import { $fk, localToday, nextRenewalDate } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { calFetch } from '@/lib/calendar'
 import type { BillingCycle } from '@/types'
@@ -10,6 +10,10 @@ import { GREET_BOOT_CLASS } from '@/lib/greeting-boot'
 import { replayActiveScreen } from '@/lib/tab-nav'
 import { LoadBars } from '@/components/ui/LoadBars'
 import { SlotNumber } from '@/components/ui/SlotNumber'
+import { HomeHero } from '@/components/home/HomeHero'
+import type { HeroSeries } from '@/components/home/PaceChart'
+import { buildHeroSeries, heroHistoryStart } from '@/lib/hero-series'
+import { beginHeroHandoff, endHeroHandoff } from '@/lib/hero-handoff'
 
 /**
  * Daily brief shown when the app opens. Doubles as the warm-up screen: while
@@ -76,31 +80,13 @@ function advancePay(ds: string, freq: string) {
 interface UpItem { date: string; title: string; amount: number; kind: 'bill' | 'pay' }
 interface TodayEv { title: string; time: string | null }
 interface Brief {
-  spent: number; income: number; lastMonthToDate: number
+  income: number; noSpendDays: number; enRoute: number
   upcoming: UpItem[]; today: TodayEv[] | null
-  subsMonthly: number; dailyAvg: number; noSpendDays: number; enRoute: number
-  /** Running spend total per day: this month up to today, last month in full */
-  cum: number[]; prevCum: number[]
-  daysInMonth: number
+  /** Hoard's hero, the same card that flies onto Home when this closes */
+  hero: { spent: number; month: HeroSeries; year: HeroSeries }
 }
 
-const CH_W = 300, CH_H = 64
-/** SVG paths for the spend-pace chart (this month vs last month, cumulative) */
-function paceChart(b: Brief) {
-  const max = Math.max(b.cum[b.cum.length - 1] ?? 0, b.prevCum[b.prevCum.length - 1] ?? 0, 1) * 1.1
-  const x = (i: number) => (b.daysInMonth <= 1 ? 0 : (i / (b.daysInMonth - 1)) * CH_W)
-  const y = (v: number) => CH_H - (v / max) * CH_H
-  const line = (pts: number[]) => pts.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('')
-  const prev = b.prevCum.slice(0, b.daysInMonth)
-  const cur  = line(b.cum)
-  const lastI = b.cum.length - 1
-  return {
-    cur,
-    area: b.cum.length ? `${cur}L${x(lastI).toFixed(1)},${CH_H}L0,${CH_H}Z` : '',
-    prev: line(prev),
-    dot: { left: `${(x(lastI) / CH_W) * 100}%`, top: `${(y(b.cum[lastI] ?? 0) / CH_H) * 100}%` },
-  }
-}
+const FLY_MS = 560
 
 export function GreetingOverlay() {
   const [show,     setShow]     = useState(false)
@@ -118,6 +104,7 @@ export function GreetingOverlay() {
   const authSubRef = useRef<{ unsubscribe: () => void } | null>(null)
   // When the card entered: every number's roll is timed from it
   const enterAt = useRef(0)
+  const heroRef = useRef<HTMLDivElement>(null)
 
   // Layout effect: the scrim is up before the first paint after hydration, so
   // the page never flashes underneath before the brief appears.
@@ -160,11 +147,7 @@ export function GreetingOverlay() {
       if (gen !== genRef.current) return
       if (!session) { setReady(true); return }
 
-      const monthStart = `${today.slice(0, 7)}-01`
       const [ty, tm, td] = today.split('-').map(Number)
-      const lmStart = ymd(new Date(ty, tm - 2, 1))
-      // Same day-of-month last month, clamped to that month's length
-      const lmSameDay = ymd(new Date(ty, tm - 2, Math.min(td, new Date(ty, tm - 1, 0).getDate())))
       const weekEnd = addDays(today, 7)
 
       // Profile first-class: today's calendar hangs off its calendar ids, so it
@@ -198,8 +181,8 @@ export function GreetingOverlay() {
         { data: expData }, { data: incData }, { data: subs }, { data: streams },
         { data: wish }, { data: profile }, todayEvs, avatarUrl,
       ] = await Promise.all([
-        supabase.from('expenses').select('cost, date').gte('date', lmStart).lte('date', today),
-        supabase.from('income').select('amount').gte('date', monthStart).lte('date', today),
+        supabase.from('expenses').select('cost, date, name').gte('date', heroHistoryStart(today)).lte('date', today),
+        supabase.from('income').select('amount, date').gte('date', heroHistoryStart(today)).lte('date', today),
         supabase.from('subscriptions').select('name, cost, billing, next_renewal, monthly_cost').eq('status', 'Active'),
         supabase.from('revenue_streams').select('name, amount, freq, next_pay_date'),
         supabase.from('wishlist').select('id').eq('status', 'Ordered'),
@@ -207,25 +190,17 @@ export function GreetingOverlay() {
       ])
       if (gen !== genRef.current) return
 
-      const exp = (expData ?? []) as unknown as { cost: number; date: string }[]
-      const spent = exp.filter(e => e.date >= monthStart).reduce((s, e) => s + Number(e.cost), 0)
-      const lastMonthToDate = exp.filter(e => e.date < monthStart && e.date <= lmSameDay).reduce((s, e) => s + Number(e.cost), 0)
-
-      // Per-day spend → running totals for the pace chart
-      const daysInMonth = new Date(ty, tm, 0).getDate()
-      const prevDays    = new Date(ty, tm - 1, 0).getDate()
-      const daily = new Array<number>(td).fill(0)
-      const prevDaily = new Array<number>(prevDays).fill(0)
-          for (const e of exp) {
-        const day = Number(e.date.slice(8, 10)) - 1
-        if (e.date >= monthStart) {
-          if (day < td) daily[day] += Number(e.cost)
-        } else if (day < prevDays) prevDaily[day] += Number(e.cost)
-      }
-      const running = (a: number[]) => { let t = 0; return a.map(v => (t += v)) }
+      // The hero's numbers come from the same builder Home uses
+      const subNames = new Set((subs ?? []).map(x => String(x.name).toLowerCase()))
+      const hero = buildHeroSeries(
+        (expData ?? []) as { cost: number; date: string; name: string | null }[],
+        (incData ?? []) as { amount: number; date: string }[],
+        subNames, today,
+      )
+      const spent  = hero.month.cum[hero.month.cum.length - 1] ?? 0
+      const income = hero.month.inc.reduce((a, v) => a + v, 0)
       // Full days only: today isn't over yet
-      const noSpendDays = daily.slice(0, td - 1).filter(v => v === 0).length
-      const income = (incData ?? []).reduce((s, r) => s + Number(r.amount), 0)
+      const noSpendDays = hero.month.out.slice(0, td - 1).filter(v => v === 0).length
 
       const upcoming: UpItem[] = []
       for (const s of subs ?? []) {
@@ -248,11 +223,9 @@ export function GreetingOverlay() {
       if (avatarUrl) { setAvatar(avatarUrl); localStorage.setItem(LS_AVATAR, avatarUrl) }
 
       setBrief({
-        spent, income, lastMonthToDate, upcoming, today: todayEvs,
-        subsMonthly: (subs ?? []).reduce((s, x) => s + Number(x.monthly_cost ?? 0), 0),
-        dailyAvg: spent / td, noSpendDays,
+        income, noSpendDays, upcoming, today: todayEvs,
         enRoute: (wish ?? []).length,
-        cum: running(daily), prevCum: running(prevDaily), daysInMonth,
+        hero: { spent, month: hero.month, year: hero.year },
       })
       setReady(true)
     }
@@ -275,7 +248,38 @@ export function GreetingOverlay() {
     if (show) document.documentElement.classList.remove(GREET_BOOT_CLASS)
   }, [show])
 
+  /** Flies a frozen copy of the card's hero onto Home's, which stays hidden
+   *  (and skips its entrance) until the copy lands on it. */
+  function flyHeroHome() {
+    const src = heroRef.current?.firstElementChild as HTMLElement | null
+    const dst = document.querySelector<HTMLElement>('[data-home-hero]')
+    if (!src || !dst || dst.closest('.screen-hidden')) return
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const a = src.getBoundingClientRect(), b = dst.getBoundingClientRect()
+    if (!a.width || b.bottom <= 0 || b.top >= window.innerHeight) return
+    const ghost = src.cloneNode(true) as HTMLElement
+    // Frozen: a clone would replay every entrance animation from the start
+    ghost.querySelectorAll<HTMLElement | SVGElement>('*').forEach(n => { n.style.animation = 'none' })
+    Object.assign(ghost.style, {
+      position: 'fixed', left: `${a.left}px`, top: `${a.top}px`, width: `${a.width}px`, height: `${a.height}px`,
+      margin: '0', zIndex: '90', pointerEvents: 'none', transformOrigin: '0 0', willChange: 'transform',
+      boxShadow: '0 24px 60px rgba(0,0,0,0.45)',
+      transition: `transform ${FLY_MS}ms cubic-bezier(0.32, 0.72, 0, 1), box-shadow ${FLY_MS}ms ease`,
+    })
+    document.body.appendChild(ghost)
+    beginHeroHandoff()
+    void ghost.offsetHeight
+    ghost.style.transform = `translate3d(${b.left - a.left}px, ${b.top - a.top}px, 0) scale(${b.width / a.width})`
+    ghost.style.boxShadow = '0 0 0 rgba(0,0,0,0)'
+    setTimeout(() => {
+      endHeroHandoff()
+      // Home's hero paints under it first, then the copy goes
+      requestAnimationFrame(() => requestAnimationFrame(() => ghost.remove()))
+    }, FLY_MS + 20)
+  }
+
   function dismiss() {
+    flyHeroHome()
     // The screen's entrance animations ran unseen behind the backdrop; replay
     // them as it fades away
     replayActiveScreen()
@@ -287,17 +291,15 @@ export function GreetingOverlay() {
   if (ready && !enterAt.current) enterAt.current = performance.now()
   const rollAt = (ms: number) => enterAt.current + ms
 
-  const net  = (brief?.income ?? 0) - (brief?.spent ?? 0)
-  const pace = brief && brief.lastMonthToDate > 0 ? ((brief.spent - brief.lastMonthToDate) / brief.lastMonthToDate) * 100 : null
-  const chart = brief ? paceChart(brief) : null
   const dateLine = todayStr
     ? new Date(todayStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
     : ''
-  const upShown = brief?.upcoming.slice(0, 3) ?? []
+  // Two of each: the hero takes the room the photo had
+  const upShown = brief?.upcoming.slice(0, 2) ?? []
   const upMore  = (brief?.upcoming.length ?? 0) - upShown.length
   const billsDue = brief?.upcoming.filter(u => u.kind === 'bill').reduce((s, u) => s + u.amount, 0) ?? 0
   const payDue   = brief?.upcoming.filter(u => u.kind === 'pay').reduce((s, u) => s + u.amount, 0) ?? 0
-  const evShown = brief?.today?.slice(0, 3) ?? []
+  const evShown = brief?.today?.slice(0, 2) ?? []
   const evMore  = (brief?.today?.length ?? 0) - evShown.length
 
   const muted = 'rgb(var(--rgb-ink-muted))'
@@ -345,7 +347,7 @@ export function GreetingOverlay() {
         {/* One scroller: the photo scrolls away with the card on short screens */}
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto', overscrollBehavior: 'contain' }}>
         {/* Hero: the profile photo takes the top of the card, greeting where it fades out */}
-        <div style={{ position: 'relative', flex: '1 0 150px', overflow: 'hidden', background: '#0c0c0f' }}>
+        <div style={{ position: 'relative', flex: '1 0 96px', overflow: 'hidden', background: '#0c0c0f' }}>
           {avatar ? (
             <img
               src={hiRes(avatar)} alt="" draggable={false}
@@ -369,68 +371,41 @@ export function GreetingOverlay() {
         </div>
 
         <div style={{ flexShrink: 0, padding: '2px 22px 4px', fontFamily: M }}>
-          {/* Month so far: number, pace chart, three stats */}
-          <section className="greet-rise" style={{ padding: '10px 0 14px', ['--d' as string]: '120ms' }}>
-            <div style={head}>
-              <span style={label}>Spent this month</span>
-              {pace !== null && (
-                <span className="greet-pop" style={{ ['--d' as string]: '1250ms', display: 'inline-block', fontSize: 11.5, fontWeight: 600, color: pace <= 0 ? 'var(--sem-income)' : '#ef4444', whiteSpace: 'nowrap' }}>
-                  {pace <= 0 ? '↓' : '↑'} {Math.abs(pace).toFixed(0)}% vs last month
-                </span>
+          {/* Hoard's hero, exactly as on Home. It flies there when the card closes.
+              Full card width, so on a phone it matches Home's width too. */}
+          <section className="greet-rise" style={{ padding: '6px 0 14px', ['--d' as string]: '120ms' }}>
+            <div
+              ref={heroRef} style={{ margin: '0 -22px' }}
+              // The month/year dots switch the view here instead of closing the card
+              onClick={e => { if ((e.target as HTMLElement).closest('button')) e.stopPropagation() }}
+            >
+              {brief && (
+                <HomeHero
+                  spent={brief.hero.spent} month={brief.hero.month} year={brief.hero.year}
+                  greeting={{ rollAt, chartDelay: 380 }}
+                />
               )}
             </div>
-            <p style={{ display: 'flex', fontSize: 40, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1, color: ink, fontFamily: 'var(--font-big-shoulders)' }}>
-              {brief ? <SlotNumber value={brief.spent} format={$fd} startAt={rollAt(260)} /> : '—'}
-            </p>
+          </section>
 
-            {chart && (
-              <div style={{ position: 'relative', marginTop: 14, height: CH_H }}>
-                <svg viewBox={`0 0 ${CH_W} ${CH_H}`} preserveAspectRatio="none" width="100%" height={CH_H} style={{ display: 'block', overflow: 'visible' }}>
-                  <defs>
-                    <linearGradient id="greet-area" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#D4AF37" stopOpacity="0.28" />
-                      <stop offset="100%" stopColor="#D4AF37" stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-                  <line x1="0" x2={CH_W} y1={CH_H} y2={CH_H} stroke="rgb(var(--rgb-ink) / 0.08)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-                  {chart.prev && <path className="greet-fade" style={{ ['--d' as string]: '300ms' }} d={chart.prev} fill="none" stroke="rgb(var(--rgb-ink) / 0.28)" strokeWidth="1.5" strokeDasharray="3 4" strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
-                  {chart.area && <path d={chart.area} fill="url(#greet-area)" />}
-                  <path d={chart.cur} fill="none" stroke="#D4AF37" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-                </svg>
-                {/* Draws the chart in left to right */}
-                <div className="greet-wipe" style={{ position: 'absolute', top: -8, bottom: -2, left: -6, right: -8, background: 'var(--color-bg-surface)', ['--d' as string]: '420ms' }} />
-                {/* Today's dot lands once the line reaches it, then keeps a slow pulse */}
-                <span style={{ position: 'absolute', left: chart.dot.left, top: chart.dot.top, width: 0, height: 0 }}>
-                  <span className="greet-pulse" style={{ position: 'absolute', left: -4, top: -4, width: 8, height: 8, borderRadius: '50%', background: '#D4AF37', ['--d' as string]: '1700ms' }} />
-                  <span className="greet-pop" style={{ position: 'absolute', left: -4, top: -4, width: 8, height: 8, borderRadius: '50%', background: '#D4AF37', boxShadow: '0 0 0 3px rgb(212 175 55 / 0.22)', ['--d' as string]: '1400ms' }} />
-                </span>
-              </div>
-            )}
-            {chart && (
-              <div style={{ display: 'flex', gap: 14, marginTop: 8, fontSize: 10.5, color: muted }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><i style={{ width: 10, height: 2, borderRadius: 2, background: '#D4AF37' }} />This month</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><i style={{ width: 10, height: 0, borderTop: '1.5px dashed rgb(var(--rgb-ink) / 0.35)' }} />Last month</span>
-              </div>
-            )}
-
-            <div style={{ display: 'flex', marginTop: 14 }}>
-              <div style={cell(0)}>
-                <p style={statLbl}>Income</p>
-                <p style={{ ...statNum, color: 'var(--sem-income)' }}>{brief ? <SlotNumber value={brief.income} format={n => `+${$fk(n)}`} startAt={rollAt(520)} /> : '—'}</p>
-              </div>
-              <div style={cell(1)}>
-                <p style={statLbl}>Net</p>
-                <p style={{ ...statNum, color: net >= 0 ? 'var(--sem-income)' : '#ef4444' }}>{brief ? <SlotNumber value={Math.abs(net)} format={n => `${net >= 0 ? '+' : '−'}${$fk(n)}`} startAt={rollAt(600)} /> : '—'}</p>
-              </div>
-              <div style={cell(2)}>
-                <p style={statLbl}>No-spend days</p>
-                <p style={statNum}>{brief ? <SlotNumber value={brief.noSpendDays} format={n => String(Math.round(n))} startAt={rollAt(680)} /> : '—'}</p>
-              </div>
+          {/* The rest of the numbers, right under the hero */}
+          <section className="greet-rise" style={{ ...section(200), display: 'flex' }}>
+            <div style={cell(0)}>
+              <p style={statLbl}>Income</p>
+              <p style={{ ...statNum, color: 'var(--sem-income)' }}>{brief ? <SlotNumber value={brief.income} format={n => `+${$fk(n)}`} startAt={rollAt(820)} /> : '—'}</p>
+            </div>
+            <div style={cell(1)}>
+              <p style={statLbl}>No-spend days</p>
+              <p style={statNum}>{brief ? <SlotNumber value={brief.noSpendDays} format={n => String(Math.round(n))} startAt={rollAt(880)} /> : '—'}</p>
+            </div>
+            <div style={cell(2)}>
+              <p style={statLbl}>On the way</p>
+              <p style={statNum}>{brief ? `${brief.enRoute} ${brief.enRoute === 1 ? 'order' : 'orders'}` : '—'}</p>
             </div>
           </section>
 
           {/* Today */}
-          <section className="greet-rise" style={section(220)}>
+          <section className="greet-rise" style={section(280)}>
             <div style={head}>
               <span style={label}>Today</span>
               {!!brief?.today?.length && <span style={{ fontSize: 11.5, color: muted }}>{brief.today.length} {brief.today.length === 1 ? 'event' : 'events'}</span>}
@@ -440,7 +415,7 @@ export function GreetingOverlay() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {evShown.map((e, i) => (
-                  <div key={i} className="greet-rise" style={{ display: 'flex', alignItems: 'baseline', gap: 12, ['--d' as string]: `${320 + i * 70}ms` }}>
+                  <div key={i} className="greet-rise" style={{ display: 'flex', alignItems: 'baseline', gap: 12, ['--d' as string]: `${380 + i * 70}ms` }}>
                     <span style={{ width: 52, flexShrink: 0, fontSize: 12.5, color: muted, fontVariantNumeric: 'tabular-nums' }}>{e.time ? fmtTime(e.time) : 'All day'}</span>
                     <span style={{ fontSize: 14.5, color: ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title}</span>
                   </div>
@@ -451,7 +426,7 @@ export function GreetingOverlay() {
           </section>
 
           {/* Next 7 days */}
-          <section className="greet-rise" style={section(300)}>
+          <section className="greet-rise" style={section(360)}>
             <div style={head}>
               <span style={label}>Next 7 days</span>
               {brief && (billsDue > 0 || payDue > 0) && (
@@ -467,7 +442,7 @@ export function GreetingOverlay() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
                 {upShown.map((u, i) => (
-                  <div key={i} className="greet-rise" style={{ display: 'flex', alignItems: 'center', gap: 10, ['--d' as string]: `${420 + i * 70}ms` }}>
+                  <div key={i} className="greet-rise" style={{ display: 'flex', alignItems: 'center', gap: 10, ['--d' as string]: `${460 + i * 70}ms` }}>
                     <span style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, background: u.kind === 'pay' ? 'var(--sem-income)' : '#D4AF37' }} />
                     <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, color: ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.title}</span>
                     <span style={{ fontSize: 12.5, color: muted }}>{dayLabel(u.date, todayStr)}</span>
@@ -481,21 +456,6 @@ export function GreetingOverlay() {
             )}
           </section>
 
-          {/* Footnotes */}
-          <section className="greet-rise" style={{ ...section(380), display: 'flex' }}>
-            <div style={cell(0)}>
-              <p style={statLbl}>Subs / month</p>
-              <p style={statNum}>{brief ? <SlotNumber value={brief.subsMonthly} format={$fk} startAt={rollAt(820)} /> : '—'}</p>
-            </div>
-            <div style={cell(1)}>
-              <p style={statLbl}>Daily avg</p>
-              <p style={statNum}>{brief ? <SlotNumber value={brief.dailyAvg} format={$fk} startAt={rollAt(880)} /> : '—'}</p>
-            </div>
-            <div style={cell(2)}>
-              <p style={statLbl}>On the way</p>
-              <p style={statNum}>{brief ? `${brief.enRoute} ${brief.enRoute === 1 ? 'order' : 'orders'}` : '—'}</p>
-            </div>
-          </section>
         </div>
         </div>
       </div>}

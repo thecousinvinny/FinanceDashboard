@@ -32,10 +32,14 @@ const BOT = H - 6
  * month's as a dashed line behind it, and a pulsing dot where today is.
  * Long-press (touch) or hover (mouse) scrubs; HomeHero shows the values.
  */
-export function PaceChart({ series, onHover, gestureMode }: {
+export function PaceChart({ series, onHover, gestureMode, delay, still }: {
   series:       HeroSeries
   onHover?:     (idx: number | null) => void
   gestureMode?: MutableRefObject<GestureMode>
+  /** ms before the draw-in (the greeting times it off its card) */
+  delay?:       number
+  /** Already drawn: no draw-in, the dot is just there (the greeting handoff) */
+  still?:       boolean
 }) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null)
   const [colorRev, setColorRev] = useState(0)
@@ -143,7 +147,7 @@ export function PaceChart({ series, onHover, gestureMode }: {
   const visit   = useScreenVisit()
   const animKey = `${slots}-${n}-${Math.round(cum[n - 1] ?? 0)}-${colorRev}-${visit}`
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const revealDelay = useMemo(() => afterSlide(), [animKey])
+  const revealDelay = useMemo(() => delay ?? afterSlide(), [animKey])
 
   function handleMouseMove(e: React.MouseEvent) {
     const rect = containerRef.current?.getBoundingClientRect()
@@ -169,7 +173,7 @@ export function PaceChart({ series, onHover, gestureMode }: {
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
     >
-      <div key={animKey} className="absolute inset-0" style={{ animation: `spark-clip-reveal 1s cubic-bezier(0.45,0,0.2,1) ${revealDelay}ms both` }}>
+      <div key={animKey} className="absolute inset-0" style={{ animation: still ? 'none' : `spark-clip-reveal 1s cubic-bezier(0.45,0,0.2,1) ${revealDelay}ms both` }}>
         <svg width="100%" height="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" overflow="visible">
           <defs>
             <linearGradient id="pace-grad" x1="0" y1="0" x2="0" y2={H} gradientUnits="userSpaceOnUse">
@@ -204,8 +208,8 @@ export function PaceChart({ series, onHover, gestureMode }: {
       {/* Today: lands after the line draws in, then keeps a slow pulse */}
       {hoverIdx === null && (
         <div key={`dot-${animKey}`} className="pointer-events-none" style={{ position: 'absolute', left: pct(endX, W), top: pct(endY, H), width: 0, height: 0 }}>
-          <span className="greet-pulse" style={{ position: 'absolute', left: -4, top: -4, width: 8, height: 8, borderRadius: '50%', background: expColor, ['--d' as string]: `${revealDelay + 1300}ms` }} />
-          <span className="greet-pop" style={{ position: 'absolute', left: -4.5, top: -4.5, width: 9, height: 9, borderRadius: '50%', background: expColor, boxShadow: '0 0 0 2px var(--color-bg-surface)', ['--d' as string]: `${revealDelay + 950}ms` }} />
+          <span className="greet-pulse" style={{ position: 'absolute', left: -4, top: -4, width: 8, height: 8, borderRadius: '50%', background: expColor, ['--d' as string]: `${still ? 0 : revealDelay + 1300}ms` }} />
+          <span className={still ? undefined : 'greet-pop'} style={{ position: 'absolute', left: -4.5, top: -4.5, width: 9, height: 9, borderRadius: '50%', background: expColor, boxShadow: '0 0 0 2px var(--color-bg-surface)', ['--d' as string]: `${revealDelay + 950}ms` }} />
         </div>
       )}
 

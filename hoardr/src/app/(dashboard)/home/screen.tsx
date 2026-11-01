@@ -16,6 +16,7 @@ import { PullIndicator } from '@/components/ui/PullIndicator'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
 import type { HeroSeries } from '@/components/home/PaceChart'
+import { buildHeroSeries, heroHistoryStart, EMPTY_SERIES } from '@/lib/hero-series'
 import type { SeedTx } from '@/lib/data/transactions'
 import { Truck, PlusCircle, Star, ArrowUpCircle } from 'lucide-react'
 import { HoardChest } from '@/components/home/HoardChest'
@@ -52,11 +53,6 @@ interface HomeCache {
   heroMonth:         HeroSeries
   heroYear:          HeroSeries
 }
-
-const EMPTY_SERIES: HeroSeries = { slots: 1, labels: [], cum: [], prev: null, prevName: null, out: [], sub: [], inc: [] }
-const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December']
-const running = (a: number[]) => { let t = 0; return a.map(v => (t += v)) }
 
 export default function HomePage() {
   const cached = pageCache.get<HomeCache>('home')
@@ -98,11 +94,8 @@ export default function HomePage() {
       const yearStart     = `${y}-01-01`
       const sig           = controller.signal
 
-      // History reaches back to the start of last month, so the hero can draw
-      // last month's pace even in January
-      const lm         = new Date(Number(y), Number(m) - 2, 1)
-      const lmKey      = `${lm.getFullYear()}-${String(lm.getMonth() + 1).padStart(2, '0')}`
-      const histStart  = `${lmKey}-01` < yearStart ? `${lmKey}-01` : yearStart
+      // The hero's history reaches back to the start of last month (lib/hero-series)
+      const histStart  = heroHistoryStart(todayStr)
 
       const [
         { data: monthExp },
@@ -200,50 +193,7 @@ export default function HomePage() {
         .slice(0, 5)
 
       // Hero: running spend this month vs last month, and this year by month
-      const outByDay: Record<string, number> = {}
-      const subByDay: Record<string, number> = {}
-      const incByDay: Record<string, number> = {}
-      for (const e of yearExp ?? []) {
-        const k = String(e.date)
-        outByDay[k] = (outByDay[k] ?? 0) + Number(e.cost)
-        if (subNameSet.has(String(e.name ?? '').toLowerCase())) subByDay[k] = (subByDay[k] ?? 0) + Number(e.cost)
-      }
-      for (const i of yearInc ?? []) { const k = String(i.date); incByDay[k] = (incByDay[k] ?? 0) + Number(i.amount) }
-      const monthKey  = `${y}-${m}`
-      const daysIn    = new Date(Number(y), Number(m), 0).getDate()
-      const lmDays    = new Date(lm.getFullYear(), lm.getMonth() + 1, 0).getDate()
-      const dayOf     = (mk: string, d: number) => `${mk}-${String(d).padStart(2, '0')}`
-      const elapsed   = Array.from({ length: Number(dStr) }, (_, i) => i + 1)
-      const monthOut  = elapsed.map(d => outByDay[dayOf(monthKey, d)] ?? 0)
-      const lmOut     = Array.from({ length: Math.min(lmDays, daysIn) }, (_, i) => outByDay[dayOf(lmKey, i + 1)] ?? 0)
-      const newHeroMonth: HeroSeries = {
-        slots:    daysIn,
-        labels:   Array.from({ length: daysIn }, (_, i) => `${MONTH_ABBR[Number(m) - 1]} ${i + 1}`),
-        cum:      running(monthOut),
-        prev:     running(lmOut),
-        prevName: MONTH_ABBR[lm.getMonth()],
-        out:      monthOut,
-        sub:      elapsed.map(d => subByDay[dayOf(monthKey, d)] ?? 0),
-        inc:      elapsed.map(d => incByDay[dayOf(monthKey, d)] ?? 0),
-      }
-      const outByMonth: Record<string, number> = {}
-      const subByMonth: Record<string, number> = {}
-      const incByMonth: Record<string, number> = {}
-      for (const k in subByDay) if (k >= yearStart) subByMonth[k.slice(0, 7)] = (subByMonth[k.slice(0, 7)] ?? 0) + subByDay[k]
-      for (const k in outByDay) if (k >= yearStart) outByMonth[k.slice(0, 7)] = (outByMonth[k.slice(0, 7)] ?? 0) + outByDay[k]
-      for (const k in incByDay) if (k >= yearStart) incByMonth[k.slice(0, 7)] = (incByMonth[k.slice(0, 7)] ?? 0) + incByDay[k]
-      const months   = Array.from({ length: Number(m) }, (_, i) => `${y}-${String(i + 1).padStart(2, '0')}`)
-      const yearOut  = months.map(k => outByMonth[k] ?? 0)
-      const newHeroYear: HeroSeries = {
-        slots:    12,
-        labels:   MONTH_FULL.map(n => `${n} ${y}`),
-        cum:      running(yearOut),
-        prev:     null,
-        prevName: null,
-        out:      yearOut,
-        sub:      months.map(k => subByMonth[k] ?? 0),
-        inc:      months.map(k => incByMonth[k] ?? 0),
-      }
+      const { month: newHeroMonth, year: newHeroYear } = buildHeroSeries(yearExp ?? [], yearInc ?? [], subNameSet, todayStr)
 
       const homeData = {
         spent: newSpent, earned: newEarned,

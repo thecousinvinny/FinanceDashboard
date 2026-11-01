@@ -4,18 +4,22 @@ import { useState, useRef, useEffect } from 'react'
 import { PaceChart, type HeroSeries } from './PaceChart'
 import { SlotNumber } from '@/components/ui/SlotNumber'
 import { $fc, $fk } from '@/lib/utils'
+import { useScreenVisit } from '@/lib/tab-nav'
+import { useHeroHandoff } from '@/lib/hero-handoff'
 
 interface Props {
   spent: number
   month: HeroSeries
   year:  HeroSeries
+  /** On the greeting card: numbers roll from the card's entrance, not a screen visit */
+  greeting?: { rollAt: (ms: number) => number; chartDelay: number }
 }
 
 function fmtInt(n: number)   { return Math.floor(n).toLocaleString('en-US') }
 function fmtCents(n: number) { return String(Math.round((Math.abs(n) % 1) * 100)).padStart(2, '0') }
 const MINUS = '−'
 
-export function HomeHero({ spent, month, year }: Props) {
+export function HomeHero({ spent, month, year, greeting }: Props) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null)
   const [view,     setView]     = useState<'month' | 'year'>('month')
 
@@ -24,6 +28,15 @@ export function HomeHero({ spent, month, year }: Props) {
   const gestureMode  = useRef<'undecided' | 'swiping' | 'scrubbing'>('undecided')
 
   useEffect(() => { setHoverIdx(null) }, [view])
+
+  // The greeting's copy of this card is flying onto it (lib/hero-handoff):
+  // stay hidden until it lands, and skip this visit's entrance — it's drawn.
+  const visit     = useScreenVisit()
+  const flying    = useHeroHandoff() && !greeting
+  const stillOn   = useRef<number | null>(null)
+  if (flying && stillOn.current !== visit) stillOn.current = visit
+  const still     = !greeting && stillOn.current === visit
+  const rollAt    = (ms: number) => greeting ? greeting.rollAt(ms) : still ? -1e6 : undefined
 
   const isYear  = view === 'year'
   const s       = isYear ? year : month
@@ -128,8 +141,9 @@ export function HomeHero({ spent, month, year }: Props) {
 
   return (
     <div
-      className="mx-4 mt-5 bg-bg-surface border border-ink/[0.06] rounded-card overflow-hidden"
-      style={{ position: 'relative', height: 292 }}
+      className={`${greeting ? '' : 'mx-4 mt-5 '}bg-bg-surface border border-ink/[0.06] rounded-card overflow-hidden`}
+      style={{ position: 'relative', height: 292, visibility: flying ? 'hidden' : undefined }}
+      data-home-hero={greeting ? undefined : ''}
       onTouchStartCapture={onTouchStartCapture}
       onTouchMoveCapture={onTouchMoveCapture}
       onTouchEndCapture={onTouchEndCapture}
@@ -142,10 +156,10 @@ export function HomeHero({ spent, month, year }: Props) {
       <div style={{ position: 'absolute', top: 0, left: 0, height: 240, width: '200%', display: 'flex',
         transform: isYear ? 'translateX(-50%)' : 'translateX(0)', transition: 'transform 0.42s cubic-bezier(0.4, 0, 0.2, 1)' }}>
         <div style={{ width: '50%', height: '100%', position: 'relative' }}>
-          <PaceChart series={month} onHover={isYear ? undefined : setHoverIdx} gestureMode={gestureMode} />
+          <PaceChart series={month} onHover={isYear ? undefined : setHoverIdx} gestureMode={gestureMode} delay={greeting?.chartDelay} still={still} />
         </div>
         <div style={{ width: '50%', height: '100%', position: 'relative' }}>
-          <PaceChart series={year} onHover={isYear ? setHoverIdx : undefined} gestureMode={gestureMode} />
+          <PaceChart series={year} onHover={isYear ? setHoverIdx : undefined} gestureMode={gestureMode} delay={greeting?.chartDelay} still={still} />
         </div>
       </div>
 
@@ -179,7 +193,7 @@ export function HomeHero({ spent, month, year }: Props) {
         <div className="flex items-start" style={{ fontFamily: 'var(--font-big-shoulders)' }}>
           <span className="text-[22px] font-light text-ink-muted mt-[7px] mr-0.5">$</span>
           <span className="text-[52px] font-bold leading-none tracking-[-0.04em] text-ink">
-            <SlotNumber value={Math.floor(total)} format={fmtInt} />
+            <SlotNumber value={Math.floor(total)} format={fmtInt} startAt={rollAt(260)} />
             <span className="text-[32px] text-ink-muted font-light">.{fmtCents(total)}</span>
           </span>
         </div>
@@ -188,10 +202,10 @@ export function HomeHero({ spent, month, year }: Props) {
       {/* Quick stats */}
       <div className="absolute left-0 right-0 bottom-0 flex border-t border-ink/[0.06]" style={{ height: 52, zIndex: 2 }}>
         {([
-          ['Spent',  <SlotNumber key="s" value={Math.max(0, total - subs)} format={$fk} />, 'var(--sem-expense)'],
-          ['Subs',   <SlotNumber key="u" value={subs} format={$fk} />, 'var(--sem-sub)'],
-          ['Net',    <SlotNumber key="n" value={Math.abs(net)} format={v => `${net >= 0 ? '+' : MINUS}${$fk(v)}`} />, net >= 0 ? 'var(--sem-income)' : '#ef4444'],
-          [isYear ? 'Avg / mo' : 'Avg / day', <SlotNumber key="a" value={avg} format={$fk} />, undefined],
+          ['Spent',  <SlotNumber key="s" value={Math.max(0, total - subs)} format={$fk} startAt={rollAt(520)} />, 'var(--sem-expense)'],
+          ['Subs',   <SlotNumber key="u" value={subs} format={$fk} startAt={rollAt(580)} />, 'var(--sem-sub)'],
+          ['Net',    <SlotNumber key="n" value={Math.abs(net)} format={v => `${net >= 0 ? '+' : MINUS}${$fk(v)}`} startAt={rollAt(640)} />, net >= 0 ? 'var(--sem-income)' : '#ef4444'],
+          [isYear ? 'Avg / mo' : 'Avg / day', <SlotNumber key="a" value={avg} format={$fk} startAt={rollAt(700)} />, undefined],
         ] as const).map(([label, value, color], i) => (
           <div key={label} className={`flex-1 min-w-0${i ? ' border-l border-ink/[0.06]' : ''}`} style={{ padding: i ? '8px 0 0 10px' : '8px 0 0 16px' }}>
             <p className={statLbl}>{label}</p>
