@@ -10,9 +10,11 @@ import { AddTransferSheet, type TransferPayload } from '@/components/wallet/AddT
 import { RevenueStreamSheet, type RevenueStreamConfig } from '@/components/wallet/RevenueStreamSheet'
 import { ManualDepositSheet, type IncomeInitial } from '@/components/wallet/ManualDepositSheet'
 import { EditCardSheet, type CardEdits } from '@/components/wallet/EditCardSheet'
+import { BankSheet, type BankEdits } from '@/components/wallet/BankSheet'
+import { CardDetailSheet, type CardExpense, type CardSub } from '@/components/wallet/CardDetailSheet'
+import { reportDbError } from '@/lib/db-error'
 import { CardVisual } from '@/components/wallet/CardVisual'
 import { SwipeToDelete } from '@/components/ui/SwipeToDelete'
-import { CustomDateInput } from '@/components/ui/CustomDateInput'
 import { CategoryIcon } from '@/components/ui/CategoryIcon'
 import type { Card, Bank, IncomeSource } from '@/types'
 import { Banknote, X, ArrowUpCircle, ArrowLeftRight, PlusCircle, Search, Landmark , CreditCard} from 'lucide-react'
@@ -29,13 +31,6 @@ import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { useOnScreenReturn } from '@/lib/tab-nav'
 import { afterSlideTimeout, useScreenReady, useScreenVisit } from '@/lib/tab-nav'
 
-interface CardExpense {
-  id: string; name: string; cost: number; date: string; categories: { name: string } | null
-}
-interface CardSub {
-  id: string; name: string; cost: number; billing: string; monthly_cost: number
-  annual_cost: number; next_renewal: string | null; category: string | null
-}
 interface IncomeRow {
   id: string; name: string; amount: number; date: string; source: string | null; bank_id: string | null
 }
@@ -168,6 +163,16 @@ function IncomeBarChart({ incomeList }: { incomeList: IncomeRow[] }) {
   )
 }
 
+/** Section label for the Accounts tab: label left, a quiet note right */
+function SectionHead({ label, note }: { label: string; note?: string }) {
+  return (
+    <div className="flex items-baseline justify-between mb-2.5 px-1">
+      <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-gold">{label}</p>
+      {note && <p className="text-[11px] text-ink-faint">{note}</p>}
+    </div>
+  )
+}
+
 function StatCard({ label, value, sub, loading }: { label: string; value: number; sub?: string; loading: boolean }) {
   return (
     <div className="flex-1 bg-bg-surface border border-ink/[0.06] rounded-[22px] p-4">
@@ -256,10 +261,7 @@ export default function InPage() {
   const [searchRows,    setSearchRows]   = useState<IncomeRow[] | null>(null)
   const [searching,     setSearching]    = useState(false)
   const [interestBank,  setInterestBank] = useState<Bank | null>(null)
-  const [intBalance,    setIntBalance]   = useState('')
-  const [intApy,        setIntApy]       = useState('')
-  const [intDate,       setIntDate]      = useState('')
-  const [intFreq,       setIntFreq]      = useState<'Monthly' | 'Quarterly'>('Monthly')
+  const [allTransfers,  setAllTransfers] = useState(false)
   const [selectedCard,  setSelectedCard] = useState<Card | null>(null)
   const [editCard,      setEditCard]     = useState<Card | null>(null)
   const [editSheetOpen, setEditSheetOpen] = useState(false)
@@ -527,15 +529,6 @@ export default function InPage() {
 
   const { indicatorRef: pullRef, refreshing: pullRefreshing } = usePullToRefresh(loadData)
 
-  useEffect(() => {
-    if (!interestBank) return
-    const bank = banks.find(b => b.id === interestBank.id) ?? interestBank
-    setIntBalance(bank.balance ? String(bank.balance) : '')
-    setIntApy(bank.apy ? String(bank.apy) : '')
-    setIntFreq((bank.interest_freq as 'Monthly' | 'Quarterly') ?? 'Monthly')
-    setIntDate(bank.next_interest_date ?? localToday())
-  }, [interestBank])
-
   // ── localStorage → Supabase one-time migration ─────────────────────────
   async function migrateFromLocalStorage(userId: string, loadedBanks: Bank[]): Promise<boolean> {
     if (localStorage.getItem('hoardr-ls-migrated')) return false
@@ -748,28 +741,16 @@ export default function InPage() {
     })
   }
 
-  async function handleSaveInterestConfig() {
+  async function handleSaveBank(edits: BankEdits) {
     if (!interestBank) return
-    const bal = parseFloat(intBalance)
-    const apy = parseFloat(intApy)
-    if (isNaN(bal) || bal <= 0) return
-    const hasInterest = !isNaN(apy) && apy > 0 && !!intDate
-    const { error } = await supabase.from('banks').update({
-      balance:            bal,
-      apy:                hasInterest ? apy   : null,
-      interest_freq:      hasInterest ? intFreq : null,
-      next_interest_date: hasInterest ? intDate  : null,
-    }).eq('id', interestBank.id)
-    if (error) { console.error('bank update error:', error); return }
-    setBanks(prev => prev.map(b => b.id === interestBank.id ? {
-      ...b,
-      balance:            bal,
-      apy:                hasInterest ? apy    : null,
-      interest_freq:      hasInterest ? intFreq : null,
-      next_interest_date: hasInterest ? intDate  : null,
-    } : b))
-    showToast(hasInterest ? 'Interest scheduled' : 'Balance saved', { type: 'add' })
+    const id = interestBank.id
+    const prev = banks
+    // Optimistic: the sheet closes on the new numbers, a failure puts them back
+    setBanks(bs => bs.map(b => b.id === id ? { ...b, ...edits } : b))
     setInterestBank(null)
+    showToast(edits.apy ? 'Balance and interest saved' : 'Balance saved', { type: 'add' })
+    const { error } = await supabase.from('banks').update(edits).eq('id', id)
+    if (reportDbError(error, 'save account')) setBanks(prev)
   }
 
   async function handleAddCard(newCard: NewCard) {
@@ -1256,69 +1237,46 @@ export default function InPage() {
 
         {/* ── Accounts ────────────────────────────────────────────────────── */}
         {!loading && tab === 'Accounts' && (
-          <div className="mx-4 mt-4 space-y-5">
+          <div className="mx-4 mt-5 space-y-6">
             {banks.length > 0 && (
-              <div>
-                <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Banks</p>
+              <section>
+                <SectionHead label="Banks" note={`${banks.length} ${banks.length === 1 ? 'account' : 'accounts'}`} />
                 <div className="bg-bg-surface border border-ink/[0.06] rounded-card overflow-hidden divide-y divide-ink/[0.04]">
                   {banks.map(bank => {
-                    const linked = cards.filter(c => c.bank_id === bank.id)
+                    const linked = cards.filter(c => c.bank_id === bank.id).length
+                    const payout = bank.apy && bank.balance
+                      ? Number(bank.balance) * (Number(bank.apy) / 100) / (bank.interest_freq === 'Quarterly' ? 4 : 12) : 0
                     return (
                       <SwipeToDelete key={bank.id} onDelete={() => handleDeleteBank(bank.id)} onTap={() => setInterestBank(bank)}>
-                        <div className="flex items-center gap-3 px-4 py-4 bg-bg-surface">
-                          <div className="w-10 h-10 rounded-[10px] bg-bg-overlay flex items-center justify-center flex-shrink-0"><Landmark size={18} className="text-ink-muted" strokeWidth={1.75} /></div>
+                        <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface">
+                          <div className="w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-ink/[0.06] flex items-center justify-center flex-shrink-0">
+                            <Landmark size={17} className="text-ink-muted" strokeWidth={1.75} />
+                          </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-[14px] font-medium text-ink">{bank.name}</p>
-                            <p className="text-[11px] text-ink-muted">
-                              {bank.type ?? 'Bank'}{bank.last4 ? ` · ••••${bank.last4}` : ''}
-                              {bank.apy ? ` · ${bank.apy}% APY` : ''}
+                            <p className="text-[14px] font-medium text-ink truncate">{bank.name}</p>
+                            <p className="text-[11px] text-ink-muted truncate">
+                              {[bank.type ?? 'Bank', bank.last4 ? `••••${bank.last4}` : null, linked ? `${linked} ${linked === 1 ? 'card' : 'cards'}` : null].filter(Boolean).join(' · ')}
                             </p>
+                            {payout > 0 && (
+                              <p className="text-[11px] text-emerald truncate">
+                                {bank.apy}% APY · +{$fd(payout)}{bank.next_interest_date ? ` ${fmtDate(bank.next_interest_date)}` : ''}
+                              </p>
+                            )}
                           </div>
-                          <div className="text-right flex-shrink-0">
-                            <p className="text-[12px] text-ink-faint">{linked.length} {linked.length === 1 ? 'card' : 'cards'}</p>
-                            {bank.balance ? <p className="text-[12px] font-mono text-emerald">{$fd(bank.balance)}</p> : null}
-                          </div>
+                          <p className="text-[17px] font-semibold tabular-nums flex-shrink-0" style={{ fontFamily: 'var(--font-big-shoulders)', color: bank.balance ? 'rgb(var(--rgb-ink))' : 'rgb(var(--rgb-ink-faint))' }}>
+                            {bank.balance ? $fd(Number(bank.balance)) : 'Set balance'}
+                          </p>
                         </div>
                       </SwipeToDelete>
                     )
                   })}
                 </div>
-              </div>
-            )}
-
-            {transfers.length > 0 && (
-              <div>
-                <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Recent Transfers</p>
-                <div className="bg-bg-surface border border-ink/[0.06] rounded-card overflow-hidden divide-y divide-ink/[0.04]">
-                  {transfers.slice(0, 10).map(t => {
-                    const from = banks.find(b => b.id === t.from_bank_id)
-                    const to   = banks.find(b => b.id === t.to_bank_id)
-                    return (
-                      <SwipeToDelete key={t.id} onDelete={() => handleDeleteTransfer(t.id)}>
-                        <div className="flex items-center gap-3 px-4 py-3.5">
-                          <div className="w-10 h-10 rounded-[10px] bg-bg-overlay ring-1 ring-ink/[0.06] flex items-center justify-center flex-shrink-0">
-                            <ArrowLeftRight size={15} className="text-ink-muted" strokeWidth={1.75} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[14px] font-medium text-ink truncate">
-                              {from?.name ?? '—'} → {to?.name ?? '—'}
-                            </p>
-                            <p className="text-[11px] text-ink-muted">
-                              {fmtDate(t.date)}{t.note ? ` · ${t.note}` : ''}
-                            </p>
-                          </div>
-                          <p className="text-[15px] font-semibold font-mono text-gold flex-shrink-0">{$fd(t.amount)}</p>
-                        </div>
-                      </SwipeToDelete>
-                    )
-                  })}
-                </div>
-              </div>
+              </section>
             )}
 
             {cards.length > 0 && (
-              <div>
-                <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">Cards</p>
+              <section>
+                <SectionHead label="Cards" note={cards.length > 1 ? 'Hold to reorder' : undefined} />
                 <div ref={containerRef} className="flex flex-col gap-4">
                   {(draggingId ? dragCards : cards).map(card => (
                     <div key={card.id} data-card-id={card.id}
@@ -1331,11 +1289,53 @@ export default function InPage() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </section>
+            )}
+
+            {transfers.length > 0 && (
+              <section>
+                <SectionHead label="Transfers" note={transfers.length > 5 ? undefined : `${transfers.length}`} />
+                <div className="bg-bg-surface border border-ink/[0.06] rounded-card overflow-hidden divide-y divide-ink/[0.04]">
+                  {transfers.slice(0, allTransfers ? 50 : 5).map(t => {
+                    const from = banks.find(b => b.id === t.from_bank_id)
+                    const to   = banks.find(b => b.id === t.to_bank_id)
+                    return (
+                      <SwipeToDelete key={t.id} onDelete={() => handleDeleteTransfer(t.id)}>
+                        <div className="flex items-center gap-3 px-4 py-3.5 bg-bg-surface">
+                          <div className="w-10 h-10 rounded-full bg-bg-overlay ring-1 ring-ink/[0.06] flex items-center justify-center flex-shrink-0">
+                            <ArrowLeftRight size={15} className="text-ink-muted" strokeWidth={1.75} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[14px] font-medium text-ink truncate">
+                              {from?.name ?? 'Deleted account'} <span className="text-ink-faint">→</span> {to?.name ?? 'Deleted account'}
+                            </p>
+                            <p className="text-[11px] text-ink-muted truncate">
+                              {fmtDate(t.date)}{t.note ? ` · ${t.note}` : ''}
+                            </p>
+                          </div>
+                          <p className="text-[15px] font-semibold tabular-nums text-ink flex-shrink-0">{$fd(t.amount)}</p>
+                        </div>
+                      </SwipeToDelete>
+                    )
+                  })}
+                  {transfers.length > 5 && (
+                    <button type="button" onClick={() => { haptic('tap'); setAllTransfers(v => !v) }}
+                      className="w-full py-3 text-[13px] font-medium text-gold active:bg-ink/[0.04]">
+                      {allTransfers ? 'Show less' : `Show all ${Math.min(transfers.length, 50)}`}
+                    </button>
+                  )}
+                </div>
+              </section>
             )}
 
             {banks.length === 0 && cards.length === 0 && (
-              <div className="py-12 text-center text-ink-faint text-[13px]">No accounts yet — tap + to add a bank or card.</div>
+              <div className="py-14 flex flex-col items-center text-center">
+                <div className="w-12 h-12 rounded-full bg-bg-overlay flex items-center justify-center mb-3">
+                  <Landmark size={20} className="text-ink-muted" strokeWidth={1.75} />
+                </div>
+                <p className="text-[15px] font-medium text-ink">No accounts yet</p>
+                <p className="text-[13px] text-ink-muted mt-1">Tap + to add a bank account or a card.</p>
+              </div>
             )}
           </div>
         )}
@@ -1398,205 +1398,23 @@ export default function InPage() {
         banks={banks.map(b => ({ id: b.id, name: b.name }))}
       />
 
-      {/* ── Bank interest sheet ──────────────────────────────────────────── */}
-      <div
-        onClick={() => setInterestBank(null)}
-        className={cn('fixed inset-0 z-[59] transition-opacity duration-300', interestBank ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none')}
-        style={{ background: 'rgba(0,0,0,0.72)' }}
+      <BankSheet
+        bank={interestBank}
+        open={!!interestBank}
+        onClose={() => setInterestBank(null)}
+        onSave={handleSaveBank}
+        linkedCards={interestBank ? cards.filter(c => c.bank_id === interestBank.id).length : 0}
       />
-      <div
-        className={cn('fixed inset-x-0 bottom-0 z-[60] rounded-t-[24px] bg-bg-surface transition-transform duration-300', interestBank ? 'translate-y-0' : 'translate-y-full')}
-        style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-      >
-        <div className="flex justify-center pt-3 pb-2">
-          <div className="w-9 h-1 rounded-full bg-ink/20" />
-        </div>
-        <div className="flex items-center justify-between px-5 mb-5">
-          <div>
-            <h2 className="text-[18px] font-bold text-ink">Balance & Interest</h2>
-            {interestBank && <p className="text-[12px] text-ink-muted mt-0.5">{interestBank.name}</p>}
-          </div>
-          <button onClick={() => setInterestBank(null)} className="w-8 h-8 rounded-full bg-bg-overlay flex items-center justify-center">
-            <X size={14} className="text-ink-muted" />
-          </button>
-        </div>
-        <div className="px-5 space-y-5" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 32px)' }}>
-          <div>
-            <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Current Balance</p>
-            <div className="flex items-center gap-1.5 bg-bg-overlay border border-ink/[0.08] rounded-[14px] px-4 py-3 focus-within:border-gold/40">
-              <span className="text-[22px] font-light text-ink-muted font-mono">$</span>
-              <input type="number" inputMode="decimal" placeholder="0.00" value={intBalance}
-                onChange={e => setIntBalance(e.target.value)}
-                className="flex-1 bg-transparent text-[22px] font-mono text-ink outline-none placeholder:text-ink-faint" />
-            </div>
-          </div>
-          <div>
-            <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">APY (%) <span className="normal-case tracking-normal text-ink-faint/60">— optional</span></p>
-            <div className="flex items-center gap-1.5 bg-bg-overlay border border-ink/[0.08] rounded-[14px] px-4 py-3 focus-within:border-gold/40">
-              <input type="number" inputMode="decimal" placeholder="4.30" value={intApy}
-                onChange={e => setIntApy(e.target.value)}
-                className="flex-1 bg-transparent text-[22px] font-mono text-ink outline-none placeholder:text-ink-faint" />
-              <span className="text-[22px] font-light text-ink-muted font-mono">%</span>
-            </div>
-          </div>
-          {parseFloat(intApy) > 0 && (
-            <>
-              <div>
-                <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Frequency</p>
-                <div className="flex gap-2">
-                  {(['Monthly', 'Quarterly'] as const).map(f => (
-                    <button key={f} onClick={() => setIntFreq(f)}
-                      className={cn('flex-1 py-2.5 rounded-full text-[12px] font-semibold transition-all select-none',
-                        intFreq === f ? 'gradient-gold text-white' : 'bg-bg-overlay text-ink-muted')}>
-                      {f}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-2">Next payment date</p>
-                <div className="rounded-[14px]">
-                  <CustomDateInput value={intDate} onChange={setIntDate}
-                    className="w-full bg-bg-overlay border border-ink/[0.08] rounded-[14px] px-4 py-3.5 text-[15px] text-ink outline-none focus:border-gold/40" />
-                </div>
-              </div>
-              {parseFloat(intBalance) > 0 && intDate && (() => {
-                const divisor = intFreq === 'Quarterly' ? 4 : 12
-                const amount  = parseFloat(intBalance) * (parseFloat(intApy) / 100) / divisor
-                return (
-                  <div className="bg-bg-overlay border border-emerald/20 rounded-[14px] px-4 py-3.5 flex items-center gap-3">
-                    <Banknote size={18} className="text-emerald flex-shrink-0" strokeWidth={1.75} />
-                    <div>
-                      <p className="text-[14px] font-semibold text-ink">+{$fd(amount)} on {intDate}</p>
-                      <p className="text-[11px] text-ink-muted">{parseFloat(intApy)}% APY · {intFreq.toLowerCase()}</p>
-                    </div>
-                  </div>
-                )
-              })()}
-            </>
-          )}
-          <button
-            onClick={handleSaveInterestConfig}
-            disabled={!(parseFloat(intBalance) > 0)}
-            className="w-full gradient-gold rounded-[14px] py-4 text-[15px] font-bold text-white disabled:opacity-40 transition-opacity"
-          >
-            {parseFloat(intApy) > 0 ? 'Schedule Interest' : 'Save Balance'}
-          </button>
-        </div>
-      </div>
-
-      {/* ── Card detail sheet ─────────────────────────────────────────────── */}
-      <div
-        onClick={() => setSelectedCard(null)}
-        className={cn('fixed inset-0 z-[59] transition-opacity duration-300', selectedCard ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none')}
-        style={{ background: 'rgba(0,0,0,0.72)' }}
+      <CardDetailSheet
+        card={selectedCard}
+        open={!!selectedCard}
+        onClose={() => setSelectedCard(null)}
+        onEdit={() => { setEditCard(selectedCard); setSelectedCard(null); setEditSheetOpen(true) }}
+        expenses={cardExpenses}
+        subs={cardSubs}
+        loading={expLoading}
+        stats={selectedCard ? cardStats[selectedCard.id] : undefined}
       />
-      <div
-        className={cn('fixed inset-x-0 bottom-0 z-[60] rounded-t-[24px] bg-bg-surface transition-transform duration-300', selectedCard ? 'translate-y-0' : 'translate-y-full')}
-        style={{ willChange: 'transform', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-      >
-        <div className="flex justify-center pt-3 pb-2">
-          <div className="w-9 h-1 rounded-full bg-ink/20" />
-        </div>
-        <div className="flex items-center justify-between px-5 mb-4">
-          <div>
-            <p className="text-[10px] font-medium tracking-[0.12em] uppercase text-ink-faint">Card</p>
-            <h2 className="text-[18px] font-bold tracking-tight text-ink">{selectedCard?.name}</h2>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => { setEditCard(selectedCard); setSelectedCard(null); setEditSheetOpen(true) }}
-              className="px-3 h-8 rounded-full bg-bg-overlay text-[11px] font-medium text-ink-muted select-none"
-            >Edit</button>
-            <button onClick={() => setSelectedCard(null)} className="w-8 h-8 flex items-center justify-center text-[22px] text-ink-muted">×</button>
-          </div>
-        </div>
-
-        {!expLoading && (() => {
-          const now        = new Date()
-          const monthStart = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`
-          const yearStart  = `${now.getFullYear()}-01-01`
-          const mo         = cardExpenses.filter(e => e.date >= monthStart).reduce((s, e) => s + Number(e.cost), 0)
-          const yr         = cardExpenses.filter(e => e.date >= yearStart ).reduce((s, e) => s + Number(e.cost), 0)
-          const all        = cardExpenses.reduce((s, e) => s + Number(e.cost), 0)
-          const subNames   = new Set(cardSubs.map(s => s.name.toLowerCase()))
-          const subExp     = cardExpenses.filter(e => subNames.has(e.name.toLowerCase()))
-          const subMo      = subExp.filter(e => e.date >= monthStart).reduce((s, e) => s + Number(e.cost), 0)
-          const subYr      = subExp.filter(e => e.date >= yearStart ).reduce((s, e) => s + Number(e.cost), 0)
-          const subAllTime = subExp.reduce((s, e) => s + Number(e.cost), 0)
-          const estMo      = cardSubs.reduce((s, sub) => s + sub.monthly_cost, 0)
-          const estYr      = cardSubs.reduce((s, sub) => s + sub.annual_cost,  0)
-          return (
-            <>
-              <div className="grid grid-cols-3 gap-2 px-5 mb-2">
-                {([['This Month', mo], ['This Year', yr], ['All Time', all]] as [string, number][]).map(([label, val]) => (
-                  <div key={label} className="bg-bg-overlay rounded-[14px] px-3 py-3">
-                    <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-1">{label}</p>
-                    <p className="text-[14px] font-bold font-mono text-gold">{$fk(val)}</p>
-                  </div>
-                ))}
-              </div>
-              {subAllTime > 0 && (
-                <div className="grid grid-cols-3 gap-2 px-5 mb-3">
-                  <div className="bg-bg-overlay rounded-[14px] px-3 py-3">
-                    <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-1">Sub / Mo</p>
-                    <p className="text-[14px] font-bold font-mono text-ink">{$fk(subMo)}</p>
-                    {estMo > 0 && <p className="text-[10px] font-mono text-ink-faint mt-0.5">/ {$fk(estMo)}</p>}
-                  </div>
-                  <div className="bg-bg-overlay rounded-[14px] px-3 py-3">
-                    <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-1">Sub / Yr</p>
-                    <p className="text-[14px] font-bold font-mono text-ink">{$fk(subYr)}</p>
-                    {estYr > 0 && <p className="text-[10px] font-mono text-ink-faint mt-0.5">/ {$fk(estYr)}</p>}
-                  </div>
-                  <div className="bg-bg-overlay rounded-[14px] px-3 py-3">
-                    <p className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-faint mb-1">All Time</p>
-                    <p className="text-[14px] font-bold font-mono text-ink">{$fk(subAllTime)}</p>
-                  </div>
-                </div>
-              )}
-            </>
-          )
-        })()}
-
-        <div className="overflow-y-auto" style={{ maxHeight: '50vh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
-          {expLoading ? (
-            <div className="px-4 space-y-2.5 pb-4">
-              {[1,2,3].map(i => <div key={i} className="h-14 rounded-[18px] skeleton" />)}
-            </div>
-          ) : cardExpenses.length === 0 ? (
-            <div className="py-12 text-center text-ink-faint text-[13px]">No expenses on this card yet.</div>
-          ) : (() => {
-            const subNameSet = new Set(cardSubs.map(s => s.name.toLowerCase()))
-            return (
-              <div className="mx-4 mb-4">
-                <div className="bg-bg-surface border border-ink/[0.06] rounded-card overflow-hidden divide-y divide-ink/[0.04]">
-                  {cardExpenses.map(exp => {
-                    const isSub = subNameSet.has(exp.name.toLowerCase())
-                    return (
-                      <div key={exp.id} className="flex items-center gap-3 px-4 py-3.5">
-                        <div className="w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-ink/[0.06] flex items-center justify-center flex-shrink-0">
-                          <CategoryIcon
-                            category={exp.categories?.name ?? 'Other'}
-                            type="Expense"
-                            isSub={isSub}
-                            size={15}
-                            className={isSub ? 'text-ink/60' : 'text-gold'}
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[14px] font-medium text-ink truncate">{exp.name}</p>
-                          <p className="text-[11px] text-ink-muted">{fmtDate(exp.date)}</p>
-                        </div>
-                        <p className="text-[15px] font-semibold font-mono flex-shrink-0 text-ink">−{$fd(exp.cost)}</p>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )
-          })()}
-        </div>
-      </div>
     </>
   )
 }
