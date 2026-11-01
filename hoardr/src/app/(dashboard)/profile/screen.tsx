@@ -1,5 +1,6 @@
 'use client'
 
+import { hiResGoogle } from '@/lib/image'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Camera, Check, Settings2, Pencil } from 'lucide-react'
@@ -176,7 +177,8 @@ export default function ProfilePage() {
       if (!u) return
       setUserId(u.id)
       setEmail(u.email ?? null)
-      setGoogleAvatar(u.user_metadata?.avatar_url ?? u.user_metadata?.picture ?? null)
+      const g = (u.user_metadata?.avatar_url ?? u.user_metadata?.picture ?? null) as string | null
+      setGoogleAvatar(g ? hiResGoogle(g, 1600) : null)   // the banner is wide on desktop
       const metaName = u.user_metadata?.full_name ?? u.user_metadata?.name ?? null
       setDisplayName(prev => prev ?? metaName)
     })
@@ -257,13 +259,19 @@ export default function ProfilePage() {
     if (!file.type.startsWith('image/') || !userId) return
     setUploading(true)
     try {
+      // The photo is the Profile banner and the greeting's hero, up to ~630px
+      // wide on desktop at 2x: keep it whole (no square crop — every place it
+      // shows crops it itself) and up to 2000px on the long side. It used to be
+      // a 400px square, which pixelated on desktop.
       const bitmap = await createImageBitmap(file)
+      const MAX = 2000
+      const k = Math.min(1, MAX / Math.max(bitmap.width, bitmap.height))
       const canvas = document.createElement('canvas')
-      canvas.width = 400; canvas.height = 400
+      canvas.width = Math.round(bitmap.width * k); canvas.height = Math.round(bitmap.height * k)
       const ctx = canvas.getContext('2d')!
-      const s = Math.min(bitmap.width, bitmap.height)
-      ctx.drawImage(bitmap, (bitmap.width - s) / 2, (bitmap.height - s) / 2, s, s, 0, 0, 400, 400)
-      const blob = await new Promise<Blob>(res => canvas.toBlob(b => res(b!), 'image/jpeg', 0.88))
+      ctx.imageSmoothingQuality = 'high'
+      ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+      const blob = await new Promise<Blob>(res => canvas.toBlob(b => res(b!), 'image/jpeg', 0.9))
       const path = `${userId}/avatar.jpg`
       const { error } = await supabase.storage.from('avatars').upload(path, blob, { upsert: true, contentType: 'image/jpeg' })
       if (error) throw error

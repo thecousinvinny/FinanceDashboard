@@ -1,5 +1,7 @@
 'use client'
 
+import { hiResGoogle } from '@/lib/image'
+import { loadNowWeather, getWeatherInfo, type NowWeather } from '@/lib/weather'
 import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { $fk, localToday, nextRenewalDate } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -33,9 +35,8 @@ export function showGreeting() {
 const M = 'var(--font-montserrat)'
 
 /** Google avatar URLs carry a size suffix (=s96-c); ask for a banner-sized one. */
-function hiRes(url: string) {
-  return /googleusercontent\.com/.test(url) ? url.replace(/=s\d+(-c)?$/, '=s720-c') : url
-}
+// The banner is up to 380px wide at 2-3x on retina screens
+const hiRes = (url: string) => hiResGoogle(url, 1200)
 
 /** Resolves once the image is decoded (or failed, or 1.5s passed); never rejects. */
 function preloadImage(src: string): Promise<void> {
@@ -81,6 +82,8 @@ interface UpItem { date: string; title: string; amount: number; kind: 'bill' | '
 interface TodayEv { title: string; time: string | null }
 interface Brief {
   income: number; noSpendDays: number; enRoute: number
+  /** Now + today's high/low; null without a known location */
+  weather: NowWeather | null
   upcoming: UpItem[]; today: TodayEv[] | null
   /** Hoard's hero, the same card that flies onto Home when this closes */
   hero: { spent: number; month: HeroSeries; year: HeroSeries }
@@ -182,7 +185,7 @@ export function GreetingOverlay() {
 
       const [
         { data: expData }, { data: incData }, { data: subs }, { data: streams },
-        { data: wish }, { data: profile }, todayEvs, avatarUrl,
+        { data: wish }, { data: profile }, todayEvs, avatarUrl, weather,
       ] = await Promise.all([
         supabase.from('expenses').select('cost, date, name').gte('date', heroHistoryStart(today)).lte('date', today),
         supabase.from('income').select('amount, date').gte('date', heroHistoryStart(today)).lte('date', today),
@@ -190,6 +193,8 @@ export function GreetingOverlay() {
         supabase.from('revenue_streams').select('name, amount, freq, next_pay_date'),
         supabase.from('wishlist').select('id').eq('status', 'Ordered'),
         profileP, todayP, avatarP,
+        // At most ~2s, and only with a location already allowed (never prompts)
+        Promise.race([loadNowWeather(), new Promise<null>(r => setTimeout(() => r(null), 2000))]),
       ])
       if (gen !== genRef.current) return
 
@@ -226,7 +231,7 @@ export function GreetingOverlay() {
       if (avatarUrl) { setAvatar(avatarUrl); localStorage.setItem(LS_AVATAR, avatarUrl) }
 
       setBrief({
-        income, noSpendDays, upcoming, today: todayEvs,
+        income, noSpendDays, upcoming, today: todayEvs, weather,
         enRoute: (wish ?? []).length,
         hero: { spent, month: hero.month, year: hero.year },
       })
@@ -384,7 +389,20 @@ export function GreetingOverlay() {
             background: 'linear-gradient(180deg, rgba(6,6,9,0) 38%, rgba(6,6,9,0.45) 65%, rgba(6,6,9,0.85) 86%, var(--color-bg-surface) 100%)',
           }} />
           <div style={{ position: 'absolute', left: 22, right: 22, bottom: 8 }}>
-            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', fontFamily: M }}>{dateLine}</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', fontFamily: M, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dateLine}</p>
+              {brief?.weather && (() => {
+                const { Icon, desc } = getWeatherInfo(brief.weather.code)
+                return (
+                  <p aria-label={`${desc}, ${brief.weather.temp} degrees, high ${brief.weather.high}, low ${brief.weather.low}`}
+                    style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, fontFamily: M, color: '#fff', textShadow: '0 1px 8px rgba(0,0,0,0.45)' }}>
+                    <Icon size={15} strokeWidth={1.9} />
+                    <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: '-0.01em' }}>{brief.weather.temp}°</span>
+                    <span style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.6)' }}>H {brief.weather.high}° L {brief.weather.low}°</span>
+                  </p>
+                )
+              })()}
+            </div>
             <h1 style={{ marginTop: 4, fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em', color: '#fff', lineHeight: 1.15, fontFamily: M, textShadow: '0 2px 14px rgba(0,0,0,0.4)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {greeting}{name ? `, ${name}` : ''}
             </h1>

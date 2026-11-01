@@ -1,5 +1,6 @@
 'use client'
 
+import { getWeatherInfo, WEATHER_LOC_KEY } from '@/lib/weather'
 import { memo, useState, useMemo, useEffect, useLayoutEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -77,17 +78,6 @@ function getTimeRange(ev: CalEvent): string | null {
 }
 
 interface DayWeather { high: number; low: number; code: number; precipProb: number; wind: number }
-function getWeatherInfo(code: number): { Icon: LucideIcon; desc: string } {
-  if (code === 0)  return { Icon: Sun,            desc: 'Clear' }
-  if (code <= 2)   return { Icon: CloudSun,        desc: 'Partly cloudy' }
-  if (code === 3)  return { Icon: Cloud,            desc: 'Overcast' }
-  if (code <= 48)  return { Icon: CloudFog,         desc: 'Foggy' }
-  if (code <= 55)  return { Icon: CloudDrizzle,     desc: 'Drizzle' }
-  if (code <= 65)  return { Icon: CloudRain,        desc: 'Rain' }
-  if (code <= 77)  return { Icon: CloudSnow,        desc: 'Snow' }
-  if (code <= 82)  return { Icon: CloudRain,        desc: 'Showers' }
-  return           { Icon: CloudLightning,   desc: 'Thunderstorm' }
-}
 function monthLabel(y: number, m: number) {
   return new Date(y, m, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()
 }
@@ -754,7 +744,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
   useEffect(() => {
     if (!('geolocation' in navigator)) return
 
-    const LOC_KEY = 'cal-weather-loc'
+    const LOC_KEY = WEATHER_LOC_KEY
     const LOC_TTL = 24 * 60 * 60 * 1000 // re-fetch position once per day
 
     function fetchWeather(lat: number, lon: number) {

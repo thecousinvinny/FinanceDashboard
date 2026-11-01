@@ -65,7 +65,7 @@ export function BootSplash() {
       {/* The app's own icon, as on the home screen */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/DARKICON.png" alt="" width={72} height={72} fetchPriority="high"
+        src="/icons/icon-512.png" alt="" width={72} height={72} fetchPriority="high"
         style={{ width: 72, height: 72, borderRadius: 16, boxShadow: '0 10px 30px rgba(0,0,0,0.35), 0 0 0 1px rgb(var(--rgb-ink) / 0.08)' }}
       />
       <p style={{ fontSize: 13, fontWeight: 600, letterSpacing: '0.28em', textTransform: 'uppercase', color: 'rgb(var(--rgb-ink-muted))', fontFamily: 'var(--font-montserrat)', paddingLeft: '0.28em' }}>
