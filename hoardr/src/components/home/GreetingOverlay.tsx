@@ -130,8 +130,11 @@ export function GreetingOverlay() {
 
     setShow(true)
     // Everything (numbers, today's events, the banner image) lands in one
-    // reveal. This cap only matters on a very slow connection.
-    const readyTimer = setTimeout(() => setReady(true), 3000)
+    // reveal. The slow extras are capped one by one (photo 1.5s, weather 2s,
+    // calendar 2.5s) so the data nearly always wins; this cap is only for a
+    // very slow connection. Revealing before the data made the card change
+    // shape when it arrived.
+    const readyTimer = setTimeout(() => setReady(true), 5000)
     // A quiet spinner only if the wait is noticeable
     const waitTimer = setTimeout(() => setWaiting(true), 450)
     const gen = ++genRef.current
@@ -192,7 +195,10 @@ export function GreetingOverlay() {
         supabase.from('subscriptions').select('name, cost, billing, next_renewal, monthly_cost').eq('status', 'Active'),
         supabase.from('revenue_streams').select('name, amount, freq, next_pay_date'),
         supabase.from('wishlist').select('id').eq('status', 'Ordered'),
-        profileP, todayP, avatarP,
+        profileP,
+        // A slow calendar shows as an empty day rather than holding the card
+        Promise.race([todayP, new Promise<TodayEv[]>(r => setTimeout(() => r([]), 2500))]),
+        avatarP,
         // At most ~2s, and only with a location already allowed (never prompts)
         Promise.race([loadNowWeather(), new Promise<null>(r => setTimeout(() => r(null), 2000))]),
       ])
@@ -419,7 +425,9 @@ export function GreetingOverlay() {
               onClick={e => { if ((e.target as HTMLElement).closest('button')) e.stopPropagation() }}
             >
               {/* Scaled, not resized: it must be the exact card Home shows, just smaller */}
-              <div style={{ transform: `scale(${HERO_SCALE})`, transformOrigin: 'top center', marginBottom: -(1 - HERO_SCALE) * HERO_H }}>
+              {/* Its height is held even before the numbers land, so the photo
+                  never takes the room and then shrinks when the hero arrives */}
+              <div style={{ height: HERO_H, transform: `scale(${HERO_SCALE})`, transformOrigin: 'top center', marginBottom: -(1 - HERO_SCALE) * HERO_H }}>
                 {brief && (
                   <HomeHero
                     spent={brief.hero.spent} month={brief.hero.month} year={brief.hero.year}
