@@ -31,7 +31,7 @@ Home, Out, In, Calendar, Profile and Settings live in `<route>/screen.tsx`; thei
   - Background refreshes (`useOnScreenReturn`) **never show skeletons/"Loading…"** once there is data, and **skip `setState` when nothing changed** — `sameAsLast(ref, value)` (`src/lib/same-data.ts`). Home, Out, In, Profile, Calendar and Settings all do. Calendar must not hand `setPrefs` a fresh-but-equal object: a new `googleCalendarIds` array re-runs the Google fetch.
   - Paged feeds keep their loaded pages when the refreshed first page matches what's shown (resetting changed the page height under the user).
   - Visit-keyed resets happen in a **layout effect** (an effect paints the old state for a frame, then snaps), and the visit counter itself is bumped during render in `ScreenKeepAlive`.
-  - Bars grow with `transform: scaleX/scaleY` + `transformOrigin`, never `width`/`height` (layout every frame). Out's `CategoryPillBar`, In's `IncomeBarChart` and Profile's `SimpleBars` / `CategoryPills` / `CostPills` (`useGrowIn`) follow this; data changes ease to the new scale instead of collapsing to zero.
+  - Bars grow with `transform: scaleX/scaleY` + `transformOrigin`, never `width`/`height` (layout every frame). Out's `CategoryPillBar`, In's `IncomeBarChart` and Profile's `CashflowCard` columns / `RankPills` / `WeekdayBars` (`useGrowIn`) follow this; data changes ease to the new scale instead of collapsing to zero.
   - No tall layers under a transform (see `SlotNumber`), no full-screen `backdrop-filter`.
   - Scroll areas nested inside a `position: fixed` screen (the calendar's lists) carry `data-touch-scroll`: after each tab slide `navigateTab` toggles their overflow so WebKit rebuilds the scrolling layer — on iPhone a view transition could leave them dead to touch. New nested scrollers on screens need the attribute too.
   - **Entrance animations start after the tab slide** — `onSlideDone(cb)` / `afterSlideTimeout(cb, ms)` (`src/lib/tab-nav.ts`) fire two frames after the view transition's `finished`, not at an estimate: the frame where iOS hands back from the snapshots to the live page is itself a hitch. (`afterSlide(ms)` is the estimate, only for CSS animation delays.) `useOnScreenReturn` callbacks also run ~900ms after the slide, so a refresh's results never land mid-roll. iOS Safari re-captures the incoming screen every frame of a view transition, so anything animating inside it (number rolls, bar growth, the sparkline reveal) was choppy on iPhone only; first load and the post-greeting replay have no slide and no delay.
@@ -52,7 +52,7 @@ Home, Out, In, Calendar, Profile and Settings live in `<route>/screen.tsx`; thei
 
 **Profile button** (`src/components/profile/ProfileDrawer.tsx`) — fixed avatar button top-right on every page; hidden on `/profile` and `/settings`. Tapping navigates to `/profile`. Hidden by checking `usePathname()`.
 
-**`/profile` page** — full analytics page: avatar upload (Supabase Storage `avatars` bucket), editable display name (`profiles.display_name`), stats tiles, `HeroSplitBarChart` canvas hero (Monthly/Annual/All Time toggle), four `MonthAnnualCard` swipeable analytics sections (Expenses, Top Categories, Subscriptions, Income), all-time summary. Settings gear navigates to `/settings`.
+**`/profile` page** — the history page: avatar upload (Supabase Storage `avatars` bucket), editable display name (`profiles.display_name`), then historical stats only — **"this month" lives on Home's hero and is never repeated here**, and every number appears once on the page. All of it is derived in one pass by `profileStats()` (`src/lib/profile-stats.ts`). Sections: `CashflowCard` (`components/profile/CashflowCard.tsx`: one net column per month, green above the zero line / red below, ranges 12 mo + each year; tap or drag to pick a month and read its In / Out / Subs / Net, top 4 categories, expense count, share of income kept and discount savings underneath; the range total sits on top), Records (best / toughest month by net, biggest payday month, biggest purchase, green streak of finished months, average month), Habits (average spend per weekday, typical (median) purchase, purchases a month), Categories (all time, share + last-90-days-vs-the-90-before trend), Subscriptions (per-sub monthly cost, $/mo · $/yr, lifetime paid), Income sources (all time, share + trend), All time (earned, spent, kept, discounts, expenses logged, since). Settings gear navigates to `/settings`.
 
 **`/in` page** — three PillGroup tabs (`History | Streams | Accounts`). History: income rows filtered `date <= today`. Streams: `revenue_streams` table + bank interest streams; `autoGenerateStreams(userId, streams)` runs once per session (`let sessionAutoGenDone = false` guard). Accounts: bank list, recent transfers section, card visuals with long-press drag-to-reorder. FAB has three actions: New Transfer, Add Account, New Income.
 
@@ -187,19 +187,13 @@ Module-level emitter — call from anywhere. `<ToastContainer />` mounted in `(d
 - `CategoryPillBar` (money page) — 32px animated pill bar. Track `#1C1F22`, gold gradient fill. `variant='emerald'` switches to emerald gradient. `onClick` + `isExpanded` adds a rotating `›` chevron and toggles a max-height drilldown list below.
 - `IncomeBarChart` (in page) — last 6 months as **horizontal pill bars**, newest first, matching Out's `CategoryPillBar` (32px track, income-accent gradient fill grown with `scaleX`). Listens to `sem-colors-changed`.
 - `StatCard` (in page) — `SlotNumber` stat tile.
-- Analytics cards in `/profile` page: `HeroSplitBarChart` (canvas, Monthly/Annual/All Time toggle — see below), `MonthAnnualCard` (shared swipeable Month/Annual wrapper), `CategoryPills`, `SimpleBars`, `CostPills`.
+- `/profile` sections (in-file): `Card`, `Record` tiles, `RankPills` (categories / subs / income sources), `WeekdayBars`, `Row`.
 
 ### OUT tab stat card → graph interaction
 
 Subs section: "This Month" / "This Year" stat cards (rendered as `<button>`) drive `subStatCard` state. The category bar graph switches between `paidMonthCatBreakdown` and `paidYearCatBreakdown`. Clicking a bar expands a drilldown list (`expandedSubCat` state) with individual payment rows; max-height = `items.length * 60 + 4` px.
 
 Expenses section: "Spent This Month" / "Saved This Month" stat cards drive `expStatCard` state. Spent uses gold `CategoryPillBar`; Saved uses `variant='emerald'` and `border-emerald/40` card highlight.
-
-### HeroSplitBarChart canvas pattern
-
-Defined inline in `profile/page.tsx`. Module-level constants (`HERO_H`, `HERO_PL`, etc.) and pure helper functions (`drawHeroPill`, `heroFmt`, `heroYMax`, `heroHeights`, `heroEase`) live outside the component so `redraw = useCallback(() => {...}, [])` with empty deps is valid — it reads only stable refs and module-level constants.
-
-Each toggle switch animates bars from zero via RAF + `heroEase` (easeOutQuart, 400ms). Each group has two bars (income teal / expense gold), each split into a base chunk `min(inc,exp)` and a net cap chunk `|inc−exp|` floating 5px above. Scrub line + tooltip rendered directly on canvas; ResizeObserver triggers redraw on width change. DPR handled with `ctx.setTransform(dpr,0,0,dpr,0,0)` at the top of every `redraw` call.
 
 ## Design system
 
