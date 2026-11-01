@@ -609,6 +609,14 @@ html[data-tab-dir='back']::view-transition-new(root) { animation-name: tab-in-ba
 ::view-transition-new(tabbar) { animation: none; }
 ::view-transition-group(tabbar) { animation: none; }
 ::view-transition-group(profile-avatar) { animation-duration: 260ms; }
+/* Looping animations hold still while a slide runs. The incoming screen is a
+   live capture: anything moving in it (the hero's today pulse, a loading
+   indicator) makes the browser re-render the whole capture every frame —
+   cheap on a phone, a visible hitch at desktop size. They resume on landing. */
+html[data-tab-dir] .greet-pulse,
+html[data-tab-dir] .load-bars > span,
+html[data-tab-dir] .animate-pulse,
+html[data-tab-dir] .animate-spin { animation-play-state: paused; }
 
 /* Light theme: many inputs set colorScheme:'dark' inline for the dark themes,
    which made native date pickers and select lists open dark in Slate Mist.

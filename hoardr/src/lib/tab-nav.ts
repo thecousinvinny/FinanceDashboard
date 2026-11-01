@@ -76,7 +76,13 @@ export function afterSlideTimeout(cb: () => void, ms: number): () => void {
  * Toggling overflow makes WebKit rebuild the scrolling layer. Scroll areas opt
  * in with `data-touch-scroll`; their position is kept.
  */
+// Touch WebKit only (iPhone, iPad): on desktop it was a forced re-layout of
+// the screen's scroll areas right as the slide landed, for nothing
+const NEEDS_REVIVE = typeof navigator !== 'undefined' &&
+  (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent)))
+
 function revive() {
+  if (!NEEDS_REVIVE) return
   document.querySelectorAll<HTMLElement>('.screen-active [data-touch-scroll]').forEach(el => {
     const top = el.scrollTop, prev = el.style.overflowY
     el.style.overflowY = 'hidden'
