@@ -80,6 +80,15 @@ function unlockPage() {
   window.scrollTo(0, lockedY)
 }
 
+/**
+ * A page lock with no sheet open (iOS suspended the app mid-close, so the
+ * unlock never ran): the page can't scroll and every pull/swipe gesture
+ * thinks a sheet is up. Released when the app comes back to the foreground.
+ */
+export function releaseStalePageLock() {
+  if (stack.length === 0 && document.body.style.position === 'fixed') unlockPage()
+}
+
 function fieldsIn(root: HTMLElement): HTMLElement[] {
   return Array.from(root.querySelectorAll<HTMLElement>(FIELD_SEL)).filter(el => el.getClientRects().length > 0)
 }

@@ -8,7 +8,8 @@ import InScreen from '@/app/(dashboard)/in/screen'
 import CalendarScreen from '@/app/(dashboard)/calendar/screen'
 import ProfileScreen from '@/app/(dashboard)/profile/screen'
 import SettingsScreen from '@/app/(dashboard)/settings/screen'
-import { ScreenActiveContext, ScreenVisitContext, afterSlideTimeout, clearPendingPath, onReplayActiveScreen, useActivePath } from '@/lib/tab-nav'
+import { ScreenActiveContext, ScreenVisitContext, afterSlideTimeout, clearPendingPath, onReplayActiveScreen, repairAfterResume, useActivePath } from '@/lib/tab-nav'
+import { releaseStalePageLock } from '@/components/ui/Sheet'
 
 /**
  * Keeps every main screen mounted once it has rendered, so switching tabs is
@@ -104,6 +105,29 @@ export function ScreenKeepAlive() {
     if (!next || mounted.size === 0) return
     return idle(() => setMounted(m => new Set(m).add(next)))
   }, [mounted])
+
+  // Coming back from the background (iOS suspends a home-screen app): undo
+  // anything the suspension left half-done that would block scrolling — a
+  // sheet's page lock with no sheet, a slide that never finished, scroll
+  // areas whose layers WebKit threw away. Once on resume, again a moment
+  // later (iOS restores layers lazily after the first frame).
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout> | undefined
+    const repair = () => { releaseStalePageLock(); repairAfterResume() }
+    const onResume = () => {
+      if (document.visibilityState !== 'visible') return
+      requestAnimationFrame(repair)
+      clearTimeout(t)
+      t = setTimeout(repair, 400)
+    }
+    document.addEventListener('visibilitychange', onResume)
+    window.addEventListener('pageshow', onResume)
+    return () => {
+      clearTimeout(t)
+      document.removeEventListener('visibilitychange', onResume)
+      window.removeEventListener('pageshow', onResume)
+    }
+  }, [])
 
   // Per-screen scroll position (they share the window's scroll)
   useEffect(() => {

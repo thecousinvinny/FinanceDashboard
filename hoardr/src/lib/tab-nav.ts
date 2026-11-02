@@ -92,6 +92,21 @@ function revive() {
   })
 }
 
+/**
+ * Back from the background: iOS can drop a suspended page's scrolling layers
+ * (the same dead-to-touch scroll areas a slide can leave) and never settle a
+ * slide that was running when it was suspended. Ends any such slide and
+ * rebuilds the visible screen's scroll areas.
+ */
+export function repairAfterResume() {
+  if (currentVT) {
+    try { currentVT.skipTransition?.() } catch {}
+    currentVT = null
+  }
+  delete document.documentElement.dataset.tabDir
+  revive()
+}
+
 const wait = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
 /** Two frames, or 150ms if frames are throttled (low-power mode, backgrounded). */
 const twoFrames = () => new Promise<void>(r => {
