@@ -113,6 +113,7 @@ export function GlobalFAB({ actions, primary }: { actions: FABAction[]; primary?
           zIndex: 45,
           background: 'rgba(0,0,0,0.32)',
           opacity: shown ? 1 : 0,
+          pointerEvents: open ? undefined : 'none',
           transition: `opacity ${MENU_MS}ms ${EASE}`,
           willChange: 'opacity',
         }}

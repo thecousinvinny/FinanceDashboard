@@ -59,7 +59,7 @@ export function ActionSheet({ open, onClose, ...content }: Props) {
   const sep = '0.5px solid rgb(var(--rgb-ink) / 0.1)'
 
   return createPortal(
-    <div data-action-sheet className="fixed inset-0 z-[500]">
+    <div data-action-sheet className="fixed inset-0 z-[500]" style={{ pointerEvents: open ? undefined : 'none' }}>
       <div
         onClick={onClose}
         className="absolute inset-0"

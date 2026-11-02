@@ -43,7 +43,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${montserrat.variable} ${bigShoulders.variable}`} style={{ backgroundColor: '#080810' }}>
+    <html lang="en" suppressHydrationWarning className={`${montserrat.variable} ${bigShoulders.variable}`} style={{ backgroundColor: '#080810' }}>
       {/* Restore theme before first paint to prevent flash */}
       <head>
         <script

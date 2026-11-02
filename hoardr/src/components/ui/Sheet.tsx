@@ -86,7 +86,10 @@ function unlockPage() {
  * thinks a sheet is up. Released when the app comes back to the foreground.
  */
 export function releaseStalePageLock() {
-  if (stack.length === 0 && document.body.style.position === 'fixed') unlockPage()
+  if (stack.length !== 0 || document.body.style.position !== 'fixed') return
+  // The lock's own offset is where the page was
+  lockedY = -parseInt(document.body.style.top || '0', 10) || 0
+  unlockPage()
 }
 
 function fieldsIn(root: HTMLElement): HTMLElement[] {
@@ -361,6 +364,8 @@ export function Sheet({ open, onClose, title, action, cancelLabel = 'Cancel', on
         className="fixed inset-0 z-[59]"
         style={{
           background: 'rgba(0,0,0,0.5)',
+          // Closing: the fading backdrop must not swallow the next tap / scroll
+          pointerEvents: open ? undefined : 'none',
           opacity: shown ? 1 : 0,
           transition: `opacity ${dur}ms ${SHEET_EASE}`,
         }}

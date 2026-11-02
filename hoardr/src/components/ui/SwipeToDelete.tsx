@@ -6,6 +6,7 @@ import { cn, haptic } from '@/lib/utils'
 
 const REVEAL   = 80    // px to show action button
 const TAP_SLOP = 10    // max movement still counted as a tap
+const DIR_SLOP = 6     // movement before a touch is a swipe or a scroll
 
 interface Props {
   onDelete?:      () => void
@@ -121,7 +122,13 @@ export function SwipeToDelete({
   function onTouchMove(e: React.TouchEvent) {
     const dx = e.touches[0].clientX - startX.current
     const dy = e.touches[0].clientY - startY.current
-    if (!dir.current) dir.current = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'
+    // Decide only after real movement: picked on the first event, a 1px
+    // sideways wobble locked the row horizontal and its preventDefault
+    // blocked the page's scroll for the whole gesture
+    if (!dir.current) {
+      if (Math.abs(dx) < DIR_SLOP && Math.abs(dy) < DIR_SLOP) return
+      dir.current = Math.abs(dx) > Math.abs(dy) * 1.2 ? 'h' : 'v'
+    }
     if (Math.abs(dx) > TAP_SLOP || Math.abs(dy) > TAP_SLOP) { didSwipe.current = true; clearPress() }
     if (dir.current !== 'h') return
     setPos(clampX(dx), false)
@@ -163,7 +170,13 @@ export function SwipeToDelete({
     if (!mouseDown.current) return
     const dx = e.clientX - startX.current
     const dy = e.clientY - startY.current
-    if (!dir.current) dir.current = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'
+    // Decide only after real movement: picked on the first event, a 1px
+    // sideways wobble locked the row horizontal and its preventDefault
+    // blocked the page's scroll for the whole gesture
+    if (!dir.current) {
+      if (Math.abs(dx) < DIR_SLOP && Math.abs(dy) < DIR_SLOP) return
+      dir.current = Math.abs(dx) > Math.abs(dy) * 1.2 ? 'h' : 'v'
+    }
     if (Math.abs(dx) > TAP_SLOP || Math.abs(dy) > TAP_SLOP) { didSwipe.current = true; clearPress() }
     if (dir.current !== 'h') return
     e.preventDefault()
@@ -224,6 +237,7 @@ export function SwipeToDelete({
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
+        onTouchCancel={onTouchEnd}
         onMouseDown={onMouseDown}
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
