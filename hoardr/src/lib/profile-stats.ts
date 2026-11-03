@@ -102,11 +102,11 @@ export function profileStats(expenses: ProfExp[], income: ProfInc[], subs: ProfS
 // ── Breakdowns over a chosen range (Categories, Subscriptions, Income sources) ──
 
 export type BreakRange = 'mo' | '6m' | 'yr' | 'all'
-export const BREAK_RANGES: { id: BreakRange; label: string; vs: string }[] = [
-  { id: 'mo',  label: 'This mo', vs: 'vs last month' },
-  { id: '6m',  label: '6 mo',    vs: 'vs the 6 before' },
-  { id: 'yr',  label: 'This yr', vs: 'vs last year' },
-  { id: 'all', label: 'All',     vs: 'last 90 days vs the 90 before' },
+export const BREAK_RANGES: { id: BreakRange; label: string; name: string; vs: string }[] = [
+  { id: 'mo',  label: 'This mo', name: 'This month', vs: 'vs last month' },
+  { id: '6m',  label: '6 mo',    name: '6 months',   vs: 'vs the 6 before' },
+  { id: 'yr',  label: 'This yr', name: 'This year',  vs: 'vs last year' },
+  { id: 'all', label: 'All',     name: 'All time',   vs: 'last 90 days vs the 90 before' },
 ]
 
 export interface SubPaid { name: string; total: number; monthly: number }

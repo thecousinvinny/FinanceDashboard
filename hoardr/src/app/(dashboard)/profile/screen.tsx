@@ -11,6 +11,7 @@ import { getCategoryIcon } from '@/components/ui/CategoryIcon'
 import { afterSlideTimeout, useOnScreenReturn, useScreenReady, useScreenVisit, navigateTab } from '@/lib/tab-nav'
 import { sameAsLast } from '@/lib/same-data'
 import { CashflowCard } from '@/components/profile/CashflowCard'
+import { useIsLargeScreen } from '@/lib/use-large-screen'
 import { profileStats, breakdown, BREAK_RANGES, type BreakRange, type ProfExp, type ProfInc, type ProfSub } from '@/lib/profile-stats'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -119,6 +120,122 @@ function RangePills({ value, onChange }: { value: BreakRange; onChange: (r: Brea
           {r.label}
         </button>
       ))}
+    </div>
+  )
+}
+/**
+ * A breakdown card whose range switches by a sideways swipe on a phone (name +
+ * dots in the header, like Home's hero) and by RangePills on large screens.
+ * Native listeners: the swipe only claims the gesture once it is clearly
+ * sideways past a slop, so a vertical scroll that wobbles never gets blocked.
+ */
+function RangeCard({ label, range, onRange, children }: {
+  label: string; range: BreakRange; onRange: (r: BreakRange) => void; children: React.ReactNode
+}) {
+  const large   = useIsLargeScreen()
+  const cardRef = useRef<HTMLDivElement>(null)
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const rangeRef = useRef(range)
+  const onRangeRef = useRef(onRange)
+  const enterDir = useRef(0)
+  useEffect(() => { rangeRef.current = range; onRangeRef.current = onRange }, [range, onRange])
+
+  useEffect(() => {
+    const el = cardRef.current, body = bodyRef.current
+    if (!el || !body || large) return
+    let start: { x: number; y: number; t: number } | null = null
+    let dir: 'h' | 'v' | null = null
+    const at = () => BREAK_RANGES.findIndex(r => r.id === rangeRef.current)
+    function onStart(e: TouchEvent) {
+      const t = e.touches[0]
+      // Leave the screen's left edge to iOS's back swipe
+      start = t.clientX < 24 ? null : { x: t.clientX, y: t.clientY, t: performance.now() }
+      dir = null
+    }
+    function onMove(e: TouchEvent) {
+      if (!start) return
+      const dx = e.touches[0].clientX - start.x, dy = e.touches[0].clientY - start.y
+      if (!dir) {
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return
+        dir = Math.abs(dx) > Math.abs(dy) * 1.3 ? 'h' : 'v'
+      }
+      if (dir !== 'h') return
+      e.preventDefault()
+      const i = at(), edge = (dx > 0 && i === 0) || (dx < 0 && i === BREAK_RANGES.length - 1)
+      body!.style.transition = 'none'
+      body!.style.transform = `translateX(${dx * (edge ? 0.15 : 0.45)}px)`
+    }
+    function onEnd(e: TouchEvent) {
+      if (!start || dir !== 'h') { start = null; return }
+      const dx = e.changedTouches[0].clientX - start.x
+      const fast = Math.abs(dx) / Math.max(1, performance.now() - start.t) > 0.35
+      start = null
+      const i = at(), next = Math.abs(dx) > 50 || (fast && Math.abs(dx) > 20) ? i + (dx < 0 ? 1 : -1) : i
+      if (next !== i && next >= 0 && next < BREAK_RANGES.length) {
+        haptic('tap')
+        enterDir.current = dx < 0 ? 1 : -1
+        onRangeRef.current(BREAK_RANGES[next].id)
+      } else {
+        body!.style.transition = 'transform 300ms cubic-bezier(0.22, 1, 0.36, 1)'
+        body!.style.transform = ''
+      }
+    }
+    el.addEventListener('touchstart',  onStart, { passive: true })
+    el.addEventListener('touchmove',   onMove,  { passive: false })
+    el.addEventListener('touchend',    onEnd,   { passive: true })
+    el.addEventListener('touchcancel', onEnd,   { passive: true })
+    return () => {
+      el.removeEventListener('touchstart',  onStart)
+      el.removeEventListener('touchmove',   onMove)
+      el.removeEventListener('touchend',    onEnd)
+      el.removeEventListener('touchcancel', onEnd)
+    }
+  }, [large])
+
+  // The new range slides in from the side it was swiped toward
+  useLayoutEffect(() => {
+    const body = bodyRef.current, d = enterDir.current
+    if (!body || !d) return
+    enterDir.current = 0
+    body.style.transition = 'none'
+    body.style.transform = `translateX(${d * 36}px)`
+    body.style.opacity = '0'
+    requestAnimationFrame(() => {
+      body.style.transition = 'transform 320ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease-out'
+      body.style.transform = ''
+      body.style.opacity = ''
+    })
+  }, [range])
+
+  const idx = BREAK_RANGES.findIndex(r => r.id === range)
+  return (
+    <div className="px-5 mb-5">
+      <div ref={cardRef} className="bg-bg-surface border border-ink/[0.06] rounded-card p-4 overflow-hidden"
+        style={large ? undefined : { touchAction: 'pan-y' }}>
+        <div className="flex items-baseline gap-2 mb-3.5">
+          <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-gold">{label}</p>
+          <div className="ml-auto text-[11px] text-ink-muted text-right">
+            {large ? <RangePills value={range} onChange={onRange} /> : (
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-medium text-ink">{BREAK_RANGES[idx].name}</span>
+                <div className="flex items-center gap-1">
+                  {BREAK_RANGES.map((r, i) => (
+                    <button key={r.id} type="button" aria-label={r.name}
+                      onClick={() => { if (i !== idx) { haptic('tap'); enterDir.current = i > idx ? 1 : -1; onRange(r.id) } }}
+                      className="flex items-center justify-center" style={{ padding: 4, margin: -4 }}>
+                      <span className="block rounded-full transition-all duration-300" style={{
+                        width: i === idx ? 10 : 4, height: 4,
+                        background: i === idx ? 'rgb(var(--rgb-ink) / 0.45)' : 'rgb(var(--rgb-ink) / 0.18)',
+                      }} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        <div ref={bodyRef}>{children}</div>
+      </div>
     </div>
   )
 }
@@ -405,7 +522,7 @@ export default function ProfilePage() {
           </Card>
 
           {/* ── Categories ────────────────────────────────────────────────────── */}
-          <Card label="Categories" stat={<RangePills value={catRange} onChange={setCatRange} />}>
+          <RangeCard label="Categories" range={catRange} onRange={setCatRange}>
             {catBreak.categories.length ? (
               <RankPills tone="expense" items={catBreak.categories.map(c => ({
                 name: c.name, value: c.total, display: $fk(c.total), icon: true,
@@ -413,10 +530,10 @@ export default function ProfilePage() {
               }))} />
             ) : <Empty>No spending {rangeWords(catRange)}</Empty>}
             <p className="text-[11px] text-ink-muted mt-3">Share of spending · trend {vsWords(catRange)}</p>
-          </Card>
+          </RangeCard>
 
           {/* ── Subscriptions ─────────────────────────────────────────────────── */}
-          <Card label="Subscriptions" stat={<RangePills value={subRange} onChange={setSubRange} />}>
+          <RangeCard label="Subscriptions" range={subRange} onRange={setSubRange}>
             {subBreak.subs.list.length ? (
               <RankPills tone="expense" items={subBreak.subs.list.slice(0, 6).map(s => ({
                 name: s.name, value: s.total, display: $fk(s.total), note: `${$fk(s.monthly)}/mo`,
@@ -425,10 +542,10 @@ export default function ProfilePage() {
             <p className="text-[11px] text-ink-muted mt-3">
               <span className="text-ink font-semibold">{$f(subBreak.subs.paid)}</span> paid {rangeWords(subRange)} · {subBreak.subs.active} active · {$fk(subBreak.subs.monthly)}/mo · {$fk(subBreak.subs.yearly)}/yr
             </p>
-          </Card>
+          </RangeCard>
 
           {/* ── Income sources ────────────────────────────────────────────────── */}
-          <Card label="Income sources" stat={<RangePills value={srcRange} onChange={setSrcRange} />}>
+          <RangeCard label="Income sources" range={srcRange} onRange={setSrcRange}>
             {srcBreak.sources.length ? (
               <RankPills tone="income" items={srcBreak.sources.map(s => ({
                 name: s.name, value: s.total, display: $fk(s.total),
@@ -436,7 +553,7 @@ export default function ProfilePage() {
               }))} />
             ) : <Empty>No income {rangeWords(srcRange)}</Empty>}
             <p className="text-[11px] text-ink-muted mt-3">Share of income · trend {vsWords(srcRange)}</p>
-          </Card>
+          </RangeCard>
 
           {/* ── All time ──────────────────────────────────────────────────────── */}
           <Card label="All time">
