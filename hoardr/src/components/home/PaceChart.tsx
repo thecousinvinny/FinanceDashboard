@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useMemo, type MutableRefObject } from 'react'
+import { useState, useRef, useEffect, useMemo, useId, type MutableRefObject } from 'react'
 import { haptic } from '@/lib/utils'
 import { afterSlide, useScreenVisit } from '@/lib/tab-nav'
 
@@ -44,6 +44,10 @@ export function PaceChart({ series, onHover, gestureMode, delay, still }: {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null)
   const [colorRev, setColorRev] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
+  // Gradient ids must be unique per chart: the month and year charts (and the
+  // greeting's copy) share the document, and url(#id) resolves to the first one
+  const uid = useId().replace(/:/g, '')
+  const gradId = `pace-grad-${uid}`, prevGradId = `pace-prev-grad-${uid}`
 
   const seriesRef  = useRef(series)
   const onHoverRef = useRef(onHover)
@@ -176,7 +180,7 @@ export function PaceChart({ series, onHover, gestureMode, delay, still }: {
       <div key={animKey} className="absolute inset-0" style={{ animation: still ? 'none' : `spark-clip-reveal 1s cubic-bezier(0.45,0,0.2,1) ${revealDelay}ms both` }}>
         <svg width="100%" height="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" overflow="visible">
           <defs>
-            <linearGradient id="pace-grad" x1="0" y1="0" x2="0" y2={H} gradientUnits="userSpaceOnUse">
+            <linearGradient id={gradId} x1="0" y1="0" x2="0" y2={H} gradientUnits="userSpaceOnUse">
               <stop offset={0}        stopColor={expColor} stopOpacity={0}    />
               <stop offset={g.before} stopColor={expColor} stopOpacity={0}    />
               <stop offset={g.peak}   stopColor={expColor} stopOpacity={0.95} />
@@ -184,14 +188,14 @@ export function PaceChart({ series, onHover, gestureMode, delay, still }: {
               <stop offset={g.mid2}   stopColor={expColor} stopOpacity={0.15} />
               <stop offset={1}        stopColor={expColor} stopOpacity={0}    />
             </linearGradient>
-            <linearGradient id="pace-prev-grad" x1="0" y1="0" x2="0" y2={H} gradientUnits="userSpaceOnUse">
+            <linearGradient id={prevGradId} x1="0" y1="0" x2="0" y2={H} gradientUnits="userSpaceOnUse">
               <stop offset={prevPeak}               stopColor={`rgb(${inkRgb})`} stopOpacity={0.1} />
               <stop offset={Math.min(1, prevPeak + 0.5)} stopColor={`rgb(${inkRgb})`} stopOpacity={0} />
             </linearGradient>
           </defs>
 
-          {prev && <path d={area(prev)} fill="url(#pace-prev-grad)" stroke="none" />}
-          <path d={area(cum)} fill="url(#pace-grad)" stroke="none" className="spark-area" />
+          {prev && <path d={area(prev)} fill={`url(#${prevGradId})`} stroke="none" />}
+          <path d={area(cum)} fill={`url(#${gradId})`} stroke="none" className="spark-area" />
           {prev && (
             <path d={curve(prev)} fill="none" stroke={`rgb(${inkRgb} / 0.32)`} strokeWidth={1.5}
               strokeDasharray="4 4" strokeLinecap="round" vectorEffect="non-scaling-stroke" />

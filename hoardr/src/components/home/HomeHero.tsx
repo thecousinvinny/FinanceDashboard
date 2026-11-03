@@ -194,10 +194,10 @@ export function HomeHero({ spent, month, year, greeting }: Props) {
         <div className="flex items-center gap-2.5 mb-3">{legend}</div>
 
         <div className="flex items-start" style={{ fontFamily: 'var(--font-big-shoulders)' }}>
-          <span className="text-[22px] font-light text-ink-muted mt-[7px] mr-0.5">$</span>
-          <span className="text-[52px] font-bold leading-none tracking-[-0.04em] text-ink">
+          <span className="text-[26px] font-light text-ink-muted mt-[8px] mr-0.5">$</span>
+          <span className="text-[64px] font-bold leading-none tracking-[-0.04em] text-ink">
             <SlotNumber value={Math.floor(total)} format={fmtInt} startAt={rollAt(260)} />
-            <span className="text-[32px] text-ink-muted font-light">.{fmtCents(total)}</span>
+            <span className="text-[38px] text-ink-muted font-light">.{fmtCents(total)}</span>
           </span>
         </div>
       </div>
