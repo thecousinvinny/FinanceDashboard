@@ -3,9 +3,12 @@
 import { useState, useRef, useEffect } from 'react'
 import { PaceChart, type HeroSeries } from './PaceChart'
 import { SlotNumber } from '@/components/ui/SlotNumber'
-import { $fc, $fk } from '@/lib/utils'
+import { $f, $fc, $fk } from '@/lib/utils'
 import { useScreenVisit } from '@/lib/tab-nav'
 import { useHeroHandoff } from '@/lib/hero-handoff'
+
+/** Stats strip: whole dollars, compact only past what a quarter of the card fits */
+const stat = (v: number) => (Math.abs(v) >= 100_000 ? $fk(v) : $f(v))
 
 interface Props {
   spent: number
@@ -202,10 +205,10 @@ export function HomeHero({ spent, month, year, greeting }: Props) {
       {/* Quick stats */}
       <div className="absolute left-0 right-0 bottom-0 flex border-t border-ink/[0.06]" style={{ height: 52, zIndex: 2 }}>
         {([
-          ['Spent',  <SlotNumber key="s" value={Math.max(0, total - subs)} format={$fk} startAt={rollAt(520)} />, 'var(--sem-expense)'],
-          ['Subs',   <SlotNumber key="u" value={subs} format={$fk} startAt={rollAt(580)} />, 'var(--sem-sub)'],
-          ['Net',    <SlotNumber key="n" value={Math.abs(net)} format={v => `${net >= 0 ? '+' : MINUS}${$fk(v)}`} startAt={rollAt(640)} />, net >= 0 ? 'var(--sem-income)' : '#ef4444'],
-          [isYear ? 'Avg / mo' : 'Avg / day', <SlotNumber key="a" value={avg} format={$fk} startAt={rollAt(700)} />, undefined],
+          ['Spent',  <SlotNumber key="s" value={Math.max(0, total - subs)} format={stat} startAt={rollAt(520)} />, 'var(--sem-expense)'],
+          ['Subs',   <SlotNumber key="u" value={subs} format={stat} startAt={rollAt(580)} />, 'var(--sem-sub)'],
+          ['Net',    <SlotNumber key="n" value={Math.abs(net)} format={v => `${net >= 0 ? '+' : MINUS}${stat(v)}`} startAt={rollAt(640)} />, net >= 0 ? 'var(--sem-income)' : '#ef4444'],
+          [isYear ? 'Avg / mo' : 'Avg / day', <SlotNumber key="a" value={avg} format={stat} startAt={rollAt(700)} />, undefined],
         ] as const).map(([label, value, color], i) => (
           <div key={label} className={`flex-1 min-w-0${i ? ' border-l border-ink/[0.06]' : ''}`} style={{ padding: i ? '8px 0 0 10px' : '8px 0 0 16px' }}>
             <p className={statLbl}>{label}</p>
