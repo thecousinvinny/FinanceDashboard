@@ -203,7 +203,7 @@ Module-level emitter — call from anywhere. `<ToastContainer />` mounted in `(d
 
 Subs section: "This Month" / "This Year" stat cards (rendered as `<button>`) drive `subStatCard` state. The category bar graph switches between `paidMonthCatBreakdown` and `paidYearCatBreakdown`. Clicking a bar expands a drilldown list (`expandedSubCat` state) with individual payment rows; max-height = `items.length * 60 + 4` px.
 
-Expenses section: "Spent This Month" / "Saved This Month" stat cards drive `expStatCard` state. Spent uses gold `CategoryPillBar`; Saved uses `variant='emerald'` and `border-emerald/40` card highlight.
+Expenses section: "Spent This Month" / "Discounts This Month" stat cards (discounts = `expenses.savings`, not income − spent) drive `expStatCard` state. Spent uses gold `CategoryPillBar`; Discounts uses `variant='emerald'` and `border-emerald/40` card highlight.
 
 ## Design system
 

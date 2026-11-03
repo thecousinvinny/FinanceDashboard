@@ -968,7 +968,7 @@ export default function OutPage() {
               expStatCard === 'saved' ? 'border-emerald/40' : 'border-ink/[0.06]')}
           >
             <div className="flex items-center justify-between mb-3">
-              <p className={cn('text-[10px] font-semibold tracking-[0.1em] uppercase', expStatCard === 'saved' ? 'text-emerald' : 'text-ink-muted')}>Saved This Month</p>
+              <p className={cn('text-[10px] font-semibold tracking-[0.1em] uppercase', expStatCard === 'saved' ? 'text-emerald' : 'text-ink-muted')}>Discounts This Month</p>
               <Sparkles size={15} strokeWidth={1.9} className="text-emerald" />
             </div>
             <p className="text-[26px] font-bold tracking-tight text-emerald" style={{ fontFamily: 'var(--font-big-shoulders)' }}>
@@ -1022,7 +1022,7 @@ export default function OutPage() {
           </div>
           <div className="flex-1 bg-bg-surface border border-ink/[0.06] rounded-[22px] p-4">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Saved / Yr</p>
+              <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-muted">Discounts / Yr</p>
               <Sparkles size={15} strokeWidth={1.9} className="text-emerald" />
             </div>
             <p className="text-[26px] font-bold tracking-tight text-emerald" style={{ fontFamily: 'var(--font-big-shoulders)' }}>
@@ -1039,7 +1039,7 @@ export default function OutPage() {
         return (
           <div className="mx-4 mt-4 bg-bg-surface border border-ink/[0.06] rounded-card px-4 py-3">
             <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-faint mb-3">
-              {expStatCard === 'spent' ? 'Spent This Month by Category' : 'Saved This Month by Category'}
+              {expStatCard === 'spent' ? 'Spent This Month by Category' : 'Discounts This Month by Category'}
             </p>
             <div className="space-y-2">
               {breakdown.map((cat, i) => (
