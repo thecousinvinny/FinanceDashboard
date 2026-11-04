@@ -35,12 +35,15 @@ function subscribe(l: () => void) { listeners.add(l); return () => { listeners.d
 const ORDER = ['/home', '/money', '/in', '/calendar', '/profile', '/settings']
 const rank = (p: string) => ORDER.findIndex(o => p === o || p.startsWith(o + '/'))
 
-type ViewTransition = { finished: Promise<void>; skipTransition?: () => void }
+type ViewTransition = { finished: Promise<void>; updateCallbackDone?: Promise<void>; skipTransition?: () => void }
 type VTDocument = Document & { startViewTransition?: (cb: () => void) => ViewTransition }
 
 // The slide in flight, and a counter so a superseded slide's update is a no-op
 let currentVT: ViewTransition | null = null
 let navSeq = 0
+// Taps closer together than this switch without a slide
+const RAPID_MS = 800
+let lastNavAt = -Infinity
 
 // The slide (globals.css: tab-in-* runs 420ms) plus a frame or two of capture
 const SLIDE_MS = 480
@@ -131,7 +134,8 @@ export function afterSlide(ms = 0): number {
  */
 export function navigateTab(path: string, mode: 'replace' | 'push' = 'replace') {
   const from = pending ?? window.location.pathname
-  if (from === path) return
+  // Back to where you are: also drops a switch still waiting on a slide
+  if (from === path) { navSeq++; return }
   // Kept-alive screens need nothing from the server (their page.tsx renders
   // null), so the URL changes in place — Next 15 tracks the native history API.
   // A router navigation fetched the route from the server on every tap, and
@@ -148,15 +152,22 @@ export function navigateTab(path: string, mode: 'replace' | 'push' = 'replace') 
     go()
     return
   }
-  // Tapping again mid-slide: finish the running slide at once and switch
-  // without starting another. Stacking view transitions (each one snapshots
-  // the whole screen) is what crashed iOS Safari on rapid tab taps.
+  // Rapid taps never start or interrupt a slide. Each slide snapshots the
+  // whole screen: stacking them crashed iOS Safari, and skipping one mid-run
+  // (what this did next) still broke it when tabs were tapped fast. A tap
+  // during a slide switches the live page under it — the incoming snapshot
+  // is live, so the new screen just shows up in the slide — once the slide's
+  // own switch has run (before that, its capture would pick up ours). A tap
+  // soon after one switches instantly.
+  const now = performance.now()
+  const rapid = now - lastNavAt < RAPID_MS
+  lastNavAt = now
   if (currentVT) {
-    try { currentVT.skipTransition?.() } catch {}
-    currentVT = null
-    go()
+    const ready = currentVT.updateCallbackDone ?? Promise.resolve()
+    ready.catch(() => {}).then(go)
     return
   }
+  if (rapid) { go(); return }
   const root = document.documentElement
   // The snapshots do the animating; the screen's own fade-in would double it
   root.classList.add('vt')
