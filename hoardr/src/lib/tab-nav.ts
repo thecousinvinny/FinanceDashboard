@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useSyncExternalStore } from 'react'
 import { flushSync } from 'react-dom'
 import { usePathname } from 'next/navigation'
-import { dataVersion } from '@/lib/data-version'
+import { dataVersion, onRemoteChange } from '@/lib/data-version'
 
 /**
  * Keep-alive screens (see components/nav/ScreenKeepAlive.tsx).
@@ -263,6 +263,14 @@ export function useOnScreenReturn(cb: () => void) {
       last.current = { at: performance.now(), v: dataVersion() }
       cbRef.current()
     }, REFRESH_DELAY_MS)
+  }, [active])
+  // Visible when something changes on another device: refresh in place
+  useEffect(() => {
+    if (!active) return
+    return onRemoteChange(() => {
+      last.current = { at: performance.now(), v: dataVersion() }
+      cbRef.current()
+    })
   }, [active])
 }
 const REFRESH_DELAY_MS = 900

@@ -9,6 +9,7 @@ import { syncAppPrefs } from '@/lib/app-prefs'
 import { syncLocationPrefs } from '@/lib/location-prefs'
 import { syncUiPrefs } from '@/lib/ui-prefs'
 import { syncCategories } from '@/lib/category-meta'
+import { startLiveSync } from '@/lib/live-sync'
 import { applyTheme, readTheme } from '@/lib/theme'
 import { applySemanticColors } from '@/lib/semantic-colors'
 
@@ -36,6 +37,7 @@ export function AuthWatcher() {
     void syncAppPrefs()
     void syncLocationPrefs()   // calendar location favorites/recents follow the account
     void syncCategories()      // your categories and their icons, for every form
+    startLiveSync()            // changes from your other devices refresh the visible screen
     // Theme, accent colors, week start, hidden calendars
     void syncUiPrefs(changed => {
       if (changed.includes('theme')) applyTheme(readTheme())

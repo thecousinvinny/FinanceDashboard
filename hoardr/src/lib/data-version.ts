@@ -8,13 +8,26 @@ let version = 0
 
 export function markDataChanged() { version++ }
 
-// Back in the app after a minute or more away (another device, Google
-// Calendar, a failed load while the phone slept): refresh screens on return
+/**
+ * Changes made somewhere else (another device, through `live-sync.ts`, or
+ * while this one was in the background). Hidden screens catch up through the
+ * version on their next return; the visible one is told now so its numbers
+ * move without a refresh.
+ */
+const remoteListeners = new Set<() => void>()
+export function markRemoteChange() {
+  version++
+  remoteListeners.forEach(l => l())
+}
+export function onRemoteChange(l: () => void) { remoteListeners.add(l); return () => { remoteListeners.delete(l) } }
+
+// Back in the app after a minute or more away (Google Calendar, a failed load
+// while the phone slept; shorter gaps are covered by live-sync reconnecting): refresh
 if (typeof document !== 'undefined') {
   let hiddenAt = 0
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) hiddenAt = Date.now()
-    else if (hiddenAt && Date.now() - hiddenAt > 60_000) version++
+    else if (hiddenAt && Date.now() - hiddenAt > 60_000) markRemoteChange()
   })
 }
 export function dataVersion() { return version }

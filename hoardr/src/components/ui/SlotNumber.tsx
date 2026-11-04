@@ -22,11 +22,13 @@ interface DrumProps {
   totalDigits:    number  // total digit count in the formatted number
   spinAt:         number  // when this number's spin started (0 = not yet shown)
   exact?:         boolean // spinAt is a real start time, not a tab-slide estimate
+  late?:          boolean // added by a value change after the spin ($96 → $101)
 }
 
-function Drum({ digit, placeFromRight, totalDigits, spinAt, exact }: DrumProps) {
+function Drum({ digit, placeFromRight, totalDigits, spinAt, exact, late }: DrumProps) {
   const trackRef  = useRef<HTMLSpanElement>(null)
   const prevDigit = useRef(digit)
+  const mounted   = useRef(false)
 
   // Higher places take a little longer, so the number settles right to left…
   const dur = 850 + placeFromRight * 90
@@ -47,9 +49,16 @@ function Drum({ digit, placeFromRight, totalDigits, spinAt, exact }: DrumProps) 
   // joins it through a negative transition delay.
   useLayoutEffect(() => {
     const d = prevDigit.current
+    const first = !mounted.current
+    mounted.current = true
     if (!spinAt) { at(10 + d); return }
     const elapsed = performance.now() - spinAt
-    if (elapsed >= del + dur) { at(10 + d); return }
+    if (elapsed >= del + dur) {
+      // A new leading digit from a later change rolls up from 0 with the rest
+      if (first && late) { at(10); restart(); at(10 + d, `transform ${ROLL_MS}ms ${EASE}`) }
+      else at(10 + d)
+      return
+    }
     at(0)
     // Waiting out a tab slide: start on its real end, reading the digit then
     if (elapsed < 0 && !exact) return onSlideDone(() => {
@@ -109,6 +118,9 @@ export function SlotNumber({ value, format, className, startAt }: Props) {
   // After a tab slide, the roll waits for the screen to land (see afterSlide)
   if (visit > 0 && spin.current?.visit !== visit) spin.current = { visit, at: performance.now() + afterSlide() }
   const spinAt = startAt ?? (visit > 0 ? spin.current!.at : 0)
+  // Drums mounting after this number's first paint come from a value change
+  const painted = useRef(false)
+  useLayoutEffect(() => { painted.current = true }, [])
 
   const str    = format(value)
   const tokens = str.split('').map(c => ({ char: c, isDigit: /\d/.test(c) }))
@@ -121,14 +133,17 @@ export function SlotNumber({ value, format, className, startAt }: Props) {
         if (!tok.isDigit) return <span key={i} style={{ lineHeight: 1 }}>{tok.char}</span>
         const digitIdx      = di++
         const placeFromRight = total - 1 - digitIdx
+        // Keyed by place, so a digit-count change keeps the drums that exist
+        // (they roll to their new digit) instead of remounting all of them
         return (
           <Drum
-            key={`${total}-${digitIdx}`}
+            key={`p${placeFromRight}`}
             digit={parseInt(tok.char)}
             placeFromRight={placeFromRight}
             totalDigits={total}
             spinAt={spinAt}
             exact={startAt !== undefined}
+            late={painted.current}
           />
         )
       })}
