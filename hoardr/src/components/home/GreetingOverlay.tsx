@@ -10,7 +10,7 @@ import type { BillingCycle } from '@/types'
 import type { Session } from '@supabase/supabase-js'
 import { GREET_BOOT_CLASS } from '@/lib/greeting-boot'
 import { replayActiveScreen } from '@/lib/tab-nav'
-import { LoadBars } from '@/components/ui/LoadBars'
+import { SplashMark } from '@/components/nav/BootSplash'
 import { SlotNumber } from '@/components/ui/SlotNumber'
 import { HomeHero } from '@/components/home/HomeHero'
 import type { HeroSeries } from '@/components/home/PaceChart'
@@ -97,7 +97,6 @@ const HERO_H = 292
 export function GreetingOverlay() {
   const [show,     setShow]     = useState(false)
   const [ready,    setReady]    = useState(false)   // card may enter
-  const [waiting,  setWaiting]  = useState(false)   // show the spinner
   const [exiting,  setExiting]  = useState(false)
   const [name,     setName]     = useState('')
   const [avatar,   setAvatar]   = useState<string | null>(null)
@@ -117,7 +116,7 @@ export function GreetingOverlay() {
   useLayoutEffect(() => {
     // At launch the <head> script has already decided (lib/greeting-boot.ts)
     if (runKey === 0 && !document.documentElement.classList.contains(GREET_BOOT_CLASS)) return
-    setReady(false); setWaiting(false); setExiting(false); setBrief(null)
+    setReady(false); setExiting(false); setBrief(null)
     enterAt.current = 0
     const today = localToday()
     setTodayStr(today)
@@ -135,8 +134,6 @@ export function GreetingOverlay() {
     // very slow connection. Revealing before the data made the card change
     // shape when it arrived.
     const readyTimer = setTimeout(() => setReady(true), 5000)
-    // A quiet spinner only if the wait is noticeable
-    const waitTimer = setTimeout(() => setWaiting(true), 450)
     const gen = ++genRef.current
 
     async function loadData() {
@@ -246,7 +243,7 @@ export function GreetingOverlay() {
 
     loadData().catch(() => { if (gen === genRef.current) setReady(true) })
     return () => {
-      genRef.current++; clearTimeout(readyTimer); clearTimeout(waitTimer)
+      genRef.current++; clearTimeout(readyTimer)
       authSubRef.current?.unsubscribe(); authSubRef.current = null
     }
   }, [runKey])
@@ -362,7 +359,14 @@ export function GreetingOverlay() {
         userSelect: 'none', WebkitUserSelect: 'none',
       }}
     >
-      {!ready && waiting && <LoadBars style={{ position: 'absolute' }} />}
+      {/* Loading: the same icon + bars as the load screen (BootSplash), at the
+          same spot — the head script shows that one under this from the first
+          frame, so the icon is there throughout */}
+      {!ready && (
+        <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, pointerEvents: 'none' }}>
+          <SplashMark />
+        </div>
+      )}
 
       {/* Same card on phone and desktop: max 380px, narrower only on small screens */}
       {ready && <div className={exiting ? 'greet-card-out' : 'greet-card-in'} style={{

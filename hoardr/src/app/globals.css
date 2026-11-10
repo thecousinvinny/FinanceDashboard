@@ -735,7 +735,11 @@ html.greet-boot body::after {
    class shows it from the first frame, React keeps it up after that */
 .boot-splash-el { display: none; }
 html.boot-splash .boot-splash-el,
+html.greet-boot .boot-splash-el,
 .boot-splash-el[data-show] { display: flex; }
+/* Brief due: the same load screen, above the plain cover (body::after) until
+   the greeting's own copy of it takes over */
+html.greet-boot .boot-splash-el { z-index: 81 !important; }
 
 /* ── Greeting (daily brief) entrance ──────────────────────────────────────
    Transform + opacity only, easeOutQuint, no overshoot. The card enters once,

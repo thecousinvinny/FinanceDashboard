@@ -62,6 +62,19 @@ export function BootSplash() {
         pointerEvents: fading ? 'none' : 'auto',
       }}
     >
+      <SplashMark />
+    </div>
+  )
+}
+
+/**
+ * The load screen's contents: the app icon, the name, and load bars that fade
+ * in only if the wait is noticeable. Also the daily brief's loading state, so
+ * every app open looks the same whether or not the brief is due.
+ */
+export function SplashMark() {
+  return (
+    <>
       {/* The app's own icon, as on the home screen */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
@@ -71,10 +84,9 @@ export function BootSplash() {
       <p style={{ fontSize: 13, fontWeight: 600, letterSpacing: '0.28em', textTransform: 'uppercase', color: 'rgb(var(--rgb-ink-muted))', fontFamily: 'var(--font-montserrat)', paddingLeft: '0.28em' }}>
         Hoardr
       </p>
-      {/* Only if the wait is noticeable */}
       <div className="greet-fade" style={{ ['--d' as string]: '500ms', marginTop: 8 }}>
         <LoadBars />
       </div>
-    </div>
+    </>
   )
 }
