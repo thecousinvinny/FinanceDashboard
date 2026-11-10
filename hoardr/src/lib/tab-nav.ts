@@ -148,7 +148,11 @@ export function navigateTab(path: string, mode: 'replace' | 'push' = 'replace') 
     window.history[mode === 'push' ? 'pushState' : 'replaceState'](null, '', path)
   }
   const doc = document as VTDocument
-  if (!doc.startViewTransition || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  // iPhone / iPad: no slide — the screen fades in (.screen-active). Every
+  // slide snapshots the whole window with all six kept-alive screens behind
+  // it, and even one tab at a time, guarded against rapid taps, iOS Safari
+  // ran out of memory: the app froze, then reloaded. Desktop keeps the slide.
+  if (NEEDS_REVIVE || !doc.startViewTransition || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     go()
     return
   }

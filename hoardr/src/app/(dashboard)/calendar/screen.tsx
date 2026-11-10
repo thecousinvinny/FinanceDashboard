@@ -1984,7 +1984,7 @@ const suppressPrepend   = useRef(true)   // true initially — cleared after scr
       )}
 
       {/* ── Sliding rail (2 panels × 100vw) ──────────────────────────────── */}
-      <div style={{ display: 'flex', width: '200vw', height: '100%', transform: `translateX(-${viewIndex * 100}vw)`, transition: 'transform 0.32s cubic-bezier(0.4,0,0.2,1)', willChange: 'transform' }}>
+      <div style={{ display: 'flex', width: '200vw', height: '100%', transform: `translateX(-${viewIndex * 100}vw)`, transition: 'transform 0.32s cubic-bezier(0.4,0,0.2,1)' }}>
 
         {/* ═══════════════════════════════════════════════════════════════
             PANEL 0 — Split view (mobile) / Notion grid (iPad+)

@@ -100,11 +100,14 @@ function Drum({ digit, placeFromRight, totalDigits, spinAt, exact, late, dir }: 
     }
   }, [digit, spinAt, dur, del])
 
+  // No permanent will-change: it kept every digit strip (20em tall) on its own
+  // GPU layer on all six kept-alive screens. The transition promotes it while
+  // it runs.
   const cell: React.CSSProperties = { display: 'block', height: '1em', lineHeight: '1' }
   return (
     <span style={{ display: 'inline-block', overflow: 'hidden', height: '1em', fontFamily: "var(--font-big-shoulders)", WebkitTextFillColor: 'currentColor' }}>
       {/* Resting position in the markup too, so server HTML shows the digit, not "0" */}
-      <span ref={trackRef} style={{ display: 'block', willChange: 'transform', transform: `translate3d(0, ${-(10 + digit)}em, 0)` }}>
+      <span ref={trackRef} style={{ display: 'block', transform: `translate3d(0, ${-(10 + digit)}em, 0)` }}>
         {CELLS.map((d, i) => <span key={i} style={cell}>{d}</span>)}
       </span>
     </span>
