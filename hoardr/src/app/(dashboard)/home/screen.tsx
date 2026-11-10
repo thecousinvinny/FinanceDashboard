@@ -323,7 +323,7 @@ export default function HomePage() {
 
       {!loading && (
         <>
-          <HomeHero spent={spent} month={heroMonth} year={heroYear} />
+          <HomeHero spent={spent} month={heroMonth} year={heroYear} live={!loading} />
 
           <UpcomingBills initial={upcoming} onPaid={handleSubPaid} />
 

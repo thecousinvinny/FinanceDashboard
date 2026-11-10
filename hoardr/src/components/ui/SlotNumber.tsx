@@ -23,12 +23,15 @@ interface DrumProps {
   spinAt:         number  // when this number's spin started (0 = not yet shown)
   exact?:         boolean // spinAt is a real start time, not a tab-slide estimate
   late?:          boolean // added by a value change after the spin ($96 → $101)
+  dir:            1 | -1  // the whole number's last change went up / down
 }
 
-function Drum({ digit, placeFromRight, totalDigits, spinAt, exact, late }: DrumProps) {
+function Drum({ digit, placeFromRight, totalDigits, spinAt, exact, late, dir }: DrumProps) {
   const trackRef  = useRef<HTMLSpanElement>(null)
   const prevDigit = useRef(digit)
   const mounted   = useRef(false)
+  const settle    = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  useLayoutEffect(() => () => clearTimeout(settle.current), [])
 
   // Higher places take a little longer, so the number settles right to left…
   const dur = 850 + placeFromRight * 90
@@ -70,19 +73,31 @@ function Drum({ digit, placeFromRight, totalDigits, spinAt, exact, late }: DrumP
   }, [spinAt, dur, del, exact])
 
   // A value change. Mid-roll: glide on to the new digit. Settled: a short
-  // forward roll from the old digit to the new one.
+  // roll from the old digit to the new one, up when the number rose and down
+  // when it fell (2,003 → 1,998 counts down), wrapping through 9 / 0.
   useLayoutEffect(() => {
     const from = prevDigit.current
     prevDigit.current = digit
     if (from === digit) return
+    clearTimeout(settle.current)
     if (!spinAt) { at(10 + digit); return }
     // Still waiting for the slide: the roll will read the new digit when it starts
     if (performance.now() < spinAt) return
     const left = spinAt + del + dur - performance.now()
     if (left > 0) { at(10 + digit, `transform ${Math.max(250, left)}ms ${EASE}`); return }
-    // Forward only: from a higher digit, wrap via the same face on the first copy
-    if (digit < from) { at(from); restart() }
-    at(10 + digit, `transform ${ROLL_MS}ms ${EASE}`)
+    const roll = `transform ${ROLL_MS}ms ${EASE}`
+    if (dir > 0) {
+      // Up from a higher digit: start on the same face in the first copy
+      if (digit < from) { at(from); restart() }
+      at(10 + digit, roll)
+    } else if (digit < from) {
+      at(10 + digit, roll)
+    } else {
+      // Down to a higher digit: land on its face in the first copy, then
+      // swap to the identical face in the second, where every digit rests
+      at(digit, roll)
+      settle.current = setTimeout(() => at(10 + digit), ROLL_MS + 30)
+    }
   }, [digit, spinAt, dur, del])
 
   const cell: React.CSSProperties = { display: 'block', height: '1em', lineHeight: '1' }
@@ -118,6 +133,9 @@ export function SlotNumber({ value, format, className, startAt }: Props) {
   // After a tab slide, the roll waits for the screen to land (see afterSlide)
   if (visit > 0 && spin.current?.visit !== visit) spin.current = { visit, at: performance.now() + afterSlide() }
   const spinAt = startAt ?? (visit > 0 ? spin.current!.at : 0)
+  // Which way the value last moved, so the digits roll the same way
+  const last = useRef({ value, dir: 1 as 1 | -1 })
+  if (value !== last.current.value) last.current = { value, dir: value > last.current.value ? 1 : -1 }
   // Drums mounting after this number's first paint come from a value change
   const painted = useRef(false)
   useLayoutEffect(() => { painted.current = true }, [])
@@ -144,6 +162,7 @@ export function SlotNumber({ value, format, className, startAt }: Props) {
             spinAt={spinAt}
             exact={startAt !== undefined}
             late={painted.current}
+            dir={last.current.dir}
           />
         )
       })}

@@ -853,3 +853,35 @@ html.boot-splash .boot-splash-el,
   .greet-pop { animation-duration: 1ms; animation-delay: 0ms; }
   .greet-pulse { animation: none; }
 }
+
+/* Home hero's Net: a change tag drifting off the number the way it moved, and
+   a soft green / red flash of the cell (HomeHero's cue). Transform + opacity
+   only. */
+.net-cue {
+  position: absolute; left: 10px; bottom: 100%; margin-bottom: 4px;
+  padding: 2px 7px; border-radius: 999px; white-space: nowrap; pointer-events: none;
+  font-size: 11px; font-weight: 700; font-family: var(--font-big-shoulders); letter-spacing: 0.01em;
+  background: var(--color-bg-elevated); box-shadow: 0 0 0 1px rgb(var(--rgb-ink) / 0.08);
+  will-change: transform, opacity;
+}
+.net-cue-up   { animation: net-cue-up 1700ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.net-cue-down { animation: net-cue-down 1700ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes net-cue-up {
+  0%   { opacity: 0; transform: translateY(8px); }
+  18%  { opacity: 1; transform: translateY(0); }
+  70%  { opacity: 1; transform: translateY(-3px); }
+  100% { opacity: 0; transform: translateY(-12px); }
+}
+@keyframes net-cue-down {
+  0%   { opacity: 0; transform: translateY(-8px); }
+  18%  { opacity: 1; transform: translateY(0); }
+  70%  { opacity: 1; transform: translateY(3px); }
+  100% { opacity: 0; transform: translateY(10px); }
+}
+.net-flash {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(var(--cue-rgb), 0.32), rgba(var(--cue-rgb), 0));
+  animation: net-flash 1100ms ease-out both;
+}
+@keyframes net-flash { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .net-cue, .net-flash { animation-duration: 1ms; } }

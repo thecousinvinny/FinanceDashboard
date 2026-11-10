@@ -16,13 +16,16 @@ interface Props {
   year:  HeroSeries
   /** On the greeting card: numbers roll from the card's entrance, not a screen visit */
   greeting?: { rollAt: (ms: number) => number; chartDelay: number }
+  /** The data is loaded: from here on a change to Net is news and gets its cue */
+  live?: boolean
 }
 
 function fmtInt(n: number)   { return Math.floor(n).toLocaleString('en-US') }
 function fmtCents(n: number) { return String(Math.round((Math.abs(n) % 1) * 100)).padStart(2, '0') }
 const MINUS = '−'
+const CUE_MS = 1700
 
-export function HomeHero({ spent, month, year, greeting }: Props) {
+export function HomeHero({ spent, month, year, greeting, live }: Props) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null)
   const [view,     setView]     = useState<'month' | 'year'>('month')
 
@@ -55,6 +58,26 @@ export function HomeHero({ spent, month, year, greeting }: Props) {
   // Stats strip: subs split out of the total, so Spent + Subs = the hero number
   const subs      = s.sub.reduce((a, v) => a + v, 0)
   const avg       = n ? total / n : 0
+
+  // Net moved (income landed, something was spent — here or on another
+  // device): a "+$2,099" / "−$5" tag drifts off the number in the direction it
+  // went, and the cell flashes green or red. Not for the first load, a
+  // month/year switch, or the greeting's copy.
+  const [cue, setCue] = useState<{ id: number; d: number } | null>(null)
+  const lastNet = useRef<{ view: string; net: number } | null>(null)
+  const netWhole = Math.round(net)
+  useEffect(() => {
+    const prev = lastNet.current
+    if (!live || greeting) { lastNet.current = null; return }
+    lastNet.current = { view, net: netWhole }
+    if (!prev || prev.view !== view || prev.net === netWhole) return
+    setCue({ id: performance.now(), d: netWhole - prev.net })
+  }, [netWhole, view, live, greeting])
+  useEffect(() => {
+    if (!cue) return
+    const t = setTimeout(() => setCue(null), CUE_MS)
+    return () => clearTimeout(t)
+  }, [cue])
 
   // Capture-phase swipe detection — intercepts quick horizontal flicks before PaceChart sees them.
   // gestureMode coordinates with PaceChart's long-press scrub: once scrubbing, swipe is suppressed.
@@ -210,9 +233,19 @@ export function HomeHero({ spent, month, year, greeting }: Props) {
           ['Net',    <SlotNumber key="n" value={Math.abs(net)} format={v => `${net >= 0 ? '+' : MINUS}${stat(v)}`} startAt={rollAt(640)} />, net >= 0 ? 'var(--sem-income)' : '#ef4444'],
           [isYear ? 'Avg / mo' : 'Avg / day', <SlotNumber key="a" value={avg} format={stat} startAt={rollAt(700)} />, undefined],
         ] as const).map(([label, value, color], i) => (
-          <div key={label} className={`flex-1 min-w-0${i ? ' border-l border-ink/[0.06]' : ''}`} style={{ padding: i ? '8px 0 0 10px' : '8px 0 0 16px' }}>
+          <div key={label} className={`relative flex-1 min-w-0${i ? ' border-l border-ink/[0.06]' : ''}`} style={{ padding: i ? '8px 0 0 10px' : '8px 0 0 16px' }}>
+            {label === 'Net' && cue && (
+              <span key={cue.id} aria-hidden className="net-flash"
+                style={{ '--cue-rgb': cue.d > 0 ? 'var(--sem-income-rgb)' : '239,68,68' } as React.CSSProperties} />
+            )}
             <p className={statLbl}>{label}</p>
             <p className={color ? undefined : 'text-ink'} style={{ ...statNum, color }}>{value}</p>
+            {label === 'Net' && cue && (
+              <span key={`t${cue.id}`} aria-hidden className={`net-cue ${cue.d > 0 ? 'net-cue-up' : 'net-cue-down'}`}
+                style={{ color: cue.d > 0 ? 'var(--sem-income)' : '#ef4444' }}>
+                {cue.d > 0 ? '+' : MINUS}{stat(Math.abs(cue.d))}
+              </span>
+            )}
           </div>
         ))}
       </div>
