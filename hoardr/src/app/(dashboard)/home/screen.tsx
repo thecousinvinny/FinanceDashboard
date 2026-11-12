@@ -20,7 +20,8 @@ import { buildHeroSeries, heroHistoryStart, EMPTY_SERIES } from '@/lib/hero-seri
 import type { SeedTx } from '@/lib/data/transactions'
 import { Truck, PlusCircle, Star, ArrowUpCircle } from 'lucide-react'
 import { GlobalFAB } from '@/components/ui/GlobalFAB'
-import { useOnScreenReturn, useScreenReady } from '@/lib/tab-nav'
+import { useOnScreenReturn, useScreenActive, useScreenReady } from '@/lib/tab-nav'
+import { LoadBars } from '@/components/ui/LoadBars'
 import { sameAsLast } from '@/lib/same-data'
 import { ActivityDetailSheet, type ActivityRef } from '@/components/home/ActivityDetailSheet'
 
@@ -36,16 +37,60 @@ interface ActivityRow {
   name:     string
   amount:   number
   date:     string
+  created:  string
   category: string
   isIncome: boolean
   isSub:    boolean
 }
 
+/**
+ * Recent activity is one feed over two tables, paged PAGE at a time as you
+ * scroll. Each table is fetched newest-first up to `shown` rows (or to its
+ * end): the newest `shown` of the merge can't take more than that from either
+ * table, so merging what's fetched is always exact.
+ */
+const PAGE = 20
+interface ActivityFeed {
+  exp:     ActivityRow[]
+  inc:     ActivityRow[]
+  expDone: boolean
+  incDone: boolean
+  shown:   number
+}
+const EMPTY_FEED: ActivityFeed = { exp: [], inc: [], expDone: false, incDone: false, shown: PAGE }
+const byNewest = (a: ActivityRow, b: ActivityRow) =>
+  b.date.localeCompare(a.date) || b.created.localeCompare(a.created) || b.id.localeCompare(a.id)
+
+const EXP_COLS = 'id, name, cost, date, created_at, categories(name)'
+const INC_COLS = 'id, name, amount, date, created_at, source'
+type ExpRow = { id: unknown; name: unknown; cost: unknown; date: unknown; created_at: unknown; categories: unknown }
+type IncRow = { id: unknown; name: unknown; amount: unknown; date: unknown; created_at: unknown; source: unknown }
+const expRow = (e: ExpRow, subs: Set<string>): ActivityRow => ({
+  id:       String(e.id),
+  name:     String(e.name),
+  amount:   -Number(e.cost),
+  date:     String(e.date),
+  created:  String(e.created_at ?? ''),
+  category: (e.categories as { name: string } | null)?.name ?? 'Other',
+  isIncome: false,
+  isSub:    subs.has(String(e.name ?? '').toLowerCase()),
+})
+const incRow = (i: IncRow): ActivityRow => ({
+  id:       String(i.id),
+  name:     String(i.name),
+  amount:   Number(i.amount),
+  date:     String(i.date),
+  created:  String(i.created_at ?? ''),
+  category: String(i.source ?? 'Other'),
+  isIncome: true,
+  isSub:    false,
+})
+
 interface HomeCache {
   spent:             number
   upcoming:          UpcomingSub[]
   enRoute:           EnRouteItem[]
-  activity:          ActivityRow[]
+  feed:              ActivityFeed
   heroMonth:         HeroSeries
   heroYear:          HeroSeries
 }
@@ -56,7 +101,8 @@ export default function HomePage() {
   const [spent,         setSpent]         = useState(cached?.spent ?? 0)
   const [upcoming,      setUpcoming]      = useState<UpcomingSub[]>(cached?.upcoming ?? [])
   const [enRoute,       setEnRoute]       = useState<EnRouteItem[]>(cached?.enRoute ?? [])
-  const [activity,      setActivity]      = useState<ActivityRow[]>(cached?.activity ?? [])
+  const [feed,          setFeed]          = useState<ActivityFeed>(cached?.feed ?? EMPTY_FEED)
+  const [loadingMore,   setLoadingMore]   = useState(false)
   const [heroMonth,          setHeroMonth]          = useState<HeroSeries>(cached?.heroMonth ?? EMPTY_SERIES)
   const [heroYear,           setHeroYear]           = useState<HeroSeries>(cached?.heroYear ?? EMPTY_SERIES)
   const [loading,            setLoading]            = useState(!cached)
@@ -72,6 +118,12 @@ export default function HomePage() {
   const loadGen           = useRef(0)
   const dataSigRef        = useRef('')
   const abortRef          = useRef<AbortController | null>(null)
+  const feedRef           = useRef(feed)
+  feedRef.current         = feed
+  const subNamesRef       = useRef(new Set<string>())
+  const moreGen           = useRef(0)
+  const moreAbortRef      = useRef<AbortController | null>(null)
+  const active            = useScreenActive()
 
   const loadData = useCallback(async () => {
     abortRef.current?.abort()
@@ -89,6 +141,9 @@ export default function HomePage() {
 
       // The hero's history reaches back to the start of last month (lib/hero-series)
       const histStart  = heroHistoryStart(todayStr)
+      // A refresh keeps every page you've scrolled through
+      const want = Math.max(PAGE, feedRef.current.shown)
+      moreGen.current++; moreAbortRef.current?.abort(); moreAbortRef.current = null; setLoadingMore(false)
 
       const [
         { data: monthExp },
@@ -114,17 +169,13 @@ export default function HomePage() {
           .eq('status', 'Ordered')
           .order('ordered_at', { ascending: false })
           .abortSignal(sig),
-        supabase.from('expenses')
-          .select('id, name, cost, date, categories(name)')
-          .order('date', { ascending: false })
-          .order('created_at', { ascending: false })
-          .limit(5)
+        supabase.from('expenses').select(EXP_COLS)
+          .order('date', { ascending: false }).order('created_at', { ascending: false }).order('id', { ascending: false })
+          .range(0, want - 1)
           .abortSignal(sig),
-        supabase.from('income')
-          .select('id, name, amount, date, source')
-          .order('date', { ascending: false })
-          .order('created_at', { ascending: false })
-          .limit(5)
+        supabase.from('income').select(INC_COLS)
+          .order('date', { ascending: false }).order('created_at', { ascending: false }).order('id', { ascending: false })
+          .range(0, want - 1)
           .abortSignal(sig),
         supabase.from('expenses').select('cost, date, name').gte('date', histStart).lte('date', todayStr).abortSignal(sig),
         supabase.from('income').select('amount, date').gte('date', histStart).lte('date', todayStr).abortSignal(sig),
@@ -156,35 +207,21 @@ export default function HomePage() {
         ordered_at:  w.ordered_at ? String(w.ordered_at) : null,
       }))
 
-      const newActivity: ActivityRow[] = [
-        ...(recentExp ?? []).map(e => ({
-          id:       String(e.id),
-          name:     String(e.name),
-          amount:   -Number(e.cost),
-          date:     String(e.date),
-          category: (e.categories as unknown as { name: string } | null)?.name ?? 'Other',
-          isIncome: false,
-          isSub:    subNameSet.has(String(e.name ?? '').toLowerCase()),
-        })),
-        ...(recentInc ?? []).map(i => ({
-          id:       String(i.id),
-          name:     String(i.name),
-          amount:   Number(i.amount),
-          date:     String(i.date),
-          category: String(i.source ?? 'Other'),
-          isIncome: true,
-          isSub:    false,
-        })),
-      ]
-        .sort((a, b) => b.date.localeCompare(a.date))
-        .slice(0, 5)
+      subNamesRef.current = subNameSet
+      const newFeed: ActivityFeed = {
+        exp:     (recentExp ?? []).map(e => expRow(e as ExpRow, subNameSet)),
+        inc:     (recentInc ?? []).map(i => incRow(i as IncRow)),
+        expDone: (recentExp ?? []).length < want,
+        incDone: (recentInc ?? []).length < want,
+        shown:   want,
+      }
 
       // Hero: running spend this month vs last month, and this year by month
       const { month: newHeroMonth, year: newHeroYear } = buildHeroSeries(yearExp ?? [], yearInc ?? [], subNameSet, todayStr)
 
       const homeData = {
         spent: newSpent,
-        upcoming: newUpcoming, enRoute: newEnRoute, activity: newActivity,
+        upcoming: newUpcoming, enRoute: newEnRoute, feed: newFeed,
         heroMonth: newHeroMonth, heroYear: newHeroYear,
       }
       // A return-to-tab refresh that changed nothing must not re-render
@@ -194,7 +231,7 @@ export default function HomePage() {
       setSpent(newSpent)
       setUpcoming(newUpcoming)
       setEnRoute(newEnRoute)
-      setActivity(newActivity)
+      setFeed(newFeed)
       setHeroMonth(newHeroMonth)
       setHeroYear(newHeroYear)
       setLoading(false)
@@ -208,6 +245,74 @@ export default function HomePage() {
   // Kept alive across tabs — refresh quietly whenever this screen is shown again
   useOnScreenReturn(loadData)
   useScreenReady(!loading)   // releases the load screen once this screen has its data
+
+  // ── Recent activity paging ─────────────────────────────────────────────────
+  const activity = useMemo(
+    () => [...feed.exp, ...feed.inc].sort(byNewest).slice(0, feed.shown),
+    [feed],
+  )
+  const hasMore = !(feed.expDone && feed.incDone) || feed.exp.length + feed.inc.length > feed.shown
+
+  const loadMore = useCallback(async () => {
+    const f = feedRef.current
+    if (moreAbortRef.current) return   // one page at a time
+    const shown = f.shown + PAGE
+    const needExp = !f.expDone && f.exp.length < shown
+    const needInc = !f.incDone && f.inc.length < shown
+    if (!needExp && !needInc) { setFeed({ ...f, shown }); return }
+    const controller = new AbortController()
+    moreAbortRef.current = controller
+    const gen = ++moreGen.current
+    setLoadingMore(true)
+    try {
+      const sig = controller.signal
+      const [e, i] = await Promise.all([
+        needExp
+          ? supabase.from('expenses').select(EXP_COLS)
+              .order('date', { ascending: false }).order('created_at', { ascending: false }).order('id', { ascending: false })
+              .range(f.exp.length, shown - 1).abortSignal(sig)
+          : Promise.resolve({ data: [] as ExpRow[] }),
+        needInc
+          ? supabase.from('income').select(INC_COLS)
+              .order('date', { ascending: false }).order('created_at', { ascending: false }).order('id', { ascending: false })
+              .range(f.inc.length, shown - 1).abortSignal(sig)
+          : Promise.resolve({ data: [] as IncRow[] }),
+      ])
+      if (gen !== moreGen.current) return
+      const cur  = feedRef.current
+      const seen = new Set([...cur.exp, ...cur.inc].map(x => x.id))
+      const eRows = (e.data ?? []) as ExpRow[], iRows = (i.data ?? []) as IncRow[]
+      const next: ActivityFeed = {
+        exp:     [...cur.exp, ...eRows.map(x => expRow(x, subNamesRef.current)).filter(x => !seen.has(x.id))],
+        inc:     [...cur.inc, ...iRows.map(incRow).filter(x => !seen.has(x.id))],
+        // Done keys off the raw page length, never the deduped one
+        expDone: cur.expDone || (needExp && eRows.length < shown - f.exp.length),
+        incDone: cur.incDone || (needInc && iRows.length < shown - f.inc.length),
+        shown,
+      }
+      setFeed(next)
+      const c = pageCache.get<HomeCache>('home')
+      if (c) pageCache.set('home', { ...c, feed: next })
+    } catch (err) {
+      if ((err as Error)?.name !== 'AbortError') console.error('home loadMore error:', err)
+    } finally {
+      if (gen === moreGen.current) setLoadingMore(false)
+      if (moreAbortRef.current === controller) moreAbortRef.current = null
+    }
+  }, [supabase])
+  useEffect(() => () => { moreGen.current++; moreAbortRef.current?.abort() }, [])
+
+  // Load the next page a screen before the end of the list. Only while this
+  // screen is visible: hidden screens are still laid out, and the sentinel
+  // would page through everything in the background.
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el || !active || !hasMore || loading) return
+    const obs = new IntersectionObserver(([entry]) => { if (entry.isIntersecting) loadMore() }, { rootMargin: '0px 0px 800px 0px' })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [active, hasMore, loading, loadMore, feed.shown])
 
   useEffect(() => {
     let mounted = true
@@ -369,12 +474,8 @@ export default function HomePage() {
             {activity.length > 0 ? (
               <div className="bg-bg-surface border border-ink/[0.06] rounded-card overflow-hidden divide-y divide-ink/[0.04]">
                 {activity.map(row => (
-                  <button
-                    key={row.id}
-                    type="button"
-                    onClick={() => { haptic('tap'); setDetailItem(row) }}
-                    className="w-full text-left flex items-center gap-3 px-4 py-3.5 active:bg-ink/[0.04] transition-colors select-none"
-                  >
+                  <SwipeToDelete key={row.id} onTap={() => { haptic('tap'); setDetailItem(row) }}>
+                  <div className="w-full text-left flex items-center gap-3 px-4 py-3.5 select-none cursor-pointer">
                     <div className="w-10 h-10 rounded-[12px] bg-bg-overlay ring-1 ring-ink/[0.06] flex items-center justify-center flex-shrink-0">
                       <CategoryIcon
                         category={row.category}
@@ -391,12 +492,18 @@ export default function HomePage() {
                     <p className={`text-[15px] font-semibold font-mono flex-shrink-0 ${row.amount > 0 ? 'text-emerald' : 'text-ink'}`}>
                       {row.amount > 0 ? '+' : '−'}{$fd(Math.abs(row.amount))}
                     </p>
-                  </button>
+                  </div>
+                  </SwipeToDelete>
                 ))}
               </div>
             ) : (
               <div className="bg-bg-surface border border-ink/[0.06] rounded-card py-10 text-center text-ink-faint text-[13px]">
                 No transactions yet — add your first one in Money.
+              </div>
+            )}
+            {activity.length > 0 && hasMore && (
+              <div ref={sentinelRef} className="flex justify-center py-5" style={{ minHeight: 44 }}>
+                {loadingMore && <LoadBars />}
               </div>
             )}
           </div>

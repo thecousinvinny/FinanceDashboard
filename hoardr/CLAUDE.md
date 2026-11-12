@@ -131,7 +131,10 @@ Google OAuth via Supabase. Login (`(auth)/login`) calls `signInWithOAuth` with `
 
 Rapid tab switching causes in-flight queries to resolve after unmount → Safari WKWebView crashes. Every client page must guard with a generation counter + AbortController. Canonical example: `home/page.tsx`. Pattern: `loadGen = useRef(0)`, `abortRef = useRef<AbortController|null>(null)`, increment gen and abort on each call, discard result if `gen !== loadGen.current`. Cleanup: `return () => { loadGen.current++; abortRef.current?.abort() }`. Second data fetch needs a separate `detailGen` + `detailAbortRef`.
 
-## Paginated feeds (`/money` Expenses, `/in` History)
+## Paginated feeds (`/money` Expenses, `/in` History, Home's Recent Activity)
+
+**Home's Recent Activity** is one feed over `expenses` + `income` (`ActivityFeed` in `home/screen.tsx`), 20 at a time behind a sentinel (only while Home is the visible screen — hidden screens are still laid out). Each table is fetched newest-first (`date, created_at, id` desc) up to `shown` rows or its end, so the merged newest `shown` is always exact; a refresh refetches `shown` rows from each, keeping every page you scrolled through. Rows are `SwipeToDelete` with only `onTap` (opens `ActivityDetailSheet`), so a new one animates in.
+
 
 Both feeds page with `.range(offset, offset + LIMIT - 1)` (LIMIT = 100) behind an
 IntersectionObserver sentinel, tracked by an `offsetRef`.
