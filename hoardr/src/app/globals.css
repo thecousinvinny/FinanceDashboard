@@ -889,3 +889,11 @@ html.greet-boot .boot-splash-el { z-index: 81 !important; }
 }
 @keyframes net-flash { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .net-cue, .net-flash { animation-duration: 1ms; } }
+
+/* A list row just added (SwipeToDelete's entrance): a gold tint that fades. */
+.row-arrive::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: rgb(212 175 55 / 0.10);
+  animation: row-arrive 1400ms ease-out both;
+}
+@keyframes row-arrive { 0%, 25% { opacity: 1; } 100% { opacity: 0; } }

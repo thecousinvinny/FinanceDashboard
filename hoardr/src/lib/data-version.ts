@@ -17,6 +17,7 @@ export function markDataChanged() { version++ }
 const remoteListeners = new Set<() => void>()
 export function markRemoteChange() {
   version++
+  arriveUntil = performance.now() + ARRIVE_MS
   remoteListeners.forEach(l => l())
 }
 export function onRemoteChange(l: () => void) { remoteListeners.add(l); return () => { remoteListeners.delete(l) } }
@@ -39,5 +40,15 @@ export function dataVersion() { return version }
  */
 export function markDataChangedSoon() {
   version++
+  arriveUntil = performance.now() + ARRIVE_MS
   setTimeout(() => { version++ }, 2500)
 }
+
+/**
+ * True for a few seconds after data changed (an add, an undo, a change from
+ * another device). Rows that mount then are the new ones, and animate in
+ * (`SwipeToDelete`); rows mounting any other time (first load, paging) don't.
+ */
+const ARRIVE_MS = 4000
+let arriveUntil = 0
+export function rowsArriving() { return performance.now() < arriveUntil }

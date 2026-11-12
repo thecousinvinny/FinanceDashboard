@@ -1,8 +1,10 @@
 'use client'
 
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useLayoutEffect } from 'react'
 import { Trash2 } from 'lucide-react'
 import { cn, haptic } from '@/lib/utils'
+import { rowsArriving } from '@/lib/data-version'
+import { useScreenActive } from '@/lib/tab-nav'
 
 const REVEAL   = 80    // px to show action button
 const TAP_SLOP = 10    // max movement still counted as a tap
@@ -23,6 +25,59 @@ interface Props {
 
 const DEFAULT_DELETE_ICON = <Trash2 size={18} strokeWidth={1.5} />
 
+// ── New-row entrance ─────────────────────────────────────────────────────────
+// A row that mounts on the visible screen just after an add (or an undo, or a
+// change from another device — `rowsArriving()`) opens its space, slides in
+// and fades a gold tint, instead of popping in. Rows mounting in one commit
+// are batched: a handful is news; more is a pill switch or a page loading
+// within the window, and those just appear.
+const ARRIVE_MAX  = 3
+const ARRIVE_EASE = 'cubic-bezier(0.22, 1, 0.36, 1)'
+let arriving: { outer: HTMLDivElement; inner: HTMLDivElement }[] = []
+let recent: { sig: string; at: number }[] = []
+
+function queueArrival(outer: HTMLDivElement, inner: HTMLDivElement) {
+  if (arriving.length === 0) {
+    // Microtasks run after every layout effect of this commit, before paint
+    queueMicrotask(() => {
+      const batch = arriving
+      arriving = []
+      if (batch.length > ARRIVE_MAX) return
+      const now = performance.now()
+      recent = recent.filter(r => now - r.at < 4000)
+      batch.forEach(({ outer, inner }) => {
+        // An optimistic row (tmp- id) remounts with its real id once saved:
+        // same content, so it doesn't arrive twice
+        const sig = outer.textContent ?? ''
+        if (recent.some(r => r.sig === sig)) return
+        recent.push({ sig, at: now })
+        playArrival(outer, inner)
+      })
+    })
+  }
+  arriving.push({ outer, inner })
+}
+
+function playArrival(outer: HTMLDivElement, inner: HTMLDivElement) {
+  const h = outer.offsetHeight
+  if (!h) return
+  outer.style.height  = '0px'
+  inner.style.opacity = '0'
+  inner.style.transform = 'translateY(-8px) scale(0.985)'
+  void outer.offsetHeight
+  outer.style.transition = `height 280ms ${ARRIVE_EASE}`
+  outer.style.height     = `${h}px`
+  inner.style.transition = `opacity 320ms ease 80ms, transform 480ms ${ARRIVE_EASE} 80ms`
+  inner.style.opacity    = '1'
+  inner.style.transform  = 'translateX(0px)'
+  outer.classList.add('row-arrive')
+  setTimeout(() => {
+    outer.style.height = ''; outer.style.transition = ''
+    inner.style.transition = ''; inner.style.opacity = ''
+  }, 600)
+  setTimeout(() => outer.classList.remove('row-arrive'), 1500)
+}
+
 export function SwipeToDelete({
   onDelete, children, className,
   actionLabel = DEFAULT_DELETE_ICON, actionBg = 'bg-ruby', onTap,
@@ -41,6 +96,14 @@ export function SwipeToDelete({
   const startWasRevealed  = useRef<'none' | 'left' | 'right'>('none')
   const didSwipe          = useRef(false)
   const mouseDown         = useRef(false)
+  const active            = useScreenActive()
+  const layerTimer        = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  useLayoutEffect(() => {
+    if (!active || !rowsArriving()) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    if (outerRef.current && slideRef.current) queueArrival(outerRef.current, slideRef.current)
+  }, [])   // eslint-disable-line react-hooks/exhaustive-deps -- on mount only
 
   function applyPress() {
     const el = pressRef.current; if (!el) return
@@ -64,6 +127,11 @@ export function SwipeToDelete({
     el.style.transition = ease
     el.style.transform  = `translateX(${x}px)`
     curX.current = x
+    // A GPU layer only while the row is off its resting place: a permanent
+    // will-change gave every row of every kept-alive list its own layer
+    clearTimeout(layerTimer.current)
+    if (x !== 0) el.style.willChange = 'transform'
+    else layerTimer.current = setTimeout(() => { el.style.willChange = '' }, 400)
 
     const la = leftActionRef.current
     const ra = rightActionRef.current
@@ -233,7 +301,6 @@ export function SwipeToDelete({
       {/* Sliding content */}
       <div
         ref={slideRef}
-        style={{ willChange: 'transform' }}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
