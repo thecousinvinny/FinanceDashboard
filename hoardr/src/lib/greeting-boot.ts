@@ -20,7 +20,12 @@ const SS_SHOWN = 'hoardr-greeting-session'
 const LS_LAST  = 'hoardr-greeting-at'      // ms timestamp of the last showing
 const COOLDOWN = 30 * 60_000
 
+// Also turns off the browser's own scroll restoration: screens keep their own
+// scroll positions (ScreenKeepAlive), and on a reload the browser kept
+// scrolling toward the old, deep offset while Home's activity feed grew —
+// paging in 20 rows after 20 until you scrolled up.
 export const GREETING_BOOT_SCRIPT = `(function(){try{
+try{history.scrollRestoration='manual'}catch(e){}
 var p=location.pathname;
 if(p==='/'||p.indexOf('/login')===0||p.indexOf('/auth')===0)return;
 var g=true;

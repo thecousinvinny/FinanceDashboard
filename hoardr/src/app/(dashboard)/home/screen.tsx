@@ -305,11 +305,44 @@ export default function HomePage() {
   // Load the next page a screen before the end of the list. Only while this
   // screen is visible: hidden screens are still laid out, and the sentinel
   // would page through everything in the background.
-  const sentinelRef = useRef<HTMLDivElement>(null)
+  //
+  // And only after you scrolled since the last page landed (or when the page
+  // can't scroll yet): a page that arrives with the sentinel still in view
+  // must not chain into the next one. Anything that holds the page at the
+  // bottom (a browser restoring an old scroll offset) otherwise paged through
+  // the whole history 20 rows at a time.
+  const sentinelRef  = useRef<HTMLDivElement>(null)
+  const scrolledRef  = useRef(false)
+  useEffect(() => { scrolledRef.current = false }, [feed.shown])
+  const pagingRef    = useRef({ hasMore, loadMore })
+  pagingRef.current  = { hasMore, loadMore }
+  useEffect(() => {
+    if (!active) return
+    // Your own input only (wheel, touch, keys, a scrollbar drag) — a scroll
+    // event also fires for the browser's restoring and for layout shifts
+    let raf = 0
+    const onInput = () => {
+      scrolledRef.current = true
+      // The sentinel may already be in range, where the observer won't fire
+      // again: check it once the input has moved the page
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => {
+        const el = sentinelRef.current
+        if (el && pagingRef.current.hasMore && el.getBoundingClientRect().top < window.innerHeight + 800) pagingRef.current.loadMore()
+      })
+    }
+    const evs = ['wheel', 'touchmove', 'keydown', 'mousedown'] as const
+    evs.forEach(ev => window.addEventListener(ev, onInput, { passive: true }))
+    return () => { cancelAnimationFrame(raf); evs.forEach(ev => window.removeEventListener(ev, onInput)) }
+  }, [active])
   useEffect(() => {
     const el = sentinelRef.current
     if (!el || !active || !hasMore || loading) return
-    const obs = new IntersectionObserver(([entry]) => { if (entry.isIntersecting) loadMore() }, { rootMargin: '0px 0px 800px 0px' })
+    const obs = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return
+      const canScroll = document.documentElement.scrollHeight > window.innerHeight + 40
+      if (scrolledRef.current || !canScroll) loadMore()
+    }, { rootMargin: '0px 0px 800px 0px' })
     obs.observe(el)
     return () => obs.disconnect()
   }, [active, hasMore, loading, loadMore, feed.shown])
