@@ -33,6 +33,23 @@ function Drum({ digit, placeFromRight, totalDigits, spinAt, exact, late, dir }: 
   const settle    = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   useLayoutEffect(() => () => clearTimeout(settle.current), [])
 
+  // At rest a strip is a plain 2D translate, drawn flat with the text around
+  // it; only a rolling strip is a 3D translate (its own GPU layer). Resting
+  // strips left on their own layers settled a pixel apart from one another —
+  // digits at uneven heights — and held a layer each on every screen.
+  const cellRef = useRef(10 + digit)
+  useLayoutEffect(() => {
+    const el = trackRef.current
+    if (!el) return
+    const flatten = (e: TransitionEvent) => {
+      if (e.target !== el) return
+      el.style.transition = 'none'
+      el.style.transform  = `translateY(${-cellRef.current}em)`
+    }
+    el.addEventListener('transitionend', flatten)
+    return () => el.removeEventListener('transitionend', flatten)
+  }, [])
+
   // Higher places take a little longer, so the number settles right to left…
   const dur = 850 + placeFromRight * 90
   // …and start a beat later from the left
@@ -42,8 +59,9 @@ function Drum({ digit, placeFromRight, totalDigits, spinAt, exact, late, dir }: 
   const at = (cell: number, transition = 'none') => {
     const el = trackRef.current
     if (!el) return
+    cellRef.current = cell
     el.style.transition = transition
-    el.style.transform  = `translate3d(0, ${-cell}em, 0)`
+    el.style.transform  = transition === 'none' ? `translateY(${-cell}em)` : `translate3d(0, ${-cell}em, 0)`
   }
   const restart = () => { void trackRef.current?.offsetHeight }
 
@@ -107,7 +125,7 @@ function Drum({ digit, placeFromRight, totalDigits, spinAt, exact, late, dir }: 
   return (
     <span style={{ display: 'inline-block', overflow: 'hidden', height: '1em', fontFamily: "var(--font-big-shoulders)", WebkitTextFillColor: 'currentColor' }}>
       {/* Resting position in the markup too, so server HTML shows the digit, not "0" */}
-      <span ref={trackRef} style={{ display: 'block', transform: `translate3d(0, ${-(10 + digit)}em, 0)` }}>
+      <span ref={trackRef} style={{ display: 'block', transform: `translateY(${-(10 + digit)}em)` }}>
         {CELLS.map((d, i) => <span key={i} style={cell}>{d}</span>)}
       </span>
     </span>

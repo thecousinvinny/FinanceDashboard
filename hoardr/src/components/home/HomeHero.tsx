@@ -6,6 +6,7 @@ import { SlotNumber } from '@/components/ui/SlotNumber'
 import { $f, $fc, $fk } from '@/lib/utils'
 import { useScreenVisit } from '@/lib/tab-nav'
 import { useHeroHandoff } from '@/lib/hero-handoff'
+import { changedHereRecently } from '@/lib/data-version'
 
 /** Stats strip: whole dollars, compact only past what a quarter of the card fits */
 const stat = (v: number) => (Math.abs(v) >= 100_000 ? $fk(v) : $f(v))
@@ -59,9 +60,11 @@ export function HomeHero({ spent, month, year, greeting, live }: Props) {
   const subs      = s.sub.reduce((a, v) => a + v, 0)
   const avg       = n ? total / n : 0
 
-  // Net moved (income landed, something was spent — here or on another
-  // device): a "+$2,099" / "−$5" tag drifts off the number in the direction it
-  // went, and the cell flashes green or red. Not for the first load, a
+  // Net moved without you doing it here (another device, a payday stream, a
+  // change while the app was away): a "+$2,099" / "−$5" tag drifts off the
+  // number in the direction it went, and the cell flashes green or red. Not
+  // for a change you just made on this device — the roll already shows it,
+  // and the tag played as a second beat after it — nor for the first load, a
   // month/year switch, or the greeting's copy.
   const [cue, setCue] = useState<{ id: number; d: number } | null>(null)
   const lastNet = useRef<{ view: string; net: number } | null>(null)
@@ -70,7 +73,7 @@ export function HomeHero({ spent, month, year, greeting, live }: Props) {
     const prev = lastNet.current
     if (!live || greeting) { lastNet.current = null; return }
     lastNet.current = { view, net: netWhole }
-    if (!prev || prev.view !== view || prev.net === netWhole) return
+    if (!prev || prev.view !== view || prev.net === netWhole || changedHereRecently()) return
     setCue({ id: performance.now(), d: netWhole - prev.net })
   }, [netWhole, view, live, greeting])
   useEffect(() => {

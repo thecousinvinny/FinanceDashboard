@@ -41,6 +41,7 @@ export function dataVersion() { return version }
 export function markDataChangedSoon() {
   version++
   arriveUntil = performance.now() + ARRIVE_MS
+  localAt = performance.now()
   setTimeout(() => { version++ }, 2500)
 }
 
@@ -52,3 +53,11 @@ export function markDataChangedSoon() {
 const ARRIVE_MS = 4000
 let arriveUntil = 0
 export function rowsArriving() { return performance.now() < arriveUntil }
+
+/**
+ * A change made on this device (a toast: add, payment, delete, undo) in the
+ * last few seconds. Cues meant to explain a change — Home's Net badge — skip
+ * those: you just made it, and the roll already shows it.
+ */
+let localAt = -Infinity
+export function changedHereRecently() { return performance.now() - localAt < 8000 }
