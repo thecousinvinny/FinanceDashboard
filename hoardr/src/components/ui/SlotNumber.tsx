@@ -33,21 +33,32 @@ function Drum({ digit, placeFromRight, totalDigits, spinAt, exact, late, dir }: 
   const settle    = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   useLayoutEffect(() => () => clearTimeout(settle.current), [])
 
-  // At rest a strip is a plain 2D translate, drawn flat with the text around
-  // it; only a rolling strip is a 3D translate (its own GPU layer). Resting
-  // strips left on their own layers settled a pixel apart from one another —
-  // digits at uneven heights — and held a layer each on every screen.
-  const cellRef = useRef(10 + digit)
+  // At rest the digit is plain text (`staticRef`) and the strip is hidden; the
+  // strip shows only while it rolls. A resting strip sat at N digit-heights
+  // up, and at a fractional pixel ratio (a zoomed desktop browser: 110%,
+  // 125%) N × 1em lands between device pixels differently for every N, so
+  // neighbouring digits rested a pixel apart. Plain text shares one baseline.
+  const staticRef = useRef<HTMLSpanElement>(null)
+  const digitRef  = useRef(digit)
+  digitRef.current = digit
+  const cellRef   = useRef(10 + digit)
+  const show = (rolling: boolean) => {
+    const strip = trackRef.current, still = staticRef.current
+    if (!strip || !still) return
+    strip.style.visibility = rolling ? 'visible' : 'hidden'
+    still.style.visibility = rolling ? 'hidden' : 'visible'
+  }
   useLayoutEffect(() => {
     const el = trackRef.current
     if (!el) return
-    const flatten = (e: TransitionEvent) => {
-      if (e.target !== el) return
+    const landed = (e: TransitionEvent) => {
+      if (e.target !== el || cellRef.current !== 10 + digitRef.current) return
       el.style.transition = 'none'
       el.style.transform  = `translateY(${-cellRef.current}em)`
+      show(false)
     }
-    el.addEventListener('transitionend', flatten)
-    return () => el.removeEventListener('transitionend', flatten)
+    el.addEventListener('transitionend', landed)
+    return () => el.removeEventListener('transitionend', landed)
   }, [])
 
   // Higher places take a little longer, so the number settles right to left…
@@ -62,6 +73,8 @@ function Drum({ digit, placeFromRight, totalDigits, spinAt, exact, late, dir }: 
     cellRef.current = cell
     el.style.transition = transition
     el.style.transform  = transition === 'none' ? `translateY(${-cell}em)` : `translate3d(0, ${-cell}em, 0)`
+    // Resting on this digit's own face: plain text; anywhere else the strip
+    show(transition !== 'none' || cell !== 10 + digitRef.current)
   }
   const restart = () => { void trackRef.current?.offsetHeight }
 
@@ -123,11 +136,13 @@ function Drum({ digit, placeFromRight, totalDigits, spinAt, exact, late, dir }: 
   // it runs.
   const cell: React.CSSProperties = { display: 'block', height: '1em', lineHeight: '1' }
   return (
-    <span style={{ display: 'inline-block', overflow: 'hidden', height: '1em', fontFamily: "var(--font-big-shoulders)", WebkitTextFillColor: 'currentColor' }}>
-      {/* Resting position in the markup too, so server HTML shows the digit, not "0" */}
-      <span ref={trackRef} style={{ display: 'block', transform: `translateY(${-(10 + digit)}em)` }}>
+    <span style={{ position: 'relative', display: 'inline-block', overflow: 'hidden', height: '1em', fontFamily: "var(--font-big-shoulders)", WebkitTextFillColor: 'currentColor' }}>
+      {/* The strip stays in flow (it sets the drum's width: its widest digit)
+          but is hidden at rest; server HTML shows the resting digit as text */}
+      <span ref={trackRef} style={{ display: 'block', visibility: 'hidden', transform: `translateY(${-(10 + digit)}em)` }}>
         {CELLS.map((d, i) => <span key={i} style={cell}>{d}</span>)}
       </span>
+      <span ref={staticRef} style={{ ...cell, position: 'absolute', top: 0, left: 0 }}>{digit}</span>
     </span>
   )
 }
